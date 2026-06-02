@@ -14,12 +14,14 @@ interface AppState {
   searchQuery: string
   selectedTagIds: string[]
   showAddForm: boolean
+  theme: 'dark' | 'light' | 'system'
 
   // Actions - Workspace
   setWorkspaceState: (state: WorkspaceState) => void
   setDb: (db: Database) => void
   setPassword: (pw: string) => void
   lock: () => void
+  setTheme: (theme: 'dark' | 'light' | 'system') => void
 
   // Actions - Keys
   addKey: (key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>) => void
@@ -46,10 +48,12 @@ export const useStore = create<AppState>((set, get) => ({
   searchQuery: '',
   selectedTagIds: [],
   showAddForm: false,
+  theme: 'dark',
 
   setWorkspaceState: (state) => set({ workspaceState: state }),
   setDb: (db) => set({ db }),
   setPassword: (pw) => set({ password: pw }),
+  setTheme: (theme) => set({ theme }),
 
   lock: () =>
     set({
