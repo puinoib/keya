@@ -52,7 +52,11 @@ function scheduleSave() {
     const { db, password } = useStore.getState()
     if (!db || !password) return
     try {
-      await FileStorage.save(db.getData(), password)
+      if ("showDirectoryPicker" in window) {
+        await FileStorage.save(db.getData(), password)
+      } else {
+        await FileStorage.saveViaDownload(db.getData(), password)
+      }
     } catch (e) {
       console.error('Auto-save failed:', e)
     }

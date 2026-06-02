@@ -183,4 +183,20 @@ export class FileStorage {
   static async lock(): Promise<void> {
     await FileStorage.clearWorkspace();
   }
+
+  /**
+   * Legacy save via download (for browsers without File System Access API).
+   */
+  static async saveViaDownload(db: KeyaDatabase, password: string, fileName = "my-keys.keya"): Promise<void> {
+    const bytes = await serializeToFile(db, password);
+    const blob = new Blob([bytes], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
