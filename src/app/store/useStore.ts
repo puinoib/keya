@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { Database, createEmptyDatabase } from '../../core/database'
+import { Database } from '../../core/database'
 import type { ApiKey, Category, Tag } from '../../core/types'
+import { FileStorage } from '../lib/storage'
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked'
 
@@ -41,6 +42,25 @@ interface AppState {
   deleteTag: (id: string) => void
 }
 
+// ── Save debouncer ──
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    const { db, password } = useStore.getState()
+    if (!db || !password) return
+    try {
+      await FileStorage.save(db.getData(), password)
+    } catch (e) {
+      console.error('Auto-save failed:', e)
+    }
+  }, 500)
+}
+
+// ── Store ──
+
 export const useStore = create<AppState>((set, get) => ({
   workspaceState: 'welcome',
   db: null,
@@ -68,16 +88,19 @@ export const useStore = create<AppState>((set, get) => ({
   addKey: (key) => {
     get().db?.addApiKey(key)
     set({ showAddForm: false })
+    scheduleSave()
   },
 
   updateKey: (id, updates) => {
     get().db?.updateApiKey(id, updates)
     set({})
+    scheduleSave()
   },
 
   deleteKey: (id) => {
     get().db?.deleteApiKey(id)
     set({})
+    scheduleSave()
   },
 
   setSearchQuery: (q) => set({ searchQuery: q }),
@@ -96,25 +119,30 @@ export const useStore = create<AppState>((set, get) => ({
   addCategory: (cat) => {
     get().db?.addCategory(cat)
     set({})
+    scheduleSave()
   },
 
   updateCategory: (id, updates) => {
     get().db?.updateCategory(id, updates)
     set({})
+    scheduleSave()
   },
 
   deleteCategory: (id) => {
     get().db?.deleteCategory(id)
     set({})
+    scheduleSave()
   },
 
   addTag: (tag) => {
     get().db?.addTag(tag)
     set({})
+    scheduleSave()
   },
 
   deleteTag: (id) => {
     get().db?.deleteTag(id)
     set({})
+    scheduleSave()
   },
 }))
