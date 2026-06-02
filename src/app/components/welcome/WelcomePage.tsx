@@ -130,6 +130,10 @@ export function WelcomePage() {
               <FileKey className="size-4" />
               Open .keya File
             </button>
+
+            {error && (
+              <p className="text-xs text-danger text-center">{error}</p>
+            )}
           </div>
         )}
 
