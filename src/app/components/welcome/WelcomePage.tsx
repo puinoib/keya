@@ -105,6 +105,14 @@ export function WelcomePage() {
     setCachedMetas({})
   }
 
+  const handleOpenFolder = async () => {
+    const handle = await FileStorage.getWorkspaceHandle()
+    if (!handle) return
+    try {
+      await window.showDirectoryPicker({ mode: 'read', startIn: handle } as any)
+    } catch { /* cancelled */ }
+  }
+
   // ── Legacy (mobile) ──
 
   const handleLegacyFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +179,11 @@ export function WelcomePage() {
               {folderName ? (
                 <>
                   <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 border border-line">
-                    <FolderOpen className="size-4 text-ink-quaternary shrink-0" />
+                    <button onClick={handleOpenFolder}
+                            className="text-ink-quaternary hover:text-ink-secondary transition-colors shrink-0"
+                            title="Open folder">
+                      <FolderOpen className="size-4" />
+                    </button>
                     <span className="text-xs text-ink-secondary truncate">{folderName}</span>
                   </div>
 
@@ -242,6 +254,7 @@ export function WelcomePage() {
           {/* Mode: New */}
           {mode === 'new' && (
             <div className="space-y-3">
+              <p className="text-sm font-medium text-ink-primary">Create: {newVaultName || 'New Vault'}</p>
               <div className="space-y-1.5">
                 <Label className="text-xs text-ink-tertiary">Vault Name</Label>
                 <div className="flex items-center gap-2">

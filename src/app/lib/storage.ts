@@ -247,6 +247,11 @@ export class FileStorage {
     return ws?.directoryHandle?.name ?? null;
   }
 
+  static async getWorkspaceHandle(): Promise<FileSystemDirectoryHandle | null> {
+    const ws = await getWorkspace();
+    return ws?.directoryHandle ?? null;
+  }
+
   /**
    * Legacy save via download (for browsers without File System Access API).
    */
