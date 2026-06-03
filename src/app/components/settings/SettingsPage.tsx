@@ -2,19 +2,26 @@ import { useStore } from "../../store/useStore"
 import { Settings as SettingsIcon, Sun, Moon, Monitor, Palette } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-
-const PRESET_ICONS = [
-  '🔒', '🔑', '🗝️', '🛡️', '🔐',
-  '📦', '🚀', '⚡', '🎯', '💎',
-  '🏠', '🏢', '🌐', '☁️', '🤖',
-]
+import { useState, useEffect, useRef } from "react"
+import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 
 export function SettingsPage() {
   const { db, theme, setTheme, updateMeta } = useStore()
   const settings = db?.getSettings()
   const data = db?.getData()
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!iconPickerOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setIconPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [iconPickerOpen])
 
   if (!data) return null
 
@@ -50,17 +57,27 @@ export function SettingsPage() {
                   {data.icon || '🔒'}
                 </button>
                 {iconPickerOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-50 bg-canvas-panel border border-line rounded-md shadow-lg p-2 grid grid-cols-5 gap-1">
-                    {PRESET_ICONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => { updateMeta({ icon: emoji }); setIconPickerOpen(false) }}
-                        className={`size-8 rounded flex items-center justify-center text-sm hover:bg-surface-3 transition-colors
-                          ${data.icon === emoji ? 'bg-accent/15 ring-1 ring-accent' : ''}`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                  <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog">
+                    <EmojiPicker
+                      onEmojiSelect={(emoji) => {
+                        updateMeta({ icon: emoji })
+                        setIconPickerOpen(false)
+                      }}
+                      emojisPerRow={6}
+                      emojiSize={28}
+                      className="border-none"
+                    >
+                      <EmojiPicker.Header>
+                        <EmojiPicker.Input
+                          placeholder="Search emoji..."
+                          hideIcon
+                          className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
+                        />
+                      </EmojiPicker.Header>
+                      <EmojiPicker.Group>
+                        <EmojiPicker.List containerHeight={220} />
+                      </EmojiPicker.Group>
+                    </EmojiPicker>
                   </div>
                 )}
               </div>
