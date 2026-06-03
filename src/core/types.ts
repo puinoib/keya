@@ -45,9 +45,8 @@ export interface KeyaDatabase {
 }
 
 export const DEFAULT_GROUPS: Omit<Group, 'id'>[] = [
-  { name: '生产环境', icon: '🚀', order: 1 },
-  { name: '个人项目', icon: '👤', order: 2 },
-  { name: '公司项目', icon: '🏢', order: 3 },
+  { name: 'Production', icon: '🚀', order: 1 },
+  { name: 'Development', icon: '🔧', order: 2 },
 ];
 
 export const DEFAULT_SETTINGS: Settings = {
