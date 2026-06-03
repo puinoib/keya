@@ -4,7 +4,7 @@ import { useStore } from "../../store/useStore"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
 import { VaultSwitcher } from "../vault/VaultSwitcher"
-import { Key, Folder, Settings, Filter, X, ChevronDown } from "lucide-react"
+import { Key, Folder, FolderOpen, Settings, Filter, X, ChevronDown } from "lucide-react"
 
 function SidebarSection({
   icon: Icon,
@@ -109,7 +109,7 @@ export function Sidebar() {
           </nav>
 
           {/* Groups */}
-          {db && groups.length > 0 && (
+          {db && (
             <SidebarSection
               icon={Folder}
               label="Groups"
@@ -123,8 +123,30 @@ export function Sidebar() {
               }
             >
               <div className="space-y-px">
+                {/* Ungrouped */}
+                {(() => {
+                  const count = db.getApiKeys().filter((k) => !k.group_id).length
+                  const active = filterGroupId === "__ungrouped__"
+                  return (
+                    <button
+                      onClick={() => setFilterGroupId(active ? null : "__ungrouped__")}
+                      className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs transition-all duration-150
+                        ${active
+                          ? "bg-accent-default/10 text-accent-bright"
+                          : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}
+                    >
+                      <FolderOpen className="size-3.5 shrink-0" />
+                      <span className="truncate flex-1 text-left">Ungrouped</span>
+                      {count > 0 && (
+                        <span className={`text-2xs tabular-nums ${active ? "text-accent-bright/60" : "text-ink-quaternary"}`}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })()}
                 {groups.map((group) => {
-                  const count = db.getApiKeys().filter((k) => k.groupId === group.id).length
+                  const count = db.getApiKeys().filter((k) => k.group_id === group.id).length
                   const active = filterGroupId === group.id
                   return (
                     <button
