@@ -1,6 +1,5 @@
 import { Key, Lock } from "lucide-react"
 import { useStore } from "../../store/useStore"
-import { FileStorage } from "../../lib/storage"
 import { KeyList } from "../keys/KeyList"
 
 export function KeysPage() {
@@ -22,10 +21,7 @@ export function KeysPage() {
         </div>
 
         <button
-          onClick={async () => {
-            await FileStorage.lock()
-            useStore.getState().setWorkspaceState("locked")
-          }}
+          onClick={() => useStore.getState().lock()}
           className="btn-ghost text-xs"
         >
           <Lock className="size-3" />

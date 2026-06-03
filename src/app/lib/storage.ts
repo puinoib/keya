@@ -186,11 +186,10 @@ export class FileStorage {
   }
 
   /**
-   * Lock: clear workspace reference.
+   * Lock: clear in-memory state only.
+   * The workspace folder reference is preserved so users don't need to re-select it.
    */
-  static async lock(): Promise<void> {
-    await FileStorage.clearWorkspace();
-  }
+  static async lock(): Promise<void> {}
 
   /**
    * Legacy save via download (for browsers without File System Access API).
