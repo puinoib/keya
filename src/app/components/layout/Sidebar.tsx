@@ -126,7 +126,8 @@ export function Sidebar() {
         {/* Footer */}
         <div className="p-3 border-t border-line-subtle">
           <p className="text-2xs text-ink-quaternary text-center">
-            made with love, powered by Suisui's Purrs
+            <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
+               className="hover:text-ink-tertiary transition-colors">GitHub</a>
           </p>
         </div>
       </aside>

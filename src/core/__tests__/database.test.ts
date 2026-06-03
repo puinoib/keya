@@ -108,16 +108,15 @@ describe('Database', () => {
   it('bumps updated_at on mutations', async () => {
     const db = new Database()
     const initial = db.getData().updated_at
-    // Wait 1ms to ensure timestamp changes
-    await new Promise((r) => setTimeout(r, 1))
+    await new Promise((r) => setTimeout(r, 10))
     const created = db.addApiKey(makeKey())
     expect(new Date(db.getData().updated_at).getTime()).toBeGreaterThan(new Date(initial).getTime())
     const afterAdd = db.getData().updated_at
-    await new Promise((r) => setTimeout(r, 1))
+    await new Promise((r) => setTimeout(r, 10))
     db.updateApiKey(created.id, { name: 'X' })
     expect(new Date(db.getData().updated_at).getTime()).toBeGreaterThan(new Date(afterAdd).getTime())
     const afterUpdate = db.getData().updated_at
-    await new Promise((r) => setTimeout(r, 1))
+    await new Promise((r) => setTimeout(r, 10))
     db.deleteApiKey(created.id)
     expect(new Date(db.getData().updated_at).getTime()).toBeGreaterThan(new Date(afterUpdate).getTime())
   })
