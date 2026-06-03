@@ -63,7 +63,7 @@ export function SettingsPage() {
                         updateMeta({ icon: emoji })
                         setIconPickerOpen(false)
                       }}
-                      emojisPerRow={6}
+                      emojisPerRow={12}
                       emojiSize={28}
                       className="border-none"
                     >
