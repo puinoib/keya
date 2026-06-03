@@ -10,6 +10,7 @@ interface AppState {
   workspaceState: WorkspaceState
   db: Database | null
   password: string | null
+  activeVaultFileName: string | null
 
   // UI
   searchQuery: string
@@ -56,13 +57,13 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
-    const { db, password } = useStore.getState()
-    if (!db || !password) return
+    const { db, password, activeVaultFileName } = useStore.getState()
+    if (!db || !password || !activeVaultFileName) return
     try {
       if ("showDirectoryPicker" in window) {
-        await FileStorage.save(db.getData(), password)
+        await FileStorage.saveVault(activeVaultFileName, db.getData(), password)
       } else {
-        await FileStorage.saveViaDownload(db.getData(), password)
+        await FileStorage.saveViaDownload(db.getData(), password, activeVaultFileName)
       }
     } catch (e) {
       console.error('Auto-save failed:', e)
@@ -83,6 +84,7 @@ export const useStore = create<AppState>((set, get) => ({
   workspaceState: 'welcome',
   db: null,
   password: null,
+  activeVaultFileName: null,
   searchQuery: '',
   showAddForm: false,
   theme: (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') || 'system',
@@ -101,6 +103,7 @@ export const useStore = create<AppState>((set, get) => ({
       workspaceState: 'welcome',
       db: null,
       password: null,
+      activeVaultFileName: null,
       searchQuery: '',
       showAddForm: false,
       ...FILTER_DEFAULTS,
