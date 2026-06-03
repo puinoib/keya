@@ -1,0 +1,99 @@
+import { useState } from 'react'
+import { Loader2, ArrowRight } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+interface VaultPasswordDialogProps {
+  mode: 'unlock' | 'new'
+  vaultName: string
+  onSubmit: (password: string) => Promise<void>
+  onCancel: () => void
+}
+
+export function VaultPasswordDialog({ mode, vaultName, onSubmit, onCancel }: VaultPasswordDialogProps) {
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const isCreate = mode === 'new'
+  const canSubmit = isCreate
+    ? password.length >= 8 && password === confirm
+    : password.length > 0
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return
+    setLoading(true)
+    setError('')
+    try {
+      await onSubmit(password)
+    } catch {
+      setError(isCreate ? 'Failed to create vault.' : 'Wrong password. Try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2.5 mb-2">
+        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
+          <span className="text-sm">🔐</span>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-ink-primary">
+            {isCreate ? 'Create' : 'Unlock'}: {vaultName}
+          </p>
+          <p className="text-2xs text-ink-quaternary">
+            {isCreate ? 'Set a master password' : 'Enter your master password'}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs text-ink-tertiary">Master Password</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={isCreate ? 'Choose a strong password...' : 'Enter password...'}
+          onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+        />
+      </div>
+
+      {isCreate && (
+        <div className="space-y-1.5">
+          <Label className="text-xs text-ink-tertiary">Confirm Password</Label>
+          <Input
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="Re-enter your password..."
+            className={confirm && password !== confirm ? 'border-red-500/50' : ''}
+            onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+          />
+          {confirm && password !== confirm && (
+            <p className="text-2xs text-danger">Passwords don't match</p>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading || !canSubmit}
+        className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
+      >
+        {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+        {isCreate ? 'Create' : 'Unlock'}
+      </button>
+
+      <button
+        onClick={onCancel}
+        className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1"
+      >
+        ← Back
+      </button>
+    </div>
+  )
+}
