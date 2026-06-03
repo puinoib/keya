@@ -8,6 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -16,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Lock, Plus, Cog } from 'lucide-react'
+import { Lock, Plus, Cog, ArrowRightLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export function VaultSwitcher() {
@@ -77,32 +80,40 @@ export function VaultSwitcher() {
             </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
-          {vaults.map((f) => {
-            const meta = metas[f]
-            const isActive = f === activeVaultFileName
-            const name = meta?.name || f.replace(/\.keya$/, '')
-            return (
-              <DropdownMenuItem
-                key={f}
-                disabled={isActive}
-                onClick={() => setSwitchTarget(f)}
-                className={isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary'}
-              >
-                <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
-                <span className="truncate flex-1">{name}</span>
-                {isActive && <span className="ml-auto text-2xs text-ink-quaternary">active</span>}
+        <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="text-ink-quaternary">
+              <ArrowRightLeft className="size-3.5" />
+              <span>Switch Vault</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-52 max-h-64 overflow-y-auto">
+              {vaults.map((f) => {
+                const meta = metas[f]
+                const isActive = f === activeVaultFileName
+                const name = meta?.name || f.replace(/\.keya$/, '')
+                return (
+                  <DropdownMenuItem
+                    key={f}
+                    disabled={isActive}
+                    onClick={() => setSwitchTarget(f)}
+                    className={isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary'}
+                  >
+                    <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
+                    <span className="truncate flex-1">{name}</span>
+                    {isActive && <span className="ml-auto text-2xs text-ink-quaternary">active</span>}
+                  </DropdownMenuItem>
+                )
+              })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowNewVault(true)} className="text-ink-quaternary">
+                <Plus className="size-3" />
+                <span>New Vault</span>
               </DropdownMenuItem>
-            )
-          })}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowNewVault(true)} className="text-ink-quaternary">
-            <Plus className="size-3" />
-            <span>New Vault</span>
-          </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate("/settings")} className="text-ink-quaternary">
-            <Cog className="size-3" />
+            <Cog className="size-3.5" />
             <span>Settings</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
