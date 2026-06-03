@@ -1,7 +1,19 @@
 import { useRef } from "react"
 import { useStore } from "../../store/useStore"
-import { Search, Plus, Sun, Moon, Monitor, Download, Upload, MoreHorizontal } from "lucide-react"
+import { Search, Plus, Sun, Moon, Monitor, Download, Upload, FileKey, FileJson, MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { deserializeFromFile, serializeToFile, type KeyaDatabase } from "../../../core"
+import { FileStorage } from "../../lib/storage"
+import { Database } from "../../../core/database"
+
+function downloadBytes(data: Uint8Array, filename: string) {
+  const blob = new Blob([data], { type: "application/octet-stream" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url; a.download = filename
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 function downloadJSON(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
@@ -12,18 +24,79 @@ function downloadJSON(data: unknown, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+/** Merge imported database into current DB — creates a fresh Database to trigger re-render */
+function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
+  for (const key of imported.api_keys) {
+    current.addApiKey({
+      name: key.name || "Imported Key",
+      key: key.key || "",
+      description: key.description || "",
+      provider: key.provider || "Custom",
+      service: key.service || "",
+      endpoint: key.endpoint || "",
+      status: key.status || "active",
+      category_id: key.category_id || current.getData().categories[0]?.id || null,
+      tag_ids: key.tag_ids || [],
+      notes: key.notes || "",
+      last_tested: key.last_tested ?? null,
+      test_status: key.test_status ?? null,
+      test_latency_ms: key.test_latency_ms ?? null,
+    })
+  }
+}
+
 export function TopBar() {
   const { searchQuery, setSearchQuery, setShowAddForm, theme, setTheme, db, password, setDb } = useStore()
-  const importRef = useRef<HTMLInputElement>(null)
+  const importKeyaRef = useRef<HTMLInputElement>(null)
+  const importJsonRef = useRef<HTMLInputElement>(null)
 
-  const handleExport = () => {
-    if (!db) return
-    const data = db.getData()
-    // Warn: contains plain-text keys
-    downloadJSON(data, `keya-export-${new Date().toISOString().slice(0, 10)}.json`)
+  /* ──── Export .keya ──── */
+  const handleExportKeya = async () => {
+    if (!db || !password) return
+    try {
+      const bytes = await serializeToFile(db.getData(), password)
+      const date = new Date().toISOString().slice(0, 10)
+      downloadBytes(bytes, `keya-${date}.keya`)
+    } catch (e) {
+      console.error("Export .keya failed:", e)
+      alert("Failed to export .keya file.")
+    }
   }
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* ──── Import .keya ──── */
+  const handleImportKeya = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !db) return
+    e.target.value = ""
+
+    const pw = prompt("Enter the password for this .keya file:")
+    if (!pw) return
+
+    try {
+      const buffer = await file.arrayBuffer()
+      const imported = await deserializeFromFile(new Uint8Array(buffer), pw)
+      mergeIntoDb(db, imported)
+
+      // Refresh store with fresh Database ref
+      setDb(new Database(db.getData()))
+
+      // Save merged database to workspace
+      await FileStorage.save(db.getData(), password || "")
+    } catch (e) {
+      console.error("Import .keya failed:", e)
+      alert("Failed to open .keya file. Wrong password or corrupted file.")
+    }
+  }
+
+  /* ──── Export JSON ──── */
+  const handleExportJson = () => {
+    if (!db) return
+    const date = new Date().toISOString().slice(0, 10)
+    downloadJSON(db.getData(), `keya-export-${date}.json`)
+  }
+
+  /* ──── Import JSON ──── */
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !db) return
     try {
@@ -33,34 +106,16 @@ export function TopBar() {
         alert("Invalid Keya export format.")
         return
       }
-      // Merge: import all keys, categories, tags, settings
-      const current = db.getData()
-      for (const key of imported.api_keys) {
-        db.addApiKey({
-          name: key.name || "Imported Key",
-          key: key.key || "",
-          description: key.description || "",
-          provider: key.provider || "Custom",
-          service: key.service || "",
-          endpoint: key.endpoint || "",
-          category_id: key.category_id || current.categories[0]?.id || null,
-          tag_ids: key.tag_ids || [],
-          notes: key.notes || "",
-          last_tested: null,
-          test_status: null,
-          test_latency_ms: null,
-        })
-      }
-      // Create new DB reference to trigger re-render
-      const freshDb = new Database(db.getData())
-      setDb(freshDb)
+      mergeIntoDb(db, imported as KeyaDatabase)
+
+      // Refresh store with fresh Database ref
+      setDb(new Database(db.getData()))
+
       // Save to .keya
-      const { FileStorage } = await import("../../lib/storage")
-      await FileStorage.save(freshDb.getData(), password || "")
+      await FileStorage.save(db.getData(), password || "")
     } catch {
       alert("Failed to parse file.")
     }
-    // Reset input
     e.target.value = ""
   }
 
@@ -84,11 +139,20 @@ export function TopBar() {
             <MoreHorizontal className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={() => importRef.current?.click()}>
-            <Upload className="size-3.5" /> Import JSON
+        <DropdownMenuContent align="end" className="w-44">
+          {/* Keya import/export — encrypted, first priority */}
+          <DropdownMenuItem onClick={() => importKeyaRef.current?.click()}>
+            <FileKey className="size-3.5" /> Import .keya
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExport}>
+          <DropdownMenuItem onClick={handleExportKeya}>
+            <Download className="size-3.5" /> Export .keya
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* JSON import/export — unencrypted, secondary */}
+          <DropdownMenuItem onClick={() => importJsonRef.current?.click()}>
+            <FileJson className="size-3.5" /> Import JSON
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJson}>
             <Download className="size-3.5" /> Export JSON
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -97,7 +161,8 @@ export function TopBar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+      <input ref={importKeyaRef} type="file" accept=".keya" className="hidden" onChange={handleImportKeya} />
+      <input ref={importJsonRef} type="file" accept=".json" className="hidden" onChange={handleImportJson} />
 
       {/* Theme toggle */}
       <DropdownMenu>
