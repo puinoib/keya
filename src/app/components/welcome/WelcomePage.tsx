@@ -12,10 +12,27 @@ const supportsFSA = typeof window !== "undefined" && "showDirectoryPicker" in wi
 export function WelcomePage() {
   const [mode, setMode] = useState<"home" | "new" | "unlock">("home")
   const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { setWorkspaceState, setDb, setPassword: setStorePassword } = useStore()
+
+  // ── Password strength ──
+
+  function getStrength(pw: string): { score: number; label: string; color: string } {
+    let score = 0
+    if (pw.length >= 8) score++
+    if (pw.length >= 12) score++
+    if (/[A-Z]/.test(pw)) score++
+    if (/[0-9]/.test(pw)) score++
+    if (/[^A-Za-z0-9]/.test(pw)) score++
+    if (score <= 1) return { score: 1, label: "Weak", color: "#ef4444" }
+    if (score <= 2) return { score: 2, label: "Fair", color: "#f59e0b" }
+    if (score <= 3) return { score: 3, label: "Good", color: "#10b981" }
+    if (score <= 4) return { score: 4, label: "Strong", color: "#3b82f6" }
+    return { score: 5, label: "Very Strong", color: "#8b5cf6" }
+  }
 
   // ── Native (desktop Chrome) ──
 
@@ -32,6 +49,8 @@ export function WelcomePage() {
 
   const handleCreate = async () => {
     if (!password) return
+    if (password !== passwordConfirm) { setError("Passwords don't match."); return }
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return }
     setLoading(true)
     setError("")
     try {
@@ -178,13 +197,39 @@ export function WelcomePage() {
               <Label htmlFor="new-password" className="text-xs text-ink-tertiary">Master Password</Label>
               <Input id="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                      placeholder="Choose a strong password..." onKeyDown={(e) => e.key === "Enter" && handleCreate()} />
+              {/* Strength bar */}
+              {password && (() => {
+                const s = getStrength(password)
+                return (
+                  <div className="space-y-1">
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map((i) => (
+                        <div key={i} className="h-1 flex-1 rounded-full transition-colors duration-200"
+                             style={{ backgroundColor: i <= s.score ? s.color : "rgba(255,255,255,0.06)" }} />
+                      ))}
+                    </div>
+                    <p className="text-2xs" style={{ color: s.color }}>{s.label}</p>
+                  </div>
+                )
+              })()}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password-confirm" className="text-xs text-ink-tertiary">Confirm Password</Label>
+              <Input id="new-password-confirm" type="password" value={passwordConfirm}
+                     onChange={(e) => setPasswordConfirm(e.target.value)}
+                     placeholder="Re-enter your password..."
+                     className={passwordConfirm && password !== passwordConfirm ? "border-red-500/50" : ""}
+                     onKeyDown={(e) => e.key === "Enter" && handleCreate()} />
+              {passwordConfirm && password !== passwordConfirm && (
+                <p className="text-2xs text-danger">Passwords don't match</p>
+              )}
             </div>
             {error && <p className="text-xs text-danger">{error}</p>}
-            <button onClick={handleCreate} disabled={loading || !password}
+            <button onClick={handleCreate} disabled={loading || !password || !passwordConfirm || password !== passwordConfirm}
                     className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
               {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />} Create Vault
             </button>
-            <button onClick={() => { setMode("home"); setPassword(""); setError("") }}
+            <button onClick={() => { setMode("home"); setPassword(""); setPasswordConfirm(""); setError("") }}
                     className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1">← Back</button>
           </div>
         )}

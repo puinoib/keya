@@ -17,6 +17,7 @@ import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
   Eye, EyeOff,
 } from "lucide-react"
+import { maskKey } from "@/lib/mask"
 
 export function KeyList() {
   const db = useStore((s) => s.db)
@@ -114,6 +115,8 @@ export function KeyList() {
                 <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-quaternary">
                   <span>{key.provider}</span>
                   {key.service && <><span className="text-white/[0.12]">·</span><span>{key.service}</span></>}
+                  <span className="text-white/[0.12]">·</span>
+                  <span className="font-mono text-2xs">{maskKey(key.key)}</span>
                   {testOk && key.test_latency_ms != null && (
                     <><span className="text-white/[0.12]">·</span><span className="text-success-bright font-medium">{key.test_latency_ms}ms</span></>
                   )}
