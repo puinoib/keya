@@ -38,7 +38,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
 
         <div className="space-y-2 mt-2">
           {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-white/[0.02] border border-white/[0.06]">
+            <div key={cat.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-surface-2 border border-line-2">
               {editingId === cat.id ? (
                 <>
                   <Input
@@ -78,7 +78,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
 
           {/* Add new */}
           {isAdding ? (
-            <div className="space-y-2 p-3 rounded-md bg-white/[0.02] border border-accent/30">
+            <div className="space-y-2 p-3 rounded-md bg-surface-2 border border-accent/30">
               <Input value={newName} onChange={(e) => setNewName(e.target.value)}
                      placeholder="Category name" className="h-8 text-sm" autoFocus
                      onKeyDown={(e) => e.key === "Enter" && handleAdd()} />
@@ -87,7 +87,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
                 <div className="flex gap-1">
                   {ICONS.map((icon) => (
                     <button key={icon} onClick={() => setNewIcon(icon)}
-                            className={`size-6 flex items-center justify-center rounded text-sm ${newIcon === icon ? "bg-accent/20 ring-1 ring-accent-bright" : "hover:bg-white/[0.05]"}`}>
+                            className={`size-6 flex items-center justify-center rounded text-sm ${newIcon === icon ? "bg-accent/20 ring-1 ring-accent-bright" : "hover:bg-surface-5"}`}>
                       {icon}
                     </button>
                   ))}
@@ -110,7 +110,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
             </div>
           ) : (
             <button onClick={() => setIsAdding(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-white/[0.03] transition-colors">
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors">
               <Plus className="size-3.5" /> Add Category
             </button>
           )}

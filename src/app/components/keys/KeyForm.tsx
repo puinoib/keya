@@ -120,7 +120,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               id="provider"
               value={form.provider}
               onChange={(e) => handleProviderChange(e.target.value)}
-              className="flex h-9 w-full rounded-md bg-white/[0.02] border border-white/[0.08] px-3 py-2
+              className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
                          text-sm text-ink-primary
                          focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright
                          transition-colors duration-150 appearance-none"
@@ -173,7 +173,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
             id="category"
             value={form.category_id ?? ""}
             onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value || null }))}
-            className="flex h-9 w-full rounded-md bg-white/[0.02] border border-white/[0.08] px-3 py-2
+            className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
                        text-sm text-ink-primary
                        focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright
                        transition-colors duration-150 appearance-none"

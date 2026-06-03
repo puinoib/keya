@@ -56,7 +56,7 @@ export function MainPage() {
         </ScrollArea>
 
         {/* ── Status Bar ── */}
-        <footer className="h-7 flex items-center justify-between px-4 text-2xs text-ink-quaternary border-t border-white/[0.05] bg-canvas-panel shrink-0">
+        <footer className="h-7 flex items-center justify-between px-4 text-2xs text-ink-quaternary border-t border-line-subtle bg-canvas-panel shrink-0">
           <span>{db ? `${db.getApiKeys().length} keys` : "No vault"}</span>
           <span>Keya v1.0</span>
         </footer>

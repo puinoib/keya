@@ -34,7 +34,7 @@ export function ManageTagsDialog({ open, onClose }: { open: boolean; onClose: ()
 
         <div className="space-y-2 mt-2">
           {tags.map((tag) => (
-            <div key={tag.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-white/[0.02] border border-white/[0.06]">
+            <div key={tag.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-surface-2 border border-line-2">
               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
               <span className="flex-1 text-sm text-ink-secondary">{tag.name}</span>
               <button onClick={() => deleteTag(tag.id)}
@@ -49,7 +49,7 @@ export function ManageTagsDialog({ open, onClose }: { open: boolean; onClose: ()
           )}
 
           {isAdding ? (
-            <div className="space-y-2 p-3 rounded-md bg-white/[0.02] border border-accent/30">
+            <div className="space-y-2 p-3 rounded-md bg-surface-2 border border-accent/30">
               <Input value={newName} onChange={(e) => setNewName(e.target.value)}
                      placeholder="Tag name" className="h-8 text-sm" autoFocus
                      onKeyDown={(e) => e.key === "Enter" && handleAdd()} />
@@ -67,7 +67,7 @@ export function ManageTagsDialog({ open, onClose }: { open: boolean; onClose: ()
             </div>
           ) : (
             <button onClick={() => setIsAdding(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-white/[0.03] transition-colors">
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors">
               <Plus className="size-3.5" /> Add Tag
             </button>
           )}
