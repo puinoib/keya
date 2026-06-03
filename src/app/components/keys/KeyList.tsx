@@ -211,6 +211,7 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
   onClose: () => void
   onSave: (id: string, updates: Partial<ApiKey>) => void
 }) {
+  const db = useStore((s) => s.db)
   const [showKey, setShowKey] = useState(false)
   const [form, setForm] = useState({
     name: editingKey?.name ?? "",
@@ -219,6 +220,8 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
     service: editingKey?.service ?? "",
     endpoint: editingKey?.endpoint ?? "",
     description: editingKey?.description ?? "",
+    category_id: editingKey?.category_id ?? null as string | null,
+    tag_ids: editingKey?.tag_ids ?? [] as string[],
   })
 
   // Sync when editingKey changes
@@ -235,6 +238,8 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
       service: form.service,
       endpoint: form.endpoint,
       description: form.description,
+      category_id: form.category_id,
+      tag_ids: form.tag_ids,
     })
   }
 
@@ -289,6 +294,53 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
             <Label className="text-xs">Endpoint</Label>
             <Input value={form.endpoint} onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))} placeholder="https://api.openai.com/v1" className="font-mono text-xs" />
           </div>
+
+          {/* Category */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Category</Label>
+            <select
+              value={form.category_id ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value || null }))}
+              className="flex h-9 w-full rounded-md bg-white/[0.02] border border-white/[0.08] px-3 py-2
+                         text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
+                         focus-visible:ring-accent-bright appearance-none"
+            >
+              <option value="" className="bg-canvas-raised">Uncategorized</option>
+              {db?.getCategories().map((cat) => (
+                <option key={cat.id} value={cat.id} className="bg-canvas-raised">{cat.icon} {cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tags */}
+          {db && db.getTags().length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tags</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {db.getTags().map((tag) => {
+                  const selected = form.tag_ids.includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => setForm((f) => ({
+                        ...f,
+                        tag_ids: selected ? f.tag_ids.filter((id) => id !== tag.id) : [...f.tag_ids, tag.id],
+                      }))}
+                      className="px-2 py-0.5 text-2xs font-medium rounded-full border transition-colors"
+                      style={{
+                        color: selected ? tag.color : "var(--ink-quaternary)",
+                        borderColor: selected ? tag.color + "60" : "var(--border-subtle)",
+                        backgroundColor: selected ? tag.color + "10" : "transparent",
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-1.5">
