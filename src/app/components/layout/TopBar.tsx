@@ -120,12 +120,12 @@ export function TopBar() {
   }
 
   return (
-    <header className="h-12 flex items-center gap-3 px-4 border-b border-white/[0.05] bg-canvas-base shrink-0">
+    <header className="h-12 flex items-center gap-3 px-4 border-b border-line-subtle bg-canvas-base shrink-0">
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary" />
         <input type="text" placeholder="Search keys..." value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
-               className="w-full h-8 pl-8 pr-3 rounded-md bg-white/[0.02] border border-white/[0.08]
+               className="w-full h-8 pl-8 pr-3 rounded-md bg-surface-2 border border-line
                           text-sm text-ink-primary placeholder:text-ink-quaternary
                           focus:outline-none focus:ring-1 focus:ring-accent-bright transition-colors duration-150" />
       </div>

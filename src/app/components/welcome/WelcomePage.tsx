@@ -163,7 +163,7 @@ export function WelcomePage() {
                 </button>
                 <Separator className="my-3" />
                 <button onClick={handleOpen} disabled={loading}
-                        className="w-full flex items-center justify-center gap-2 rounded-md bg-white/[0.02] border border-white/[0.08] px-4 py-2.5 text-sm text-ink-secondary hover:bg-white/[0.05] hover:text-ink-primary transition-colors disabled:opacity-50">
+                        className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-5 hover:text-ink-primary transition-colors disabled:opacity-50">
                   <FileKey className="size-4" /> Open .keya File
                 </button>
               </>
@@ -205,7 +205,7 @@ export function WelcomePage() {
                     <div className="flex gap-1">
                       {[1,2,3,4,5].map((i) => (
                         <div key={i} className="h-1 flex-1 rounded-full transition-colors duration-200"
-                             style={{ backgroundColor: i <= s.score ? s.color : "rgba(255,255,255,0.06)" }} />
+                             style={{ backgroundColor: i <= s.score ? s.color : "var(--surface-6)" }} />
                       ))}
                     </div>
                     <p className="text-2xs" style={{ color: s.color }}>{s.label}</p>

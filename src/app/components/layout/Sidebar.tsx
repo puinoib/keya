@@ -18,7 +18,7 @@ export function Sidebar() {
     <>
       <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
         {/* Brand */}
-        <div className="h-12 flex items-center gap-2.5 px-4 border-b border-white/[0.05]">
+        <div className="h-12 flex items-center gap-2.5 px-4 border-b border-line-subtle">
           <div className="flex items-center justify-center size-6 rounded-md bg-accent text-white">
             <Key className="size-3.5" />
           </div>
@@ -33,7 +33,7 @@ export function Sidebar() {
               return (
                 <button key={item.label}
                         className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors duration-100
-                          ${item.active ? "bg-white/[0.06] text-ink-primary font-medium" : "text-ink-tertiary hover:text-ink-secondary hover:bg-white/[0.03]"}`}>
+                          ${item.active ? "bg-surface-6 text-ink-primary font-medium" : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}>
                   <Icon className="size-3.5 shrink-0" />
                   <span className="truncate">{item.label}</span>
                   <span className="ml-auto text-2xs text-ink-quaternary">{item.count}</span>
@@ -57,7 +57,7 @@ export function Sidebar() {
               </div>
               {db.getCategories().map((cat) => (
                 <button key={cat.id}
-                        className="w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-ink-tertiary hover:text-ink-secondary hover:bg-white/[0.03] transition-colors">
+                        className="w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 transition-colors">
                   <span className="text-sm leading-none">{cat.icon}</span>
                   <span className="truncate">{cat.name}</span>
                 </button>
@@ -82,7 +82,7 @@ export function Sidebar() {
                 <button key={tag.id}
                         onClick={() => toggleTagFilter(tag.id)}
                         className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs transition-colors
-                          ${selectedTagIds.includes(tag.id) ? "bg-white/[0.06] text-ink-primary" : "text-ink-tertiary hover:text-ink-secondary hover:bg-white/[0.03]"}`}>
+                          ${selectedTagIds.includes(tag.id) ? "bg-surface-6 text-ink-primary" : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}>
                   <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                   <span className="truncate">{tag.name}</span>
                   {selectedTagIds.includes(tag.id) && (
@@ -98,7 +98,7 @@ export function Sidebar() {
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-3 border-t border-white/[0.05]">
+        <div className="p-3 border-t border-line-subtle">
           <p className="text-2xs text-ink-quaternary text-center">
             made with love, powered by Suisui's Purrs
           </p>

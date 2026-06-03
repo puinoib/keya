@@ -20,42 +20,48 @@ export default {
         ],
       },
       colors: {
-        // ── Linear canvas ──
         canvas: {
-          deepest: '#010102',   // page bg
-          base:   '#08090a',    // marketing black
-          panel:  '#0f1011',    // sidebar
-          raised: '#191a1b',    // elevated surface
-          hover:  '#28282c',    // hover state
+          deepest: 'var(--canvas-deepest)',
+          base: 'var(--canvas-base)',
+          panel: 'var(--canvas-panel)',
+          raised: 'var(--canvas-raised)',
+          hover: 'var(--canvas-hover)',
         },
-        // ── Linear text ──
         ink: {
-          primary:   '#f7f8f8',  // near-white
-          secondary: '#d0d6e0',  // silver
-          tertiary:  '#8a8f98',  // muted
-          quaternary:'#62666d',  // subtle
+          primary: 'var(--ink-primary)',
+          secondary: 'var(--ink-secondary)',
+          tertiary: 'var(--ink-tertiary)',
+          quaternary: 'var(--ink-quaternary)',
         },
-        // ── Linear accent (the only chromatic color) ──
         accent: {
-          DEFAULT: '#5e6ad2',   // brand indigo
-          bright:  '#7170ff',   // interactive violet
-          hover:   '#828fff',   // hover
-          muted:   '#7a7fad',   // security lavender
+          DEFAULT: 'var(--accent-default)',
+          bright: 'var(--accent-bright)',
+          hover: 'var(--accent-hover)',
+          muted: 'var(--accent-muted)',
         },
-        // ── Linear borders ──
         line: {
-          DEFAULT: 'rgba(255,255,255,0.08)',
-          subtle:  'rgba(255,255,255,0.05)',
-          solid:   '#23252a',
+          DEFAULT: 'var(--line-3)',
+          subtle: 'var(--line-1)',
+          2: 'var(--line-2)',
+          4: 'var(--line-4)',
+          solid: '#23252a',
         },
-        // ── Status ──
+        surface: {
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          4: 'var(--surface-4)',
+          5: 'var(--surface-5)',
+          6: 'var(--surface-6)',
+        },
+        divider: 'var(--divider)',
         success: {
           DEFAULT: '#27a644',
-          bright:  '#10b981',
+          bright: '#10b981',
         },
         danger: {
           DEFAULT: '#ef4444',
-          muted:   '#7f1d1d',
+          muted: '#7f1d1d',
         },
       },
       borderRadius: {
@@ -64,11 +70,11 @@ export default {
         sm: '4px',
       },
       boxShadow: {
-        'card': 'rgba(0,0,0,0.2) 0px 0px 0px 1px',
-        'elevated': 'rgba(0,0,0,0.4) 0px 2px 4px',
-        'dialog': 'rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px',
-        'focus': 'rgba(0,0,0,0.1) 0px 4px 12px',
-        'inset': 'rgba(0,0,0,0.2) 0px 0px 12px 0px inset',
+        'card': 'var(--shadow-card)',
+        'elevated': 'var(--shadow-elevated)',
+        'dialog': 'var(--shadow-dialog)',
+        'focus': 'var(--shadow-focus)',
+        'inset': 'var(--shadow-inset)',
       },
       letterSpacing: {
         'display': '-.022em',

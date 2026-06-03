@@ -61,7 +61,7 @@ export function KeyList() {
   if (keys.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="flex items-center justify-center size-12 rounded-xl bg-white/[0.03] border border-white/[0.05] mb-4">
+        <div className="flex items-center justify-center size-12 rounded-xl bg-surface-3 border border-line-subtle mb-4">
           <FlaskConical className="size-5 text-ink-quaternary" />
         </div>
         <h3 className="text-sm font-medium text-ink-secondary mb-1">No API Keys yet</h3>
@@ -89,8 +89,8 @@ export function KeyList() {
             <div
               key={key.id}
               className="group flex items-center gap-4 px-4 py-3 rounded-lg
-                         bg-white/[0.01] border border-white/[0.06]
-                         hover:bg-white/[0.03] hover:border-white/[0.10]
+                         bg-surface-1 border border-line-2
+                         hover:bg-surface-3 hover:border-line-4
                          transition-all duration-150"
             >
               {/* Icon */}
@@ -114,13 +114,13 @@ export function KeyList() {
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-quaternary">
                   <span>{key.provider}</span>
-                  {key.service && <><span className="text-white/[0.12]">·</span><span>{key.service}</span></>}
-                  <span className="text-white/[0.12]">·</span>
+                  {key.service && <><span className="text-divider">·</span><span>{key.service}</span></>}
+                  <span className="text-divider">·</span>
                   <span className="font-mono text-2xs">{maskKey(key.key)}</span>
                   {testOk && key.test_latency_ms != null && (
-                    <><span className="text-white/[0.12]">·</span><span className="text-success-bright font-medium">{key.test_latency_ms}ms</span></>
+                    <><span className="text-divider">·</span><span className="text-success-bright font-medium">{key.test_latency_ms}ms</span></>
                   )}
-                  {testFail && <><span className="text-white/[0.12]">·</span><span className="text-danger font-medium">Failed</span></>}
+                  {testFail && <><span className="text-divider">·</span><span className="text-danger font-medium">Failed</span></>}
                 </div>
               </div>
 
@@ -144,7 +144,7 @@ export function KeyList() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button onClick={() => handleTest(key)} disabled={isTesting}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-white/[0.05] transition-colors disabled:opacity-50">
+                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors disabled:opacity-50">
                       {isTesting ? <span className="size-3.5 border-2 border-ink-tertiary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-3.5" />}
                     </button>
                   </TooltipTrigger>
@@ -154,7 +154,7 @@ export function KeyList() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button onClick={() => handleCopy(key.key, key.id)}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-white/[0.05] transition-colors">
+                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors">
                       {copiedId === key.id ? <span className="text-xs text-success-bright font-medium">✓</span> : <Copy className="size-3.5" />}
                     </button>
                   </TooltipTrigger>
@@ -163,7 +163,7 @@ export function KeyList() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-white/[0.05] transition-colors">
+                    <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors">
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
@@ -279,7 +279,7 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
             <div className="space-y-1.5">
               <Label className="text-xs">Provider</Label>
               <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
-                      className="flex h-9 w-full rounded-md bg-white/[0.02] border border-white/[0.08] px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright appearance-none">
+                      className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright appearance-none">
                 {PROVIDERS.map((p) => <option key={p} value={p} className="bg-canvas-raised">{p}</option>)}
               </select>
             </div>
@@ -301,7 +301,7 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
             <select
               value={form.category_id ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value || null }))}
-              className="flex h-9 w-full rounded-md bg-white/[0.02] border border-white/[0.08] px-3 py-2
+              className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
                          text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
                          focus-visible:ring-accent-bright appearance-none"
             >
