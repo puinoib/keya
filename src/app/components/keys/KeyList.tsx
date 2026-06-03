@@ -99,8 +99,7 @@ export function KeyList() {
               {/* Icon */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center justify-center size-9 rounded-lg shrink-0 text-base"
-                       style={{ backgroundColor: (group?.color ?? "#5e6ad2") + "18", color: group?.color ?? "#7170ff" }}>
+                  <div className="flex items-center justify-center size-9 rounded-lg bg-surface-3 text-ink-secondary shrink-0 text-base">
                     {group?.icon ? group.icon : <Key className="size-4" />}
                   </div>
                 </TooltipTrigger>

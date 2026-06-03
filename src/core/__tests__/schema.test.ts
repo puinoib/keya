@@ -118,6 +118,6 @@ describe('schema (.keya file format)', () => {
     const restored = await deserializeFromFile(bytes, password)
     expect(restored.vault_id).toBe(db.vault_id)
     expect(restored.name).toBe('')
-    expect(restored.icon).toBe('🔐')
+    expect(restored.icon).toBe('')
   })
 })

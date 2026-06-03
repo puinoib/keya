@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus, Trash2, Pencil, Check, X } from "lucide-react"
 
-const COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#84CC16"]
 const ICONS = ["🚀", "👤", "🏢", "☁️", "📦", "🔧", "💾", "🌐"]
 
 export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -16,7 +15,6 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newIcon, setNewIcon] = useState("📦")
-  const [newColor, setNewColor] = useState("#8B5CF6")
   const [isAdding, setIsAdding] = useState(false)
 
   if (!db) return null
@@ -24,7 +22,7 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
 
   const handleAdd = () => {
     if (!newName.trim()) return
-    addGroup({ name: newName.trim(), icon: newIcon, color: newColor, order: groups.length + 1 })
+    addGroup({ name: newName.trim(), icon: newIcon, order: groups.length + 1 })
     setNewName("")
     setIsAdding(false)
   }
@@ -40,29 +38,26 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
           {groups.map((g) => (
             <div key={g.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-surface-2 border border-line-2">
               {editingId === g.id ? (
-                <>
-                  <Input
-                    defaultValue={g.name}
-                    autoFocus
-                    className="h-7 text-xs flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        updateGroup(g.id, { name: (e.target as HTMLInputElement).value })
-                        setEditingId(null)
-                      }
-                      if (e.key === "Escape") setEditingId(null)
-                    }}
-                    onBlur={(e) => {
-                      updateGroup(g.id, { name: e.target.value })
+                <Input
+                  defaultValue={g.name}
+                  autoFocus
+                  className="h-7 text-xs flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      updateGroup(g.id, { name: (e.target as HTMLInputElement).value })
                       setEditingId(null)
-                    }}
-                  />
-                </>
+                    }
+                    if (e.key === "Escape") setEditingId(null)
+                  }}
+                  onBlur={(e) => {
+                    updateGroup(g.id, { name: e.target.value })
+                    setEditingId(null)
+                  }}
+                />
               ) : (
                 <>
                   <span className="text-base">{g.icon}</span>
                   <span className="flex-1 text-sm text-ink-secondary">{g.name}</span>
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
                   <button onClick={() => setEditingId(g.id)}
                           className="text-ink-quaternary hover:text-ink-primary transition-colors">
                     <Pencil className="size-3" />
@@ -90,16 +85,6 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
                             className={`size-6 flex items-center justify-center rounded text-sm ${newIcon === icon ? "bg-accent/20 ring-1 ring-accent-bright" : "hover:bg-surface-5"}`}>
                       {icon}
                     </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-2xs text-ink-quaternary">Color</Label>
-                <div className="flex gap-1">
-                  {COLORS.map((c) => (
-                    <button key={c} onClick={() => setNewColor(c)}
-                            className={`size-4 rounded-full ${newColor === c ? "ring-1 ring-accent-bright ring-offset-2 ring-offset-canvas-raised" : ""}`}
-                            style={{ backgroundColor: c }} />
                   ))}
                 </div>
               </div>

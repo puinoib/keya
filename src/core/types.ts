@@ -22,7 +22,6 @@ export interface Group {
   id: string;
   name: string;
   icon: string;
-  color: string;
   order: number;
 }
 
@@ -48,9 +47,9 @@ export interface KeyaDatabase {
 }
 
 export const DEFAULT_GROUPS: Omit<Group, 'id'>[] = [
-  { name: '生产环境', icon: '🚀', color: '#3B82F6', order: 1 },
-  { name: '个人项目', icon: '👤', color: '#10B981', order: 2 },
-  { name: '公司项目', icon: '🏢', color: '#8B5CF6', order: 3 },
+  { name: '生产环境', icon: '🚀', order: 1 },
+  { name: '个人项目', icon: '👤', order: 2 },
+  { name: '公司项目', icon: '🏢', order: 3 },
 ];
 
 export const DEFAULT_SETTINGS: Settings = {

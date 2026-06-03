@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { Database, createEmptyDatabase } from '../database'
 import type { ApiKey, Group } from '../types'
 
-const sampleGroup: Omit<Group, 'id'> = { name: 'Production', icon: '🚀', color: '#000', order: 1 }
+const sampleGroup: Omit<Group, 'id'> = { name: 'Production', icon: '🚀', order: 1 }
 
 function makeKey(overrides?: Partial<Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>>): Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> {
   return {
@@ -31,7 +31,7 @@ describe('Database', () => {
     expect(data.version).toBe('1.0')
     expect(data.vault_id).toBeTruthy()
     expect(data.name).toBe('')
-    expect(data.icon).toBe('🔐')
+    expect(data.icon).toBe('')
     expect(data.color).toBe('#3b82f6')
     expect(data.api_keys).toEqual([])
     expect(data.groups.length).toBeGreaterThanOrEqual(3)
