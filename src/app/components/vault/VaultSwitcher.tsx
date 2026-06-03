@@ -71,13 +71,15 @@ export function VaultSwitcher() {
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-full h-12 flex items-center gap-2 px-4 hover:bg-surface-3 transition-colors">
-            <div className="flex items-center justify-center size-6 rounded-md bg-surface-3 text-ink-secondary text-xs shrink-0">
+          <button className="w-full h-12 flex items-center gap-2.5 px-3.5 hover:bg-surface-3 transition-colors rounded-none">
+            <div className="flex items-center justify-center size-7 rounded-lg bg-accent-default/15 text-accent-bright text-sm shrink-0">
               {currentIcon ? currentIcon : <Lock className="size-3.5" />}
             </div>
-            <span className="text-sm font-semibold tracking-tight text-ink-primary truncate flex-1 text-left">
-              {currentName}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold tracking-tight text-ink-primary truncate block text-left">
+                {currentName}
+              </span>
+            </div>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52">
