@@ -62,7 +62,7 @@ export function KeyDetail() {
   return (
     <>
       <div
-        className="w-72 h-full flex flex-col rounded-xl
+        className="w-72 mr-3 my-3 flex flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >
