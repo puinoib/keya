@@ -85,13 +85,16 @@ export const useStore = create<AppState>((set, get) => ({
   password: null,
   searchQuery: '',
   showAddForm: false,
-  theme: 'dark',
+  theme: (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') || 'system',
   ...FILTER_DEFAULTS,
 
   setWorkspaceState: (state) => set({ workspaceState: state }),
   setDb: (db) => set({ db }),
   setPassword: (pw) => set({ password: pw }),
-  setTheme: (theme) => set({ theme }),
+  setTheme: (theme) => {
+    localStorage.setItem('keya-theme', theme)
+    set({ theme })
+  },
 
   lock: () =>
     set({
