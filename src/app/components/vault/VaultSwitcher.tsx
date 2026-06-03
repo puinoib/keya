@@ -24,11 +24,17 @@ export function VaultSwitcher() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSwitchTarget(null)
+        setShowNewVault(false)
+      }
     }
-    if (open) document.addEventListener('mousedown', handleClick)
+    if (open || switchTarget || showNewVault) {
+      document.addEventListener('mousedown', handleClick)
+    }
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
+  }, [open, switchTarget, showNewVault])
 
   const currentName = db?.getData().name || activeVaultFileName?.replace(/\.keya$/, '') || 'Vault'
   const currentIcon = db?.getData().icon || ''
@@ -61,32 +67,6 @@ export function VaultSwitcher() {
     setOpen(false)
   }
 
-  if (switchTarget) {
-    return (
-      <div className="p-3 border-b border-line-subtle">
-        <VaultPasswordDialog
-          mode="unlock"
-          vaultName={metas[switchTarget]?.name || switchTarget.replace(/\.keya$/, '')}
-          onSubmit={(pw) => handleSwitch(switchTarget, pw)}
-          onCancel={() => setSwitchTarget(null)}
-        />
-      </div>
-    )
-  }
-
-  if (showNewVault) {
-    return (
-      <div className="p-3 border-b border-line-subtle">
-        <VaultPasswordDialog
-          mode="new"
-          vaultName="New Vault"
-          onSubmit={handleCreate}
-          onCancel={() => setShowNewVault(false)}
-        />
-      </div>
-    )
-  }
-
   return (
     <div ref={ref} className="relative border-b border-line-subtle">
       <button
@@ -115,7 +95,7 @@ export function VaultSwitcher() {
               <button
                 key={f}
                 disabled={isActive}
-                onClick={() => { setSwitchTarget(f) }}
+                onClick={() => { setOpen(false); setSwitchTarget(f) }}
                 className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
                   ${isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary hover:bg-surface-3 hover:text-ink-primary'}`}
               >
@@ -127,13 +107,35 @@ export function VaultSwitcher() {
           })}
           <div className="border-t border-line-subtle mt-1 pt-1">
             <button
-              onClick={() => setShowNewVault(true)}
+              onClick={() => { setOpen(false); setShowNewVault(true) }}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-ink-quaternary hover:text-ink-tertiary hover:bg-surface-3 transition-colors"
             >
               <Plus className="size-3" />
               <span>New Vault</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {switchTarget && (
+        <div className="absolute left-0 right-0 top-full z-50 bg-canvas-panel border border-line rounded-b-md shadow-lg p-3">
+          <VaultPasswordDialog
+            mode="unlock"
+            vaultName={metas[switchTarget]?.name || switchTarget.replace(/\.keya$/, '')}
+            onSubmit={(pw) => handleSwitch(switchTarget, pw)}
+            onCancel={() => setSwitchTarget(null)}
+          />
+        </div>
+      )}
+
+      {showNewVault && (
+        <div className="absolute left-0 right-0 top-full z-50 bg-canvas-panel border border-line rounded-b-md shadow-lg p-3">
+          <VaultPasswordDialog
+            mode="new"
+            vaultName="New Vault"
+            onSubmit={handleCreate}
+            onCancel={() => setShowNewVault(false)}
+          />
         </div>
       )}
     </div>
