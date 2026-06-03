@@ -34,7 +34,7 @@ export function KeysPage() {
       {/* Detail wrapper: animates width so flex naturally shifts the list */}
       <div
         className={`shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
-                    ${selectedKeyId ? "w-72" : "w-0"}`}
+                    ${selectedKeyId ? "w-80" : "w-0"}`}
       >
         <KeyDetail />
       </div>
