@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage'
-import { Database } from '../../../core/database'
+import { Database, deserializeFromFile } from '../../../core'
 import { useStore } from '../../store/useStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -94,7 +94,6 @@ export function WelcomePage() {
   const handleLegacyUnlock = async (password: string) => {
     const file = (window as any).__legacyFile as File | undefined
     if (!file) throw new Error('Please select a .keya file first.')
-    const { deserializeFromFile } = await import('../../../core/schema')
     const buffer = await file.arrayBuffer()
     const data = await deserializeFromFile(new Uint8Array(buffer), password)
     const db = new Database(data)
