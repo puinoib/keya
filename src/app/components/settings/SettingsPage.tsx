@@ -1,16 +1,22 @@
 import { useStore } from "../../store/useStore"
-import { Settings as SettingsIcon, Sun, Moon, Monitor, Palette } from "lucide-react"
+import { Settings as SettingsIcon, Sun, Moon, Monitor, Palette, Fingerprint, Loader2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useState, useEffect, useRef } from "react"
 import { EmojiPicker } from "@ferrucc-io/emoji-picker"
+import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
 
 export function SettingsPage() {
-  const { db, theme, setTheme, updateMeta } = useStore()
+  const { db, password, theme, setTheme, updateMeta } = useStore()
   const settings = db?.getSettings()
   const data = db?.getData()
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const [bioRegistered, setBioRegistered] = useState(false)
+  const [bioLoading, setBioLoading] = useState(false)
+  const [bioError, setBioError] = useState('')
   const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const bioSupported = isBiometricSupported()
+  const vaultId = data?.vault_id
 
   useEffect(() => {
     if (!iconPickerOpen) return
@@ -22,6 +28,11 @@ export function SettingsPage() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [iconPickerOpen])
+
+  useEffect(() => {
+    if (!bioSupported || !vaultId) return
+    isBiometricRegistered(vaultId).then(setBioRegistered)
+  }, [bioSupported, vaultId])
 
   if (!data) return null
 
@@ -93,6 +104,49 @@ export function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Biometric */}
+        {bioSupported && vaultId && (
+          <div className="space-y-2">
+            <Label className="text-xs">Biometric Unlock</Label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  setBioLoading(true)
+                  setBioError('')
+                  try {
+                    if (bioRegistered) {
+                      await removeBiometric(vaultId)
+                      setBioRegistered(false)
+                    } else {
+                      await registerBiometric(vaultId, password!)
+                      setBioRegistered(true)
+                    }
+                  } catch (e) {
+                    setBioError(e instanceof Error ? e.message : 'Failed')
+                  } finally {
+                    setBioLoading(false)
+                  }
+                }}
+                disabled={bioLoading}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs transition-colors
+                  ${bioRegistered
+                    ? 'bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5'
+                    : 'bg-accent text-white hover:bg-accent-bright'}
+                  disabled:opacity-50`}
+              >
+                {bioLoading
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : <Fingerprint className="size-3.5" />}
+                {bioRegistered ? 'Remove' : 'Enable'}
+              </button>
+              {bioRegistered && (
+                <span className="text-2xs text-emerald-500">Enabled</span>
+              )}
+            </div>
+            {bioError && <p className="text-2xs text-danger">{bioError}</p>}
+          </div>
+        )}
 
         {/* Theme */}
         <div className="space-y-2">
