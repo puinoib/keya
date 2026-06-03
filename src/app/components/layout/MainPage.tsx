@@ -51,7 +51,7 @@ export function MainPage() {
             </div>
 
             {/* ── Content ── */}
-            {showAddForm ? <KeyForm /> : <KeyList />}
+            <KeyList />
           </main>
         </ScrollArea>
 
@@ -61,6 +61,8 @@ export function MainPage() {
           <span>Keya v1.0</span>
         </footer>
       </div>
+
+      <KeyForm open={showAddForm} onClose={() => setShowAddForm(false)} />
     </div>
   )
 }
