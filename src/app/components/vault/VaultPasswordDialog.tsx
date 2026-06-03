@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Loader2, ArrowRight, Lock, Fingerprint } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,20 @@ interface VaultPasswordDialogProps {
   onCancel: () => void
 }
 
+function evalStrength(pw: string) {
+  if (!pw) return { score: 0, label: '', color: '' }
+  let s = 0
+  if (pw.length >= 8) s++
+  if (pw.length >= 12) s++
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++
+  if (/\d/.test(pw)) s++
+  if (/[^a-zA-Z0-9]/.test(pw)) s++
+  if (s <= 1) return { score: 1, label: 'Weak', color: 'bg-red-500' }
+  if (s <= 2) return { score: 2, label: 'Fair', color: 'bg-orange-500' }
+  if (s <= 3) return { score: 3, label: 'Good', color: 'bg-yellow-500' }
+  return { score: 4, label: 'Strong', color: 'bg-emerald-500' }
+}
+
 export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaultId, onSubmit, onCancel }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -26,6 +40,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
   const canSubmit = isCreate
     ? password.length >= 8 && password === confirm
     : password.length > 0
+  const strength = useMemo(() => evalStrength(password), [password])
 
   useEffect(() => {
     if (isCreate || !vaultId) return
@@ -60,21 +75,17 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2.5 mb-2">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          {vaultIcon || <Lock className="size-4" />}
+      {!isCreate && (
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
+            {vaultIcon || <Lock className="size-4" />}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-ink-primary">Unlock: {vaultName}</p>
+            {fileName && <p className="text-2xs text-ink-quaternary">{fileName}</p>}
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-ink-primary">
-            {isCreate ? 'Create' : 'Unlock'}: {vaultName}
-          </p>
-          {isCreate ? (
-            <p className="text-2xs text-ink-quaternary">Set a master password</p>
-          ) : fileName ? (
-            <p className="text-2xs text-ink-quaternary">{fileName}</p>
-          ) : null}
-        </div>
-      </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs text-ink-tertiary">Master Password</Label>
@@ -85,6 +96,16 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
           placeholder={isCreate ? 'Choose a strong password...' : 'Enter password...'}
           onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
         />
+        {isCreate && password && (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex gap-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : 'bg-surface-3'}`} />
+              ))}
+            </div>
+            <span className="text-2xs text-ink-quaternary">{strength.label}</span>
+          </div>
+        )}
       </div>
 
       {isCreate && (
