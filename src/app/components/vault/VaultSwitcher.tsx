@@ -63,7 +63,7 @@ export function VaultSwitcher() {
   }
 
   return (
-    <div className="border-b border-line-subtle">
+    <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="w-full h-12 flex items-center gap-2 px-4 hover:bg-surface-3 transition-colors">
