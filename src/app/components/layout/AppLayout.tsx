@@ -21,11 +21,6 @@ export function AppLayout() {
               <Outlet />
             </main>
           </ScrollArea>
-
-          <footer className="h-6 flex items-center justify-between px-4 text-2xs text-ink-quaternary/50 border-t border-line-subtle shrink-0">
-            <span>{db ? `${db.getApiKeys().length} keys` : ""}</span>
-            <span>Keya v1.0</span>
-          </footer>
         </div>
       </div>
 
