@@ -23,9 +23,9 @@ function SidebarSection({
 
   return (
     <div className="px-2.5 py-1.5">
-      <button
+      <div
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-1.5 mb-1 group"
+        className="w-full flex items-center justify-between px-1.5 mb-1 group cursor-pointer"
       >
         <div className="flex items-center gap-1.5">
           <ChevronDown
@@ -37,7 +37,7 @@ function SidebarSection({
         <span className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
           {action}
         </span>
-      </button>
+      </div>
       {open && children}
     </div>
   )
