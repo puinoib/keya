@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label'
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new'
   vaultName: string
+  vaultIcon?: string
   onSubmit: (password: string) => Promise<void>
   onCancel: () => void
 }
 
-export function VaultPasswordDialog({ mode, vaultName, onSubmit, onCancel }: VaultPasswordDialogProps) {
+export function VaultPasswordDialog({ mode, vaultName, vaultIcon, onSubmit, onCancel }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -37,15 +38,17 @@ export function VaultPasswordDialog({ mode, vaultName, onSubmit, onCancel }: Vau
     <div className="space-y-3">
       <div className="flex items-center gap-2.5 mb-2">
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <Lock className="size-4" />
+          {vaultIcon || <Lock className="size-4" />}
         </div>
         <div>
           <p className="text-sm font-medium text-ink-primary">
             {isCreate ? 'Create' : 'Unlock'}: {vaultName}
           </p>
-          <p className="text-2xs text-ink-quaternary">
-            {isCreate ? 'Set a master password' : 'Enter your master password'}
-          </p>
+          {isCreate && (
+            <p className="text-2xs text-ink-quaternary">
+              Set a master password
+            </p>
+          )}
         </div>
       </div>
 

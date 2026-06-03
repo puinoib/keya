@@ -62,6 +62,10 @@ export function WelcomePage() {
       setFolderName(dirHandle.name)
       const files = await FileStorage.listVaultFiles()
       setVaultFiles(files)
+      const metas = await FileStorage.getCachedVaultMetas()
+      const map: Record<string, CachedVaultMeta> = {}
+      for (const m of metas) map[m.fileName] = m
+      setCachedMetas(map)
     } catch { /* cancelled */ }
     setLoading(false)
   }
@@ -126,22 +130,25 @@ export function WelcomePage() {
   // ── Render ──
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-canvas-deepest">
+    <div className="flex flex-col min-h-screen bg-canvas-deepest">
       {/* Theme toggle */}
-      <div className="absolute top-4 right-4 flex items-center gap-1 bg-surface-2 rounded-md border border-line p-0.5">
-        {([['system', Monitor], ['light', Sun], ['dark', Moon]] as const).map(([t, Icon]) => (
-          <button key={t} onClick={() => setTheme(t)}
-                  className={`p-1.5 rounded transition-colors ${theme === t ? 'bg-surface-5 text-ink-primary' : 'text-ink-quaternary hover:text-ink-secondary'}`}>
-            <Icon className="size-3.5" />
-          </button>
-        ))}
+      <div className="flex justify-end px-4 pt-4">
+        <div className="flex items-center gap-1 bg-surface-2 rounded-md border border-line p-0.5">
+          {([['system', Monitor], ['light', Sun], ['dark', Moon]] as const).map(([t, Icon]) => (
+            <button key={t} onClick={() => setTheme(t)}
+                    className={`p-1.5 rounded transition-colors ${theme === t ? 'bg-surface-5 text-ink-primary' : 'text-ink-quaternary hover:text-ink-secondary'}`}>
+              <Icon className="size-3.5" />
+            </button>
+          ))}
+        </div>
       </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-6">
-          <img src="/icon.svg" alt="Keya" className="size-11 mb-3.5" />
-          <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Keya</h1>
-          <p className="text-xs text-ink-tertiary mt-1">Your Key Guardian</p>
+        <div className="flex flex-col items-center mb-8">
+          <img src="/icon.svg" alt="Keya" className="size-14 mb-4" />
+          <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">Keya</h1>
+          <p className="text-xs text-ink-quaternary mt-1.5">Local-first AI API key manager</p>
         </div>
 
         {/* Browser warning */}
@@ -220,6 +227,7 @@ export function WelcomePage() {
             <VaultPasswordDialog
               mode="unlock"
               vaultName={cachedMetas[selectedVault]?.name || selectedVault.replace(/\.keya$/, '')}
+              vaultIcon={cachedMetas[selectedVault]?.icon}
               onSubmit={supportsFSA
                 ? (pw) => handleUnlockVault(selectedVault, pw)
                 : handleLegacyUnlock}
@@ -276,6 +284,7 @@ export function WelcomePage() {
               <VaultPasswordDialog
                 mode="new"
                 vaultName={newVaultName || 'New Vault'}
+                vaultIcon={newVaultIcon}
                 onSubmit={handleCreateVault}
                 onCancel={() => { setMode('home'); setNewVaultName(''); setNewVaultIcon(''); setEmojiPickerOpen(false) }}
               />
@@ -284,18 +293,33 @@ export function WelcomePage() {
         </div>
 
         {error && mode === 'home' && <p className="text-xs text-danger text-center mt-2">{error}</p>}
+      </div>
+      </div>
 
-        {mode === 'home' && (
-          <>
-            <p className="text-center text-2xs text-ink-quaternary mt-10">
-              Your keys stay on your device. Encrypted end-to-end.
-            </p>
+      {/* Footer */}
+      <div className="px-6 py-5">
+        <div className="mx-auto max-w-sm flex flex-col items-center gap-3">
+          <div className="flex items-center gap-1.5 text-ink-quaternary">
+            <svg className="size-3 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span className="text-2xs">End-to-end encrypted. Your keys never leave your device.</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="https://coryso.com" target="_blank" rel="noopener noreferrer"
+               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
+              Coryso Studio
+            </a>
+            <a href="https://x.com/intent/follow?screen_name=puinoib_" target="_blank" rel="noopener noreferrer"
+               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
+              X
+            </a>
             <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
-               className="block text-center text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors mt-2">
+               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
               GitHub
             </a>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   )
