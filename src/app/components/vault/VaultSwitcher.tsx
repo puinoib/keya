@@ -82,7 +82,7 @@ export function VaultSwitcher() {
             </div>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-52">
+        <DropdownMenuContent align="start" className="w-52 ml-2">
           <DropdownMenuItem onClick={() => navigate("/settings")} className="text-ink-quaternary">
             <Cog className="size-3.5" />
             <span>Settings</span>
