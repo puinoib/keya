@@ -28,9 +28,7 @@ export function Sidebar() {
       <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
         {/* Brand */}
         <div className="h-12 flex items-center gap-2.5 px-4 border-b border-line-subtle">
-          <div className="flex items-center justify-center size-6 rounded-md bg-accent text-white">
-            <Key className="size-3.5" />
-          </div>
+          <img src="/favicon.svg" alt="Keya" className="size-6" />
           <span className="text-sm font-semibold tracking-tight text-ink-primary">Keya</span>
         </div>
 
