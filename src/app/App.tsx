@@ -1,6 +1,7 @@
-import { useEffect } from "react"
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Loader2 } from "lucide-react"
 import { AppLayout } from "./components/layout/AppLayout"
 import { SettingsLayout } from "./components/layout/SettingsLayout"
 import { WelcomePage } from "./components/welcome/WelcomePage"
@@ -8,6 +9,9 @@ import { KeysPage } from "./components/keys/KeysPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
 import { BiometricPrompt } from "./components/vault/BiometricPrompt"
 import { useStore } from "./store/useStore"
+import { useAutoLock } from "./hooks/useAutoLock"
+import { loadSession, clearSession } from "./lib/session"
+import { FileStorage } from "./lib/storage"
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const workspaceState = useStore((s) => s.workspaceState)
@@ -85,14 +89,47 @@ function BiometricPromptLayer() {
   )
 }
 
+function SessionRestore({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const session = loadSession()
+    if (!session) { setReady(true); return }
+
+    const { fileName, password } = session
+    FileStorage.openVault(fileName, password)
+      .then((db) => {
+        useStore.getState().unlock(db, password, fileName)
+      })
+      .catch(() => {
+        clearSession()
+      })
+      .finally(() => setReady(true))
+  }, [])
+
+  useAutoLock()
+
+  if (!ready) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-canvas-deepest">
+        <Loader2 className="size-6 animate-spin text-ink-quaternary" />
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeSync />
-      <TooltipProvider delayDuration={300}>
-        <AppRoutes />
-        <BiometricPromptLayer />
-      </TooltipProvider>
+      <SessionRestore>
+        <TooltipProvider delayDuration={300}>
+          <AppRoutes />
+          <BiometricPromptLayer />
+        </TooltipProvider>
+      </SessionRestore>
     </BrowserRouter>
   )
 }

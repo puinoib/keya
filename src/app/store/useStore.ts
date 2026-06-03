@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { Database } from '../../core/database'
 import type { ApiKey, Group } from '../../core/types'
 import { FileStorage } from '../lib/storage'
+import { saveSession, clearSession } from '../lib/session'
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked'
 
@@ -32,6 +33,7 @@ interface AppState {
   setDb: (db: Database) => void
   setPassword: (pw: string) => void
   lock: () => void
+  unlock: (db: Database, password: string, fileName: string) => void
   setTheme: (theme: 'dark' | 'light' | 'system') => void
 
   // Actions - Keys
@@ -111,7 +113,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ theme })
   },
 
-  lock: () =>
+  lock: () => {
+    clearSession()
     set({
       workspaceState: 'welcome',
       db: null,
@@ -121,7 +124,18 @@ export const useStore = create<AppState>((set, get) => ({
       showAddForm: false,
       ...FILTER_DEFAULTS,
       selectedKeyId: null,
-    }),
+    })
+  },
+
+  unlock: (db, password, fileName) => {
+    saveSession(fileName, password)
+    set({
+      workspaceState: 'unlocked',
+      db,
+      password,
+      activeVaultFileName: fileName,
+    })
+  },
 
   addKey: (key) => {
     get().db?.addApiKey(key)
