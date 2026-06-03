@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { Database, createEmptyDatabase } from '../database'
-import type { ApiKey, Category, Tag } from '../types'
+import type { ApiKey, Group } from '../types'
 
-const sampleCategory: Omit<Category, 'id'> = { name: 'AI Models', icon: '🤖', color: '#000', order: 1 }
-const sampleTag: Omit<Tag, 'id'> = { name: 'production', color: '#ff0000' }
+const sampleGroup: Omit<Group, 'id'> = { name: 'Production', icon: '🚀', color: '#000', order: 1 }
 
 function makeKey(overrides?: Partial<Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>>): Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> {
   return {
@@ -14,8 +13,7 @@ function makeKey(overrides?: Partial<Omit<ApiKey, 'id' | 'created_at' | 'updated
     service: 'ChatGPT',
     endpoint: 'https://api.openai.com/v1',
     status: 'active',
-    category_id: null,
-    tag_ids: [],
+    group_id: null,
     notes: '',
     last_tested: null,
     test_status: null,
@@ -33,8 +31,7 @@ describe('Database', () => {
     expect(data.version).toBe('1.0')
     expect(data.file_id).toBeTruthy()
     expect(data.api_keys).toEqual([])
-    expect(data.categories.length).toBeGreaterThanOrEqual(3)
-    expect(data.tags).toEqual([])
+    expect(data.groups.length).toBeGreaterThanOrEqual(3)
     expect(data.settings.theme).toBe('system')
   })
 
@@ -155,50 +152,32 @@ describe('Database', () => {
     expect(db.searchKeys('OpenAi')).toHaveLength(1)
   })
 
-  /* ──── Categories ──── */
+  /* ──── Groups ──── */
 
-  it('adds and retrieves categories', () => {
+  it('adds and retrieves groups', () => {
     const db = new Database()
-    const count = db.getCategories().length
-    const cat = db.addCategory(sampleCategory)
-    expect(cat.id).toBeTruthy()
-    expect(db.getCategories()).toHaveLength(count + 1)
+    const count = db.getGroups().length
+    const group = db.addGroup(sampleGroup)
+    expect(group.id).toBeTruthy()
+    expect(db.getGroups()).toHaveLength(count + 1)
   })
 
-  it('updates a category', () => {
+  it('updates a group', () => {
     const db = new Database()
-    const cat = db.addCategory(sampleCategory)
-    db.updateCategory(cat.id, { name: 'Renamed' })
-    const cats = db.getCategories()
-    const renamed = cats.find((c) => c.id === cat.id)
+    const group = db.addGroup(sampleGroup)
+    db.updateGroup(group.id, { name: 'Renamed' })
+    const groups = db.getGroups()
+    const renamed = groups.find((g) => g.id === group.id)
     expect(renamed?.name).toBe('Renamed')
   })
 
-  it('deletes a category and unassigns keys', () => {
+  it('deletes a group and unassigns keys', () => {
     const db = new Database()
-    const cat = db.addCategory(sampleCategory)
-    const key = db.addApiKey(makeKey({ category_id: cat.id }))
-    db.deleteCategory(cat.id)
-    expect(db.getCategories().find((c) => c.id === cat.id)).toBeUndefined()
-    expect(db.getApiKey(key.id)?.category_id).toBeNull()
-  })
-
-  /* ──── Tags ──── */
-
-  it('adds and retrieves tags', () => {
-    const db = new Database()
-    const tag = db.addTag(sampleTag)
-    expect(tag.id).toBeTruthy()
-    expect(db.getTags()).toHaveLength(1)
-  })
-
-  it('deletes a tag and removes it from all keys', () => {
-    const db = new Database()
-    const tag = db.addTag(sampleTag)
-    const key = db.addApiKey(makeKey({ tag_ids: [tag.id] }))
-    db.deleteTag(tag.id)
-    expect(db.getTags()).toHaveLength(0)
-    expect(db.getApiKey(key.id)?.tag_ids).toEqual([])
+    const group = db.addGroup(sampleGroup)
+    const key = db.addApiKey(makeKey({ group_id: group.id }))
+    db.deleteGroup(group.id)
+    expect(db.getGroups().find((g) => g.id === group.id)).toBeUndefined()
+    expect(db.getApiKey(key.id)?.group_id).toBeNull()
   })
 
   /* ──── Settings ──── */

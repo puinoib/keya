@@ -9,8 +9,7 @@ export interface ApiKey {
   endpoint: string;
   key: string;
   status: 'active' | 'inactive' | 'expired';
-  category_id: string | null;
-  tag_ids: string[];
+  group_id: string | null;
   notes: string;
   last_tested: string | null;
   test_status: 'success' | 'failed' | null;
@@ -19,18 +18,12 @@ export interface ApiKey {
   updated_at: string;
 }
 
-export interface Category {
+export interface Group {
   id: string;
   name: string;
   icon: string;
   color: string;
   order: number;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
 }
 
 export interface Settings {
@@ -46,15 +39,14 @@ export interface KeyaDatabase {
   created_at: string;
   updated_at: string;
   api_keys: ApiKey[];
-  categories: Category[];
-  tags: Tag[];
+  groups: Group[];
   settings: Settings;
 }
 
-export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
-  { name: 'AI 模型', icon: '🤖', color: '#3B82F6', order: 1 },
-  { name: '云服务', icon: '☁️', color: '#10B981', order: 2 },
-  { name: '其他', icon: '📦', color: '#8B5CF6', order: 3 },
+export const DEFAULT_GROUPS: Omit<Group, 'id'>[] = [
+  { name: '生产环境', icon: '🚀', color: '#3B82F6', order: 1 },
+  { name: '个人项目', icon: '👤', color: '#10B981', order: 2 },
+  { name: '公司项目', icon: '🏢', color: '#8B5CF6', order: 3 },
 ];
 
 export const DEFAULT_SETTINGS: Settings = {

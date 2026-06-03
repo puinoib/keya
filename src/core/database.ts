@@ -1,5 +1,5 @@
-import type { KeyaDatabase, ApiKey, Category, Tag } from './types';
-import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from './types';
+import type { KeyaDatabase, ApiKey, Group } from './types';
+import { DEFAULT_GROUPS, DEFAULT_SETTINGS } from './types';
 
 export function createEmptyDatabase(): KeyaDatabase {
   const now = new Date().toISOString();
@@ -9,12 +9,11 @@ export function createEmptyDatabase(): KeyaDatabase {
     created_at: now,
     updated_at: now,
     api_keys: [],
-    categories: DEFAULT_CATEGORIES.map((c, i) => ({
-      ...c,
+    groups: DEFAULT_GROUPS.map((g, i) => ({
+      ...g,
       id: crypto.randomUUID(),
       order: i + 1,
     })),
-    tags: [],
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -80,67 +79,34 @@ export class Database {
     );
   }
 
-  /* ──── Categories ──── */
+  /* ──── Groups ──── */
 
-  getCategories(): Category[] {
-    return [...this.data.categories].sort((a, b) => a.order - b.order);
+  getGroups(): Group[] {
+    return [...this.data.groups].sort((a, b) => a.order - b.order);
   }
 
-  addCategory(cat: Omit<Category, 'id'>): Category {
-    const newCat: Category = { ...cat, id: crypto.randomUUID() };
-    this.data.categories.push(newCat);
+  addGroup(group: Omit<Group, 'id'>): Group {
+    const newGroup: Group = { ...group, id: crypto.randomUUID() };
+    this.data.groups.push(newGroup);
     this.touch();
-    return newCat;
+    return newGroup;
   }
 
-  updateCategory(id: string, updates: Partial<Category>): Category | null {
-    const idx = this.data.categories.findIndex((c) => c.id === id);
+  updateGroup(id: string, updates: Partial<Group>): Group | null {
+    const idx = this.data.groups.findIndex((g) => g.id === id);
     if (idx === -1) return null;
-    this.data.categories[idx] = { ...this.data.categories[idx], ...updates, id };
+    this.data.groups[idx] = { ...this.data.groups[idx], ...updates, id };
     this.touch();
-    return this.data.categories[idx];
+    return this.data.groups[idx];
   }
 
-  deleteCategory(id: string): boolean {
-    const idx = this.data.categories.findIndex((c) => c.id === id);
+  deleteGroup(id: string): boolean {
+    const idx = this.data.groups.findIndex((g) => g.id === id);
     if (idx === -1) return false;
-    this.data.categories.splice(idx, 1);
-    // Unassign keys in this category
+    this.data.groups.splice(idx, 1);
+    // Unassign keys in this group
     this.data.api_keys.forEach((k) => {
-      if (k.category_id === id) k.category_id = null;
-    });
-    this.touch();
-    return true;
-  }
-
-  /* ──── Tags ──── */
-
-  getTags(): Tag[] {
-    return this.data.tags;
-  }
-
-  addTag(tag: Omit<Tag, 'id'>): Tag {
-    const newTag: Tag = { ...tag, id: crypto.randomUUID() };
-    this.data.tags.push(newTag);
-    this.touch();
-    return newTag;
-  }
-
-  updateTag(id: string, updates: Partial<Tag>): Tag | null {
-    const idx = this.data.tags.findIndex((t) => t.id === id);
-    if (idx === -1) return null;
-    this.data.tags[idx] = { ...this.data.tags[idx], ...updates, id };
-    this.touch();
-    return this.data.tags[idx];
-  }
-
-  deleteTag(id: string): boolean {
-    const idx = this.data.tags.findIndex((t) => t.id === id);
-    if (idx === -1) return false;
-    this.data.tags.splice(idx, 1);
-    // Remove tag from all keys
-    this.data.api_keys.forEach((k) => {
-      k.tag_ids = k.tag_ids.filter((tid) => tid !== id);
+      if (k.group_id === id) k.group_id = null;
     });
     this.touch();
     return true;

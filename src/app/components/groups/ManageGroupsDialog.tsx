@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash2, Pencil, Check, X } from "lucide-react"
 
 const COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444", "#EC4899", "#06B6D4", "#84CC16"]
-const ICONS = ["🤖", "☁️", "📦", "🔧", "💾", "🌐", "📊", "🎯"]
+const ICONS = ["🚀", "👤", "🏢", "☁️", "📦", "🔧", "💾", "🌐"]
 
-export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { db, addCategory, updateCategory, deleteCategory } = useStore()
+export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { db, addGroup, updateGroup, deleteGroup } = useStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newIcon, setNewIcon] = useState("📦")
@@ -20,11 +20,11 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
   const [isAdding, setIsAdding] = useState(false)
 
   if (!db) return null
-  const categories = db.getCategories()
+  const groups = db.getGroups()
 
   const handleAdd = () => {
     if (!newName.trim()) return
-    addCategory({ name: newName.trim(), icon: newIcon, color: newColor, order: categories.length + 1 })
+    addGroup({ name: newName.trim(), icon: newIcon, color: newColor, order: groups.length + 1 })
     setNewName("")
     setIsAdding(false)
   }
@@ -33,41 +33,41 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Manage Categories</DialogTitle>
+          <DialogTitle>Manage Groups</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-2 mt-2">
-          {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-surface-2 border border-line-2">
-              {editingId === cat.id ? (
+          {groups.map((g) => (
+            <div key={g.id} className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-surface-2 border border-line-2">
+              {editingId === g.id ? (
                 <>
                   <Input
-                    defaultValue={cat.name}
+                    defaultValue={g.name}
                     autoFocus
                     className="h-7 text-xs flex-1"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        updateCategory(cat.id, { name: (e.target as HTMLInputElement).value })
+                        updateGroup(g.id, { name: (e.target as HTMLInputElement).value })
                         setEditingId(null)
                       }
                       if (e.key === "Escape") setEditingId(null)
                     }}
                     onBlur={(e) => {
-                      updateCategory(cat.id, { name: e.target.value })
+                      updateGroup(g.id, { name: e.target.value })
                       setEditingId(null)
                     }}
                   />
                 </>
               ) : (
                 <>
-                  <span className="text-base">{cat.icon}</span>
-                  <span className="flex-1 text-sm text-ink-secondary">{cat.name}</span>
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                  <button onClick={() => setEditingId(cat.id)}
+                  <span className="text-base">{g.icon}</span>
+                  <span className="flex-1 text-sm text-ink-secondary">{g.name}</span>
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: g.color }} />
+                  <button onClick={() => setEditingId(g.id)}
                           className="text-ink-quaternary hover:text-ink-primary transition-colors">
                     <Pencil className="size-3" />
                   </button>
-                  <button onClick={() => deleteCategory(cat.id)}
+                  <button onClick={() => deleteGroup(g.id)}
                           className="text-ink-quaternary hover:text-danger transition-colors">
                     <Trash2 className="size-3" />
                   </button>
@@ -80,7 +80,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
           {isAdding ? (
             <div className="space-y-2 p-3 rounded-md bg-surface-2 border border-accent/30">
               <Input value={newName} onChange={(e) => setNewName(e.target.value)}
-                     placeholder="Category name" className="h-8 text-sm" autoFocus
+                     placeholder="Group name" className="h-8 text-sm" autoFocus
                      onKeyDown={(e) => e.key === "Enter" && handleAdd()} />
               <div className="flex items-center gap-2">
                 <Label className="text-2xs text-ink-quaternary">Icon</Label>
@@ -111,7 +111,7 @@ export function ManageCategoriesDialog({ open, onClose }: { open: boolean; onClo
           ) : (
             <button onClick={() => setIsAdding(true)}
                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors">
-              <Plus className="size-3.5" /> Add Category
+              <Plus className="size-3.5" /> Add Group
             </button>
           )}
         </div>

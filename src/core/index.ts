@@ -1,7 +1,7 @@
 // @keya/core — public API
 // Types
-export type { KeyaDatabase, ApiKey, Category, Tag, Settings } from './types';
-export { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, ENDPOINT_DEFAULTS } from './types';
+export type { KeyaDatabase, ApiKey, Group, Settings } from './types';
+export { DEFAULT_GROUPS, DEFAULT_SETTINGS, ENDPOINT_DEFAULTS } from './types';
 
 // Crypto
 export { initCrypto, packEncrypted, decryptRaw, deriveKey } from './crypto';

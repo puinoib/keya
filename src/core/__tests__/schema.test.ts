@@ -22,8 +22,7 @@ describe('schema (.keya file format)', () => {
       provider: 'OpenAI',
       service: 'ChatGPT',
       endpoint: 'https://api.openai.com/v1',
-      category_id: base.categories[0]?.id ?? null,
-      tag_ids: [],
+      group_id: base.groups[0]?.id ?? null,
       notes: '',
       last_tested: null,
       test_status: null,
@@ -37,8 +36,7 @@ describe('schema (.keya file format)', () => {
       provider: 'Anthropic',
       service: 'Claude',
       endpoint: 'https://api.anthropic.com',
-      category_id: base.categories[0]?.id ?? null,
-      tag_ids: [],
+      group_id: base.groups[0]?.id ?? null,
       notes: 'Main production key',
       last_tested: null,
       test_status: null,
@@ -59,7 +57,7 @@ describe('schema (.keya file format)', () => {
     expect(restored.api_keys[0].name).toBe(db.api_keys[0].name)
     expect(restored.api_keys[0].key).toBe(db.api_keys[0].key)
     expect(restored.api_keys[1].key).toBe(db.api_keys[1].key)
-    expect(restored.categories).toHaveLength(db.categories.length)
+    expect(restored.groups).toHaveLength(db.groups.length)
     // updated_at is set from header.modified, accept close timestamps
     expect(Math.abs(new Date(restored.updated_at).getTime() - new Date(db.updated_at).getTime())).toBeLessThan(5000)
   })

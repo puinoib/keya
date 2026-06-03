@@ -21,8 +21,7 @@ interface FormData {
   service: string
   endpoint: string
   description: string
-  category_id: string | null
-  tag_ids: string[]
+  group_id: string | null
 }
 
 const empty: FormData = {
@@ -32,8 +31,7 @@ const empty: FormData = {
   service: "ChatGPT",
   endpoint: "",
   description: "",
-  category_id: null,
-  tag_ids: [],
+  group_id: null,
 }
 
 export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -62,8 +60,12 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
       service: form.service,
       endpoint: form.endpoint,
       description: form.description,
-      category_id: form.category_id,
-      tag_ids: form.tag_ids,
+      group_id: form.group_id,
+      status: "active",
+      notes: "",
+      last_tested: null,
+      test_status: null,
+      test_latency_ms: null,
     })
     setForm(empty)
   }
@@ -166,54 +168,24 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
           />
         </div>
 
-        {/* Category */}
+        {/* Group */}
         <div className="space-y-1.5">
-          <Label htmlFor="category" className="text-xs">Category</Label>
+          <Label htmlFor="group" className="text-xs">Group</Label>
           <select
-            id="category"
-            value={form.category_id ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value || null }))}
+            id="group"
+            value={form.group_id ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, group_id: e.target.value || null }))}
             className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
                        text-sm text-ink-primary
                        focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright
                        transition-colors duration-150 appearance-none"
           >
-            <option value="" className="bg-canvas-raised">Uncategorized</option>
-            {db?.getCategories().map((cat) => (
-              <option key={cat.id} value={cat.id} className="bg-canvas-raised">{cat.icon} {cat.name}</option>
+            <option value="" className="bg-canvas-raised">Ungrouped</option>
+            {db?.getGroups().map((g) => (
+              <option key={g.id} value={g.id} className="bg-canvas-raised">{g.icon} {g.name}</option>
             ))}
           </select>
         </div>
-
-        {/* Tags */}
-        {db && db.getTags().length > 0 && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Tags</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {db.getTags().map((tag) => {
-                const selected = form.tag_ids.includes(tag.id)
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => setForm((f) => ({
-                      ...f,
-                      tag_ids: selected ? f.tag_ids.filter((id) => id !== tag.id) : [...f.tag_ids, tag.id],
-                    }))}
-                    className="px-2 py-0.5 text-2xs font-medium rounded-full border transition-colors"
-                    style={{
-                      color: selected ? tag.color : "var(--ink-quaternary)",
-                      borderColor: selected ? tag.color + "60" : "var(--border-subtle)",
-                      backgroundColor: selected ? tag.color + "10" : "transparent",
-                    }}
-                  >
-                    {tag.name}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Description */}
         <div className="space-y-1.5">

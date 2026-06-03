@@ -21,7 +21,7 @@ import { maskKey } from "@/lib/mask"
 
 export function KeyList() {
   const db = useStore((s) => s.db)
-  const { searchQuery, selectedTagIds, setShowAddForm, updateKey, deleteKey } = useStore()
+  const { searchQuery, filterGroupId, filterProvider, filterStatus, filterTestStatus, setShowAddForm, updateKey, deleteKey } = useStore()
   const [testing, setTesting] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
@@ -30,13 +30,16 @@ export function KeyList() {
 
   let keys = db.getApiKeys()
   if (searchQuery) keys = db.searchKeys(searchQuery)
-  if (selectedTagIds.length > 0)
-    keys = keys.filter((k) => k.tag_ids.some((tid) => selectedTagIds.includes(tid)))
+  if (filterGroupId) keys = keys.filter((k) => k.group_id === filterGroupId)
+  if (filterProvider) keys = keys.filter((k) => k.provider === filterProvider)
+  if (filterStatus) keys = keys.filter((k) => k.status === filterStatus)
+  if (filterTestStatus) keys = keys.filter((k) => {
+    if (filterTestStatus === "untested") return !k.test_status
+    return k.test_status === filterTestStatus
+  })
 
-  const categories = db.getCategories()
-  const tags = db.getTags()
-  const getCategory = (id: string | null) => categories.find((c) => c.id === id)
-  const getTag = (id: string) => tags.find((t) => t.id === id)
+  const groups = db.getGroups()
+  const getGroup = (id: string | null) => groups.find((g) => g.id === id)
 
   const handleTest = async (key: ApiKey) => {
     setTesting(key.id)
@@ -80,7 +83,7 @@ export function KeyList() {
     <>
       <div className="space-y-2">
         {keys.map((key) => {
-          const cat = getCategory(key.category_id)
+          const group = getGroup(key.group_id)
           const isTesting = testing === key.id
           const testOk = key.test_status === "success"
           const testFail = key.test_status === "failed"
@@ -97,11 +100,11 @@ export function KeyList() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center justify-center size-9 rounded-lg shrink-0 text-base"
-                       style={{ backgroundColor: (cat?.color ?? "#5e6ad2") + "18", color: cat?.color ?? "#7170ff" }}>
-                    {cat?.icon ?? "🔑"}
+                       style={{ backgroundColor: (group?.color ?? "#5e6ad2") + "18", color: group?.color ?? "#7170ff" }}>
+                    {group?.icon ?? "🔑"}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>{cat?.name ?? "Uncategorized"}</TooltipContent>
+                <TooltipContent>{group?.name ?? "Ungrouped"}</TooltipContent>
               </Tooltip>
 
               {/* Info */}
@@ -122,21 +125,6 @@ export function KeyList() {
                   )}
                   {testFail && <><span className="text-divider">·</span><span className="text-danger font-medium">Failed</span></>}
                 </div>
-              </div>
-
-              {/* Tags */}
-              <div className="hidden md:flex items-center gap-1 shrink-0">
-                {key.tag_ids.slice(0, 2).map((tid) => {
-                  const tag = getTag(tid)
-                  if (!tag) return null
-                  return (
-                    <span key={tid} className="px-2 py-0.5 text-2xs font-medium rounded-full border"
-                          style={{ color: tag.color, borderColor: tag.color + "40", backgroundColor: tag.color + "10" }}>
-                      {tag.name}
-                    </span>
-                  )
-                })}
-                {key.tag_ids.length > 2 && <span className="text-2xs text-ink-quaternary">+{key.tag_ids.length - 2}</span>}
               </div>
 
               {/* Actions */}
@@ -220,14 +208,8 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
     service: editingKey?.service ?? "",
     endpoint: editingKey?.endpoint ?? "",
     description: editingKey?.description ?? "",
-    category_id: editingKey?.category_id ?? null as string | null,
-    tag_ids: editingKey?.tag_ids ?? [] as string[],
+    group_id: editingKey?.group_id ?? null as string | null,
   })
-
-  // Sync when editingKey changes
-  if (editingKey && form.name === "" && editingKey.name !== "") {
-    // Only sync on first open — let user edits persist
-  }
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return
@@ -238,8 +220,7 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
       service: form.service,
       endpoint: form.endpoint,
       description: form.description,
-      category_id: form.category_id,
-      tag_ids: form.tag_ids,
+      group_id: form.group_id,
     })
   }
 
@@ -295,52 +276,22 @@ function EditKeyDialog({ editingKey, onClose, onSave }: {
             <Input value={form.endpoint} onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))} placeholder="https://api.openai.com/v1" className="font-mono text-xs" />
           </div>
 
-          {/* Category */}
+          {/* Group */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Category</Label>
+            <Label className="text-xs">Group</Label>
             <select
-              value={form.category_id ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value || null }))}
+              value={form.group_id ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, group_id: e.target.value || null }))}
               className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
                          text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
                          focus-visible:ring-accent-bright appearance-none"
             >
-              <option value="" className="bg-canvas-raised">Uncategorized</option>
-              {db?.getCategories().map((cat) => (
-                <option key={cat.id} value={cat.id} className="bg-canvas-raised">{cat.icon} {cat.name}</option>
+              <option value="" className="bg-canvas-raised">Ungrouped</option>
+              {db?.getGroups().map((g) => (
+                <option key={g.id} value={g.id} className="bg-canvas-raised">{g.icon} {g.name}</option>
               ))}
             </select>
           </div>
-
-          {/* Tags */}
-          {db && db.getTags().length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tags</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {db.getTags().map((tag) => {
-                  const selected = form.tag_ids.includes(tag.id)
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => setForm((f) => ({
-                        ...f,
-                        tag_ids: selected ? f.tag_ids.filter((id) => id !== tag.id) : [...f.tag_ids, tag.id],
-                      }))}
-                      className="px-2 py-0.5 text-2xs font-medium rounded-full border transition-colors"
-                      style={{
-                        color: selected ? tag.color : "var(--ink-quaternary)",
-                        borderColor: selected ? tag.color + "60" : "var(--border-subtle)",
-                        backgroundColor: selected ? tag.color + "10" : "transparent",
-                      }}
-                    >
-                      {tag.name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Description */}
           <div className="space-y-1.5">
