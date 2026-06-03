@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Database } from '../../core/database'
-import type { ApiKey, Category, Tag } from '../../core/types'
+import type { ApiKey, Group } from '../../core/types'
 import { FileStorage } from '../lib/storage'
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked'
@@ -13,9 +13,14 @@ interface AppState {
 
   // UI
   searchQuery: string
-  selectedTagIds: string[]
   showAddForm: boolean
   theme: 'dark' | 'light' | 'system'
+
+  // Smart filters
+  filterGroupId: string | null
+  filterProvider: string | null
+  filterStatus: string | null
+  filterTestStatus: string | null
 
   // Actions - Workspace
   setWorkspaceState: (state: WorkspaceState) => void
@@ -31,15 +36,17 @@ interface AppState {
 
   // Actions - UI
   setSearchQuery: (q: string) => void
-  toggleTagFilter: (tagId: string) => void
   setShowAddForm: (show: boolean) => void
+  setFilterGroupId: (id: string | null) => void
+  setFilterProvider: (p: string | null) => void
+  setFilterStatus: (s: string | null) => void
+  setFilterTestStatus: (s: string | null) => void
+  clearFilters: () => void
 
-  // Actions - Categories & Tags
-  addCategory: (cat: Omit<Category, 'id'>) => void
-  updateCategory: (id: string, updates: Partial<Category>) => void
-  deleteCategory: (id: string) => void
-  addTag: (tag: Omit<Tag, 'id'>) => void
-  deleteTag: (id: string) => void
+  // Actions - Groups
+  addGroup: (group: Omit<Group, 'id'>) => void
+  updateGroup: (id: string, updates: Partial<Group>) => void
+  deleteGroup: (id: string) => void
 }
 
 // ── Save debouncer ──
@@ -65,14 +72,21 @@ function scheduleSave() {
 
 // ── Store ──
 
+const FILTER_DEFAULTS = {
+  filterGroupId: null as string | null,
+  filterProvider: null as string | null,
+  filterStatus: null as string | null,
+  filterTestStatus: null as string | null,
+}
+
 export const useStore = create<AppState>((set, get) => ({
   workspaceState: 'welcome',
   db: null,
   password: null,
   searchQuery: '',
-  selectedTagIds: [],
   showAddForm: false,
   theme: 'dark',
+  ...FILTER_DEFAULTS,
 
   setWorkspaceState: (state) => set({ workspaceState: state }),
   setDb: (db) => set({ db }),
@@ -85,8 +99,8 @@ export const useStore = create<AppState>((set, get) => ({
       db: null,
       password: null,
       searchQuery: '',
-      selectedTagIds: [],
       showAddForm: false,
+      ...FILTER_DEFAULTS,
     }),
 
   addKey: (key) => {
@@ -108,44 +122,27 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setSearchQuery: (q) => set({ searchQuery: q }),
-
-  toggleTagFilter: (tagId) => {
-    const current = get().selectedTagIds
-    set({
-      selectedTagIds: current.includes(tagId)
-        ? current.filter((id) => id !== tagId)
-        : [...current, tagId],
-    })
-  },
-
   setShowAddForm: (show) => set({ showAddForm: show }),
+  setFilterGroupId: (id) => set({ filterGroupId: id }),
+  setFilterProvider: (p) => set({ filterProvider: p }),
+  setFilterStatus: (s) => set({ filterStatus: s }),
+  setFilterTestStatus: (s) => set({ filterTestStatus: s }),
+  clearFilters: () => set(FILTER_DEFAULTS),
 
-  addCategory: (cat) => {
-    get().db?.addCategory(cat)
+  addGroup: (group) => {
+    get().db?.addGroup(group)
     set({})
     scheduleSave()
   },
 
-  updateCategory: (id, updates) => {
-    get().db?.updateCategory(id, updates)
+  updateGroup: (id, updates) => {
+    get().db?.updateGroup(id, updates)
     set({})
     scheduleSave()
   },
 
-  deleteCategory: (id) => {
-    get().db?.deleteCategory(id)
-    set({})
-    scheduleSave()
-  },
-
-  addTag: (tag) => {
-    get().db?.addTag(tag)
-    set({})
-    scheduleSave()
-  },
-
-  deleteTag: (id) => {
-    get().db?.deleteTag(id)
+  deleteGroup: (id) => {
+    get().db?.deleteGroup(id)
     set({})
     scheduleSave()
   },
