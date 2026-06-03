@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { FileStorage } from "../../lib/storage"
 import { Database } from "../../../core/database"
 import { useStore } from "../../store/useStore"
@@ -17,6 +17,11 @@ export function WelcomePage() {
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { setWorkspaceState, setDb, setPassword: setStorePassword, theme, setTheme } = useStore()
+  const [folderName, setFolderName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (supportsFSA) FileStorage.getWorkspaceName().then(setFolderName)
+  }, [mode])
 
   // ── Password strength ──
 
@@ -40,7 +45,8 @@ export function WelcomePage() {
     setLoading(true)
     setError("")
     try {
-      const { existingFile } = await FileStorage.setupWorkspace()
+      const { existingFile, directoryHandle } = await FileStorage.setupWorkspace()
+      setFolderName(directoryHandle.name)
       if (existingFile) setMode("unlock")
       else setMode("new")
     } catch { /* cancelled */ }
@@ -165,16 +171,36 @@ export function WelcomePage() {
           <div className="space-y-2.5">
             {supportsFSA && (
               <>
-                <button onClick={handleSetup} disabled={loading}
-                        className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
-                  {loading ? <Loader2 className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
-                  Setup Sync Folder
-                </button>
-                <Separator className="my-3" />
-                <button onClick={handleOpen} disabled={loading}
-                        className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-5 hover:text-ink-primary transition-colors disabled:opacity-50">
-                  <FileKey className="size-4" /> Open .keya File
-                </button>
+                {folderName ? (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 border border-line">
+                      <FolderOpen className="size-4 text-ink-quaternary shrink-0" />
+                      <span className="text-xs text-ink-secondary truncate">{folderName}</span>
+                    </div>
+                    <button onClick={handleOpen} disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
+                      {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+                      Open Vault
+                    </button>
+                    <button onClick={handleSetup} disabled={loading}
+                            className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1">
+                      Change Sync Folder
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={handleSetup} disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
+                      {loading ? <Loader2 className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
+                      Choose Sync Folder
+                    </button>
+                    <Separator className="my-3" />
+                    <button onClick={handleOpen} disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2.5 text-sm text-ink-secondary hover:bg-surface-5 hover:text-ink-primary transition-colors disabled:opacity-50">
+                      <FileKey className="size-4" /> Open .keya File
+                    </button>
+                  </>
+                )}
               </>
             )}
 
