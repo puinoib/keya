@@ -13,7 +13,7 @@ export function AppLayout() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
-        <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base shadow-card border border-line overflow-hidden">
+        <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
           <TopBar />
 
           <ScrollArea className="flex-1">

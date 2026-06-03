@@ -4,7 +4,7 @@ import { useStore } from "../../store/useStore"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
 import { VaultSwitcher } from "../vault/VaultSwitcher"
-import { Key, Folder, Settings, Filter, X, Cog } from "lucide-react"
+import { Key, Folder, Settings, Filter, X } from "lucide-react"
 
 export function Sidebar() {
   const {
@@ -37,10 +37,6 @@ export function Sidebar() {
               <Key className="size-3.5 shrink-0" />
               <span className="truncate">All Keys</span>
               <span className="ml-auto text-2xs text-ink-quaternary">{db?.getApiKeys().length ?? 0}</span>
-            </NavLink>
-            <NavLink to="/settings" className={linkClass}>
-              <Cog className="size-3.5 shrink-0" />
-              <span className="truncate">Settings</span>
             </NavLink>
           </nav>
 
