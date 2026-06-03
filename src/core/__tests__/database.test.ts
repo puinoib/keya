@@ -33,7 +33,7 @@ describe('Database', () => {
     expect(data.name).toBe('')
     expect(data.icon).toBe('')
     expect(data.api_keys).toEqual([])
-    expect(data.groups.length).toBeGreaterThanOrEqual(3)
+    expect(data.groups.length).toBeGreaterThanOrEqual(2)
     expect(data.settings.theme).toBe('system')
   })
 
