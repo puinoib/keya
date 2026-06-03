@@ -136,6 +136,7 @@ export function VaultSwitcher() {
           <VaultPasswordDialog
             mode="unlock"
             vaultName={metas[switchTarget!]?.name || switchTarget?.replace(/\.keya$/, '') || ''}
+            vaultId={metas[switchTarget!]?.vault_id}
             onSubmit={(pw) => switchTarget && handleSwitch(switchTarget, pw)}
             onCancel={() => setSwitchTarget(null)}
           />
