@@ -127,6 +127,13 @@ export class Database {
     this.touch();
   }
 
+  /* ──── Vault Meta ──── */
+
+  updateMeta(updates: Partial<Pick<KeyaDatabase, 'name' | 'description' | 'icon' | 'color'>>) {
+    Object.assign(this.data, updates);
+    this.touch();
+  }
+
   /* ──── Helpers ──── */
 
   private touch(): void {
