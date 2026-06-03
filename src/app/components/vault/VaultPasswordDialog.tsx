@@ -1,27 +1,36 @@
-import { useState } from 'react'
-import { Loader2, ArrowRight, Lock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Loader2, ArrowRight, Lock, Fingerprint } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { isBiometricSupported, isBiometricRegistered, unlockWithBiometric } from '@/app/lib/biometric'
 
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new'
   vaultName: string
   vaultIcon?: string
   fileName?: string
+  vaultId?: string
   onSubmit: (password: string) => Promise<void>
   onCancel: () => void
 }
 
-export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, onSubmit, onCancel }: VaultPasswordDialogProps) {
+export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaultId, onSubmit, onCancel }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showBiometric, setShowBiometric] = useState(false)
+  const [bioLoading, setBioLoading] = useState(false)
 
   const isCreate = mode === 'new'
   const canSubmit = isCreate
     ? password.length >= 8 && password === confirm
     : password.length > 0
+
+  useEffect(() => {
+    if (isCreate || !vaultId) return
+    isBiometricSupported() && isBiometricRegistered(vaultId).then(setShowBiometric)
+  }, [isCreate, vaultId])
 
   const handleSubmit = async () => {
     if (!canSubmit) return
@@ -33,6 +42,20 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, onSu
       setError(isCreate ? 'Failed to create vault.' : 'Wrong password. Try again.')
     }
     setLoading(false)
+  }
+
+  const handleBiometric = async () => {
+    if (!vaultId) return
+    setBioLoading(true)
+    setError('')
+    try {
+      const pw = await unlockWithBiometric(vaultId)
+      await onSubmit(pw)
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes('cancelled') ? '' : 'Biometric unlock failed. Use password instead.')
+    } finally {
+      setBioLoading(false)
+    }
   }
 
   return (
@@ -82,6 +105,17 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, onSu
       )}
 
       {error && <p className="text-xs text-danger">{error}</p>}
+
+      {showBiometric && !isCreate && (
+        <button
+          onClick={handleBiometric}
+          disabled={bioLoading}
+          className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-surface-3 transition-colors disabled:opacity-50"
+        >
+          {bioLoading ? <Loader2 className="size-4 animate-spin" /> : <Fingerprint className="size-4" />}
+          Unlock with Biometrics
+        </button>
+      )}
 
       <button
         onClick={handleSubmit}

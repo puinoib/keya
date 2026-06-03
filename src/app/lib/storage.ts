@@ -8,9 +8,10 @@
 import { serializeToFile, deserializeFromFile, type KeyaDatabase, Database } from '../../core';
 
 const DB_NAME = 'keya-meta';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const WORKSPACE_STORE = 'workspace';
 const VAULT_META_STORE = 'vault-meta';
+const BIOMETRIC_STORE = 'biometric';
 
 // ── Types ──
 
@@ -40,6 +41,9 @@ function openMetaDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(VAULT_META_STORE)) {
         db.createObjectStore(VAULT_META_STORE, { keyPath: 'vault_id' });
+      }
+      if (!db.objectStoreNames.contains(BIOMETRIC_STORE)) {
+        db.createObjectStore(BIOMETRIC_STORE, { keyPath: 'vault_id' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -259,3 +263,5 @@ export class FileStorage {
     URL.revokeObjectURL(url);
   }
 }
+
+export { openMetaDB, BIOMETRIC_STORE };

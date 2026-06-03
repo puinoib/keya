@@ -26,7 +26,7 @@ export function WelcomePage() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { theme, setTheme } = useStore()
+  const { theme, setTheme, setBiometricPrompt } = useStore()
 
   useEffect(() => {
     if (mode !== 'home') return
@@ -72,12 +72,14 @@ export function WelcomePage() {
 
   const handleUnlockVault = async (fileName: string, password: string) => {
     const db = await FileStorage.openVault(fileName, password)
+    const vaultId = db.getData().vault_id
     useStore.setState({
       db,
       password,
       activeVaultFileName: fileName,
       workspaceState: 'unlocked',
     })
+    setBiometricPrompt({ vaultId, password })
   }
 
   const handleCreateVault = async (password: string) => {
@@ -229,6 +231,7 @@ export function WelcomePage() {
               vaultName={cachedMetas[selectedVault]?.name || selectedVault.replace(/\.keya$/, '')}
               vaultIcon={cachedMetas[selectedVault]?.icon}
               fileName={selectedVault}
+              vaultId={cachedMetas[selectedVault]?.vault_id}
               onSubmit={supportsFSA
                 ? (pw) => handleUnlockVault(selectedVault, pw)
                 : handleLegacyUnlock}
