@@ -256,9 +256,10 @@ export async function deserializeFromFile(
 
   // Default vault metadata for old files without these fields
   if (!db.name) db.name = '';
-  if (!db.description) db.description = '';
   if (!db.icon || db.icon === '🔐') db.icon = '';
-  if (!db.color) db.color = '#3b82f6';
+  // Remove deprecated fields from old files
+  delete (db as any).description;
+  delete (db as any).color;
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();

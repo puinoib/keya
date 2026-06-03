@@ -38,7 +38,6 @@ export function VaultSwitcher() {
 
   const currentName = db?.getData().name || activeVaultFileName?.replace(/\.keya$/, '') || 'Vault'
   const currentIcon = db?.getData().icon || ''
-  const currentColor = db?.getData().color || '#3b82f6'
 
   const handleSwitch = async (fileName: string, password: string) => {
     const newDb = await FileStorage.openVault(fileName, password)
@@ -73,10 +72,7 @@ export function VaultSwitcher() {
         onClick={() => setOpen(!open)}
         className="w-full h-12 flex items-center gap-2 px-4 hover:bg-surface-3 transition-colors"
       >
-        <div
-          className="flex items-center justify-center size-6 rounded-md text-xs shrink-0"
-          style={{ backgroundColor: `${currentColor}20`, color: currentColor }}
-        >
+        <div className="flex items-center justify-center size-6 rounded-md bg-surface-3 text-ink-secondary text-xs shrink-0">
           {currentIcon ? currentIcon : <Lock className="size-3.5" />}
         </div>
         <span className="text-sm font-semibold tracking-tight text-ink-primary truncate flex-1 text-left">

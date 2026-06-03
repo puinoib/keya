@@ -38,9 +38,7 @@ export interface KeyaDatabase {
   created_at: string;
   updated_at: string;
   name: string;
-  description: string;
   icon: string;
-  color: string;
   api_keys: ApiKey[];
   groups: Group[];
   settings: Settings;

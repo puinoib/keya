@@ -9,9 +9,7 @@ export function createEmptyDatabase(name?: string): KeyaDatabase {
     created_at: now,
     updated_at: now,
     name: name ?? '',
-    description: '',
     icon: '',
-    color: '#3b82f6',
     api_keys: [],
     groups: DEFAULT_GROUPS.map((g, i) => ({
       ...g,
@@ -129,7 +127,7 @@ export class Database {
 
   /* ──── Vault Meta ──── */
 
-  updateMeta(updates: Partial<Pick<KeyaDatabase, 'name' | 'description' | 'icon' | 'color'>>) {
+  updateMeta(updates: Partial<Pick<KeyaDatabase, 'name' | 'icon'>>) {
     Object.assign(this.data, updates);
     this.touch();
   }

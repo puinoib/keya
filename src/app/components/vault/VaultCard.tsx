@@ -15,10 +15,7 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
       onClick={onClick}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md bg-surface-2 border border-line hover:bg-surface-3 hover:border-line-subtle transition-colors text-left"
     >
-      <div
-        className="flex items-center justify-center size-8 rounded-lg text-sm shrink-0"
-        style={{ backgroundColor: `${meta?.color ?? '#3b82f6'}20`, color: meta?.color ?? '#3b82f6' }}
-      >
+      <div className="flex items-center justify-center size-8 rounded-lg bg-surface-3 text-ink-secondary text-sm shrink-0">
         {meta?.icon ? meta.icon : <Lock className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">

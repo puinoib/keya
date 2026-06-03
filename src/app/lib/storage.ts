@@ -24,7 +24,6 @@ export interface CachedVaultMeta {
   fileName: string;
   name: string;
   icon: string;
-  color: string;
   keyCount: number;
   updatedAt: string;
 }
@@ -164,13 +163,13 @@ export class FileStorage {
   static async createVault(
     fileName: string,
     password: string,
-    meta?: { name?: string; icon?: string; color?: string },
+    meta?: { name?: string; icon?: string },
   ): Promise<Database> {
     const ws = await getWorkspace();
     if (!ws) throw new Error('No workspace configured');
 
     const displayName = meta?.name || fileNameToStem(fileName);
-    const db = new Database(undefined, { name: displayName, icon: meta?.icon, color: meta?.color });
+    const db = new Database(undefined, { name: displayName, icon: meta?.icon });
 
     await FileStorage.saveVault(fileName, db.getData(), password);
     await FileStorage.cacheVaultMeta(fileName, db);
@@ -202,7 +201,6 @@ export class FileStorage {
       fileName,
       name: data.name || fileNameToStem(fileName),
       icon: data.icon,
-      color: data.color,
       keyCount: data.api_keys.length,
       updatedAt: data.updated_at,
     });

@@ -32,7 +32,6 @@ describe('Database', () => {
     expect(data.vault_id).toBeTruthy()
     expect(data.name).toBe('')
     expect(data.icon).toBe('')
-    expect(data.color).toBe('#3b82f6')
     expect(data.api_keys).toEqual([])
     expect(data.groups.length).toBeGreaterThanOrEqual(3)
     expect(data.settings.theme).toBe('system')
