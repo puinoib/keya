@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { VaultCard } from '../vault/VaultCard'
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog'
-import { FolderOpen, Key, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus } from 'lucide-react'
+import { FolderOpen, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus } from 'lucide-react'
+import logoSvg from '../../../../public/icon.svg'
 
 const supportsFSA = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
@@ -121,9 +122,7 @@ export function WelcomePage() {
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center justify-center size-11 rounded-xl bg-accent text-white mb-3.5 shadow-lg shadow-accent/20">
-            <Key className="size-5" />
-          </div>
+          <img src={logoSvg} alt="Keya" className="size-11 mb-3.5" />
           <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Keya</h1>
           <p className="text-xs text-ink-tertiary mt-1">Your Key Guardian</p>
         </div>
