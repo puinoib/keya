@@ -36,8 +36,9 @@ export function BiometricPrompt({ vaultId, password, onDone }: BiometricPromptPr
     try {
       await registerBiometric(vaultId, password)
       onDone()
-    } catch {
-      setError('Registration failed. You can try again later.')
+    } catch (e) {
+      console.error('Biometric registration failed:', e)
+      setError(e instanceof Error ? e.message : 'Registration failed. You can try again later.')
     } finally {
       setLoading(false)
     }

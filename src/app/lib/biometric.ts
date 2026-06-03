@@ -88,16 +88,6 @@ function rpId(): string {
   return location.hostname;
 }
 
-async function getPrfOutput(credential: PublicKeyCredential, salt: Uint8Array): Promise<Uint8Array> {
-  const clientExtResults = credential.getClientExtensionResults();
-  const prfResult = clientExtResults.prf;
-  if (!prfResult?.results?.first) {
-    throw new Error('PRF output not available. Your browser may not support this feature.');
-  }
-  // PRF output is already derived using the salt during the get() call
-  return new Uint8Array(prfResult.results.first);
-}
-
 // ── Public API ──
 
 export function isBiometricSupported(): boolean {
@@ -120,7 +110,8 @@ export async function registerBiometric(vaultId: string, password: string): Prom
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
-  const createOptions: PublicKeyCredentialCreationOptions = {
+  // Step 1: Create credential with PRF enabled
+  const credential = await navigator.credentials.create({
     publicKey: {
       rp: { id: rpId(), name: 'Keya' },
       user: {
@@ -130,33 +121,63 @@ export async function registerBiometric(vaultId: string, password: string): Prom
       },
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       pubKeyCredParams: [
-        { alg: -7, type: 'public-key' },   // ES256
-        { alg: -257, type: 'public-key' },  // RS256
+        { alg: -7, type: 'public-key' },
+        { alg: -257, type: 'public-key' },
       ],
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
         userVerification: 'required',
       },
       extensions: {
-        prf: { eval: { first: toBuffer(salt) } },
+        prf: {},
       },
     },
-  };
+  }) as PublicKeyCredential;
 
-  const credential = await navigator.credentials.create(createOptions) as PublicKeyCredential;
   if (!credential) throw new Error('Biometric registration cancelled.');
 
-  const prfKey = await getPrfOutput(credential, salt);
-  const encryptedPassword = await aesEncrypt(password, prfKey, iv);
+  const credentialId = new Uint8Array(credential.rawId);
 
+  // Step 2: Immediately authenticate to get PRF output
+  const prfKey = await evaluatePrf(credentialId, salt);
+
+  // Step 3: Encrypt password and store
+  const encryptedPassword = await aesEncrypt(password, prfKey, iv);
   await putRecord({
     vault_id: vaultId,
-    credentialId: new Uint8Array(credential.rawId),
+    credentialId,
     encryptedPassword,
     salt: toBase64(salt),
     iv: toBase64(iv),
     createdAt: new Date().toISOString(),
   });
+}
+
+/**
+ * Authenticate with an existing credential and evaluate PRF.
+ */
+async function evaluatePrf(credentialId: Uint8Array, salt: Uint8Array): Promise<Uint8Array> {
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: rpId(),
+      allowCredentials: [{
+        id: toBuffer(credentialId),
+        type: 'public-key',
+      }],
+      userVerification: 'required',
+      extensions: {
+        prf: { eval: { first: toBuffer(salt) } },
+      },
+    },
+  }) as PublicKeyCredential;
+
+  if (!assertion) throw new Error('Biometric authentication cancelled.');
+
+  const results = assertion.getClientExtensionResults();
+  const prfFirst = results.prf?.results?.first;
+  if (!prfFirst) throw new Error('PRF not supported by this device.');
+  return new Uint8Array(prfFirst);
 }
 
 /**
@@ -168,26 +189,7 @@ export async function unlockWithBiometric(vaultId: string): Promise<string> {
   if (!record) throw new Error('No biometric credential found for this vault.');
 
   const salt = fromBase64(record.salt);
-
-  const getOptions: PublicKeyCredentialRequestOptions = {
-    publicKey: {
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rpId: rpId(),
-      allowCredentials: [{
-        id: toBuffer(record.credentialId),
-        type: 'public-key',
-      }],
-      userVerification: 'required',
-      extensions: {
-        prf: { eval: { first: toBuffer(salt) } },
-      },
-    },
-  };
-
-  const assertion = await navigator.credentials.get(getOptions) as PublicKeyCredential;
-  if (!assertion) throw new Error('Biometric authentication cancelled.');
-
-  const prfKey = await getPrfOutput(assertion, salt);
+  const prfKey = await evaluatePrf(record.credentialId, salt);
   const iv = fromBase64(record.iv);
   return aesDecrypt(record.encryptedPassword, prfKey, iv);
 }

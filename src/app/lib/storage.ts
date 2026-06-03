@@ -8,7 +8,7 @@
 import { serializeToFile, deserializeFromFile, type KeyaDatabase, Database } from '../../core';
 
 const DB_NAME = 'keya-meta';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const WORKSPACE_STORE = 'workspace';
 const VAULT_META_STORE = 'vault-meta';
 const BIOMETRIC_STORE = 'biometric';
