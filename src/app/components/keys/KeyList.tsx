@@ -30,7 +30,11 @@ export function KeyList() {
 
   let keys = db.getApiKeys()
   if (searchQuery) keys = db.searchKeys(searchQuery)
-  if (filterGroupId) keys = keys.filter((k) => k.group_id === filterGroupId)
+  if (filterGroupId) {
+    keys = filterGroupId === "__ungrouped__"
+      ? keys.filter((k) => !k.group_id)
+      : keys.filter((k) => k.group_id === filterGroupId)
+  }
   if (filterProvider) keys = keys.filter((k) => k.provider === filterProvider)
   if (filterStatus) keys = keys.filter((k) => k.status === filterStatus)
   if (filterTestStatus) keys = keys.filter((k) => {
