@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key,
+  Eye, EyeOff, Key, Plus, Search,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -61,27 +61,41 @@ export function KeyList() {
     } catch { /* clipboard unavailable */ }
   }
 
-  if (keys.length === 0) {
+  const hasFilters = searchQuery || filterGroupId || filterProvider || filterStatus || filterTestStatus
+
+  if (keys.length === 0 && !hasFilters) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="flex items-center justify-center size-12 rounded-xl bg-surface-3 border border-line-subtle mb-4">
-          <FlaskConical className="size-5 text-ink-quaternary" />
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="flex items-center justify-center size-14 rounded-2xl bg-accent-default/10 text-accent-bright mb-5">
+          <Key className="size-6" />
         </div>
-        <h3 className="text-sm font-medium text-ink-secondary mb-1">No API Keys yet</h3>
-        <p className="text-xs text-ink-quaternary mb-5">Add your first key to get started</p>
+        <h3 className="text-sm font-semibold text-ink-primary mb-1.5">No API Keys yet</h3>
+        <p className="text-xs text-ink-quaternary mb-6 max-w-[200px]">Securely store and manage your API keys in one place</p>
         <button
           onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-bright transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent-default px-4 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
         >
+          <Plus className="size-3.5" />
           Add your first key
         </button>
       </div>
     )
   }
 
+  if (keys.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex items-center justify-center size-10 rounded-xl bg-surface-3 text-ink-quaternary mb-3">
+          <Search className="size-4" />
+        </div>
+        <p className="text-sm text-ink-tertiary">No keys match your filters</p>
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {keys.map((key) => {
           const group = getGroup(key.group_id)
           const isTesting = testing === key.id
@@ -91,16 +105,15 @@ export function KeyList() {
           return (
             <div
               key={key.id}
-              className="group flex items-center gap-4 px-4 py-3 rounded-lg
-                         bg-surface-1 border border-line-2
-                         hover:bg-surface-3 hover:border-line-4
+              className="group flex items-center gap-3 px-3.5 py-2.5 rounded-lg
+                         hover:bg-surface-3
                          transition-all duration-150"
             >
               {/* Icon */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center justify-center size-9 rounded-lg bg-surface-3 text-ink-secondary shrink-0 text-base">
-                    {group?.icon ? group.icon : <Key className="size-4" />}
+                  <div className="flex items-center justify-center size-8 rounded-lg bg-surface-4 text-ink-secondary shrink-0 text-sm">
+                    {group?.icon ? group.icon : <Key className="size-3.5" />}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>{group?.name ?? "Ungrouped"}</TooltipContent>
@@ -109,16 +122,16 @@ export function KeyList() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-ink-primary truncate">{key.name}</span>
+                  <span className="text-[13px] font-medium text-ink-primary truncate">{key.name}</span>
                   {testOk && <span className="shrink-0 size-1.5 rounded-full bg-success-bright" />}
                   {testFail && <span className="shrink-0 size-1.5 rounded-full bg-danger" />}
                   {!key.test_status && <span className="shrink-0 size-1.5 rounded-full bg-ink-quaternary/30" />}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-quaternary">
+                <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-ink-quaternary">
                   <span>{key.provider}</span>
                   {key.service && <><span className="text-divider">·</span><span>{key.service}</span></>}
                   <span className="text-divider">·</span>
-                  <span className="font-mono text-2xs">{maskKey(key.key)}</span>
+                  <span className="font-mono">{maskKey(key.key)}</span>
                   {testOk && key.test_latency_ms != null && (
                     <><span className="text-divider">·</span><span className="text-success-bright font-medium">{key.test_latency_ms}ms</span></>
                   )}
@@ -127,12 +140,12 @@ export function KeyList() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button onClick={() => handleTest(key)} disabled={isTesting}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors disabled:opacity-50">
-                      {isTesting ? <span className="size-3.5 border-2 border-ink-tertiary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-3.5" />}
+                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100 disabled:opacity-50">
+                      {isTesting ? <span className="size-3 border-[1.5px] border-ink-tertiary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-3.5" />}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>{isTesting ? "Testing..." : "Test key"}</TooltipContent>
@@ -141,7 +154,7 @@ export function KeyList() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button onClick={() => handleCopy(key.key, key.id)}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors">
+                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100">
                       {copiedId === key.id ? <span className="text-xs text-success-bright font-medium">✓</span> : <Copy className="size-3.5" />}
                     </button>
                   </TooltipTrigger>
@@ -150,7 +163,7 @@ export function KeyList() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-primary hover:bg-surface-5 transition-colors">
+                    <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100">
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>

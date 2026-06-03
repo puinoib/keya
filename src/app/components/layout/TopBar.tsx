@@ -119,14 +119,16 @@ export function TopBar() {
   }
 
   return (
-    <header className="h-12 flex items-center gap-3 px-4 shrink-0">
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary" />
+    <header className="h-11 flex items-center gap-2 px-3 shrink-0">
+      <div className="relative flex-1 max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary pointer-events-none" />
         <input type="text" placeholder="Search keys..." value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
-               className="w-full h-8 pl-8 pr-3 rounded-md bg-surface-2 border border-line
-                          text-sm text-ink-primary placeholder:text-ink-quaternary
-                          focus:outline-none focus:ring-1 focus:ring-accent-bright transition-colors duration-150" />
+               className="w-full h-7 pl-8 pr-3 rounded-md bg-surface-2 border border-transparent
+                          text-xs text-ink-primary placeholder:text-ink-quaternary
+                          hover:bg-surface-3 hover:border-line-subtle
+                          focus:outline-none focus:bg-surface-2 focus:border-line focus:ring-1 focus:ring-accent-bright/40
+                          transition-all duration-150" />
       </div>
 
       <div className="flex-1" />
@@ -134,7 +136,7 @@ export function TopBar() {
       {/* More menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="btn-ghost text-xs">
+          <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
             <MoreHorizontal className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
@@ -166,7 +168,7 @@ export function TopBar() {
       {/* Theme toggle */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="btn-ghost text-xs">
+          <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
             {theme === "dark" ? <Moon className="size-3.5" /> : theme === "light" ? <Sun className="size-3.5" /> : <Monitor className="size-3.5" />}
           </button>
         </DropdownMenuTrigger>
@@ -183,7 +185,8 @@ export function TopBar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <button onClick={() => setShowAddForm(true)} className="btn-primary text-xs">
+      <button onClick={() => setShowAddForm(true)}
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-accent text-2xs font-medium text-white hover:bg-accent-bright transition-colors duration-150">
         <Plus className="size-3.5" /> Add Key
       </button>
     </header>
