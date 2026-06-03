@@ -48,6 +48,7 @@ interface AppState {
   setFilterStatus: (s: string | null) => void
   setFilterTestStatus: (s: string | null) => void
   clearFilters: () => void
+  clearSmartFilters: () => void
   setSelectedKeyId: (id: string | null) => void
 
   // Actions - Groups
@@ -148,6 +149,7 @@ export const useStore = create<AppState>((set, get) => ({
   setFilterStatus: (s) => set({ filterStatus: s }),
   setFilterTestStatus: (s) => set({ filterTestStatus: s }),
   clearFilters: () => set(FILTER_DEFAULTS),
+  clearSmartFilters: () => set({ filterProvider: null, filterStatus: null, filterTestStatus: null }),
   setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
   addGroup: (group) => {

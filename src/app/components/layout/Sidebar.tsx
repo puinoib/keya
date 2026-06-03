@@ -69,7 +69,8 @@ function FilterSelect({
 export function Sidebar() {
   const {
     db, filterGroupId, filterProvider, filterStatus, filterTestStatus,
-    setFilterGroupId, setFilterProvider, setFilterStatus, setFilterTestStatus, clearFilters,
+    setFilterGroupId, setFilterProvider, setFilterStatus, setFilterTestStatus,
+    clearFilters, clearSmartFilters, setSearchQuery,
   } = useStore()
   const [showGroups, setShowGroups] = useState(false)
 
@@ -97,7 +98,7 @@ export function Sidebar() {
         <ScrollArea className="flex-1">
           {/* Nav */}
           <nav className="px-2 pt-1 pb-0.5">
-            <NavLink to="/keys" className={navLinkClass} onClick={() => setFilterGroupId(null)}>
+            <NavLink to="/keys" className={navLinkClass} onClick={() => { clearFilters(); setSearchQuery('') }}>
               <Key className="size-3.5 shrink-0" />
               <span className="truncate">All Keys</span>
               {keyCount > 0 && (
@@ -176,11 +177,10 @@ export function Sidebar() {
             <SidebarSection
               icon={Filter}
               label="Filters"
-              defaultOpen={!hasActiveFilter}
               action={
-                hasActiveFilter ? (
+                (filterProvider || filterStatus || filterTestStatus) ? (
                   <button
-                    onClick={(e) => { e.stopPropagation(); clearFilters() }}
+                    onClick={(e) => { e.stopPropagation(); clearSmartFilters() }}
                     className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
                   >
                     <X className="size-3" />
