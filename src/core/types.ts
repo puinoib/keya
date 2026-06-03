@@ -35,9 +35,13 @@ export interface Settings {
 
 export interface KeyaDatabase {
   version: '1.0';
-  file_id: string;
+  vault_id: string;
   created_at: string;
   updated_at: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
   api_keys: ApiKey[];
   groups: Group[];
   settings: Settings;

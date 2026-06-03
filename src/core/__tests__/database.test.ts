@@ -29,7 +29,10 @@ describe('Database', () => {
     const db = new Database()
     const data = db.getData()
     expect(data.version).toBe('1.0')
-    expect(data.file_id).toBeTruthy()
+    expect(data.vault_id).toBeTruthy()
+    expect(data.name).toBe('')
+    expect(data.icon).toBe('🔐')
+    expect(data.color).toBe('#3b82f6')
     expect(data.api_keys).toEqual([])
     expect(data.groups.length).toBeGreaterThanOrEqual(3)
     expect(data.settings.theme).toBe('system')
@@ -38,7 +41,7 @@ describe('Database', () => {
   it('accepts existing data', () => {
     const existing = createEmptyDatabase()
     const db = new Database(existing)
-    expect(db.getData().file_id).toBe(existing.file_id)
+    expect(db.getData().vault_id).toBe(existing.vault_id)
   })
 
   /* ──── API Keys CRUD ──── */

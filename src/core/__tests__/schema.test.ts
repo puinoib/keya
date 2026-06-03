@@ -52,7 +52,7 @@ describe('schema (.keya file format)', () => {
     const restored = await deserializeFromFile(bytes, password)
 
     expect(restored.version).toBe(db.version)
-    expect(restored.file_id).toBe(db.file_id)
+    expect(restored.vault_id).toBe(db.vault_id)
     expect(restored.api_keys).toHaveLength(db.api_keys.length)
     expect(restored.api_keys[0].name).toBe(db.api_keys[0].name)
     expect(restored.api_keys[0].key).toBe(db.api_keys[0].key)
@@ -107,5 +107,17 @@ describe('schema (.keya file format)', () => {
     expect(asText).not.toContain('sk-ant-api03-xyz789')
     // But the magic header should be visible
     expect(asText.slice(0, 4)).toBe('KEYA')
+  })
+
+  it('reads old files with file_id instead of vault_id', async () => {
+    const db = makeTestDb()
+    // Simulate old format by using file_id key
+    const oldFormat = { ...db, file_id: db.vault_id } as any
+    delete oldFormat.vault_id
+    const bytes = await serializeToFile(oldFormat as KeyaDatabase, password)
+    const restored = await deserializeFromFile(bytes, password)
+    expect(restored.vault_id).toBe(db.vault_id)
+    expect(restored.name).toBe('')
+    expect(restored.icon).toBe('🔐')
   })
 })

@@ -187,7 +187,9 @@ export async function serializeToFile(
   const json = JSON.stringify(db, null, 2);
   const { salt, nonce, encrypted } = encryptDatabase(json, password);
 
-  const header = createHeader(db.file_id, new Date(db.created_at));
+  // Backward compatibility: accept file_id if vault_id is missing
+  const vaultId = db.vault_id || (db as any).file_id;
+  const header = createHeader(vaultId, new Date(db.created_at));
   const params = createEncParams(salt, nonce);
 
   // Payload
@@ -245,6 +247,18 @@ export async function deserializeFromFile(
   const plaintext = decryptRaw(encrypted, params.nonce, key)
   const json = sodium.to_string(plaintext)
   const db = JSON.parse(json) as KeyaDatabase;
+
+  // Backward compatibility: migrate file_id → vault_id
+  if (!db.vault_id && (db as any).file_id) {
+    db.vault_id = (db as any).file_id;
+    delete (db as any).file_id;
+  }
+
+  // Default vault metadata for old files without these fields
+  if (!db.name) db.name = '';
+  if (!db.description) db.description = '';
+  if (!db.icon) db.icon = '🔐';
+  if (!db.color) db.color = '#3b82f6';
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();
