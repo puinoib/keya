@@ -106,13 +106,10 @@ export function KeyList() {
             <div
               key={key.id}
               onClick={() => setSelectedKeyId(selectedKeyId === key.id ? null : key.id)}
-              className={`group relative flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
+              className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
                          transition-all duration-200
                          ${selectedKeyId === key.id ? "bg-surface-4" : "hover:bg-surface-3"}`}
             >
-              {/* Active indicator bar */}
-              <div className={`absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-accent transition-all duration-200
-                              ${selectedKeyId === key.id ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"}`} />
               {/* Icon */}
               <Tooltip>
                 <TooltipTrigger asChild>
