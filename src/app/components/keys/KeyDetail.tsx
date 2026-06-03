@@ -62,9 +62,9 @@ export function KeyDetail() {
   return (
     <>
       <div
-        className="w-72 shrink-0 my-4 mr-4 flex flex-col rounded-xl
+        className="w-72 h-full flex flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
-                   animate-detail-fade-in overflow-hidden"
+                   overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in" style={{ animationDelay: "40ms" }}>
