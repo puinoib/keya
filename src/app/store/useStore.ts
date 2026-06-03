@@ -24,6 +24,9 @@ interface AppState {
   filterStatus: string | null
   filterTestStatus: string | null
 
+  // Selection
+  selectedKeyId: string | null
+
   // Actions - Workspace
   setWorkspaceState: (state: WorkspaceState) => void
   setDb: (db: Database) => void
@@ -45,6 +48,7 @@ interface AppState {
   setFilterStatus: (s: string | null) => void
   setFilterTestStatus: (s: string | null) => void
   clearFilters: () => void
+  setSelectedKeyId: (id: string | null) => void
 
   // Actions - Groups
   addGroup: (group: Omit<Group, 'id'>) => void
@@ -96,6 +100,7 @@ export const useStore = create<AppState>((set, get) => ({
   biometricPrompt: null,
   theme: (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') || 'system',
   ...FILTER_DEFAULTS,
+  selectedKeyId: null,
 
   setWorkspaceState: (state) => set({ workspaceState: state }),
   setDb: (db) => set({ db }),
@@ -114,6 +119,7 @@ export const useStore = create<AppState>((set, get) => ({
       searchQuery: '',
       showAddForm: false,
       ...FILTER_DEFAULTS,
+      selectedKeyId: null,
     }),
 
   addKey: (key) => {
@@ -142,6 +148,7 @@ export const useStore = create<AppState>((set, get) => ({
   setFilterStatus: (s) => set({ filterStatus: s }),
   setFilterTestStatus: (s) => set({ filterTestStatus: s }),
   clearFilters: () => set(FILTER_DEFAULTS),
+  setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
   addGroup: (group) => {
     get().db?.addGroup(group)

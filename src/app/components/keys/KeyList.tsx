@@ -21,7 +21,7 @@ import { maskKey } from "@/lib/mask"
 
 export function KeyList() {
   const db = useStore((s) => s.db)
-  const { searchQuery, filterGroupId, filterProvider, filterStatus, filterTestStatus, setShowAddForm, updateKey, deleteKey } = useStore()
+  const { searchQuery, filterGroupId, filterProvider, filterStatus, filterTestStatus, selectedKeyId, setSelectedKeyId, setShowAddForm, updateKey, deleteKey } = useStore()
   const [testing, setTesting] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
@@ -105,9 +105,10 @@ export function KeyList() {
           return (
             <div
               key={key.id}
-              className="group flex items-center gap-3 px-3.5 py-2.5 rounded-lg
-                         hover:bg-surface-3
-                         transition-all duration-150"
+              onClick={() => setSelectedKeyId(selectedKeyId === key.id ? null : key.id)}
+              className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
+                         transition-all duration-150
+                         ${selectedKeyId === key.id ? "bg-surface-4" : "hover:bg-surface-3"}`}
             >
               {/* Icon */}
               <Tooltip>
@@ -206,7 +207,7 @@ export function KeyList() {
 
 const PROVIDERS = ["OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot", "Zhipu", "Mistral", "Cohere", "Together", "Custom"]
 
-function EditKeyDialog({ editingKey, onClose, onSave }: {
+export function EditKeyDialog({ editingKey, onClose, onSave }: {
   editingKey: ApiKey | null
   onClose: () => void
   onSave: (id: string, updates: Partial<ApiKey>) => void

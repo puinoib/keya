@@ -17,7 +17,7 @@ export function AppLayout() {
           <TopBar />
 
           <ScrollArea className="flex-1">
-            <main className="px-6 py-5 max-w-4xl mx-auto w-full">
+            <main className="flex min-h-full">
               <Outlet />
             </main>
           </ScrollArea>
