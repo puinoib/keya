@@ -50,7 +50,7 @@ interface AppState {
   deleteGroup: (id: string) => void
 
   // Actions - Vault Meta
-  updateMeta: (updates: Partial<{ name: string; description: string; icon: string; color: string }>) => void
+  updateMeta: (updates: Partial<{ name: string; icon: string }>) => void
 }
 
 // ── Save debouncer ──
