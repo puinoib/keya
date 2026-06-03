@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, ArrowRight, Lock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -37,7 +37,7 @@ export function VaultPasswordDialog({ mode, vaultName, onSubmit, onCancel }: Vau
     <div className="space-y-3">
       <div className="flex items-center gap-2.5 mb-2">
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <span className="text-sm">🔐</span>
+          <Lock className="size-4" />
         </div>
         <div>
           <p className="text-sm font-medium text-ink-primary">

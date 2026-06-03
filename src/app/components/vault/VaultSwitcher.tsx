@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../../store/useStore'
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage'
 import { VaultPasswordDialog } from './VaultPasswordDialog'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Lock, Plus } from 'lucide-react'
 
 export function VaultSwitcher() {
   const { db, activeVaultFileName } = useStore()
@@ -31,7 +31,7 @@ export function VaultSwitcher() {
   }, [open])
 
   const currentName = db?.getData().name || activeVaultFileName?.replace(/\.keya$/, '') || 'Vault'
-  const currentIcon = db?.getData().icon || '🔐'
+  const currentIcon = db?.getData().icon || ''
   const currentColor = db?.getData().color || '#3b82f6'
 
   const handleSwitch = async (fileName: string, password: string) => {
@@ -97,7 +97,7 @@ export function VaultSwitcher() {
           className="flex items-center justify-center size-6 rounded-md text-xs shrink-0"
           style={{ backgroundColor: `${currentColor}20`, color: currentColor }}
         >
-          {currentIcon}
+          {currentIcon ? currentIcon : <Lock className="size-3.5" />}
         </div>
         <span className="text-sm font-semibold tracking-tight text-ink-primary truncate flex-1 text-left">
           {currentName}
@@ -119,7 +119,7 @@ export function VaultSwitcher() {
                 className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
                   ${isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary hover:bg-surface-3 hover:text-ink-primary'}`}
               >
-                <span className="text-sm">{meta?.icon ?? '🔐'}</span>
+                <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
                 <span className="truncate">{name}</span>
                 {isActive && <span className="ml-auto text-2xs text-ink-quaternary">active</span>}
               </button>

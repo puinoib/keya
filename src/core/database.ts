@@ -10,7 +10,7 @@ export function createEmptyDatabase(name?: string): KeyaDatabase {
     updated_at: now,
     name: name ?? '',
     description: '',
-    icon: '🔐',
+    icon: '',
     color: '#3b82f6',
     api_keys: [],
     groups: DEFAULT_GROUPS.map((g, i) => ({
