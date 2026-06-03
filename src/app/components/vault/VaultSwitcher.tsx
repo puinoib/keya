@@ -16,10 +16,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Lock, Plus } from 'lucide-react'
+import { Lock, Plus, Cog } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export function VaultSwitcher() {
   const { db, activeVaultFileName } = useStore()
+  const navigate = useNavigate()
   const [vaults, setVaults] = useState<string[]>([])
   const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({})
   const [switchTarget, setSwitchTarget] = useState<string | null>(null)
@@ -97,6 +99,11 @@ export function VaultSwitcher() {
           <DropdownMenuItem onClick={() => setShowNewVault(true)} className="text-ink-quaternary">
             <Plus className="size-3" />
             <span>New Vault</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate("/settings")} className="text-ink-quaternary">
+            <Cog className="size-3" />
+            <span>Settings</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
