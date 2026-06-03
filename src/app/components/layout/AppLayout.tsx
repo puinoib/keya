@@ -13,16 +13,16 @@ export function AppLayout() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
-        <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+        <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden">
           <TopBar />
 
           <ScrollArea className="flex-1">
-            <main className="p-6 max-w-4xl mx-auto w-full">
+            <main className="px-6 py-5 max-w-4xl mx-auto w-full">
               <Outlet />
             </main>
           </ScrollArea>
 
-          <footer className="h-7 flex items-center justify-between px-4 text-2xs text-ink-quaternary border-t border-line-subtle shrink-0">
+          <footer className="h-6 flex items-center justify-between px-4 text-2xs text-ink-quaternary/60 border-t border-line-subtle shrink-0">
             <span>{db ? `${db.getApiKeys().length} keys` : "No vault"}</span>
             <span>Keya v1.0</span>
           </footer>
