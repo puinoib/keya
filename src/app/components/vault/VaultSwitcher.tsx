@@ -1,17 +1,29 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../../store/useStore'
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage'
 import { VaultPasswordDialog } from './VaultPasswordDialog'
-import { ChevronDown, Lock, Plus } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Lock, Plus } from 'lucide-react'
 
 export function VaultSwitcher() {
   const { db, activeVaultFileName } = useStore()
-  const [open, setOpen] = useState(false)
   const [vaults, setVaults] = useState<string[]>([])
   const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({})
   const [switchTarget, setSwitchTarget] = useState<string | null>(null)
   const [showNewVault, setShowNewVault] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     FileStorage.listVaultFiles().then(setVaults)
@@ -21,20 +33,6 @@ export function VaultSwitcher() {
       setMetas(map)
     })
   }, [activeVaultFileName])
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-        setSwitchTarget(null)
-        setShowNewVault(false)
-      }
-    }
-    if (open || switchTarget || showNewVault) {
-      document.addEventListener('mousedown', handleClick)
-    }
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open, switchTarget, showNewVault])
 
   const currentName = db?.getData().name || activeVaultFileName?.replace(/\.keya$/, '') || 'Vault'
   const currentIcon = db?.getData().icon || ''
@@ -49,7 +47,6 @@ export function VaultSwitcher() {
       workspaceState: 'unlocked',
     })
     setSwitchTarget(null)
-    setOpen(false)
   }
 
   const handleCreate = async (password: string) => {
@@ -63,77 +60,78 @@ export function VaultSwitcher() {
       workspaceState: 'unlocked',
     })
     setShowNewVault(false)
-    setOpen(false)
   }
 
   return (
-    <div ref={ref} className="relative border-b border-line-subtle">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full h-12 flex items-center gap-2 px-4 hover:bg-surface-3 transition-colors"
-      >
-        <div className="flex items-center justify-center size-6 rounded-md bg-surface-3 text-ink-secondary text-xs shrink-0">
-          {currentIcon ? currentIcon : <Lock className="size-3.5" />}
-        </div>
-        <span className="text-sm font-semibold tracking-tight text-ink-primary truncate flex-1 text-left">
-          {currentName}
-        </span>
-        <ChevronDown className={`size-3.5 text-ink-quaternary transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 bg-canvas-panel border border-line rounded-b-md shadow-lg py-1 max-h-64 overflow-y-auto">
+    <div className="border-b border-line-subtle">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="w-full h-12 flex items-center gap-2 px-4 hover:bg-surface-3 transition-colors">
+            <div className="flex items-center justify-center size-6 rounded-md bg-surface-3 text-ink-secondary text-xs shrink-0">
+              {currentIcon ? currentIcon : <Lock className="size-3.5" />}
+            </div>
+            <span className="text-sm font-semibold tracking-tight text-ink-primary truncate flex-1 text-left">
+              {currentName}
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
           {vaults.map((f) => {
             const meta = metas[f]
             const isActive = f === activeVaultFileName
             const name = meta?.name || f.replace(/\.keya$/, '')
             return (
-              <button
+              <DropdownMenuItem
                 key={f}
                 disabled={isActive}
-                onClick={() => { setOpen(false); setSwitchTarget(f) }}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
-                  ${isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary hover:bg-surface-3 hover:text-ink-primary'}`}
+                onClick={() => setSwitchTarget(f)}
+                className={isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary'}
               >
                 <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
-                <span className="truncate">{name}</span>
+                <span className="truncate flex-1">{name}</span>
                 {isActive && <span className="ml-auto text-2xs text-ink-quaternary">active</span>}
-              </button>
+              </DropdownMenuItem>
             )
           })}
-          <div className="border-t border-line-subtle mt-1 pt-1">
-            <button
-              onClick={() => { setOpen(false); setShowNewVault(true) }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-ink-quaternary hover:text-ink-tertiary hover:bg-surface-3 transition-colors"
-            >
-              <Plus className="size-3" />
-              <span>New Vault</span>
-            </button>
-          </div>
-        </div>
-      )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowNewVault(true)} className="text-ink-quaternary">
+            <Plus className="size-3" />
+            <span>New Vault</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {switchTarget && (
-        <div className="absolute left-0 right-0 top-full z-50 bg-canvas-panel border border-line rounded-b-md shadow-lg p-3">
+      <Dialog open={!!switchTarget} onOpenChange={(v) => !v && setSwitchTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Unlock Vault</DialogTitle>
+            <DialogDescription>
+              Enter the master password for {metas[switchTarget!]?.name || switchTarget?.replace(/\.keya$/, '')}
+            </DialogDescription>
+          </DialogHeader>
           <VaultPasswordDialog
             mode="unlock"
-            vaultName={metas[switchTarget]?.name || switchTarget.replace(/\.keya$/, '')}
-            onSubmit={(pw) => handleSwitch(switchTarget, pw)}
+            vaultName={metas[switchTarget!]?.name || switchTarget?.replace(/\.keya$/, '') || ''}
+            onSubmit={(pw) => switchTarget && handleSwitch(switchTarget, pw)}
             onCancel={() => setSwitchTarget(null)}
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {showNewVault && (
-        <div className="absolute left-0 right-0 top-full z-50 bg-canvas-panel border border-line rounded-b-md shadow-lg p-3">
+      <Dialog open={showNewVault} onOpenChange={setShowNewVault}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Create New Vault</DialogTitle>
+            <DialogDescription>Set a master password for your new vault</DialogDescription>
+          </DialogHeader>
           <VaultPasswordDialog
             mode="new"
             vaultName="New Vault"
             onSubmit={handleCreate}
             onCancel={() => setShowNewVault(false)}
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
