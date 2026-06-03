@@ -16,6 +16,7 @@ interface AppState {
   searchQuery: string
   showAddForm: boolean
   theme: 'dark' | 'light' | 'system'
+  biometricPrompt: { vaultId: string; password: string } | null
 
   // Smart filters
   filterGroupId: string | null
@@ -38,6 +39,7 @@ interface AppState {
   // Actions - UI
   setSearchQuery: (q: string) => void
   setShowAddForm: (show: boolean) => void
+  setBiometricPrompt: (prompt: { vaultId: string; password: string } | null) => void
   setFilterGroupId: (id: string | null) => void
   setFilterProvider: (p: string | null) => void
   setFilterStatus: (s: string | null) => void
@@ -91,6 +93,7 @@ export const useStore = create<AppState>((set, get) => ({
   activeVaultFileName: null,
   searchQuery: '',
   showAddForm: false,
+  biometricPrompt: null,
   theme: (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') || 'system',
   ...FILTER_DEFAULTS,
 
@@ -133,6 +136,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setShowAddForm: (show) => set({ showAddForm: show }),
+  setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),
   setFilterGroupId: (id) => set({ filterGroupId: id }),
   setFilterProvider: (p) => set({ filterProvider: p }),
   setFilterStatus: (s) => set({ filterStatus: s }),

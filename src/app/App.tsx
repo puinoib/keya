@@ -6,6 +6,7 @@ import { SettingsLayout } from "./components/layout/SettingsLayout"
 import { WelcomePage } from "./components/welcome/WelcomePage"
 import { KeysPage } from "./components/keys/KeysPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
+import { BiometricPrompt } from "./components/vault/BiometricPrompt"
 import { useStore } from "./store/useStore"
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -70,12 +71,27 @@ function AppRoutes() {
   )
 }
 
+function BiometricPromptLayer() {
+  const prompt = useStore((s) => s.biometricPrompt)
+  const setPrompt = useStore((s) => s.setBiometricPrompt)
+
+  if (!prompt) return null
+  return (
+    <BiometricPrompt
+      vaultId={prompt.vaultId}
+      password={prompt.password}
+      onDone={() => setPrompt(null)}
+    />
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeSync />
       <TooltipProvider delayDuration={300}>
         <AppRoutes />
+        <BiometricPromptLayer />
       </TooltipProvider>
     </BrowserRouter>
   )
