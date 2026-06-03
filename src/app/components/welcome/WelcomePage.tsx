@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { VaultCard } from '../vault/VaultCard'
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog'
 import { FolderOpen, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus } from 'lucide-react'
+import { EmojiPicker } from '@ferrucc-io/emoji-picker'
 
 const supportsFSA = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
@@ -21,6 +22,9 @@ export function WelcomePage() {
   const [cachedMetas, setCachedMetas] = useState<Record<string, CachedVaultMeta>>({})
   const [selectedVault, setSelectedVault] = useState<string | null>(null)
   const [newVaultName, setNewVaultName] = useState('')
+  const [newVaultIcon, setNewVaultIcon] = useState('')
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { theme, setTheme } = useStore()
 
@@ -36,6 +40,17 @@ export function WelcomePage() {
       })
     }
   }, [mode])
+
+  useEffect(() => {
+    if (!emojiPickerOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setEmojiPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [emojiPickerOpen])
 
   // ── Handlers ──
 
@@ -65,7 +80,10 @@ export function WelcomePage() {
     const fileName = newVaultName
       ? `${newVaultName.replace(/\.keya$/, '')}.keya`
       : `vault-${Date.now()}.keya`
-    const db = await FileStorage.createVault(fileName, password)
+    const db = await FileStorage.createVault(fileName, password, {
+      name: newVaultName || undefined,
+      icon: newVaultIcon || undefined,
+    })
     useStore.setState({
       db,
       password,
@@ -214,17 +232,52 @@ export function WelcomePage() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-ink-tertiary">Vault Name</Label>
-                <Input
-                  value={newVaultName}
-                  onChange={(e) => setNewVaultName(e.target.value)}
-                  placeholder="My Vault"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+                      className="size-9 rounded-md border border-line bg-surface-2 flex items-center justify-center text-base hover:bg-surface-3 transition-colors"
+                    >
+                      {newVaultIcon || '🔒'}
+                    </button>
+                    {emojiPickerOpen && (
+                      <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 max-h-[260px] overflow-y-auto scrollbar-thin rounded-lg bg-canvas-panel border border-line shadow-dialog">
+                        <EmojiPicker
+                          onEmojiSelect={(emoji) => {
+                            setNewVaultIcon(emoji)
+                            setEmojiPickerOpen(false)
+                          }}
+                          emojisPerRow={8}
+                          emojiSize={20}
+                          className="border-none"
+                        >
+                          <EmojiPicker.Header>
+                            <EmojiPicker.Input
+                              placeholder="Search emoji..."
+                              hideIcon
+                              className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
+                            />
+                          </EmojiPicker.Header>
+                          <EmojiPicker.Group>
+                            <EmojiPicker.List />
+                          </EmojiPicker.Group>
+                        </EmojiPicker>
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    value={newVaultName}
+                    onChange={(e) => setNewVaultName(e.target.value)}
+                    placeholder="My Vault"
+                    className="flex-1"
+                  />
+                </div>
               </div>
               <VaultPasswordDialog
                 mode="new"
                 vaultName={newVaultName || 'New Vault'}
                 onSubmit={handleCreateVault}
-                onCancel={() => { setMode('home'); setNewVaultName('') }}
+                onCancel={() => { setMode('home'); setNewVaultName(''); setNewVaultIcon(''); setEmojiPickerOpen(false) }}
               />
             </div>
           )}
