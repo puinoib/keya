@@ -247,7 +247,7 @@ export function WelcomePage() {
                             setNewVaultIcon(emoji)
                             setEmojiPickerOpen(false)
                           }}
-                          emojisPerRow={6}
+                          emojisPerRow={12}
                           emojiSize={28}
                           className="border-none"
                         >
