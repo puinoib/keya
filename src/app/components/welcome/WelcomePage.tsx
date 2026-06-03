@@ -5,7 +5,7 @@ import { useStore } from "../../store/useStore"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { FolderOpen, FileKey, Key, ArrowRight, Loader2, Upload, AlertTriangle } from "lucide-react"
+import { FolderOpen, FileKey, Key, ArrowRight, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor } from "lucide-react"
 
 const supportsFSA = typeof window !== "undefined" && "showDirectoryPicker" in window
 
@@ -16,7 +16,7 @@ export function WelcomePage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { setWorkspaceState, setDb, setPassword: setStorePassword } = useStore()
+  const { setWorkspaceState, setDb, setPassword: setStorePassword, theme, setTheme } = useStore()
 
   // ── Password strength ──
 
@@ -129,7 +129,16 @@ export function WelcomePage() {
   // ── Render ──
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas-deepest">
+    <div className="relative flex min-h-screen items-center justify-center bg-canvas-deepest">
+      {/* Theme toggle */}
+      <div className="absolute top-4 right-4 flex items-center gap-1 bg-surface-2 rounded-md border border-line p-0.5">
+        {([["system", Monitor], ["light", Sun], ["dark", Moon]] as const).map(([t, Icon]) => (
+          <button key={t} onClick={() => setTheme(t)}
+                  className={`p-1.5 rounded transition-colors ${theme === t ? "bg-surface-5 text-ink-primary" : "text-ink-quaternary hover:text-ink-secondary"}`}>
+            <Icon className="size-3.5" />
+          </button>
+        ))}
+      </div>
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
@@ -263,6 +272,10 @@ export function WelcomePage() {
         <p className="text-center text-2xs text-ink-quaternary mt-10">
           Your keys stay on your device. Encrypted end-to-end.
         </p>
+        <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
+           className="block text-center text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors mt-2">
+          GitHub
+        </a>
       </div>
     </div>
   )
