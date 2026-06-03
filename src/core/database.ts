@@ -1,13 +1,17 @@
 import type { KeyaDatabase, ApiKey, Group } from './types';
 import { DEFAULT_GROUPS, DEFAULT_SETTINGS } from './types';
 
-export function createEmptyDatabase(): KeyaDatabase {
+export function createEmptyDatabase(name?: string): KeyaDatabase {
   const now = new Date().toISOString();
   return {
     version: '1.0',
-    file_id: crypto.randomUUID(),
+    vault_id: crypto.randomUUID(),
     created_at: now,
     updated_at: now,
+    name: name ?? '',
+    description: '',
+    icon: '🔐',
+    color: '#3b82f6',
     api_keys: [],
     groups: DEFAULT_GROUPS.map((g, i) => ({
       ...g,
@@ -21,8 +25,8 @@ export function createEmptyDatabase(): KeyaDatabase {
 export class Database {
   private data: KeyaDatabase;
 
-  constructor(data?: KeyaDatabase) {
-    this.data = data ?? createEmptyDatabase();
+  constructor(data?: KeyaDatabase, meta?: { name?: string; icon?: string; color?: string }) {
+    this.data = data ?? createEmptyDatabase(meta?.name);
   }
 
   getData(): KeyaDatabase {
