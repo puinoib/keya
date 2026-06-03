@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff,
+  Eye, EyeOff, Key,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -101,7 +101,7 @@ export function KeyList() {
                 <TooltipTrigger asChild>
                   <div className="flex items-center justify-center size-9 rounded-lg shrink-0 text-base"
                        style={{ backgroundColor: (group?.color ?? "#5e6ad2") + "18", color: group?.color ?? "#7170ff" }}>
-                    {group?.icon ?? "🔑"}
+                    {group?.icon ? group.icon : <Key className="size-4" />}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>{group?.name ?? "Ungrouped"}</TooltipContent>

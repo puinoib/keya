@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react'
 import type { CachedVaultMeta } from '../../lib/storage'
 
 interface VaultCardProps {
@@ -18,7 +19,7 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
         className="flex items-center justify-center size-8 rounded-lg text-sm shrink-0"
         style={{ backgroundColor: `${meta?.color ?? '#3b82f6'}20`, color: meta?.color ?? '#3b82f6' }}
       >
-        {meta?.icon ?? '🔐'}
+        {meta?.icon ? meta.icon : <Lock className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink-primary truncate">{displayName}</p>

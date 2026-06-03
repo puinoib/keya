@@ -257,7 +257,7 @@ export async function deserializeFromFile(
   // Default vault metadata for old files without these fields
   if (!db.name) db.name = '';
   if (!db.description) db.description = '';
-  if (!db.icon) db.icon = '🔐';
+  if (!db.icon || db.icon === '🔐') db.icon = '';
   if (!db.color) db.color = '#3b82f6';
 
   // Update modified time from header
