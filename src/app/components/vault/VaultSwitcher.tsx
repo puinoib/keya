@@ -44,26 +44,14 @@ export function VaultSwitcher() {
 
   const handleSwitch = async (fileName: string, password: string) => {
     const newDb = await FileStorage.openVault(fileName, password)
-    useStore.getState().lock()
-    useStore.setState({
-      db: newDb,
-      password,
-      activeVaultFileName: fileName,
-      workspaceState: 'unlocked',
-    })
+    useStore.getState().unlock(newDb, password, fileName)
     setSwitchTarget(null)
   }
 
   const handleCreate = async (password: string) => {
     const fileName = `vault-${Date.now()}.keya`
     const newDb = await FileStorage.createVault(fileName, password)
-    useStore.getState().lock()
-    useStore.setState({
-      db: newDb,
-      password,
-      activeVaultFileName: fileName,
-      workspaceState: 'unlocked',
-    })
+    useStore.getState().unlock(newDb, password, fileName)
     setShowNewVault(false)
   }
 
