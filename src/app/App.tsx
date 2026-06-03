@@ -1,14 +1,33 @@
 import { useEffect } from "react"
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { MainPage } from "./components/layout/MainPage"
+import { AppLayout } from "./components/layout/AppLayout"
 import { WelcomePage } from "./components/welcome/WelcomePage"
+import { KeysPage } from "./components/keys/KeysPage"
+import { SettingsPage } from "./components/settings/SettingsPage"
 import { useStore } from "./store/useStore"
 
-export default function App() {
+function AuthGuard({ children }: { children: React.ReactNode }) {
   const workspaceState = useStore((s) => s.workspaceState)
+  const location = useLocation()
+
+  if (workspaceState !== "unlocked") {
+    return <Navigate to="/" state={{ from: location }} replace />
+  }
+  return <>{children}</>
+}
+
+function WelcomeGuard() {
+  const workspaceState = useStore((s) => s.workspaceState)
+  if (workspaceState === "unlocked") {
+    return <Navigate to="/keys" replace />
+  }
+  return <WelcomePage />
+}
+
+function ThemeSync() {
   const theme = useStore((s) => s.theme)
 
-  // Apply theme class to <html>
   useEffect(() => {
     const root = document.documentElement
     const applyTheme = (t: string) => {
@@ -17,7 +36,6 @@ export default function App() {
       } else if (t === "dark") {
         root.classList.remove("light")
       } else {
-        // system
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
         if (prefersDark) root.classList.remove("light")
         else root.classList.add("light")
@@ -33,9 +51,29 @@ export default function App() {
     }
   }, [theme])
 
+  return null
+}
+
+function AppRoutes() {
   return (
-    <TooltipProvider delayDuration={300}>
-      {workspaceState === "unlocked" ? <MainPage /> : <WelcomePage />}
-    </TooltipProvider>
+    <Routes>
+      <Route path="/" element={<WelcomeGuard />} />
+      <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+        <Route path="/keys" element={<KeysPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ThemeSync />
+      <TooltipProvider delayDuration={300}>
+        <AppRoutes />
+      </TooltipProvider>
+    </BrowserRouter>
   )
 }
