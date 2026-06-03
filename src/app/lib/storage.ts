@@ -178,6 +178,14 @@ export class FileStorage {
   }
 
   /**
+   * Get workspace folder name (or null if not configured).
+   */
+  static async getWorkspaceName(): Promise<string | null> {
+    const ws = await getWorkspace();
+    return ws?.directoryHandle?.name ?? null;
+  }
+
+  /**
    * Lock: clear workspace reference.
    */
   static async lock(): Promise<void> {
