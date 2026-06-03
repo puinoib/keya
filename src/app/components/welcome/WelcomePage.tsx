@@ -241,14 +241,14 @@ export function WelcomePage() {
                       {newVaultIcon || '🔒'}
                     </button>
                     {emojiPickerOpen && (
-                      <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 max-h-[260px] overflow-y-auto scrollbar-thin rounded-lg bg-canvas-panel border border-line shadow-dialog">
+                      <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog">
                         <EmojiPicker
                           onEmojiSelect={(emoji) => {
                             setNewVaultIcon(emoji)
                             setEmojiPickerOpen(false)
                           }}
-                          emojisPerRow={8}
-                          emojiSize={20}
+                          emojisPerRow={6}
+                          emojiSize={28}
                           className="border-none"
                         >
                           <EmojiPicker.Header>
@@ -259,7 +259,7 @@ export function WelcomePage() {
                             />
                           </EmojiPicker.Header>
                           <EmojiPicker.Group>
-                            <EmojiPicker.List />
+                            <EmojiPicker.List containerHeight={220} />
                           </EmojiPicker.Group>
                         </EmojiPicker>
                       </div>
