@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom"
 import { useStore } from "../../store/useStore"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
+import { VaultSwitcher } from "../vault/VaultSwitcher"
 import { Key, Folder, Settings, Filter, X, Cog } from "lucide-react"
 
 export function Sidebar() {
@@ -26,11 +27,8 @@ export function Sidebar() {
   return (
     <>
       <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
-        {/* Brand */}
-        <div className="h-12 flex items-center gap-2.5 px-4 border-b border-line-subtle">
-          <img src="/favicon.svg" alt="Keya" className="size-6" />
-          <span className="text-sm font-semibold tracking-tight text-ink-primary">Keya</span>
-        </div>
+        {/* Vault Switcher */}
+        <VaultSwitcher />
 
         <ScrollArea className="flex-1">
           {/* Nav */}
