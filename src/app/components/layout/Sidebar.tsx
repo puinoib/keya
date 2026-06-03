@@ -97,7 +97,7 @@ export function Sidebar() {
         <ScrollArea className="flex-1">
           {/* Nav */}
           <nav className="px-2 pt-1 pb-0.5">
-            <NavLink to="/keys" className={navLinkClass}>
+            <NavLink to="/keys" className={navLinkClass} onClick={() => setFilterGroupId(null)}>
               <Key className="size-3.5 shrink-0" />
               <span className="truncate">All Keys</span>
               {keyCount > 0 && (
