@@ -6,7 +6,7 @@ import {
   Copy, FlaskConical, Pencil, Trash2, Key, Eye, EyeOff, X,
   CheckCircle2, XCircle, MinusCircle, Clock, Globe, Tag, FileText,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { EditKeyDialog } from "./KeyList"
 
 export function KeyDetail() {
@@ -15,6 +15,8 @@ export function KeyDetail() {
   const [testing, setTesting] = useState(false)
   const [copied, setCopied] = useState(false)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
+
+  useEffect(() => { setShowKey(false); setCopied(false) }, [selectedKeyId])
 
   if (!db || !selectedKeyId) return null
 
@@ -59,9 +61,13 @@ export function KeyDetail() {
 
   return (
     <>
-      <div className="w-72 shrink-0 border-l border-line-subtle bg-canvas-panel flex flex-col animate-slide-in-from-right overflow-y-auto">
+      <div
+        className="w-72 shrink-0 my-4 mr-4 flex flex-col rounded-xl
+                   bg-canvas-raised border border-line shadow-elevated
+                   animate-slide-in-from-right overflow-hidden"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0">
           <span className="text-2xs font-medium text-ink-quaternary uppercase tracking-wider">Overview</span>
           <button
             onClick={() => setSelectedKeyId(null)}
@@ -71,13 +77,13 @@ export function KeyDetail() {
           </button>
         </div>
 
-        {/* Identity */}
-        <div className="px-4 pb-4">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin">
+          {/* Identity */}
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="flex items-center justify-center size-10 rounded-xl bg-surface-4 text-ink-secondary text-lg shrink-0">
-              {group?.icon ? group.icon : <Key className="size-4" />}
+            <div className="flex items-center justify-center size-10 rounded-xl bg-accent/10 text-accent-bright text-lg shrink-0">
+              {group?.icon ? group.icon : <Key className="size-4.5" />}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold text-ink-primary truncate">{key.name}</h2>
               <p className="text-2xs text-ink-quaternary">{group?.name ?? "Ungrouped"}</p>
             </div>
@@ -100,8 +106,7 @@ export function KeyDetail() {
                 <MinusCircle className="size-3" /> Untested
               </span>
             )}
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-medium
-              ${key.status === "active" ? "bg-surface-3 text-ink-tertiary" : "bg-surface-3 text-ink-quaternary"}`}>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-3 text-ink-tertiary text-2xs font-medium">
               {key.status}
             </span>
           </div>
@@ -110,7 +115,7 @@ export function KeyDetail() {
           <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-2xs text-ink-quaternary">API Key</span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setShowKey(!showKey)}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
@@ -125,7 +130,7 @@ export function KeyDetail() {
                 </button>
               </div>
             </div>
-            <p className="font-mono text-xs text-ink-secondary break-all leading-relaxed">
+            <p className="font-mono text-xs text-ink-secondary break-all leading-relaxed select-all">
               {showKey ? key.key : maskKey(key.key)}
             </p>
           </div>
@@ -136,23 +141,16 @@ export function KeyDetail() {
             {key.service && <MetaRow icon={Tag} label="Service" value={key.service} />}
             {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
             {key.test_latency_ms != null && (
-              <MetaRow
-                icon={FlaskConical}
-                label="Latency"
-                value={`${key.test_latency_ms}ms`}
-                highlight={testOk}
-              />
+              <MetaRow icon={FlaskConical} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />
             )}
-            {key.last_tested && (
-              <MetaRow icon={Clock} label="Last tested" value={formatDate(key.last_tested)} />
-            )}
+            {key.last_tested && <MetaRow icon={Clock} label="Last tested" value={formatDate(key.last_tested)} />}
             <MetaRow icon={Clock} label="Created" value={formatDate(key.created_at)} />
             {key.description && <MetaRow icon={FileText} label="Description" value={key.description} />}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="mt-auto px-4 py-3 border-t border-line-subtle space-y-1">
+        <div className="px-4 py-3 border-t border-line-subtle shrink-0 space-y-1">
           <button
             onClick={handleTest}
             disabled={testing}
@@ -198,9 +196,9 @@ function MetaRow({ icon: Icon, label, value, mono, highlight }: {
   return (
     <div className="flex items-start gap-2">
       <Icon className="size-3 text-ink-quaternary mt-0.5 shrink-0" />
-      <div className="min-w-0">
-        <span className="text-2xs text-ink-quaternary">{label}</span>
-        <p className={`text-xs ${highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "truncate"}`}>
+      <div className="min-w-0 flex-1">
+        <p className="text-2xs text-ink-quaternary">{label}</p>
+        <p className={`text-xs ${highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "break-words"}`}>
           {value}
         </p>
       </div>

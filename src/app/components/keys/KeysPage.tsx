@@ -7,9 +7,9 @@ export function KeysPage() {
   const { db, selectedKeyId } = useStore()
 
   return (
-    <div className="flex flex-1 min-h-0 -m-0">
-      <div className={`flex-1 min-w-0 ${selectedKeyId ? "" : "max-w-4xl mx-auto w-full"}`}>
-        <div className="px-6 py-5">
+    <div className="flex flex-1 min-h-0">
+      <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto">
+        <div className={`max-w-4xl transition-all duration-300 ${selectedKeyId ? "" : "mx-auto"}`}>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
               Keys
