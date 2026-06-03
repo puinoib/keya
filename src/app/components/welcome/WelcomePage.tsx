@@ -5,7 +5,7 @@ import { useStore } from "../../store/useStore"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { FolderOpen, FileKey, Key, ArrowRight, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor } from "lucide-react"
+import { FolderOpen, FileKey, ArrowRight, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor } from "lucide-react"
 
 const supportsFSA = typeof window !== "undefined" && "showDirectoryPicker" in window
 
@@ -148,9 +148,7 @@ export function WelcomePage() {
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center justify-center size-11 rounded-xl bg-accent text-white mb-3.5 shadow-lg shadow-accent/20">
-            <Key className="size-5" />
-          </div>
+          <img src="/favicon.svg" alt="Keya" className="size-11 mb-3.5" />
           <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Keya</h1>
           <p className="text-xs text-ink-tertiary mt-1">Your Key Guardian</p>
         </div>
@@ -222,7 +220,7 @@ export function WelcomePage() {
         {mode === "new" && (
           <div className="space-y-3">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright"><Key className="size-4" /></div>
+              <img src="/favicon.svg" alt="Keya" className="size-8" />
               <div>
                 <p className="text-sm font-medium text-ink-primary">Create Vault</p>
                 <p className="text-2xs text-ink-quaternary">Set a master password</p>
@@ -273,7 +271,7 @@ export function WelcomePage() {
         {mode === "unlock" && (
           <div className="space-y-3">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright"><Key className="size-4" /></div>
+              <img src="/favicon.svg" alt="Keya" className="size-8" />
               <div>
                 <p className="text-sm font-medium text-ink-primary">Unlock Vault</p>
                 <p className="text-2xs text-ink-quaternary">Enter your master password</p>
