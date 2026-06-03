@@ -6,7 +6,8 @@
  */
 
 import type { KeyaDatabase } from './types';
-import { encryptDatabase, decryptDatabase, initCrypto } from './crypto';
+import { encryptDatabase, decryptRaw, deriveKey, initCrypto } from './crypto';
+import sodium from 'libsodium-wrappers-sumo';
 
 // ── Constants ──
 
@@ -240,7 +241,9 @@ export async function deserializeFromFile(
   const encrypted = fileBytes.slice(PREAMBLE_SIZE + 4, PREAMBLE_SIZE + 4 + payloadLen);
 
   // Decrypt
-  const json = decryptDatabase(encrypted, password);
+  const key = deriveKey(password, params.salt)
+  const plaintext = decryptRaw(encrypted, params.nonce, key)
+  const json = sodium.to_string(plaintext)
   const db = JSON.parse(json) as KeyaDatabase;
 
   // Update modified time from header
