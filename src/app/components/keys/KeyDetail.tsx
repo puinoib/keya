@@ -64,10 +64,10 @@ export function KeyDetail() {
       <div
         className="w-72 shrink-0 my-4 mr-4 flex flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
-                   animate-slide-in-from-right overflow-hidden"
+                   animate-detail-fade-in overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in" style={{ animationDelay: "40ms" }}>
           <span className="text-2xs font-medium text-ink-quaternary uppercase tracking-wider">Overview</span>
           <button
             onClick={() => setSelectedKeyId(null)}
@@ -79,7 +79,7 @@ export function KeyDetail() {
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin">
           {/* Identity */}
-          <div className="flex items-center gap-2.5 mb-3">
+          <div className="flex items-center gap-2.5 mb-3 animate-stagger-in" style={{ animationDelay: "80ms" }}>
             <div className="flex items-center justify-center size-10 rounded-xl bg-accent/10 text-accent-bright text-lg shrink-0">
               {group?.icon ? group.icon : <Key className="size-4.5" />}
             </div>
@@ -90,7 +90,7 @@ export function KeyDetail() {
           </div>
 
           {/* Status */}
-          <div className="flex items-center gap-1.5 mb-4">
+          <div className="flex items-center gap-1.5 mb-4 animate-stagger-in" style={{ animationDelay: "120ms" }}>
             {testOk && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-2xs font-medium">
                 <CheckCircle2 className="size-3" /> Working
@@ -112,7 +112,7 @@ export function KeyDetail() {
           </div>
 
           {/* Key Value */}
-          <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4">
+          <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4 animate-stagger-in" style={{ animationDelay: "160ms" }}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-2xs text-ink-quaternary">API Key</span>
               <div className="flex items-center gap-0.5">
@@ -136,7 +136,7 @@ export function KeyDetail() {
           </div>
 
           {/* Meta fields */}
-          <div className="space-y-3">
+          <div className="space-y-3 animate-stagger-in" style={{ animationDelay: "200ms" }}>
             <MetaRow icon={Tag} label="Provider" value={key.provider} />
             {key.service && <MetaRow icon={Tag} label="Service" value={key.service} />}
             {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
@@ -150,7 +150,7 @@ export function KeyDetail() {
         </div>
 
         {/* Actions */}
-        <div className="px-4 py-3 border-t border-line-subtle shrink-0 space-y-1">
+        <div className="px-4 py-3 border-t border-line-subtle shrink-0 space-y-1 animate-stagger-in" style={{ animationDelay: "240ms" }}>
           <button
             onClick={handleTest}
             disabled={testing}
