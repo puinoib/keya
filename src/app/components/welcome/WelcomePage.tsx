@@ -228,6 +228,7 @@ export function WelcomePage() {
               mode="unlock"
               vaultName={cachedMetas[selectedVault]?.name || selectedVault.replace(/\.keya$/, '')}
               vaultIcon={cachedMetas[selectedVault]?.icon}
+              fileName={selectedVault}
               onSubmit={supportsFSA
                 ? (pw) => handleUnlockVault(selectedVault, pw)
                 : handleLegacyUnlock}
