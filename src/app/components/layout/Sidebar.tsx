@@ -1,8 +1,9 @@
 import { useState } from "react"
+import { NavLink } from "react-router-dom"
 import { useStore } from "../../store/useStore"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
-import { Key, Folder, Settings, Filter, X } from "lucide-react"
+import { Key, Folder, Settings, Filter, X, Cog } from "lucide-react"
 
 export function Sidebar() {
   const {
@@ -11,16 +12,16 @@ export function Sidebar() {
   } = useStore()
   const [showGroups, setShowGroups] = useState(false)
 
-  const navItems = [
-    { icon: Key, label: "All Keys", active: true, count: db?.getApiKeys().length ?? 0 },
-  ]
-
   // Derive unique providers from keys
   const providers = db
     ? [...new Set(db.getApiKeys().map((k) => k.provider))].sort()
     : []
 
   const hasActiveFilter = filterGroupId || filterProvider || filterStatus || filterTestStatus
+
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors duration-100
+     ${isActive ? "bg-surface-6 text-ink-primary font-medium" : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`
 
   return (
     <>
@@ -36,18 +37,15 @@ export function Sidebar() {
         <ScrollArea className="flex-1">
           {/* Nav */}
           <nav className="p-2 space-y-0.5">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <button key={item.label}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors duration-100
-                          ${item.active ? "bg-surface-6 text-ink-primary font-medium" : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}>
-                  <Icon className="size-3.5 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                  <span className="ml-auto text-2xs text-ink-quaternary">{item.count}</span>
-                </button>
-              )
-            })}
+            <NavLink to="/keys" className={linkClass}>
+              <Key className="size-3.5 shrink-0" />
+              <span className="truncate">All Keys</span>
+              <span className="ml-auto text-2xs text-ink-quaternary">{db?.getApiKeys().length ?? 0}</span>
+            </NavLink>
+            <NavLink to="/settings" className={linkClass}>
+              <Cog className="size-3.5 shrink-0" />
+              <span className="truncate">Settings</span>
+            </NavLink>
           </nav>
 
           {/* Groups */}
@@ -91,7 +89,6 @@ export function Sidebar() {
                 )}
               </div>
               <div className="space-y-1">
-                {/* Provider */}
                 <select value={filterProvider ?? ""}
                         onChange={(e) => setFilterProvider(e.target.value || null)}
                         className="w-full h-7 px-2 rounded-md bg-surface-2 border border-line text-2xs text-ink-tertiary hover:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent-bright appearance-none">
@@ -99,7 +96,6 @@ export function Sidebar() {
                   {providers.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
 
-                {/* Status */}
                 <select value={filterStatus ?? ""}
                         onChange={(e) => setFilterStatus(e.target.value || null)}
                         className="w-full h-7 px-2 rounded-md bg-surface-2 border border-line text-2xs text-ink-tertiary hover:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent-bright appearance-none">
@@ -109,7 +105,6 @@ export function Sidebar() {
                   <option value="expired">Expired</option>
                 </select>
 
-                {/* Test Result */}
                 <select value={filterTestStatus ?? ""}
                         onChange={(e) => setFilterTestStatus(e.target.value || null)}
                         className="w-full h-7 px-2 rounded-md bg-surface-2 border border-line text-2xs text-ink-tertiary hover:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent-bright appearance-none">
