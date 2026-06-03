@@ -118,9 +118,9 @@ export function WelcomePage() {
           </button>
         ))}
       </div>
-      <div className="w-full max-w-xs">
+      <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-6">
           <img src="/icon.svg" alt="Keya" className="size-11 mb-3.5" />
           <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Keya</h1>
           <p className="text-xs text-ink-tertiary mt-1">Your Key Guardian</p>
@@ -136,102 +136,113 @@ export function WelcomePage() {
           </div>
         )}
 
-        {/* Mode: Home — vault list */}
-        {mode === 'home' && supportsFSA && (
-          <div className="space-y-2.5">
-            {folderName ? (
-              <>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 border border-line">
-                  <FolderOpen className="size-4 text-ink-quaternary shrink-0" />
-                  <span className="text-xs text-ink-secondary truncate">{folderName}</span>
-                </div>
-
-                {vaultFiles.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {vaultFiles.map((f) => (
-                      <VaultCard
-                        key={f}
-                        fileName={f}
-                        meta={cachedMetas[f]}
-                        onClick={() => { setSelectedVault(f); setMode('unlock') }}
-                      />
-                    ))}
+        {/* Mode content with fade transition */}
+        <div key={mode} className="animate-fade-in">
+          {/* Mode: Home — vault list */}
+          {mode === 'home' && supportsFSA && (
+            <div className="space-y-2">
+              {folderName ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 border border-line">
+                    <FolderOpen className="size-4 text-ink-quaternary shrink-0" />
+                    <span className="text-xs text-ink-secondary truncate">{folderName}</span>
                   </div>
-                ) : (
-                  <p className="text-xs text-ink-quaternary text-center py-2">No vaults found</p>
-                )}
 
-                <button onClick={() => setMode('new')}
-                        className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors">
-                  <Plus className="size-4" /> New Vault
+                  {vaultFiles.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {vaultFiles.map((f) => (
+                        <VaultCard
+                          key={f}
+                          fileName={f}
+                          meta={cachedMetas[f]}
+                          onClick={() => { setSelectedVault(f); setMode('unlock') }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5 px-4 py-5 rounded-md border border-dashed border-line">
+                      <FolderOpen className="size-5 text-ink-quaternary" />
+                      <p className="text-xs text-ink-tertiary">No vaults yet</p>
+                      <p className="text-2xs text-ink-quaternary">Create your first vault to get started</p>
+                    </div>
+                  )}
+
+                  <button onClick={() => setMode('new')}
+                          className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors">
+                    <Plus className="size-4" /> New Vault
+                  </button>
+                  <button onClick={handleSwitchFolder}
+                          className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1">
+                    Change Sync Folder
+                  </button>
+                </>
+              ) : (
+                <button onClick={handleChooseFolder} disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
+                  {loading ? <Loader2 className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
+                  Choose Sync Folder
                 </button>
-                <button onClick={handleSwitchFolder}
-                        className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1">
-                  Change Sync Folder
-                </button>
-              </>
-            ) : (
-              <button onClick={handleChooseFolder} disabled={loading}
+              )}
+            </div>
+          )}
+
+          {/* Mode: Home — legacy (mobile) */}
+          {mode === 'home' && !supportsFSA && (
+            <div className="space-y-2">
+              <button onClick={() => fileInputRef.current?.click()} disabled={loading}
                       className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
-                {loading ? <Loader2 className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
-                Choose Sync Folder
+                <Upload className="size-4" /> Open .keya File
               </button>
-            )}
-          </div>
-        )}
+              <input ref={fileInputRef} type="file" accept=".keya" className="hidden" onChange={handleLegacyFilePicked} />
+            </div>
+          )}
 
-        {/* Mode: Home — legacy (mobile) */}
-        {mode === 'home' && !supportsFSA && (
-          <div className="space-y-2.5">
-            <button onClick={() => fileInputRef.current?.click()} disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
-              <Upload className="size-4" /> Open .keya File
-            </button>
-            <input ref={fileInputRef} type="file" accept=".keya" className="hidden" onChange={handleLegacyFilePicked} />
-          </div>
-        )}
+          {/* Mode: Unlock */}
+          {mode === 'unlock' && selectedVault && (
+            <VaultPasswordDialog
+              mode="unlock"
+              vaultName={cachedMetas[selectedVault]?.name || selectedVault.replace(/\.keya$/, '')}
+              onSubmit={supportsFSA
+                ? (pw) => handleUnlockVault(selectedVault, pw)
+                : handleLegacyUnlock}
+              onCancel={() => { setMode('home'); setSelectedVault(null) }}
+            />
+          )}
 
-        {/* Mode: Unlock */}
-        {mode === 'unlock' && selectedVault && (
-          <VaultPasswordDialog
-            mode="unlock"
-            vaultName={cachedMetas[selectedVault]?.name || selectedVault.replace(/\.keya$/, '')}
-            onSubmit={supportsFSA
-              ? (pw) => handleUnlockVault(selectedVault, pw)
-              : handleLegacyUnlock}
-            onCancel={() => { setMode('home'); setSelectedVault(null) }}
-          />
-        )}
-
-        {/* Mode: New */}
-        {mode === 'new' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-ink-tertiary">Vault Name</Label>
-              <Input
-                value={newVaultName}
-                onChange={(e) => setNewVaultName(e.target.value)}
-                placeholder="My Vault"
+          {/* Mode: New */}
+          {mode === 'new' && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-ink-tertiary">Vault Name</Label>
+                <Input
+                  value={newVaultName}
+                  onChange={(e) => setNewVaultName(e.target.value)}
+                  placeholder="My Vault"
+                />
+              </div>
+              <VaultPasswordDialog
+                mode="new"
+                vaultName={newVaultName || 'New Vault'}
+                onSubmit={handleCreateVault}
+                onCancel={() => { setMode('home'); setNewVaultName('') }}
               />
             </div>
-            <VaultPasswordDialog
-              mode="new"
-              vaultName={newVaultName || 'New Vault'}
-              onSubmit={handleCreateVault}
-              onCancel={() => { setMode('home'); setNewVaultName('') }}
-            />
-          </div>
+          )}
+        </div>
+
+        {error && mode === 'home' && <p className="text-xs text-danger text-center mt-2">{error}</p>}
+
+        {mode === 'home' && (
+          <>
+            <p className="text-center text-2xs text-ink-quaternary mt-10">
+              Your keys stay on your device. Encrypted end-to-end.
+            </p>
+            <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
+               className="block text-center text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors mt-2">
+              GitHub
+            </a>
+          </>
         )}
-
-        {error && <p className="text-xs text-danger text-center mt-2">{error}</p>}
-
-        <p className="text-center text-2xs text-ink-quaternary mt-10">
-          Your keys stay on your device. Encrypted end-to-end.
-        </p>
-        <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
-           className="block text-center text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors mt-2">
-          GitHub
-        </a>
       </div>
     </div>
   )
