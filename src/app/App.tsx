@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppLayout } from "./components/layout/AppLayout"
+import { SettingsLayout } from "./components/layout/SettingsLayout"
 import { WelcomePage } from "./components/welcome/WelcomePage"
 import { KeysPage } from "./components/keys/KeysPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
@@ -60,6 +61,8 @@ function AppRoutes() {
       <Route path="/" element={<WelcomeGuard />} />
       <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
         <Route path="/keys" element={<KeysPage />} />
+      </Route>
+      <Route element={<AuthGuard><SettingsLayout /></AuthGuard>}>
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
