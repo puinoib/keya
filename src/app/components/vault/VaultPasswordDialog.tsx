@@ -7,11 +7,12 @@ interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new'
   vaultName: string
   vaultIcon?: string
+  fileName?: string
   onSubmit: (password: string) => Promise<void>
   onCancel: () => void
 }
 
-export function VaultPasswordDialog({ mode, vaultName, vaultIcon, onSubmit, onCancel }: VaultPasswordDialogProps) {
+export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, onSubmit, onCancel }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -44,11 +45,11 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, onSubmit, onCa
           <p className="text-sm font-medium text-ink-primary">
             {isCreate ? 'Create' : 'Unlock'}: {vaultName}
           </p>
-          {isCreate && (
-            <p className="text-2xs text-ink-quaternary">
-              Set a master password
-            </p>
-          )}
+          {isCreate ? (
+            <p className="text-2xs text-ink-quaternary">Set a master password</p>
+          ) : fileName ? (
+            <p className="text-2xs text-ink-quaternary">{fileName}</p>
+          ) : null}
         </div>
       </div>
 
