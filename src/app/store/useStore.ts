@@ -48,6 +48,9 @@ interface AppState {
   addGroup: (group: Omit<Group, 'id'>) => void
   updateGroup: (id: string, updates: Partial<Group>) => void
   deleteGroup: (id: string) => void
+
+  // Actions - Vault Meta
+  updateMeta: (updates: Partial<{ name: string; description: string; icon: string; color: string }>) => void
 }
 
 // ── Save debouncer ──
@@ -65,6 +68,7 @@ function scheduleSave() {
       } else {
         await FileStorage.saveViaDownload(db.getData(), password, activeVaultFileName)
       }
+      await FileStorage.cacheVaultMeta(activeVaultFileName, db)
     } catch (e) {
       console.error('Auto-save failed:', e)
     }
@@ -149,6 +153,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteGroup: (id) => {
     get().db?.deleteGroup(id)
+    set({})
+    scheduleSave()
+  },
+
+  updateMeta: (updates) => {
+    get().db?.updateMeta(updates)
     set({})
     scheduleSave()
   },
