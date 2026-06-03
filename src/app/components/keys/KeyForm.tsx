@@ -1,10 +1,13 @@
 import { useState } from "react"
 import { useStore } from "../../store/useStore"
 import { ENDPOINT_DEFAULTS, type ApiKey } from "../../../core/types"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Key, ArrowLeft, Eye, EyeOff, Wand2 } from "lucide-react"
+import { Key, Eye, EyeOff, Wand2 } from "lucide-react"
 
 const PROVIDERS = [
   "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
@@ -33,8 +36,8 @@ const empty: FormData = {
   tag_ids: [],
 }
 
-export function KeyForm() {
-  const { setShowAddForm, addKey, db } = useStore()
+export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { addKey, db } = useStore()
   const [form, setForm] = useState<FormData>(empty)
   const [showKey, setShowKey] = useState(false)
 
@@ -62,30 +65,17 @@ export function KeyForm() {
       category_id: form.category_id,
       tag_ids: form.tag_ids,
     })
+    setForm(empty)
   }
 
   return (
-    <div className="max-w-lg">
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => setShowAddForm(false)}
-          className="inline-flex items-center justify-center size-7 rounded-md
-                     text-ink-quaternary hover:text-ink-primary hover:bg-white/[0.05]
-                     transition-colors"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center size-7 rounded-md bg-accent/15 text-accent-bright">
-            <Key className="size-3.5" />
-          </div>
-          <h2 className="text-sm font-semibold text-ink-primary">New API Key</h2>
-        </div>
-      </div>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New API Key</DialogTitle>
+        </DialogHeader>
 
-      {/* ── Form ── */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
         {/* Name */}
         <div className="space-y-1.5">
           <Label htmlFor="name" className="text-xs">Name</Label>
@@ -242,11 +232,12 @@ export function KeyForm() {
             <Key className="size-3.5" />
             Save Key
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
         </div>
       </form>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
