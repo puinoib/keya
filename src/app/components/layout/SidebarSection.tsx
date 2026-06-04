@@ -1,5 +1,5 @@
 import { useState, ReactNode } from "react"
-import { ChevronDown } from "lucide-react"
+import { CaretDown } from "@phosphor-icons/react"
 
 interface Props {
   icon: React.ElementType
@@ -29,7 +29,7 @@ export function SidebarSection({
           <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">
             {label}
           </span>
-          <ChevronDown
+          <CaretDown
             className={`size-2.5 text-ink-quaternary transition-transform duration-150 ${open ? "" : "-rotate-90"}`}
           />
         </div>
