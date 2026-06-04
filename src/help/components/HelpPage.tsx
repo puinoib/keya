@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from "@phosphor-icons/react"
 import type { HelpDocument } from '../types'
 import { getDocument } from '../lib/manifest'
 import { MarkdownContent } from './MarkdownContent'
@@ -42,7 +42,7 @@ export function HelpPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="size-6 animate-spin text-ink-quaternary" />
+        <Spinner className="size-6 animate-spin text-ink-quaternary" />
       </div>
     )
   }

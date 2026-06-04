@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { MagnifyingGlass } from "@phosphor-icons/react"
 import type { HelpDocument, SearchResult } from '../types'
 import { searchDocuments, buildSearchIndex } from '../lib/search'
 import { cn } from '@/lib/utils'
@@ -39,7 +39,7 @@ export function HelpSearch({ documents, onClose }: HelpSearchProps) {
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
+        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
         <input
           type="text"
           value={query}

@@ -4,9 +4,9 @@ import { maskKey } from "@/lib/mask"
 import { useToast } from "@/components/ui/toast"
 import type { ApiKey } from "../../../core/types"
 import {
-  Copy, FlaskConical, Pencil, Trash2, Key, Eye, EyeOff, X,
-  CheckCircle2, XCircle, MinusCircle, Clock, Globe, Tag, FileText, AlertTriangle,
-} from "lucide-react"
+  Copy, Flask, PencilSimple, Trash, Key, Eye, EyeSlash, X,
+  CheckCircle, XCircle, MinusCircle, Clock, Globe, Tag, FileText, Warning,
+} from "@phosphor-icons/react"
 import { useState, useEffect } from "react"
 import { EditKeyDialog } from "./KeyList"
 
@@ -114,17 +114,17 @@ export function KeyDetail() {
           <div className="flex items-center gap-1.5 mb-4 animate-stagger-in" style={{ animationDelay: "120ms" }}>
             {expiry.expired && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
-                <AlertTriangle className="size-3" /> Expired
+                <Warning className="size-3" /> Expired
               </span>
             )}
             {!expiry.expired && expiry.expiringSoon && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                <AlertTriangle className="size-3" /> {expiry.daysLeft}d left
+                <Warning className="size-3" /> {expiry.daysLeft}d left
               </span>
             )}
             {testOk && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-xs font-medium">
-                <CheckCircle2 className="size-3" /> Working
+                <CheckCircle className="size-3" /> Working
               </span>
             )}
             {testFail && (
@@ -148,13 +148,13 @@ export function KeyDetail() {
                   onClick={() => setShowKey(!showKey)}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
-                  {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                  {showKey ? <EyeSlash className="size-3" /> : <Eye className="size-3" />}
                 </button>
                 <button
                   onClick={handleCopy}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
-                  {copied ? <CheckCircle2 className="size-3 text-success-bright" /> : <Copy className="size-3" />}
+                  {copied ? <CheckCircle className="size-3 text-success-bright" /> : <Copy className="size-3" />}
                 </button>
               </div>
             </div>
@@ -169,7 +169,7 @@ export function KeyDetail() {
             {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
             {key.expires_at && (
               <MetaRow
-                icon={AlertTriangle}
+                icon={Warning}
                 label="Expires"
                 value={formatDate(key.expires_at)}
                 highlight={!expiry.expired && !expiry.expiringSoon}
@@ -177,7 +177,7 @@ export function KeyDetail() {
               />
             )}
             {key.test_latency_ms != null && (
-              <MetaRow icon={FlaskConical} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />
+              <MetaRow icon={Flask} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />
             )}
             {key.last_tested && <MetaRow icon={Clock} label="Last tested" value={formatDate(key.last_tested)} />}
             <MetaRow icon={Clock} label="Created" value={formatDate(key.created_at)} />
@@ -194,20 +194,20 @@ export function KeyDetail() {
           >
             {testing
               ? <span className="size-3 border-[1.5px] border-ink-tertiary border-t-transparent rounded-full animate-spin" />
-              : <FlaskConical className="size-3.5" />}
+              : <Flask className="size-3.5" />}
             {testing ? "Testing..." : "Test Key"}
           </button>
           <button
             onClick={() => setEditingKey(key)}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors duration-100"
           >
-            <Pencil className="size-3.5" /> Edit
+            <PencilSimple className="size-3.5" /> Edit
           </button>
           <button
             onClick={handleDelete}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-danger/70 hover:text-danger hover:bg-danger/5 transition-colors duration-100"
           >
-            <Trash2 className="size-3.5" /> Delete
+            <Trash className="size-3.5" /> Delete
           </button>
         </div>
       </div>

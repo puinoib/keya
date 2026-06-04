@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight } from "@phosphor-icons/react"
 import type { HelpDocument } from '../types'
 import { loadManifest } from '../lib/manifest'
 import { cn } from '@/lib/utils'
