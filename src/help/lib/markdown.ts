@@ -16,7 +16,7 @@ export function convertInternalLinks(html: string): {
   internalLinks: Set<string>
 } {
   const internalLinks = new Set<string>()
-  const converted = html.replace(internalLinkRegex, (match, slug) => {
+  const converted = html.replace(internalLinkRegex, (_match, slug) => {
     internalLinks.add(slug)
     return `data-internal-link="/help/${slug}"`
   })

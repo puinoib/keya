@@ -1,4 +1,4 @@
-import { HelpDocument, SearchResult } from '../types'
+import type { HelpDocument, SearchResult } from '../types'
 
 interface SearchIndex {
   documents: HelpDocument[]
