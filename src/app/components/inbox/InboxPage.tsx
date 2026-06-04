@@ -43,6 +43,8 @@ export function InboxPage() {
   const archiveInboxItem = useStore((s) => s.archiveInboxItem);
   const runInboxChecks = useStore((s) => s.runInboxChecks);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
+  const clearFilters = useStore((s) => s.clearFilters);
+  const setSearchQuery = useStore((s) => s.setSearchQuery);
 
   const items = db?.getInboxItems() ?? [];
   const openItems = useMemo(
@@ -152,6 +154,8 @@ export function InboxPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
+                        clearFilters();
+                        setSearchQuery('');
                         setSelectedKeyId(item.entity_id);
                         navigate({ to: '/keys' });
                       }}
