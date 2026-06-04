@@ -361,6 +361,15 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: var(--surface-6);
   }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* ── Linear ghost button ── */
