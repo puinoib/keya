@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
+import { GroupSelect } from './GroupSelect';
 import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
 import type { ApiKey } from '../../../core/types';
@@ -371,8 +372,6 @@ export function EditKeyDialog({
   onSave: (id: string, updates: Partial<ApiKey>) => void;
 }) {
   const db = useStore((s) => s.db);
-  const [dialogPortalContainer, setDialogPortalContainer] =
-    useState<HTMLElement | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -416,13 +415,6 @@ export function EditKeyDialog({
     ENDPOINT_DEFAULTS[form.provider.toLowerCase()] ??
     settings?.custom_providers?.find((cp) => cp.name === form.provider)
       ?.endpoint;
-
-  const currentGroup = form.group_id
-    ? db?.getGroups().find((g) => g.id === form.group_id)
-    : null;
-  const groupDisplay = currentGroup
-    ? `${currentGroup.icon} ${currentGroup.name}`
-    : 'Ungrouped';
 
   const handleTest = async () => {
     if (!form.key) return;
@@ -469,10 +461,6 @@ export function EditKeyDialog({
     }
   };
 
-  const handleDialogContentRef = (node: HTMLDivElement | null) => {
-    setDialogPortalContainer(node?.parentElement ?? null);
-  };
-
   return (
     <Dialog
       open={editingKey !== null}
@@ -480,7 +468,7 @@ export function EditKeyDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent ref={handleDialogContentRef} className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit API Key</DialogTitle>
         </DialogHeader>
@@ -634,27 +622,11 @@ export function EditKeyDialog({
           {/* Group */}
           <div className="space-y-1.5">
             <Label className="text-xs">Group</Label>
-            <Select
-              value={form.group_id ?? '__none__'}
-              onValueChange={(v) =>
-                setForm((f) => ({
-                  ...f,
-                  group_id: v === '__none__' ? null : v,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
-              </SelectTrigger>
-              <SelectContent container={dialogPortalContainer}>
-                <SelectItem value="__none__">Ungrouped</SelectItem>
-                {db?.getGroups().map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.icon} {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <GroupSelect
+              groups={db?.getGroups() ?? []}
+              value={form.group_id}
+              onChange={(group_id) => setForm((f) => ({ ...f, group_id }))}
+            />
           </div>
 
           {/* Description */}

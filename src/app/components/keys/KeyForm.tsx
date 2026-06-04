@@ -7,6 +7,7 @@ import {
 } from '../../../core/types';
 import { ApiTester } from '../../lib/api-tester';
 import { DayPicker } from './DayPicker';
+import { GroupSelect } from './GroupSelect';
 import {
   Dialog,
   DialogContent,
@@ -70,8 +71,6 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const { addKey, updateKey, db } = useStore();
-  const [dialogPortalContainer, setDialogPortalContainer] =
-    useState<HTMLElement | null>(null);
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -101,13 +100,6 @@ export function KeyForm({
     ENDPOINT_DEFAULTS[form.provider.toLowerCase()] ??
     settings?.custom_providers?.find((cp) => cp.name === form.provider)
       ?.endpoint;
-
-  const currentGroup = form.group_id
-    ? db?.getGroups().find((g) => g.id === form.group_id)
-    : null;
-  const groupDisplay = currentGroup
-    ? `${currentGroup.icon} ${currentGroup.name}`
-    : 'Ungrouped';
 
   const handleProviderChange = (provider: string) => {
     const endpoint =
@@ -185,10 +177,6 @@ export function KeyForm({
     onClose();
   };
 
-  const handleDialogContentRef = (node: HTMLDivElement | null) => {
-    setDialogPortalContainer(node?.parentElement ?? null);
-  };
-
   return (
     <Dialog
       open={open}
@@ -196,7 +184,7 @@ export function KeyForm({
         if (!o) handleClose();
       }}
     >
-      <DialogContent ref={handleDialogContentRef} className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New API Key</DialogTitle>
         </DialogHeader>
@@ -225,6 +213,11 @@ export function KeyForm({
               <Input
                 id="key_value"
                 type={showKey ? 'text' : 'password'}
+                name="api-key-secret"
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                spellCheck={false}
                 value={form.key_value}
                 onChange={(e) => {
                   setForm((f) => ({ ...f, key_value: e.target.value }));
@@ -348,27 +341,11 @@ export function KeyForm({
             <Label htmlFor="group" className="text-xs">
               Group
             </Label>
-            <Select
-              value={form.group_id ?? '__none__'}
-              onValueChange={(v) =>
-                setForm((f) => ({
-                  ...f,
-                  group_id: v === '__none__' ? null : v,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
-              </SelectTrigger>
-              <SelectContent container={dialogPortalContainer}>
-                <SelectItem value="__none__">Ungrouped</SelectItem>
-                {db?.getGroups().map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.icon} {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <GroupSelect
+              groups={db?.getGroups() ?? []}
+              value={form.group_id}
+              onChange={(group_id) => setForm((f) => ({ ...f, group_id }))}
+            />
           </div>
 
           {/* Description */}
