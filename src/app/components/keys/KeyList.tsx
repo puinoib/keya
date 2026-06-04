@@ -41,6 +41,7 @@ export function KeyList() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null)
+  const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null)
   const toast = useToast()
 
   if (!db) return null
@@ -66,7 +67,6 @@ export function KeyList() {
   }, [selectedKeyId, keys])
 
   const groups = db.getGroups()
-  const getGroup = (id: string | null) => groups.find((g) => g.id === id)
 
   const handleTest = async (key: ApiKey) => {
     setTesting(key.id)
@@ -131,7 +131,6 @@ export function KeyList() {
     <>
       <div className="space-y-1">
         {keys.map((key) => {
-          const group = getGroup(key.group_id)
           const isTesting = testing === key.id
           const testOk = key.test_status === "success"
           const testFail = key.test_status === "failed"
@@ -142,20 +141,12 @@ export function KeyList() {
             <div
               key={key.id}
               onClick={() => setSelectedKeyId(selectedKeyId === key.id ? null : key.id)}
-              className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
+              onMouseEnter={() => setHoveredKeyId(key.id)}
+              onMouseLeave={() => setHoveredKeyId(null)}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
                          transition-all duration-200
                          ${selectedKeyId === key.id ? "bg-surface-4" : "hover:bg-surface-3"}`}
             >
-              {/* Icon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center justify-center size-8 rounded-lg bg-surface-4 text-ink-secondary shrink-0 text-sm">
-                    {group?.icon ? group.icon : <Key className="size-3.5" />}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{group?.name ?? "Ungrouped"}</TooltipContent>
-              </Tooltip>
-
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -179,31 +170,23 @@ export function KeyList() {
               </div>
 
               {/* Actions */}
-              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button onClick={() => handleTest(key)} disabled={isTesting}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100 disabled:opacity-50">
-                      {isTesting ? <span className="size-3 border-[1.5px] border-ink-tertiary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-3.5" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isTesting ? "Testing..." : "Test key"}</TooltipContent>
-                </Tooltip>
+              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleTest(key)} disabled={isTesting}
+                        className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
+                        title={isTesting ? "Testing..." : "Test key"}>
+                  {isTesting ? <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-4 text-ink-primary" />}
+                </button>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button onClick={() => handleCopy(key.key, key.id)}
-                            className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100">
-                      {copiedId === key.id ? <span className="text-xs text-success-bright font-medium">✓</span> : <Copy className="size-3.5" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{copiedId === key.id ? "Copied!" : "Copy to clipboard"}</TooltipContent>
-                </Tooltip>
+                <button onClick={() => handleCopy(key.key, key.id)}
+                        className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100"
+                        title={copiedId === key.id ? "Copied!" : "Copy to clipboard"}>
+                  {copiedId === key.id ? <span className="text-xs text-success-bright font-medium">✓</span> : <Copy className="size-4 text-ink-primary" />}
+                </button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-5 transition-colors duration-100">
-                      <MoreHorizontal className="size-3.5" />
+                    <button className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100">
+                      <MoreHorizontal className="size-4 text-ink-primary" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
