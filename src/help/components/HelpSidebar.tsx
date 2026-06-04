@@ -26,7 +26,7 @@ export function HelpSidebar({
                   ? currentSlug === null
                   : currentSlug === doc.slug
               )
-                ? 'bg-accent-default/20 text-accent-bright font-medium'
+                ? 'bg-accent/20 text-accent-bright font-medium'
                 : 'text-ink-secondary hover:bg-surface-3 hover:text-ink-primary'
             )}
           >

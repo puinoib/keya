@@ -1,4 +1,10 @@
-import { createFileRoute, redirect, Outlet } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  redirect,
+  Outlet,
+  useNavigate,
+} from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { useStore } from '@/app/store/useStore';
 import { loadSession } from '@/app/lib/session';
 
@@ -13,5 +19,20 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/' });
     }
   },
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  const navigate = useNavigate();
+  const workspaceState = useStore((s) => s.workspaceState);
+
+  useEffect(() => {
+    // After the vault is locked (manually, by auto-lock, or session restore failure),
+    // redirect to home since beforeLoad only runs on navigation.
+    if (workspaceState !== 'unlocked' && !loadSession()) {
+      navigate({ to: '/' });
+    }
+  }, [workspaceState, navigate]);
+
+  return <Outlet />;
+}
