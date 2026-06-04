@@ -1,53 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { Spinner } from "@phosphor-icons/react"
-import type { HelpDocument } from '../types'
 import { getDocument } from '../lib/manifest'
 import { MarkdownContent } from './MarkdownContent'
 
-export function HelpPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const [document, setDocument] = useState<HelpDocument | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function HelpPage({ slug }: { slug: string }) {
+  const document = getDocument(slug)
 
-  useEffect(() => {
-    async function loadDoc() {
-      if (!slug) {
-        setError('Document not found')
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
-      setError(null)
-
-      try {
-        const doc = await getDocument(slug)
-        if (doc) {
-          setDocument(doc)
-        } else {
-          setError('Document not found')
-        }
-      } catch (err) {
-        setError('Failed to load document')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDoc()
-  }, [slug])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Spinner className="size-6 animate-spin text-ink-quaternary" />
-      </div>
-    )
-  }
-
-  if (error || !document) {
+  if (!document) {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-ink-primary">Document not found</h2>
