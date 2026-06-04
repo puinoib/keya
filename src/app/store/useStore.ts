@@ -36,7 +36,7 @@ interface AppState {
   setTheme: (theme: 'dark' | 'light' | 'system') => void
 
   // Actions - Keys
-  addKey: (key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>) => void
+  addKey: (key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>) => ApiKey | undefined
   updateKey: (id: string, updates: Partial<ApiKey>) => void
   deleteKey: (id: string) => void
 
@@ -138,9 +138,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addKey: (key) => {
-    get().db?.addApiKey(key)
+    const created = get().db?.addApiKey(key)
     set({ showAddForm: false })
     scheduleSave()
+    return created
   },
 
   updateKey: (id, updates) => {

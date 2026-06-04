@@ -267,6 +267,11 @@ export async function deserializeFromFile(
     if (k.expires_at === undefined) (k as any).expires_at = null;
   }
 
+  // Default new settings fields for old files
+  if (db.settings.auto_test_on_save === undefined) db.settings.auto_test_on_save = false;
+  if (db.settings.custom_providers === undefined) db.settings.custom_providers = [];
+  if (db.settings.disabled_providers === undefined) db.settings.disabled_providers = [];
+
   // Update modified time from header
   db.updated_at = header.modified.toISOString();
 

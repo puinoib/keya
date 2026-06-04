@@ -1,7 +1,10 @@
 import { useState } from "react"
+import { format } from "date-fns"
 import { useStore } from "../../store/useStore"
-import { ENDPOINT_DEFAULTS } from "../../../core/types"
+import { ENDPOINT_DEFAULTS, getProvidersForDropdown } from "../../../core/types"
 import { ApiTester } from "../../lib/api-tester"
+import { Popover } from "@base-ui/react/popover"
+import { DayPicker } from "./DayPicker"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -9,13 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2, Calendar } from "lucide-react"
-
-const PROVIDERS = [
-  "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
-  "Zhipu", "Baidu", "Mistral", "Cohere", "Together", "OpenRouter",
-  "SiliconFlow", "Azure OpenAI", "Custom",
-]
+import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react"
 
 interface FormData {
   name: string
@@ -24,7 +21,7 @@ interface FormData {
   endpoint: string
   description: string
   group_id: string | null
-  expires_at: string
+  expires_at: Date | undefined
 }
 
 interface TestState {
@@ -39,20 +36,25 @@ const empty: FormData = {
   endpoint: "",
   description: "",
   group_id: null,
-  expires_at: "",
+  expires_at: undefined,
 }
 
 export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { addKey, db } = useStore()
+  const { addKey, updateKey, db } = useStore()
   const [form, setForm] = useState<FormData>(empty)
   const [showKey, setShowKey] = useState(false)
   const [testState, setTestState] = useState<TestState>({ testing: false, result: null })
 
+  const settings = db?.getSettings()
+  const providers = getProvidersForDropdown(settings)
   const defaultEndpoint = ENDPOINT_DEFAULTS[form.provider.toLowerCase()]
+    ?? settings?.custom_providers?.find((cp) => cp.name === form.provider)?.endpoint
 
   const handleProviderChange = (provider: string) => {
     const endpoint = ENDPOINT_DEFAULTS[provider.toLowerCase()]
-    setForm((f) => ({ ...f, provider, endpoint: endpoint ?? "" }))
+      ?? settings?.custom_providers?.find((cp) => cp.name === provider)?.endpoint
+      ?? ""
+    setForm((f) => ({ ...f, provider, endpoint }))
     setTestState({ testing: false, result: null })
   }
 
@@ -73,21 +75,36 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
     e.preventDefault()
     if (!form.name || !form.key_value) return
 
-    addKey({
+    const created = addKey({
       name: form.name,
       key: form.key_value,
       provider: form.provider,
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
-      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+      expires_at: form.expires_at ? form.expires_at.toISOString() : null,
       last_tested: testState.result ? new Date().toISOString() : null,
       test_status: testState.result?.success ? "success" : (testState.result ? "failed" : null),
       test_latency_ms: testState.result?.latency_ms ?? null,
     })
+
+    const provider = form.provider
+    const endpoint = form.endpoint
+    const keyValue = form.key_value
     setForm(empty)
     setTestState({ testing: false, result: null })
     onClose()
+
+    // Auto-test on save
+    if (settings?.auto_test_on_save && created) {
+      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
+        updateKey(created.id, {
+          last_tested: new Date().toISOString(),
+          test_status: result.success ? "success" : "failed",
+          test_latency_ms: result.latency_ms ?? null,
+        })
+      })
+    }
   }
 
   const handleClose = () => {
@@ -148,7 +165,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PROVIDERS.map((p) => (
+                {providers.map((p) => (
                   <SelectItem key={p} value={p}>{p}</SelectItem>
                 ))}
               </SelectContent>
@@ -179,6 +196,38 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
             />
           </div>
 
+          {/* Expiration */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Expiration</Label>
+            <Popover.Root>
+              <Popover.Trigger className="w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left">
+                <CalendarIcon className="size-3.5 shrink-0" />
+                <span className={!form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"}>
+                  {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
+                </span>
+                {form.expires_at && (
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, expires_at: undefined })) }}
+                    className="ml-auto text-ink-quaternary hover:text-ink-secondary"
+                  >
+                    <X className="size-3" />
+                  </span>
+                )}
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Positioner sideOffset={4}>
+                  <Popover.Popup className="rounded-lg border border-line bg-canvas-raised shadow-elevated z-50">
+                    <DayPicker
+                      value={form.expires_at}
+                      onChange={(d) => { setForm((f) => ({ ...f, expires_at: d })) }}
+                    />
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
+
           {/* Group */}
           <div className="space-y-1.5">
             <Label htmlFor="group" className="text-xs">Group</Label>
@@ -200,27 +249,12 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-xs">Description (optional)</Label>
+            <Label htmlFor="description" className="text-xs">Description</Label>
             <Input
               id="description"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="What's this key for?"
-            />
-          </div>
-
-          {/* Expiration */}
-          <div className="space-y-1.5">
-            <Label htmlFor="expires_at" className="text-xs flex items-center gap-1.5">
-              <Calendar className="size-3" /> Expiration (optional)
-            </Label>
-            <Input
-              id="expires_at"
-              type="date"
-              value={form.expires_at}
-              onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
-              min={new Date().toISOString().split("T")[0]}
-              className="text-xs"
             />
           </div>
 

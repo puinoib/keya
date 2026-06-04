@@ -1,11 +1,12 @@
 import { useStore } from "../../store/useStore"
-import { Settings as SettingsIcon, Palette, Fingerprint, Loader2 } from "lucide-react"
+import { Settings as SettingsIcon, Palette, Fingerprint, Loader2, FlaskConical, Server } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect, useRef } from "react"
 import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
+import { ManageProvidersDialog } from "./ManageProvidersDialog"
 
 export function SettingsPage() {
   const { db, password, updateMeta, updateSettings } = useStore()
@@ -15,6 +16,7 @@ export function SettingsPage() {
   const [bioRegistered, setBioRegistered] = useState(false)
   const [bioLoading, setBioLoading] = useState(false)
   const [bioError, setBioError] = useState('')
+  const [showProviders, setShowProviders] = useState(false)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const bioSupported = isBiometricSupported()
   const vaultId = data?.vault_id
@@ -165,7 +167,41 @@ export function SettingsPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Auto-Test on Save */}
+        <div className="space-y-2">
+          <Label className="text-xs">Auto-Test on Save</Label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => updateSettings({ auto_test_on_save: !settings?.auto_test_on_save })}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs transition-colors
+                ${settings?.auto_test_on_save
+                  ? 'bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5'
+                  : 'bg-accent text-white hover:bg-accent-bright'}`}
+            >
+              <FlaskConical className="size-3.5" />
+              {settings?.auto_test_on_save ? 'Disable' : 'Enable'}
+            </button>
+            {settings?.auto_test_on_save && (
+              <span className="text-xs text-emerald-500">Enabled</span>
+            )}
+          </div>
+        </div>
+
+        {/* Providers */}
+        <div className="space-y-2">
+          <Label className="text-xs">Providers</Label>
+          <button
+            onClick={() => setShowProviders(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5 transition-colors"
+          >
+            <Server className="size-3.5" />
+            Manage Providers
+          </button>
+        </div>
       </div>
+
+      <ManageProvidersDialog open={showProviders} onClose={() => setShowProviders(false)} />
     </>
   )
 }
