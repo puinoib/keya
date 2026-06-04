@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Trash2, Pencil, Check, X } from "lucide-react"
+import { Plus, Trash, PencilSimple, Check, X } from "@phosphor-icons/react"
 
 const ICONS = ["🚀", "👤", "🏢", "☁️", "📦", "🔧", "💾", "🌐"]
 
@@ -60,11 +60,11 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
                   <span className="flex-1 text-sm text-ink-secondary">{g.name}</span>
                   <button onClick={() => setEditingId(g.id)}
                           className="text-ink-quaternary hover:text-ink-primary transition-colors">
-                    <Pencil className="size-3" />
+                    <PencilSimple className="size-3" />
                   </button>
                   <button onClick={() => deleteGroup(g.id)}
                           className="text-ink-quaternary hover:text-danger transition-colors">
-                    <Trash2 className="size-3" />
+                    <Trash className="size-3" />
                   </button>
                 </>
               )}

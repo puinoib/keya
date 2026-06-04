@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { VaultCard } from '../vault/VaultCard'
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog'
-import { FolderOpen, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus, Info } from 'lucide-react'
+import { FolderOpen, Spinner, UploadSimple, Warning, Sun, Moon, Monitor, Plus, Info } from "@phosphor-icons/react"
 import { EmojiPicker } from '@ferrucc-io/emoji-picker'
 import {
   AlertDialogRoot,
@@ -191,7 +191,7 @@ export function WelcomePage() {
         {/* Browser warning */}
         {!supportsFSA && mode === 'home' && (
           <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-            <AlertTriangle className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <Warning className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-300 leading-relaxed">
               Your browser doesn't support automatic file syncing. Use desktop Chrome for the best experience.
             </p>
@@ -227,7 +227,7 @@ export function WelcomePage() {
                     </div>
                   ) : needsPermission ? (
                     <div className="flex flex-col items-center gap-2 px-4 py-4 rounded-md border border-dashed border-line">
-                      <AlertTriangle className="size-5 text-amber-400" />
+                      <Warning className="size-5 text-amber-400" />
                       <p className="text-xs text-ink-tertiary text-center">Permission required to access vault files</p>
                       <button onClick={handleRequestPermission}
                               className="mt-1 text-xs text-accent hover:text-accent-bright transition-colors">
@@ -254,7 +254,7 @@ export function WelcomePage() {
               ) : (
                 <button onClick={handleChooseFolder} disabled={loading}
                         className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
-                  {loading ? <Loader2 className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
+                  {loading ? <Spinner className="size-4 animate-spin" /> : <FolderOpen className="size-4" />}
                   Choose Sync Folder
                 </button>
               )}
@@ -266,7 +266,7 @@ export function WelcomePage() {
             <div className="space-y-2">
               <button onClick={() => fileInputRef.current?.click()} disabled={loading}
                       className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50">
-                <Upload className="size-4" /> Open .keya File
+                <UploadSimple className="size-4" /> Open .keya File
               </button>
               <input ref={fileInputRef} type="file" accept=".keya" className="hidden" onChange={handleLegacyFilePicked} />
             </div>
