@@ -193,25 +193,25 @@ export function Sidebar() {
             >
               <div className="space-y-1 px-0.5">
                 <FilterSelect
-                  value={filterProvider ?? ""}
-                  onChange={(v) => setFilterProvider(v || null)}
-                  options={[{ value: "", label: "All Providers" }, ...providers.map((p) => ({ value: p, label: p }))]}
+                  value={filterProvider ?? "__all__"}
+                  onChange={(v) => setFilterProvider(v === "__all__" ? null : v)}
+                  options={[{ value: "__all__", label: "All Providers" }, ...providers.map((p) => ({ value: p, label: p }))]}
                 />
                 <FilterSelect
-                  value={filterStatus ?? ""}
-                  onChange={(v) => setFilterStatus(v || null)}
+                  value={filterStatus ?? "__all__"}
+                  onChange={(v) => setFilterStatus(v === "__all__" ? null : v)}
                   options={[
-                    { value: "", label: "All Status" },
+                    { value: "__all__", label: "All Status" },
                     { value: "active", label: "Active" },
                     { value: "inactive", label: "Inactive" },
                     { value: "expired", label: "Expired" },
                   ]}
                 />
                 <FilterSelect
-                  value={filterTestStatus ?? ""}
-                  onChange={(v) => setFilterTestStatus(v || null)}
+                  value={filterTestStatus ?? "__all__"}
+                  onChange={(v) => setFilterTestStatus(v === "__all__" ? null : v)}
                   options={[
-                    { value: "", label: "All Results" },
+                    { value: "__all__", label: "All Results" },
                     { value: "success", label: "Passed" },
                     { value: "failed", label: "Failed" },
                     { value: "untested", label: "Untested" },
