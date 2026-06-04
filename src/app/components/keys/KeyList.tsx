@@ -28,9 +28,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2, CalendarIcon, X,
-} from "lucide-react"
+  Copy, DotsThree, Flask, Trash, PencilSimple,
+  Eye, EyeSlash, Key, Plus, MagnifyingGlass, ArrowCounterClockwise, CheckCircle, XCircle, Spinner, Calendar, X,
+} from "@phosphor-icons/react"
 import { maskKey } from "@/lib/mask"
 import { useToast } from "@/components/ui/toast"
 
@@ -120,7 +120,7 @@ export function KeyList() {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="flex items-center justify-center size-10 rounded-xl bg-surface-3 text-ink-quaternary mb-3">
-          <Search className="size-4" />
+          <MagnifyingGlass className="size-4" />
         </div>
         <p className="text-sm text-ink-tertiary">No keys match your filters</p>
       </div>
@@ -174,7 +174,7 @@ export function KeyList() {
                 <button onClick={() => handleTest(key)} disabled={isTesting}
                         className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
                         title={isTesting ? "Testing..." : "Test key"}>
-                  {isTesting ? <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" /> : <FlaskConical className="size-4 text-ink-primary" />}
+                  {isTesting ? <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" /> : <Flask className="size-4 text-ink-primary" />}
                 </button>
 
                 <button onClick={() => handleCopy(key.key, key.id)}
@@ -186,18 +186,18 @@ export function KeyList() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100">
-                      <MoreHorizontal className="size-4 text-ink-primary" />
+                      <DotsThree className="size-4 text-ink-primary" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem onClick={() => setEditingKey(key)}>
-                      <Pencil className="size-3.5" /> Edit
+                      <PencilSimple className="size-3.5" /> Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeletingKey(key)}
                       className="text-danger focus:text-danger">
-                      <Trash2 className="size-3.5" /> Delete
+                      <Trash className="size-3.5" /> Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -344,7 +344,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
               />
               <button type="button" onClick={() => setShowKey(!showKey)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-quaternary hover:text-ink-secondary">
-                {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showKey ? <EyeSlash className="size-3.5" /> : <Eye className="size-3.5" />}
               </button>
             </div>
           </div>
@@ -378,7 +378,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
                   className="text-ink-quaternary hover:text-accent-bright transition-colors"
                   title="Reset to default"
                 >
-                  <RotateCcw className="size-3" />
+                  <ArrowCounterClockwise className="size-3" />
                 </button>
               )}
             </Label>
@@ -393,7 +393,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
               onClick={() => setShowCalendar(!showCalendar)}
               className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
             >
-              <CalendarIcon className="size-3.5 shrink-0" />
+              <Calendar className="size-3.5 shrink-0" />
               <span className={!form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"}>
                 {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
               </span>
@@ -450,7 +450,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
                 : "bg-danger/10 text-danger"
             }`}>
               {testState.result.success
-                ? <CheckCircle2 className="size-3.5" />
+                ? <CheckCircle className="size-3.5" />
                 : <XCircle className="size-3.5" />}
               <span>
                 {testState.result.success
@@ -471,8 +471,8 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
               disabled={!form.key || testState.testing}
             >
               {testState.testing
-                ? <Loader2 className="size-3.5 animate-spin" />
-                : <FlaskConical className="size-3.5" />}
+                ? <Spinner className="size-3.5 animate-spin" />
+                : <Flask className="size-3.5" />}
               Test
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>

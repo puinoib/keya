@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react'
+import { Lock } from "@phosphor-icons/react"
 import type { CachedVaultMeta } from '../../lib/storage'
 
 interface VaultCardProps {

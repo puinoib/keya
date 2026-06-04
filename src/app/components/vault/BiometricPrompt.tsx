@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Fingerprint, Loader2, X } from 'lucide-react'
+import { Fingerprint, Spinner, X } from "@phosphor-icons/react"
 import { registerBiometric, isBiometricSupported, isBiometricRegistered } from '@/app/lib/biometric'
 
 interface BiometricPromptProps {
@@ -72,7 +72,7 @@ export function BiometricPrompt({ vaultId, password, onDone }: BiometricPromptPr
             disabled={loading}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
           >
-            {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
+            {loading ? <Spinner className="size-3.5 animate-spin" /> : <Fingerprint className="size-3.5" />}
             Enable
           </button>
         </div>
