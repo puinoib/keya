@@ -1,25 +1,38 @@
-
-.DS_Store
-.env
-.env.*.local
-.env.local
-.idea/
-.superpowers/
-.vscode/
-*.swo
-*.swp
-*.tsbuildinfo
-# Build output
 # Dependencies
-# Env
-# IDE
-# OS
-# pnpm
-# TypeScript
-# Vite
-dist/
 node_modules/
 node_modules/.tmp/
-pnpm-debug.log*
+
+# Build output
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+.superpowers/
+
+# OS
+.DS_Store
 Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
 vite.config.ts.timestamp-*
+pnpm-debug.log*
+
+# Vim
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# TanStack Router (generated)
+.tanstack/
+src/routeTree.gen.ts

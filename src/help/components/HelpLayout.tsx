@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 import { HelpSidebar, HelpSearch } from './index';
 import { HelpIndex } from './HelpIndex';
 import { HelpPage } from './HelpPage';
@@ -25,7 +25,10 @@ export function HelpLayout() {
 
   const handleNavigate = (slug: string | null) => {
     setCurrentSlug(slug);
-    navigate(slug ? `/help/${slug}` : '/help');
+    navigate({
+      to: slug ? '/help/$slug' : '/help',
+      params: slug ? { slug } : undefined,
+    });
   };
 
   return (

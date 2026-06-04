@@ -255,7 +255,8 @@ export function KeyList() {
               {/* Actions */}
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1 shrink-0"
+                className={`flex items-center gap-1 shrink-0 transition-opacity duration-150
+                           ${hoveredKeyId === key.id ? 'opacity-100' : 'opacity-0'}`}
               >
                 <button
                   onClick={() => handleTest(key)}
