@@ -25,7 +25,7 @@ import {
 } from '../../../core';
 import { FileStorage } from '../../lib/storage';
 import { Database } from '../../../core/database';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 
 function downloadBytes(data: Uint8Array, filename: string) {
   const blob = new Blob([data], { type: 'application/octet-stream' });
@@ -82,7 +82,6 @@ export function TopBar() {
     password,
     setDb,
   } = useStore();
-  const toast = useToast();
   const importKeyaRef = useRef<HTMLInputElement>(null);
   const importJsonRef = useRef<HTMLInputElement>(null);
 
@@ -93,14 +92,11 @@ export function TopBar() {
       const bytes = await serializeToFile(db.getData(), password);
       const date = new Date().toISOString().slice(0, 10);
       downloadBytes(bytes, `keya-${date}.keya`);
-      toast.add({ title: 'Exported .keya file', timeout: 3000 });
+      toast.success('Exported .keya file');
     } catch (e) {
       console.error('Export .keya failed:', e);
-      toast.add({
-        title: 'Export failed',
+      toast.error('Export failed', {
         description: 'Failed to export .keya file',
-        type: 'error',
-        timeout: 4000,
       });
     }
   };
@@ -121,18 +117,13 @@ export function TopBar() {
 
       setDb(new Database(db.getData()));
       await FileStorage.save(db.getData(), password || '');
-      toast.add({
-        title: 'Imported .keya file',
+      toast.success('Imported .keya file', {
         description: `${imported.api_keys.length} keys imported`,
-        timeout: 3000,
       });
     } catch (e) {
       console.error('Import .keya failed:', e);
-      toast.add({
-        title: 'Import failed',
+      toast.error('Import failed', {
         description: 'Wrong password or corrupted file',
-        type: 'error',
-        timeout: 4000,
       });
     }
   };
@@ -142,7 +133,7 @@ export function TopBar() {
     if (!db) return;
     const date = new Date().toISOString().slice(0, 10);
     downloadJSON(db.getData(), `keya-export-${date}.json`);
-    toast.add({ title: 'Exported JSON file', timeout: 3000 });
+    toast.success('Exported JSON file');
   };
 
   /* ──── Import JSON ──── */
@@ -153,11 +144,8 @@ export function TopBar() {
       const text = await file.text();
       const imported = JSON.parse(text);
       if (!imported.api_keys || !Array.isArray(imported.api_keys)) {
-        toast.add({
-          title: 'Import failed',
+        toast.error('Import failed', {
           description: 'Invalid Keya export format',
-          type: 'error',
-          timeout: 4000,
         });
         return;
       }
@@ -165,17 +153,12 @@ export function TopBar() {
 
       setDb(new Database(db.getData()));
       await FileStorage.save(db.getData(), password || '');
-      toast.add({
-        title: 'Imported JSON file',
+      toast.success('Imported JSON file', {
         description: `${imported.api_keys.length} keys imported`,
-        timeout: 3000,
       });
     } catch {
-      toast.add({
-        title: 'Import failed',
+      toast.error('Import failed', {
         description: 'Failed to parse file',
-        type: 'error',
-        timeout: 4000,
       });
     }
     e.target.value = '';

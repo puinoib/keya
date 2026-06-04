@@ -14,9 +14,7 @@ const TooltipTrigger = React.forwardRef<
     const child = React.Children.only(children) as React.ReactElement<
       Record<string, unknown>
     >;
-    return (
-      <TooltipPrimitive.Trigger ref={ref} render={child} {...props} />
-    );
+    return <TooltipPrimitive.Trigger ref={ref} render={child} {...props} />;
   }
   return (
     <TooltipPrimitive.Trigger ref={ref} {...props}>

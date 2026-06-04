@@ -35,7 +35,7 @@ import {
   Calendar,
   X,
 } from '@phosphor-icons/react';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 
 interface FormData {
   name: string;
@@ -70,7 +70,6 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const { addKey, updateKey, db } = useStore();
-  const toast = useToast();
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -157,7 +156,7 @@ export function KeyForm({
     setTestState({ testing: false, result: null });
     onClose();
 
-    toast.add({ title: 'Key saved', description: keyName, timeout: 3000 });
+    toast.success('Key saved', { description: keyName });
 
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {

@@ -7,7 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { ToastProvider } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@phosphor-icons/react';
 import { AppLayout } from './components/layout/AppLayout';
 import { SettingsLayout } from './components/layout/SettingsLayout';
@@ -151,12 +151,11 @@ export default function App() {
     <BrowserRouter>
       <ThemeSync />
       <SessionRestore>
-        <ToastProvider>
-          <TooltipProvider delayDuration={300}>
-            <AppRoutes />
-            <BiometricPromptLayer />
-          </TooltipProvider>
-        </ToastProvider>
+        <TooltipProvider delayDuration={300}>
+          <AppRoutes />
+          <BiometricPromptLayer />
+        </TooltipProvider>
+        <Toaster />
       </SessionRestore>
     </BrowserRouter>
   );
