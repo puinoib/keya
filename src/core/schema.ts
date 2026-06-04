@@ -260,6 +260,11 @@ export async function deserializeFromFile(
   // Remove deprecated fields from old files
   delete (db as any).description;
   delete (db as any).color;
+  // Remove status/notes from individual keys in old files
+  for (const k of db.api_keys) {
+    delete (k as any).status;
+    delete (k as any).notes;
+  }
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();

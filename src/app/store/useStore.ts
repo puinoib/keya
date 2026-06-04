@@ -22,7 +22,6 @@ interface AppState {
   // Smart filters
   filterGroupId: string | null
   filterProvider: string | null
-  filterStatus: string | null
   filterTestStatus: string | null
 
   // Selection
@@ -47,7 +46,6 @@ interface AppState {
   setBiometricPrompt: (prompt: { vaultId: string; password: string } | null) => void
   setFilterGroupId: (id: string | null) => void
   setFilterProvider: (p: string | null) => void
-  setFilterStatus: (s: string | null) => void
   setFilterTestStatus: (s: string | null) => void
   clearFilters: () => void
   clearSmartFilters: () => void
@@ -89,7 +87,6 @@ function scheduleSave() {
 const FILTER_DEFAULTS = {
   filterGroupId: null as string | null,
   filterProvider: null as string | null,
-  filterStatus: null as string | null,
   filterTestStatus: null as string | null,
 }
 
@@ -160,10 +157,9 @@ export const useStore = create<AppState>((set, get) => ({
   setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),
   setFilterGroupId: (id) => set({ filterGroupId: id }),
   setFilterProvider: (p) => set({ filterProvider: p }),
-  setFilterStatus: (s) => set({ filterStatus: s }),
   setFilterTestStatus: (s) => set({ filterTestStatus: s }),
   clearFilters: () => set(FILTER_DEFAULTS),
-  clearSmartFilters: () => set({ filterProvider: null, filterStatus: null, filterTestStatus: null }),
+  clearSmartFilters: () => set({ filterProvider: null, filterTestStatus: null }),
   setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
   addGroup: (group) => {

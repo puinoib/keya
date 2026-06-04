@@ -7,9 +7,7 @@ export interface ApiKey {
   provider: string;
   endpoint: string;
   key: string;
-  status: 'active' | 'inactive' | 'expired';
   group_id: string | null;
-  notes: string;
   last_tested: string | null;
   test_status: 'success' | 'failed' | null;
   test_latency_ms: number | null;

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useStore } from "../../store/useStore"
 import { ApiTester } from "../../lib/api-tester"
 import type { ApiKey } from "../../../core/types"
@@ -23,7 +23,7 @@ import { maskKey } from "@/lib/mask"
 
 export function KeyList() {
   const db = useStore((s) => s.db)
-  const { searchQuery, filterGroupId, filterProvider, filterStatus, filterTestStatus, selectedKeyId, setSelectedKeyId, setShowAddForm, updateKey, deleteKey } = useStore()
+  const { searchQuery, filterGroupId, filterProvider, filterTestStatus, selectedKeyId, setSelectedKeyId, setShowAddForm, updateKey, deleteKey } = useStore()
   const [testing, setTesting] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
@@ -38,11 +38,17 @@ export function KeyList() {
       : keys.filter((k) => k.group_id === filterGroupId)
   }
   if (filterProvider) keys = keys.filter((k) => k.provider === filterProvider)
-  if (filterStatus) keys = keys.filter((k) => k.status === filterStatus)
   if (filterTestStatus) keys = keys.filter((k) => {
     if (filterTestStatus === "untested") return !k.test_status
     return k.test_status === filterTestStatus
   })
+
+  // Deselect if the selected key is filtered out
+  useEffect(() => {
+    if (selectedKeyId && !keys.some((k) => k.id === selectedKeyId)) {
+      setSelectedKeyId(null)
+    }
+  }, [selectedKeyId, keys])
 
   const groups = db.getGroups()
   const getGroup = (id: string | null) => groups.find((g) => g.id === id)
@@ -67,7 +73,7 @@ export function KeyList() {
     } catch { /* clipboard unavailable */ }
   }
 
-  const hasFilters = searchQuery || filterGroupId || filterProvider || filterStatus || filterTestStatus
+  const hasFilters = searchQuery || filterGroupId || filterProvider || filterTestStatus
 
   if (keys.length === 0 && !hasFilters) {
     return (

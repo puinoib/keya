@@ -6,8 +6,8 @@ import { KeyDetail } from "../keys/KeyDetail"
 export function KeysPage() {
   const {
     db, selectedKeyId,
-    searchQuery, filterGroupId, filterProvider, filterStatus, filterTestStatus,
-    setSearchQuery, setFilterGroupId, setFilterProvider, setFilterStatus, setFilterTestStatus,
+    searchQuery, filterGroupId, filterProvider, filterTestStatus,
+    setSearchQuery, setFilterGroupId, setFilterProvider, setFilterTestStatus,
     clearFilters,
   } = useStore()
 
@@ -21,7 +21,6 @@ export function KeysPage() {
     if (name) tags.push({ label: name, onRemove: () => setFilterGroupId(null) })
   }
   if (filterProvider) tags.push({ label: filterProvider, onRemove: () => setFilterProvider(null) })
-  if (filterStatus) tags.push({ label: filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1), onRemove: () => setFilterStatus(null) })
   if (filterTestStatus) {
     const label = filterTestStatus === 'success' ? 'Passed' : filterTestStatus === 'failed' ? 'Failed' : 'Untested'
     tags.push({ label, onRemove: () => setFilterTestStatus(null) })

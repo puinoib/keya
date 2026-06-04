@@ -78,8 +78,6 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
-      status: "active",
-      notes: "",
       last_tested: testState.result ? new Date().toISOString() : null,
       test_status: testState.result?.success ? "success" : (testState.result ? "failed" : null),
       test_latency_ms: testState.result?.latency_ms ?? null,
