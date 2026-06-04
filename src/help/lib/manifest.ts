@@ -1,18 +1,23 @@
 import type { HelpDocument, HelpManifest } from '../types'
 import matter from 'gray-matter'
 
-const contentModules = import.meta.glob('../content/*.md', { query: '?raw', import: 'default' })
+// eager: true loads all files at import time as raw strings
+const contentModules = import.meta.glob<string>('../content/*.md', {
+  eager: true,
+  query: '?raw',
+  import: 'default'
+})
 
 async function loadDocument(slug: string): Promise<HelpDocument | null> {
   try {
-    const path = `../content/${slug}.md`
-    const loader = contentModules[path]
+    // Find the key that ends with /{slug}.md
+    const entry = Object.entries(contentModules).find(([key]) =>
+      key === `../content/${slug}.md`
+    )
 
-    if (!loader) {
-      return null
-    }
+    if (!entry) return null
 
-    const raw = await loader()
+    const raw = entry[1]
     const { data, content } = matter(raw)
 
     return {
@@ -22,14 +27,19 @@ async function loadDocument(slug: string): Promise<HelpDocument | null> {
       content,
       order: data.order || 999
     }
-  } catch {
+  } catch (err) {
+    console.error(`Failed to load document "${slug}":`, err)
     return null
   }
 }
 
 export async function loadManifest(): Promise<HelpManifest> {
   const slugs = Object.keys(contentModules)
-    .map(path => path.replace('../content/', '').replace('.md', ''))
+    .map(path => {
+      const match = path.match(/([^/]+)\.md$/)
+      return match ? match[1] : null
+    })
+    .filter((s): s is string => s !== null)
 
   const documents = await Promise.all(
     slugs.map(slug => loadDocument(slug))
