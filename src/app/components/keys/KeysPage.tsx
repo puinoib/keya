@@ -1,4 +1,4 @@
-import { Lock, X } from "lucide-react"
+import { Lock, X } from "@phosphor-icons/react"
 import { useStore } from "../../store/useStore"
 import { KeyList } from "../keys/KeyList"
 import { KeyDetail } from "../keys/KeyDetail"
