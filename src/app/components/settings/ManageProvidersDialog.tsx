@@ -1,16 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { PRESET_PROVIDERS } from '../../../core/types';
+import { ENDPOINT_DEFAULTS, PRESET_PROVIDERS } from '../../../core/types';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,6 +23,23 @@ type ProviderItem = {
   endpoint?: string;
   isCustom: boolean;
   isEnabled: boolean;
+};
+
+const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
+  OpenAI: ENDPOINT_DEFAULTS.openai,
+  Anthropic: ENDPOINT_DEFAULTS.anthropic,
+  Google: ENDPOINT_DEFAULTS.google,
+  Groq: ENDPOINT_DEFAULTS.groq,
+  DeepSeek: ENDPOINT_DEFAULTS.deepseek,
+  Moonshot: ENDPOINT_DEFAULTS.moonshot,
+  Zhipu: ENDPOINT_DEFAULTS.zhipu,
+  Baidu: ENDPOINT_DEFAULTS.baidu,
+  Mistral: ENDPOINT_DEFAULTS.mistral,
+  Cohere: ENDPOINT_DEFAULTS.cohere,
+  Together: ENDPOINT_DEFAULTS.together,
+  OpenRouter: ENDPOINT_DEFAULTS.openrouter,
+  SiliconFlow: ENDPOINT_DEFAULTS.siliconflow,
+  'Azure OpenAI': ENDPOINT_DEFAULTS.azure,
 };
 
 function ProviderCard({
@@ -54,10 +69,8 @@ function ProviderCard({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-ink-quaternary">
-            {provider.isCustom
-              ? provider.endpoint
-              : 'Built-in provider available in Keya'}
+          <p className="mt-1 truncate font-mono text-xs text-ink-quaternary">
+            {provider.endpoint}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -114,6 +127,7 @@ export function ManageProvidersDialog({
   const providers = useMemo<ProviderItem[]>(() => {
     const presetItems: ProviderItem[] = PRESET_PROVIDERS.map((name) => ({
       name,
+      endpoint: presetEndpoints[name],
       isCustom: false,
       isEnabled: !disabled.has(name),
     }));
@@ -170,33 +184,21 @@ export function ManageProvidersDialog({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl p-0 overflow-hidden">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-5xl flex-col overflow-hidden p-0">
         <DialogHeader className="border-b border-line px-6 py-5">
           <DialogTitle>Manage Providers</DialogTitle>
-          <DialogDescription>
-            Enable providers from the left list, or disable active providers
-            from the right list.
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-0 md:grid-cols-2">
-          <section className="border-b border-line md:border-b-0 md:border-r">
+        <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-2">
+          <section className="flex min-h-0 flex-col border-b border-line md:border-b-0 md:border-r">
             <div className="flex items-center justify-between px-6 py-4">
-              <div>
-                <h3 className="text-sm font-medium text-ink-primary">
-                  Disabled Providers
-                </h3>
-                <p className="mt-1 text-xs text-ink-quaternary">
-                  Includes built-in and custom providers not currently shown in
-                  forms.
-                </p>
-              </div>
+              <h3 className="text-sm font-medium text-ink-primary">Disabled</h3>
               <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
                 {disabledProviders.length}
               </span>
             </div>
 
-            <ScrollArea className="h-[44vh] px-6 pb-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
               <div className="space-y-3">
                 {disabledProviders.length > 0 ? (
                   disabledProviders.map((provider) => (
@@ -219,9 +221,9 @@ export function ManageProvidersDialog({
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
 
-            <div className="border-t border-line px-6 py-4">
+            <div className="shrink-0 border-t border-line px-6 py-4">
               {isAdding ? (
                 <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
                   <Input
@@ -282,22 +284,15 @@ export function ManageProvidersDialog({
             </div>
           </section>
 
-          <section>
+          <section className="flex min-h-0 flex-col">
             <div className="flex items-center justify-between px-6 py-4">
-              <div>
-                <h3 className="text-sm font-medium text-ink-primary">
-                  Enabled Providers
-                </h3>
-                <p className="mt-1 text-xs text-ink-quaternary">
-                  These providers are available when creating or editing keys.
-                </p>
-              </div>
+              <h3 className="text-sm font-medium text-ink-primary">Enabled</h3>
               <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
                 {enabledProviders.length}
               </span>
             </div>
 
-            <ScrollArea className="h-[calc(44vh+89px)] px-6 pb-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
               <div className="space-y-3">
                 {enabledProviders.map((provider) => (
                   <ProviderCard
@@ -314,7 +309,7 @@ export function ManageProvidersDialog({
                   />
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </section>
         </div>
       </DialogContent>

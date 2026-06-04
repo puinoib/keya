@@ -114,6 +114,10 @@ export function VaultPasswordDialog({
         <Label className="text-xs text-ink-tertiary">Master Password</Label>
         <Input
           type="password"
+          name={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
+          autoComplete="off"
+          data-form-type="other"
+          data-lpignore="true"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={
@@ -143,6 +147,10 @@ export function VaultPasswordDialog({
           <Label className="text-xs text-ink-tertiary">Confirm Password</Label>
           <Input
             type="password"
+            name="vault-confirm-secret"
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Re-enter your password..."
