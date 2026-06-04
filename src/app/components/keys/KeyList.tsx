@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import { DayPicker } from "./DayPicker"
 import { useStore } from "../../store/useStore"
 import { ApiTester } from "../../lib/api-tester"
 import type { ApiKey } from "../../../core/types"
-import { ENDPOINT_DEFAULTS } from "../../../core/types"
+import { ENDPOINT_DEFAULTS, getProvidersForDropdown } from "../../../core/types"
+import { Popover } from "@base-ui/react/popover"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -17,7 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2, Calendar,
+  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2, CalendarIcon, X,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -221,12 +224,6 @@ export function KeyList() {
 
 /* ── Inline Edit Dialog ── */
 
-const PROVIDERS = [
-  "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
-  "Zhipu", "Baidu", "Mistral", "Cohere", "Together", "OpenRouter",
-  "SiliconFlow", "Azure OpenAI", "Custom",
-]
-
 export function EditKeyDialog({ editingKey, onClose, onSave }: {
   editingKey: ApiKey | null
   onClose: () => void
@@ -241,11 +238,16 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
     endpoint: editingKey?.endpoint ?? "",
     description: editingKey?.description ?? "",
     group_id: editingKey?.group_id ?? null as string | null,
-    expires_at: editingKey?.expires_at ? editingKey.expires_at.split("T")[0] : "",
+    expires_at: editingKey?.expires_at ? new Date(editingKey.expires_at) : undefined as Date | undefined,
   })
   const [testState, setTestState] = useState<{ testing: boolean; result: { success: boolean; latency_ms: number; error?: string } | null }>({
     testing: false, result: null,
   })
+
+  const settings = db?.getSettings()
+  const providers = getProvidersForDropdown(settings)
+  const defaultEndpoint = ENDPOINT_DEFAULTS[form.provider.toLowerCase()]
+    ?? settings?.custom_providers?.find((cp) => cp.name === form.provider)?.endpoint
 
   const handleTest = async () => {
     if (!form.key) return
@@ -263,11 +265,24 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
-      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+      expires_at: form.expires_at ? form.expires_at.toISOString() : null,
       last_tested: testState.result ? new Date().toISOString() : undefined,
       test_status: testState.result ? (testState.result.success ? "success" : "failed") : undefined,
       test_latency_ms: testState.result?.latency_ms ?? undefined,
     })
+
+    // Auto-test on save
+    if (settings?.auto_test_on_save) {
+      const { provider, endpoint, key: keyValue } = form
+      const keyId = editingKey.id
+      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
+        useStore.getState().updateKey(keyId, {
+          last_tested: new Date().toISOString(),
+          test_status: result.success ? "success" : "failed",
+          test_latency_ms: result.latency_ms ?? null,
+        })
+      })
+    }
   }
 
   return (
@@ -304,12 +319,17 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           {/* Provider */}
           <div className="space-y-1.5">
             <Label className="text-xs">Provider</Label>
-            <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
+            <Select value={form.provider} onValueChange={(v) => {
+              const ep = ENDPOINT_DEFAULTS[v.toLowerCase()]
+                ?? settings?.custom_providers?.find((cp) => cp.name === v)?.endpoint
+                ?? form.endpoint
+              setForm((f) => ({ ...f, provider: v, endpoint: ep }))
+            }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PROVIDERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {providers.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -318,10 +338,10 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1.5">
               Endpoint
-              {ENDPOINT_DEFAULTS[form.provider.toLowerCase()] && (
+              {defaultEndpoint && (
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, endpoint: ENDPOINT_DEFAULTS[f.provider.toLowerCase()] }))}
+                  onClick={() => setForm((f) => ({ ...f, endpoint: defaultEndpoint }))}
                   className="text-ink-quaternary hover:text-accent-bright transition-colors"
                   title="Reset to default"
                 >
@@ -330,6 +350,46 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
               )}
             </Label>
             <Input value={form.endpoint} onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))} placeholder="https://api.openai.com/v1" className="font-mono text-xs" />
+          </div>
+
+          {/* Expiration */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Expiration</Label>
+            <Popover.Root>
+              <Popover.Trigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`w-full justify-start text-left text-xs font-normal h-9 ${
+                      !form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"
+                    }`}
+                  />
+                }
+              >
+                <CalendarIcon className="size-3.5" />
+                {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
+                {form.expires_at && (
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, expires_at: undefined })) }}
+                    className="ml-auto text-ink-quaternary hover:text-ink-secondary"
+                  >
+                    <X className="size-3" />
+                  </span>
+                )}
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Positioner sideOffset={4}>
+                  <Popover.Popup className="rounded-lg border border-line bg-canvas-raised shadow-elevated z-50">
+                    <DayPicker
+                      value={form.expires_at}
+                      onChange={(d) => setForm((f) => ({ ...f, expires_at: d }))}
+                    />
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
           </div>
 
           {/* Group */}
@@ -354,21 +414,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           {/* Description */}
           <div className="space-y-1.5">
             <Label className="text-xs">Description</Label>
-            <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional" />
-          </div>
-
-          {/* Expiration */}
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5">
-              <Calendar className="size-3" /> Expiration (optional)
-            </Label>
-            <Input
-              type="date"
-              value={form.expires_at}
-              onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
-              min={new Date().toISOString().split("T")[0]}
-              className="text-xs"
-            />
+            <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="What's this key for?" />
           </div>
 
           {/* Test Result */}

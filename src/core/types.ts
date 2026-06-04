@@ -23,10 +23,18 @@ export interface Group {
   order: number;
 }
 
+export interface CustomProvider {
+  name: string;
+  endpoint: string;
+}
+
 export interface Settings {
   theme: 'light' | 'dark' | 'system';
   language: 'zh-CN' | 'en-US';
   auto_lock_minutes: number;
+  auto_test_on_save: boolean;
+  custom_providers: CustomProvider[];
+  disabled_providers: string[];
 }
 
 export interface KeyaDatabase {
@@ -50,6 +58,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   language: 'zh-CN',
   auto_lock_minutes: 5,
+  auto_test_on_save: false,
+  custom_providers: [],
+  disabled_providers: [],
 };
 
 export const ENDPOINT_DEFAULTS: Record<string, string> = {
@@ -68,3 +79,16 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   siliconflow: 'https://api.siliconflow.cn/v1',
   azure: 'https://YOUR_RESOURCE.openai.azure.com',
 };
+
+export const PRESET_PROVIDERS = [
+  "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
+  "Zhipu", "Baidu", "Mistral", "Cohere", "Together", "OpenRouter",
+  "SiliconFlow", "Azure OpenAI",
+] as const;
+
+export function getProvidersForDropdown(settings: Settings | undefined): string[] {
+  const disabled = new Set(settings?.disabled_providers ?? []);
+  const enabled = PRESET_PROVIDERS.filter((p) => !disabled.has(p));
+  const customs = (settings?.custom_providers ?? []).map((cp) => cp.name);
+  return [...enabled, ...customs, "Custom"];
+}
