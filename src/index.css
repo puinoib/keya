@@ -1,32 +1,141 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;510;590;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ── Class-based dark mode ── */
+@custom-variant dark (&.dark);
+
+/* ── Emoji picker in node_modules ── */
+@source "../node_modules/@ferrucc-io/emoji-picker/dist/**/*.{js,jsx,ts,tsx}";
+
+/* ── Theme ── */
+@theme {
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --color-canvas-deepest: var(--canvas-deepest);
+  --color-canvas-base: var(--canvas-base);
+  --color-canvas-panel: var(--canvas-panel);
+  --color-canvas-raised: var(--canvas-raised);
+  --color-canvas-hover: var(--canvas-hover);
+
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-ink-quaternary: var(--ink-quaternary);
+
+  --color-accent: var(--accent-default);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+
+  --color-line: var(--line-3);
+  --color-line-subtle: var(--line-1);
+  --color-line-2: var(--line-2);
+  --color-line-4: var(--line-4);
+  --color-line-solid: #23252a;
+
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+
+  --color-divider: var(--divider);
+
+  --color-success: #27a644;
+  --color-success-bright: #10b981;
+  --color-danger: #ef4444;
+  --color-danger-muted: #7f1d1d;
+
+  --radius-lg: 8px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+
+  --shadow-card: var(--shadow-card-val);
+  --shadow-elevated: var(--shadow-elevated-val);
+  --shadow-dialog: var(--shadow-dialog-val);
+  --shadow-focus: var(--shadow-focus-val);
+  --shadow-inset: var(--shadow-inset-val);
+
+  --tracking-display: -.022em;
+  --tracking-heading: -.016em;
+  --tracking-tight: -.011em;
+
+  --text-2xs: 10px;
+
+  --animate-fade-in: fade-in 0.15s ease-out;
+  --animate-fade-out: fade-out 0.15s ease-out;
+  --animate-slide-in-from-right: slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-detail-fade-in: detail-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-stagger-in: stagger-in 0.2s ease-out both;
+  --animate-dialog-enter: dialog-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-dialog-exit: dialog-exit 0.15s ease-in;
+
+  @keyframes fade-in {
+    0% { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-out {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(4px); }
+  }
+  @keyframes slide-in-from-right {
+    0% { opacity: 0; transform: translateX(24px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes detail-fade-in {
+    0% { opacity: 0; transform: translateX(16px) scale(0.98); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes stagger-in {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes dialog-enter {
+    0% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+    100% { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  @keyframes dialog-exit {
+    0% { opacity: 1; transform: translate(-50%, -50%); }
+    100% { opacity: 0; transform: translate(-50%, calc(-50% - 4px)); }
+  }
+  @keyframes enter {
+    from {
+      opacity: var(--tw-enter-opacity, 1);
+      transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+    }
+  }
+  @keyframes exit {
+    to {
+      opacity: var(--tw-exit-opacity, 1);
+      transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1));
+    }
+  }
+}
 
 /* ── Linear Design System Foundation ── */
 @layer base {
   :root {
     /* shadcn/ui CSS variables (dark) */
-    --background: 216 8% 3%;          /* #08090a */
-    --foreground: 180 4% 97%;         /* #f7f8f8 */
-    --card: 240 4% 6%;                /* #0f1011 */
+    --background: 216 8% 3%;
+    --foreground: 180 4% 97%;
+    --card: 240 4% 6%;
     --card-foreground: 180 4% 97%;
-    --popover: 220 3% 10%;            /* #191a1b */
+    --popover: 220 3% 10%;
     --popover-foreground: 180 4% 97%;
-    --primary: 234 45% 60%;           /* #5e6ad2 */
+    --primary: 234 45% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 10%;          /* #191a1b */
+    --secondary: 240 5% 10%;
     --secondary-foreground: 180 4% 97%;
-    --muted: 240 5% 8%;               /* #0f1011 */
-    --muted-foreground: 225 7% 56%;   /* #8a8f98 */
+    --muted: 240 5% 8%;
+    --muted-foreground: 225 7% 56%;
     --accent: 234 45% 60%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100% / 0.08;
     --input: 0 0% 100% / 0.08;
-    --ring: 244 80% 65%;              /* #7170ff */
+    --ring: 244 80% 65%;
     --radius: 6px;
 
     /* Canvas */
@@ -36,7 +145,7 @@
     --canvas-raised: #191a1b;
     --canvas-hover: #28282c;
 
-    /* Surface overlays (subtle backgrounds) */
+    /* Surface overlays */
     --surface-1: rgba(255,255,255,0.01);
     --surface-2: rgba(255,255,255,0.02);
     --surface-3: rgba(255,255,255,0.03);
@@ -66,11 +175,11 @@
     --accent-muted: #7a7fad;
 
     /* Shadows */
-    --shadow-card: rgba(0,0,0,0.2) 0px 0px 0px 1px;
-    --shadow-elevated: rgba(0,0,0,0.4) 0px 2px 4px;
-    --shadow-dialog: rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px;
-    --shadow-focus: rgba(0,0,0,0.1) 0px 4px 12px;
-    --shadow-inset: rgba(0,0,0,0.2) 0px 0px 12px 0px inset;
+    --shadow-card-val: rgba(0,0,0,0.2) 0px 0px 0px 1px;
+    --shadow-elevated-val: rgba(0,0,0,0.4) 0px 2px 4px;
+    --shadow-dialog-val: rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px;
+    --shadow-focus-val: rgba(0,0,0,0.1) 0px 4px 12px;
+    --shadow-inset-val: rgba(0,0,0,0.2) 0px 0px 12px 0px inset;
   }
 
   /* Light theme */
@@ -125,11 +234,11 @@
     --accent-hover: #7170ff;
     --accent-muted: #7a7fad;
 
-    --shadow-card: rgba(0,0,0,0.06) 0px 0px 0px 1px;
-    --shadow-elevated: rgba(0,0,0,0.08) 0px 2px 4px;
-    --shadow-dialog: rgba(0,0,0,0.02) 0px 8px 2px, rgba(0,0,0,0.02) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.06) 0px 1px 1px, rgba(0,0,0,0.04) 0px 0px 1px;
-    --shadow-focus: rgba(0,0,0,0.05) 0px 4px 12px;
-    --shadow-inset: rgba(0,0,0,0.06) 0px 0px 12px 0px inset;
+    --shadow-card-val: rgba(0,0,0,0.06) 0px 0px 0px 1px;
+    --shadow-elevated-val: rgba(0,0,0,0.08) 0px 2px 4px;
+    --shadow-dialog-val: rgba(0,0,0,0.02) 0px 8px 2px, rgba(0,0,0,0.02) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.06) 0px 1px 1px, rgba(0,0,0,0.04) 0px 0px 1px;
+    --shadow-focus-val: rgba(0,0,0,0.05) 0px 4px 12px;
+    --shadow-inset-val: rgba(0,0,0,0.06) 0px 0px 12px 0px inset;
   }
 
   .light body {
@@ -226,21 +335,63 @@
   }
 }
 
-/* ── shadcn/ui animation utilities ── */
-@layer utilities {
-  .animate-in {
-    animation-name: enter;
-    animation-duration: 0.15s;
-    --tw-enter-opacity: initial;
-    --tw-enter-scale: initial;
-    --tw-enter-rotate: initial;
-    --tw-enter-translate-x: initial;
-    --tw-enter-translate-y: initial;
-  }
-  .fade-in-0 {
-    --tw-enter-opacity: 0;
-  }
-  .zoom-in-95 {
-    --tw-enter-scale: 0.95;
-  }
+/* ── Animation utilities (replaces tailwindcss-animate) ── */
+@utility animate-in {
+  animation-name: enter;
+  animation-duration: 0.15s;
+  --tw-enter-opacity: initial;
+  --tw-enter-scale: initial;
+  --tw-enter-rotate: initial;
+  --tw-enter-translate-x: initial;
+  --tw-enter-translate-y: initial;
+}
+
+@utility animate-out {
+  animation-name: exit;
+  animation-duration: 0.15s;
+  --tw-exit-opacity: initial;
+  --tw-exit-scale: initial;
+  --tw-exit-rotate: initial;
+  --tw-exit-translate-x: initial;
+  --tw-exit-translate-y: initial;
+}
+
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+
+@utility slide-in-from-top-1 {
+  --tw-enter-translate-y: -0.25rem;
+}
+
+@utility slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+@utility slide-in-from-bottom-1 {
+  --tw-enter-translate-y: 0.25rem;
+}
+
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+@utility slide-in-from-left-1 {
+  --tw-enter-translate-x: -0.25rem;
+}
+
+@utility slide-in-from-right-1 {
+  --tw-enter-translate-x: 0.25rem;
 }
