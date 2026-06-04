@@ -1,5 +1,6 @@
+import { useNavigate } from "react-router-dom"
 import { useStore } from "../../store/useStore"
-import { Gear, Palette, Fingerprint, Spinner, Flask, HardDrives, Shield, CaretRight } from "@phosphor-icons/react"
+import { Gear, Palette, Fingerprint, Spinner, Flask, HardDrives, Shield, CaretRight, Question } from "@phosphor-icons/react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -24,6 +25,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const { db, password, updateMeta, updateSettings } = useStore()
   const settings = db?.getSettings()
   const data = db?.getData()
@@ -209,6 +211,26 @@ export function SettingsPage() {
               <div className="flex items-center gap-2.5">
                 <HardDrives className="size-4 text-ink-quaternary" />
                 <p className="text-xs font-medium text-ink-primary">Providers</p>
+              </div>
+              <CaretRight className="size-3.5 text-ink-quaternary" />
+            </button>
+          </div>
+        </section>
+
+        {/* ── Help & Support ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Question className="size-3.5 text-ink-quaternary" />
+            <span className="text-xs font-medium text-ink-secondary">Help & Support</span>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2">
+            <button
+              onClick={() => navigate('/help')}
+              className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors"
+            >
+              <div>
+                <p className="text-xs font-medium text-ink-primary">Help Center</p>
+                <p className="text-xs text-ink-quaternary mt-0.5">Quick start, FAQ, and security</p>
               </div>
               <CaretRight className="size-3.5 text-ink-quaternary" />
             </button>
