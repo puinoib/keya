@@ -1,6 +1,6 @@
 import { useRef } from "react"
 import { useStore } from "../../store/useStore"
-import { Search, Plus, Sun, Moon, Monitor, Download, Upload, FileKey, FileJson, MoreHorizontal } from "lucide-react"
+import { MagnifyingGlass, Plus, Sun, Moon, Monitor, DownloadSimple, Key, FileCode, DotsThree } from "@phosphor-icons/react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { deserializeFromFile, serializeToFile, type KeyaDatabase } from "../../../core"
 import { FileStorage } from "../../lib/storage"
@@ -119,7 +119,7 @@ export function TopBar() {
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">
       <div className="relative flex-1 max-w-sm">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary pointer-events-none" />
+        <MagnifyingGlass className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary pointer-events-none" />
         <input type="text" placeholder="Search keys..." value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
                className="w-full h-7 pl-8 pr-3 rounded-md bg-surface-2 border border-transparent
@@ -135,24 +135,24 @@ export function TopBar() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
-            <MoreHorizontal className="size-3.5" />
+            <DotsThree className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
           {/* Keya import/export — encrypted, first priority */}
           <DropdownMenuItem onClick={() => importKeyaRef.current?.click()}>
-            <FileKey className="size-3.5" /> Import .keya
+            <Key className="size-3.5" /> Import .keya
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportKeya}>
-            <Download className="size-3.5" /> Export .keya
+            <DownloadSimple className="size-3.5" /> Export .keya
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {/* JSON import/export — unencrypted, secondary */}
           <DropdownMenuItem onClick={() => importJsonRef.current?.click()}>
-            <FileJson className="size-3.5" /> Import JSON
+            <FileCode className="size-3.5" /> Import JSON
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportJson}>
-            <Download className="size-3.5" /> Export JSON
+            <DownloadSimple className="size-3.5" /> Export JSON
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowAddForm(true)}>
