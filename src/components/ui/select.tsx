@@ -34,11 +34,19 @@ function SelectTrigger({
 
 function SelectContent({
   className,
+  container,
   children,
   ...props
-}: SelectPrimitive.Popup.Props & { position?: string }) {
+}: SelectPrimitive.Popup.Props & {
+  position?: string;
+  container?:
+    | HTMLElement
+    | ShadowRoot
+    | null
+    | React.RefObject<HTMLElement | ShadowRoot | null>;
+}) {
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Positioner>
         <SelectPrimitive.Popup
           className={cn(

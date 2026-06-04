@@ -33,6 +33,7 @@ export interface Settings {
   language: 'zh-CN' | 'en-US';
   auto_lock_minutes: number;
   auto_test_on_save: boolean;
+  auto_test_daily: boolean;
   custom_providers: CustomProvider[];
   disabled_providers: string[];
 }
@@ -59,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'zh-CN',
   auto_lock_minutes: 5,
   auto_test_on_save: false,
+  auto_test_daily: false,
   custom_providers: [],
   disabled_providers: [],
 };
@@ -102,6 +104,8 @@ export function getProvidersForDropdown(
 ): string[] {
   const disabled = new Set(settings?.disabled_providers ?? []);
   const enabled = PRESET_PROVIDERS.filter((p) => !disabled.has(p));
-  const customs = (settings?.custom_providers ?? []).map((cp) => cp.name);
+  const customs = (settings?.custom_providers ?? [])
+    .filter((cp) => !disabled.has(cp.name))
+    .map((cp) => cp.name);
   return [...enabled, ...customs, 'Custom'];
 }

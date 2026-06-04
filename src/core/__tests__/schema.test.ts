@@ -131,4 +131,12 @@ describe('schema (.keya file format)', () => {
     expect(restored.name).toBe('');
     expect(restored.icon).toBe('');
   });
+
+  it('defaults missing daily auto-test setting to off', async () => {
+    const db = makeTestDb();
+    delete (db.settings as any).auto_test_daily;
+    const bytes = await serializeToFile(db, password);
+    const restored = await deserializeFromFile(bytes, password);
+    expect(restored.settings.auto_test_daily).toBe(false);
+  });
 });

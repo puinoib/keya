@@ -31,17 +31,23 @@ import { ManageProvidersDialog } from './ManageProvidersDialog';
 function Toggle({
   checked,
   onChange,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
+      type="button"
       role="switch"
       aria-checked={checked}
+      aria-disabled={disabled}
+      disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200
-        ${checked ? 'bg-accent' : 'bg-surface-3'}`}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all duration-200
+        ${checked ? 'bg-accent' : 'bg-surface-3'}
+        ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
     >
       <span
         className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200
@@ -175,11 +181,14 @@ export function SettingsPage() {
                     )}
                   </div>
                 </div>
-                {bioLoading ? (
-                  <Spinner className="size-4 animate-spin text-ink-quaternary" />
-                ) : (
-                  <button
-                    onClick={async () => {
+                <div className="flex items-center gap-2">
+                  {bioLoading && (
+                    <Spinner className="size-4 animate-spin text-ink-quaternary" />
+                  )}
+                  <Toggle
+                    checked={bioRegistered}
+                    disabled={bioLoading}
+                    onChange={async () => {
                       setBioLoading(true);
                       setBioError('');
                       try {
@@ -196,16 +205,8 @@ export function SettingsPage() {
                         setBioLoading(false);
                       }
                     }}
-                    className={`text-xs px-2.5 py-1 rounded-md transition-colors
-                        ${
-                          bioRegistered
-                            ? 'text-ink-quaternary hover:text-danger hover:bg-danger/10'
-                            : 'text-accent hover:bg-accent/10'
-                        }`}
-                  >
-                    {bioRegistered ? 'Remove' : 'Enable'}
-                  </button>
-                )}
+                  />
+                </div>
               </div>
             )}
             <div className="flex items-center justify-between p-3">
@@ -259,6 +260,24 @@ export function SettingsPage() {
                 onChange={() =>
                   updateSettings({
                     auto_test_on_save: !settings?.auto_test_on_save,
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="text-xs font-medium text-ink-primary">
+                  Daily First-Open Test
+                </p>
+                <p className="text-xs text-ink-quaternary mt-0.5">
+                  Test all keys only on the first time you open Keya each day
+                </p>
+              </div>
+              <Toggle
+                checked={!!settings?.auto_test_daily}
+                onChange={() =>
+                  updateSettings({
+                    auto_test_daily: !settings?.auto_test_daily,
                   })
                 }
               />
