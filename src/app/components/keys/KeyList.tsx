@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
 import { DayPicker } from "./DayPicker"
 import { useStore } from "../../store/useStore"
 import { ApiTester } from "../../lib/api-tester"
 import type { ApiKey } from "../../../core/types"
 import { ENDPOINT_DEFAULTS, getProvidersForDropdown } from "../../../core/types"
-import { Popover } from "@base-ui/react/popover"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -231,6 +230,20 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
 }) {
   const db = useStore((s) => s.db)
   const [showKey, setShowKey] = useState(false)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const calendarRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showCalendar) return
+    const handler = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendar(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [showCalendar])
+
   const [form, setForm] = useState({
     name: editingKey?.name ?? "",
     key: editingKey?.key ?? "",
@@ -353,43 +366,35 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           </div>
 
           {/* Expiration */}
-          <div className="space-y-1.5">
+          <div className="relative" ref={calendarRef}>
             <Label className="text-xs">Expiration</Label>
-            <Popover.Root>
-              <Popover.Trigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`w-full justify-start text-left text-xs font-normal h-9 ${
-                      !form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"
-                    }`}
-                  />
-                }
-              >
-                <CalendarIcon className="size-3.5" />
+            <button
+              type="button"
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
+            >
+              <CalendarIcon className="size-3.5 shrink-0" />
+              <span className={!form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"}>
                 {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
-                {form.expires_at && (
-                  <span
-                    role="button"
-                    onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, expires_at: undefined })) }}
-                    className="ml-auto text-ink-quaternary hover:text-ink-secondary"
-                  >
-                    <X className="size-3" />
-                  </span>
-                )}
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Positioner sideOffset={4}>
-                  <Popover.Popup className="rounded-lg border border-line bg-canvas-raised shadow-elevated z-50">
-                    <DayPicker
-                      value={form.expires_at}
-                      onChange={(d) => setForm((f) => ({ ...f, expires_at: d }))}
-                    />
-                  </Popover.Popup>
-                </Popover.Positioner>
-              </Popover.Portal>
-            </Popover.Root>
+              </span>
+              {form.expires_at && (
+                <span
+                  role="button"
+                  onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, expires_at: undefined })) }}
+                  className="ml-auto text-ink-quaternary hover:text-ink-secondary"
+                >
+                  <X className="size-3" />
+                </span>
+              )}
+            </button>
+            {showCalendar && (
+              <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
+                <DayPicker
+                  value={form.expires_at}
+                  onChange={(d) => { setForm((f) => ({ ...f, expires_at: d })); setShowCalendar(false) }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Group */}

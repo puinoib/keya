@@ -1,5 +1,5 @@
 import { useStore } from "../../store/useStore"
-import { Settings as SettingsIcon, Palette, Fingerprint, Loader2, FlaskConical, Server } from "lucide-react"
+import { Settings as SettingsIcon, Palette, Fingerprint, Loader2, FlaskConical, Server, Shield, ChevronRight } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -7,6 +7,21 @@ import { useState, useEffect, useRef } from "react"
 import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
 import { ManageProvidersDialog } from "./ManageProvidersDialog"
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200
+        ${checked ? 'bg-accent' : 'bg-surface-3'}`}
+    >
+      <span className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200
+        ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+    </button>
+  )
+}
 
 export function SettingsPage() {
   const { db, password, updateMeta, updateSettings } = useStore()
@@ -52,17 +67,14 @@ export function SettingsPage() {
       </div>
 
       <div className="space-y-6 max-w-sm">
-        {/* Vault Meta */}
-        <div className="space-y-4 pb-6 border-b border-line-subtle">
-          <div className="flex items-center gap-2">
+        {/* ── Vault ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
             <Palette className="size-3.5 text-ink-quaternary" />
             <span className="text-xs font-medium text-ink-secondary">Vault</span>
           </div>
-
-          {/* Icon + Name Row */}
-          <div className="flex items-start gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Icon</Label>
+          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
+            <div className="flex items-center gap-3 p-3">
               <div className="relative">
                 <button
                   onClick={() => setIconPickerOpen(!iconPickerOpen)}
@@ -95,110 +107,115 @@ export function SettingsPage() {
                   </div>
                 )}
               </div>
-            </div>
-            <div className="space-y-1.5 flex-1">
-              <Label className="text-xs">Name</Label>
               <Input
                 value={data.name}
                 onChange={(e) => updateMeta({ name: e.target.value })}
                 placeholder="My Vault"
-                className="h-9"
+                className="h-8 text-xs"
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Biometric */}
-        {bioSupported && vaultId && (
-          <div className="space-y-2">
-            <Label className="text-xs">Biometric Unlock</Label>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={async () => {
-                  setBioLoading(true)
-                  setBioError('')
-                  try {
-                    if (bioRegistered) {
-                      await removeBiometric(vaultId)
-                      setBioRegistered(false)
-                    } else {
-                      await registerBiometric(vaultId, password!)
-                      setBioRegistered(true)
-                    }
-                  } catch (e) {
-                    setBioError(e instanceof Error ? e.message : 'Failed')
-                  } finally {
-                    setBioLoading(false)
-                  }
-                }}
-                disabled={bioLoading}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs transition-colors
-                  ${bioRegistered
-                    ? 'bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5'
-                    : 'bg-accent text-white hover:bg-accent-bright'}
-                  disabled:opacity-50`}
-              >
+        {/* ── Security ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="size-3.5 text-ink-quaternary" />
+            <span className="text-xs font-medium text-ink-secondary">Security</span>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
+            {bioSupported && vaultId && (
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2.5">
+                  <Fingerprint className="size-4 text-ink-quaternary" />
+                  <div>
+                    <p className="text-xs font-medium text-ink-primary">Biometric Unlock</p>
+                    {bioError && <p className="text-xs text-danger mt-0.5">{bioError}</p>}
+                  </div>
+                </div>
                 {bioLoading
-                  ? <Loader2 className="size-3.5 animate-spin" />
-                  : <Fingerprint className="size-3.5" />}
-                {bioRegistered ? 'Remove' : 'Enable'}
-              </button>
-              {bioRegistered && (
-                <span className="text-xs text-emerald-500">Enabled</span>
-              )}
-            </div>
-            {bioError && <p className="text-xs text-danger">{bioError}</p>}
-          </div>
-        )}
-        {/* Auto Lock */}
-        <div className="space-y-2">
-          <Label className="text-xs">Auto Lock (minutes)</Label>
-          <Select
-            value={String(settings?.auto_lock_minutes ?? 5)}
-            onValueChange={(v) => updateSettings({ auto_lock_minutes: Number(v) })}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 5, 10, 15, 30].map((m) => (
-                <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Auto-Test on Save */}
-        <div className="space-y-2">
-          <Label className="text-xs">Auto-Test on Save</Label>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => updateSettings({ auto_test_on_save: !settings?.auto_test_on_save })}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs transition-colors
-                ${settings?.auto_test_on_save
-                  ? 'bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5'
-                  : 'bg-accent text-white hover:bg-accent-bright'}`}
-            >
-              <FlaskConical className="size-3.5" />
-              {settings?.auto_test_on_save ? 'Disable' : 'Enable'}
-            </button>
-            {settings?.auto_test_on_save && (
-              <span className="text-xs text-emerald-500">Enabled</span>
+                  ? <Loader2 className="size-4 animate-spin text-ink-quaternary" />
+                  : (
+                    <button
+                      onClick={async () => {
+                        setBioLoading(true)
+                        setBioError('')
+                        try {
+                          if (bioRegistered) {
+                            await removeBiometric(vaultId)
+                            setBioRegistered(false)
+                          } else {
+                            await registerBiometric(vaultId, password!)
+                            setBioRegistered(true)
+                          }
+                        } catch (e) {
+                          setBioError(e instanceof Error ? e.message : 'Failed')
+                        } finally {
+                          setBioLoading(false)
+                        }
+                      }}
+                      className={`text-xs px-2.5 py-1 rounded-md transition-colors
+                        ${bioRegistered
+                          ? 'text-ink-quaternary hover:text-danger hover:bg-danger/10'
+                          : 'text-accent hover:bg-accent/10'}`}
+                    >
+                      {bioRegistered ? 'Remove' : 'Enable'}
+                    </button>
+                  )
+                }
+              </div>
             )}
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="text-xs font-medium text-ink-primary">Auto Lock</p>
+                <p className="text-xs text-ink-quaternary mt-0.5">Lock after inactivity</p>
+              </div>
+              <Select
+                value={String(settings?.auto_lock_minutes ?? 5)}
+                onValueChange={(v) => updateSettings({ auto_lock_minutes: Number(v) })}
+              >
+                <SelectTrigger className="w-24 h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 5, 10, 15, 30].map((m) => (
+                    <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Providers */}
-        <div className="space-y-2">
-          <Label className="text-xs">Providers</Label>
-          <button
-            onClick={() => setShowProviders(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5 transition-colors"
-          >
-            <Server className="size-3.5" />
-            Manage Providers
-          </button>
-        </div>
+        {/* ── Keys ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <FlaskConical className="size-3.5 text-ink-quaternary" />
+            <span className="text-xs font-medium text-ink-secondary">Keys</span>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="text-xs font-medium text-ink-primary">Auto-Test on Save</p>
+                <p className="text-xs text-ink-quaternary mt-0.5">Test keys after saving</p>
+              </div>
+              <Toggle
+                checked={!!settings?.auto_test_on_save}
+                onChange={() => updateSettings({ auto_test_on_save: !settings?.auto_test_on_save })}
+              />
+            </div>
+            <button
+              onClick={() => setShowProviders(true)}
+              className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors rounded-b-lg"
+            >
+              <div className="flex items-center gap-2.5">
+                <Server className="size-4 text-ink-quaternary" />
+                <p className="text-xs font-medium text-ink-primary">Providers</p>
+              </div>
+              <ChevronRight className="size-3.5 text-ink-quaternary" />
+            </button>
+          </div>
+        </section>
       </div>
 
       <ManageProvidersDialog open={showProviders} onClose={() => setShowProviders(false)} />
