@@ -106,6 +106,14 @@ export default {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "dialog-enter": {
+          "0%": { opacity: "0", transform: "translate(-50%, calc(-50% + 12px))" },
+          "100%": { opacity: "1", transform: "translate(-50%, -50%)" },
+        },
+        "dialog-exit": {
+          "0%": { opacity: "1", transform: "translate(-50%, -50%)" },
+          "100%": { opacity: "0", transform: "translate(-50%, calc(-50% - 4px))" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.15s ease-out",
@@ -113,6 +121,8 @@ export default {
         "slide-in-from-right": "slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         "detail-fade-in": "detail-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
         "stagger-in": "stagger-in 0.2s ease-out both",
+        "dialog-enter": "dialog-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "dialog-exit": "dialog-exit 0.15s ease-in",
       },
     },
   },
