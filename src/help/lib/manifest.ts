@@ -1,4 +1,4 @@
-import { HelpDocument, HelpManifest } from '../types'
+import type { HelpDocument, HelpManifest } from '../types'
 import matter from 'gray-matter'
 
 const contentModules = import.meta.glob('../content/*.md', { query: '?raw', import: 'default' })

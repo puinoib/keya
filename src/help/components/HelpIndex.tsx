@@ -1,13 +1,17 @@
-import type { HelpDocument } from '../types'
+import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
+import type { HelpDocument } from '../types'
+import { loadManifest } from '../lib/manifest'
 import { cn } from '@/lib/utils'
 
-interface HelpIndexProps {
-  documents: HelpDocument[]
-}
+export function HelpIndex() {
+  const [documents, setDocuments] = useState<HelpDocument[]>([])
 
-export function HelpIndex({ documents }: HelpIndexProps) {
-  const docs = documents.filter(doc => doc.slug !== 'index')
+  useEffect(() => {
+    loadManifest().then(manifest => {
+      setDocuments(manifest.documents.filter(doc => doc.slug !== 'index'))
+    })
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -21,7 +25,7 @@ export function HelpIndex({ documents }: HelpIndexProps) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {docs.map((doc) => (
+        {documents.map((doc) => (
           <a
             key={doc.slug}
             href={`/help/${doc.slug}`}
