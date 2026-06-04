@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Database } from '../../core/database';
 import type { ApiKey, Group } from '../../core/types';
+import { ApiTester } from '../lib/api-tester';
 import { FileStorage } from '../lib/storage';
 import { saveSession, clearSession, loadSession } from '../lib/session';
 
@@ -70,6 +71,8 @@ interface AppState {
 // ── Save debouncer ──
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const DAILY_AUTO_TEST_PREFIX = 'keya-daily-auto-test:';
+const DAILY_AUTO_TEST_CONCURRENCY = 3;
 
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer);
@@ -95,6 +98,57 @@ function scheduleSave() {
       console.error('Auto-save failed:', e);
     }
   }, 500);
+}
+
+function getLocalDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<void>
+): Promise<void> {
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const item = items[nextIndex++];
+        await task(item);
+      }
+    }
+  );
+  await Promise.all(workers);
+}
+
+function maybeRunDailyAutoTest(db: Database) {
+  const settings = db.getSettings();
+  if (!settings.auto_test_daily) return;
+
+  const vaultId = db.getData().vault_id;
+  const storageKey = `${DAILY_AUTO_TEST_PREFIX}${vaultId}`;
+  const today = getLocalDateKey();
+  if (localStorage.getItem(storageKey) === today) return;
+
+  // Mark the attempt first so reloads do not repeatedly hit provider APIs.
+  localStorage.setItem(storageKey, today);
+  const keys = [...db.getApiKeys()];
+  if (keys.length === 0) return;
+
+  runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
+    const result = await ApiTester.testKey(key);
+    useStore.getState().updateKey(key.id, {
+      last_tested: new Date().toISOString(),
+      test_status: result.success ? 'success' : 'failed',
+      test_latency_ms: result.latency_ms ?? null,
+    });
+  }).catch((e) => {
+    console.error('Daily auto-test failed:', e);
+  });
 }
 
 // ── Store ──
@@ -155,6 +209,7 @@ export const useStore = create<AppState>((set, get) => {
         password,
         activeVaultFileName: fileName,
       });
+      maybeRunDailyAutoTest(db);
     },
 
     addKey: (key) => {

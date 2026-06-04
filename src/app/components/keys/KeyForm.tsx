@@ -70,6 +70,8 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const { addKey, updateKey, db } = useStore();
+  const [dialogPortalContainer, setDialogPortalContainer] =
+    useState<HTMLElement | null>(null);
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -183,6 +185,10 @@ export function KeyForm({
     onClose();
   };
 
+  const handleDialogContentRef = (node: HTMLDivElement | null) => {
+    setDialogPortalContainer(node?.parentElement ?? null);
+  };
+
   return (
     <Dialog
       open={open}
@@ -190,7 +196,7 @@ export function KeyForm({
         if (!o) handleClose();
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent ref={handleDialogContentRef} className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New API Key</DialogTitle>
         </DialogHeader>
@@ -354,7 +360,7 @@ export function KeyForm({
               <SelectTrigger>
                 <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent container={dialogPortalContainer}>
                 <SelectItem value="__none__">Ungrouped</SelectItem>
                 {db?.getGroups().map((g) => (
                   <SelectItem key={g.id} value={g.id}>

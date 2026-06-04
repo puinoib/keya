@@ -371,6 +371,8 @@ export function EditKeyDialog({
   onSave: (id: string, updates: Partial<ApiKey>) => void;
 }) {
   const db = useStore((s) => s.db);
+  const [dialogPortalContainer, setDialogPortalContainer] =
+    useState<HTMLElement | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -467,6 +469,10 @@ export function EditKeyDialog({
     }
   };
 
+  const handleDialogContentRef = (node: HTMLDivElement | null) => {
+    setDialogPortalContainer(node?.parentElement ?? null);
+  };
+
   return (
     <Dialog
       open={editingKey !== null}
@@ -474,7 +480,7 @@ export function EditKeyDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent ref={handleDialogContentRef} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit API Key</DialogTitle>
         </DialogHeader>
@@ -640,7 +646,7 @@ export function EditKeyDialog({
               <SelectTrigger>
                 <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent container={dialogPortalContainer}>
                 <SelectItem value="__none__">Ungrouped</SelectItem>
                 {db?.getGroups().map((g) => (
                   <SelectItem key={g.id} value={g.id}>

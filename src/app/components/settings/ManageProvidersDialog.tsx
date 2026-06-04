@@ -1,15 +1,93 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { PRESET_PROVIDERS } from '../../../core/types';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash, Check, X } from '@phosphor-icons/react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Plus,
+  Trash,
+  X,
+} from '@phosphor-icons/react';
+
+type ProviderItem = {
+  name: string;
+  endpoint?: string;
+  isCustom: boolean;
+  isEnabled: boolean;
+};
+
+function ProviderCard({
+  provider,
+  actionLabel,
+  actionIcon,
+  onAction,
+  onRemove,
+}: {
+  provider: ProviderItem;
+  actionLabel: string;
+  actionIcon: React.ReactNode;
+  onAction: () => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-line bg-surface-2 p-3">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-ink-primary">
+              {provider.name}
+            </p>
+            {provider.isCustom && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-bright">
+                Custom
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-ink-quaternary">
+            {provider.isCustom
+              ? provider.endpoint
+              : 'Built-in provider available in Keya'}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onAction}
+            className="h-8 gap-1.5 text-xs"
+          >
+            {actionIcon}
+            {actionLabel}
+          </Button>
+          {onRemove && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={onRemove}
+              className="size-8 text-ink-quaternary hover:text-danger"
+              aria-label={`Delete ${provider.name}`}
+            >
+              <Trash className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ManageProvidersDialog({
   open,
@@ -33,8 +111,26 @@ export function ManageProvidersDialog({
     ...customs.map((cp) => cp.name),
   ]);
 
-  const toggleProvider = (name: string) => {
-    const updated = disabled.has(name)
+  const providers = useMemo<ProviderItem[]>(() => {
+    const presetItems: ProviderItem[] = PRESET_PROVIDERS.map((name) => ({
+      name,
+      isCustom: false,
+      isEnabled: !disabled.has(name),
+    }));
+    const customItems: ProviderItem[] = customs.map((cp) => ({
+      name: cp.name,
+      endpoint: cp.endpoint,
+      isCustom: true,
+      isEnabled: !disabled.has(cp.name),
+    }));
+    return [...presetItems, ...customItems];
+  }, [customs, disabled]);
+
+  const enabledProviders = providers.filter((provider) => provider.isEnabled);
+  const disabledProviders = providers.filter((provider) => !provider.isEnabled);
+
+  const toggleProvider = (name: string, enable: boolean) => {
+    const updated = enable
       ? settings.disabled_providers.filter((n: string) => n !== name)
       : [...settings.disabled_providers, name];
     updateSettings({ disabled_providers: updated });
@@ -42,9 +138,14 @@ export function ManageProvidersDialog({
 
   const addCustom = () => {
     const name = newName.trim();
-    if (!name || !newEndpoint.trim() || allNames.has(name)) return;
+    const endpoint = newEndpoint.trim();
+    if (!name || !endpoint || allNames.has(name)) return;
+
     updateSettings({
-      custom_providers: [...customs, { name, endpoint: newEndpoint.trim() }],
+      custom_providers: [...customs, { name, endpoint }],
+      disabled_providers: settings.disabled_providers.filter(
+        (providerName: string) => providerName !== name
+      ),
     });
     setNewName('');
     setNewEndpoint('');
@@ -55,137 +156,166 @@ export function ManageProvidersDialog({
     updateSettings({
       custom_providers: customs.filter((cp) => cp.name !== name),
       disabled_providers: settings.disabled_providers.filter(
-        (n: string) => n !== name
+        (providerName: string) => providerName !== name
       ),
     });
   };
 
+  const duplicateName = allNames.has(newName.trim());
+
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => {
-        if (!o) onClose();
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl p-0 overflow-hidden">
+        <DialogHeader className="border-b border-line px-6 py-5">
           <DialogTitle>Manage Providers</DialogTitle>
+          <DialogDescription>
+            Enable providers from the left list, or disable active providers
+            from the right list.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2 max-h-[60vh] overflow-y-auto">
-          {/* Preset Providers */}
-          <div className="space-y-1.5">
-            <p className="text-xs text-ink-quaternary font-medium">Preset</p>
-            {PRESET_PROVIDERS.map((p) => {
-              const isDisabled = disabled.has(p);
-              return (
-                <div
-                  key={p}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-md bg-surface-2 border border-line-2"
-                >
-                  <span
-                    className={`flex-1 text-xs ${isDisabled ? 'text-ink-quaternary line-through' : 'text-ink-secondary'}`}
-                  >
-                    {p}
-                  </span>
-                  <button
-                    onClick={() => toggleProvider(p)}
-                    className={`text-xs px-2 py-0.5 rounded transition-colors ${
-                      isDisabled
-                        ? 'text-ink-quaternary hover:text-ink-secondary'
-                        : 'text-accent-bright hover:text-accent'
-                    }`}
-                  >
-                    {isDisabled ? 'Enable' : 'Disable'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Custom Providers */}
-          <div className="space-y-1.5">
-            <p className="text-xs text-ink-quaternary font-medium">Custom</p>
-            {customs.map((cp) => {
-              const isDisabled = disabled.has(cp.name);
-              return (
-                <div
-                  key={cp.name}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-2 border border-line-2"
-                >
-                  <span
-                    className={`text-xs ${isDisabled ? 'text-ink-quaternary line-through' : 'text-ink-secondary'}`}
-                  >
-                    {cp.name}
-                  </span>
-                  <span className="text-xs text-ink-quaternary font-mono truncate flex-1">
-                    {cp.endpoint}
-                  </span>
-                  <button
-                    onClick={() => toggleProvider(cp.name)}
-                    className={`text-xs px-2 py-0.5 rounded transition-colors ${
-                      isDisabled
-                        ? 'text-ink-quaternary hover:text-ink-secondary'
-                        : 'text-accent-bright hover:text-accent'
-                    }`}
-                  >
-                    {isDisabled ? 'On' : 'Off'}
-                  </button>
-                  <button
-                    onClick={() => removeCustom(cp.name)}
-                    className="text-ink-quaternary hover:text-danger transition-colors"
-                  >
-                    <Trash className="size-3" />
-                  </button>
-                </div>
-              );
-            })}
-
-            {isAdding ? (
-              <div className="space-y-2 p-3 rounded-md bg-surface-2 border border-accent/30">
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Provider name"
-                  className="h-8 text-xs"
-                  autoFocus
-                />
-                <Input
-                  value={newEndpoint}
-                  onChange={(e) => setNewEndpoint(e.target.value)}
-                  placeholder="https://api.example.com/v1"
-                  className="h-8 text-xs font-mono"
-                />
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    onClick={addCustom}
-                    disabled={
-                      !newName.trim() ||
-                      !newEndpoint.trim() ||
-                      allNames.has(newName.trim())
-                    }
-                  >
-                    <Check className="size-3.5" /> Add
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsAdding(false)}
-                  >
-                    <X className="size-3.5" /> Cancel
-                  </Button>
-                </div>
+        <div className="grid gap-0 md:grid-cols-2">
+          <section className="border-b border-line md:border-b-0 md:border-r">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div>
+                <h3 className="text-sm font-medium text-ink-primary">
+                  Disabled Providers
+                </h3>
+                <p className="mt-1 text-xs text-ink-quaternary">
+                  Includes built-in and custom providers not currently shown in
+                  forms.
+                </p>
               </div>
-            ) : (
-              <button
-                onClick={() => setIsAdding(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors"
-              >
-                <Plus className="size-3.5" /> Add Custom Provider
-              </button>
-            )}
-          </div>
+              <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
+                {disabledProviders.length}
+              </span>
+            </div>
+
+            <ScrollArea className="h-[44vh] px-6 pb-4">
+              <div className="space-y-3">
+                {disabledProviders.length > 0 ? (
+                  disabledProviders.map((provider) => (
+                    <ProviderCard
+                      key={provider.name}
+                      provider={provider}
+                      actionLabel="Enable"
+                      actionIcon={<ArrowRight className="size-4" />}
+                      onAction={() => toggleProvider(provider.name, true)}
+                      onRemove={
+                        provider.isCustom
+                          ? () => removeCustom(provider.name)
+                          : undefined
+                      }
+                    />
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-line bg-surface-2 px-4 py-8 text-center text-sm text-ink-quaternary">
+                    All providers are enabled.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="border-t border-line px-6 py-4">
+              {isAdding ? (
+                <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
+                  <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Provider name"
+                    autoFocus
+                  />
+                  <Input
+                    value={newEndpoint}
+                    onChange={(e) => setNewEndpoint(e.target.value)}
+                    placeholder="https://api.example.com/v1"
+                    className="font-mono text-xs"
+                  />
+                  {duplicateName && newName.trim() ? (
+                    <p className="text-xs text-danger">
+                      Provider name already exists.
+                    </p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={addCustom}
+                      disabled={
+                        !newName.trim() || !newEndpoint.trim() || duplicateName
+                      }
+                    >
+                      <Check className="size-3.5" />
+                      Add Custom Provider
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAdding(false);
+                        setNewName('');
+                        setNewEndpoint('');
+                      }}
+                    >
+                      <X className="size-3.5" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-center"
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Plus className="size-4" />
+                  Add Custom Provider
+                </Button>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between px-6 py-4">
+              <div>
+                <h3 className="text-sm font-medium text-ink-primary">
+                  Enabled Providers
+                </h3>
+                <p className="mt-1 text-xs text-ink-quaternary">
+                  These providers are available when creating or editing keys.
+                </p>
+              </div>
+              <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
+                {enabledProviders.length}
+              </span>
+            </div>
+
+            <ScrollArea className="h-[calc(44vh+89px)] px-6 pb-4">
+              <div className="space-y-3">
+                {enabledProviders.map((provider) => (
+                  <ProviderCard
+                    key={provider.name}
+                    provider={provider}
+                    actionLabel="Disable"
+                    actionIcon={<ArrowLeft className="size-4" />}
+                    onAction={() => toggleProvider(provider.name, false)}
+                    onRemove={
+                      provider.isCustom
+                        ? () => removeCustom(provider.name)
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </section>
         </div>
       </DialogContent>
     </Dialog>
