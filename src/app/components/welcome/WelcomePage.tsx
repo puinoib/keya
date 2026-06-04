@@ -19,6 +19,7 @@ export function WelcomePage() {
   const [loading, setLoading] = useState(false)
   const [folderName, setFolderName] = useState<string | null>(null)
   const [vaultFiles, setVaultFiles] = useState<string[]>([])
+  const [needsPermission, setNeedsPermission] = useState(false)
   const [cachedMetas, setCachedMetas] = useState<Record<string, CachedVaultMeta>>({})
   const [selectedVault, setSelectedVault] = useState<string | null>(null)
   const [newVaultName, setNewVaultName] = useState('')
@@ -32,7 +33,15 @@ export function WelcomePage() {
     if (mode !== 'home') return
     if (supportsFSA) {
       FileStorage.getWorkspaceName().then(setFolderName)
-      FileStorage.listVaultFiles().then(setVaultFiles)
+      FileStorage.listVaultFiles().then((files) => {
+        if (files === null) {
+          setNeedsPermission(true)
+          setVaultFiles([])
+        } else {
+          setNeedsPermission(false)
+          setVaultFiles(files)
+        }
+      })
       FileStorage.getCachedVaultMetas().then((list) => {
         const map: Record<string, CachedVaultMeta> = {}
         for (const m of list) map[m.fileName] = m
@@ -61,13 +70,28 @@ export function WelcomePage() {
       const dirHandle = await FileStorage.setupWorkspace()
       setFolderName(dirHandle.name)
       const files = await FileStorage.listVaultFiles()
-      setVaultFiles(files)
+      if (files === null) {
+        setNeedsPermission(true)
+        setVaultFiles([])
+      } else {
+        setNeedsPermission(false)
+        setVaultFiles(files)
+      }
       const metas = await FileStorage.getCachedVaultMetas()
       const map: Record<string, CachedVaultMeta> = {}
       for (const m of metas) map[m.fileName] = m
       setCachedMetas(map)
     } catch { /* cancelled */ }
     setLoading(false)
+  }
+
+  const handleRequestPermission = async () => {
+    const granted = await FileStorage.requestPermission()
+    if (granted) {
+      setNeedsPermission(false)
+      const files = await FileStorage.listVaultFiles()
+      if (files) setVaultFiles(files)
+    }
   }
 
   const handleUnlockVault = async (fileName: string, password: string) => {
@@ -182,6 +206,15 @@ export function WelcomePage() {
                           onClick={() => { setSelectedVault(f); setMode('unlock') }}
                         />
                       ))}
+                    </div>
+                  ) : needsPermission ? (
+                    <div className="flex flex-col items-center gap-2 px-4 py-4 rounded-md border border-dashed border-line">
+                      <AlertTriangle className="size-5 text-amber-400" />
+                      <p className="text-xs text-ink-tertiary text-center">Permission required to access vault files</p>
+                      <button onClick={handleRequestPermission}
+                              className="mt-1 text-xs text-accent hover:text-accent-bright transition-colors">
+                        Grant Access
+                      </button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-1.5 px-4 py-5 rounded-md border border-dashed border-line">

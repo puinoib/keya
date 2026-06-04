@@ -131,17 +131,23 @@ export class FileStorage {
 
   /**
    * List all .keya filenames in the workspace folder, sorted alphabetically.
+   * Returns null if permission is denied (requires user gesture to re-request).
    */
-  static async listVaultFiles(): Promise<string[]> {
+  static async listVaultFiles(): Promise<string[] | null> {
     const ws = await getWorkspace();
     if (!ws) return [];
-    if (!(await ensurePermission(ws.directoryHandle))) return [];
 
-    const files: string[] = [];
-    for await (const [name] of (ws.directoryHandle as any).entries()) {
-      if (name.endsWith('.keya')) files.push(name);
+    const perm = await ws.directoryHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      const files: string[] = [];
+      for await (const [name] of (ws.directoryHandle as any).entries()) {
+        if (name.endsWith('.keya')) files.push(name);
+      }
+      return files.sort();
     }
-    return files.sort();
+
+    // Permission not granted - return null to indicate need for user gesture
+    return null;
   }
 
   /**
@@ -250,6 +256,21 @@ export class FileStorage {
   static async getWorkspaceHandle(): Promise<FileSystemDirectoryHandle | null> {
     const ws = await getWorkspace();
     return ws?.directoryHandle ?? null;
+  }
+
+  /**
+   * Request permission for the workspace directory.
+   * Call this in a user gesture context (e.g., button click).
+   */
+  static async requestPermission(): Promise<boolean> {
+    const ws = await getWorkspace();
+    if (!ws) return false;
+
+    const perm = await ws.directoryHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') return true;
+
+    const req = await ws.directoryHandle.requestPermission({ mode: 'readwrite' });
+    return req === 'granted';
   }
 
   /**
