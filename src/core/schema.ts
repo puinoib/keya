@@ -315,6 +315,7 @@ export async function deserializeFromFile(
     db.settings.custom_providers = [];
   if (db.settings.disabled_providers === undefined)
     db.settings.disabled_providers = [];
+  if (!Array.isArray((db as any).inbox)) (db as any).inbox = [];
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();

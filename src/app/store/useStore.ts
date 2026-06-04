@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import type { Database } from '../../core/database';
-import type { ApiKey, Group } from '../../core/types';
+import type { ApiKey, Group, InboxItem } from '../../core/types';
 import { ApiTester } from '../lib/api-tester';
 import { FileStorage } from '../lib/storage';
 import { saveSession, clearSession, loadSession } from '../lib/session';
+import { collectExpiryAlerts, syncInboxWithAlerts } from '../../core/inbox';
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked';
 
@@ -27,6 +28,12 @@ interface AppState {
 
   // Selection
   selectedKeyId: string | null;
+  lastInboxSyncAt: string | null;
+  lastInboxSyncResult: {
+    added: number;
+    updated: number;
+    archived: number;
+  } | null;
 
   // Actions - Workspace
   setWorkspaceState: (state: WorkspaceState) => void;
@@ -63,6 +70,8 @@ interface AppState {
 
   // Actions - Settings
   updateSettings: (updates: Record<string, unknown>) => void;
+  runInboxChecks: () => { added: number; updated: number; archived: number };
+  archiveInboxItem: (id: string) => InboxItem | null;
 
   // Actions - Vault Meta
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
@@ -98,6 +107,21 @@ function scheduleSave() {
       console.error('Auto-save failed:', e);
     }
   }, 500);
+}
+
+function runInboxChecksForDatabase(db: Database) {
+  const alerts = collectExpiryAlerts(db.getApiKeys(), db.getData().vault_id);
+  const summary = syncInboxWithAlerts(db.getData(), alerts);
+
+  if (
+    summary.added.length > 0 ||
+    summary.updated.length > 0 ||
+    summary.archived.length > 0
+  ) {
+    db.updateMeta({});
+  }
+
+  return summary;
 }
 
 function getLocalDateKey(date = new Date()): string {
@@ -178,6 +202,8 @@ export const useStore = create<AppState>((set, get) => {
       'system',
     ...FILTER_DEFAULTS,
     selectedKeyId: null,
+    lastInboxSyncAt: null,
+    lastInboxSyncResult: null,
 
     setWorkspaceState: (state) => set({ workspaceState: state }),
     setDb: (db) => set({ db }),
@@ -203,17 +229,34 @@ export const useStore = create<AppState>((set, get) => {
 
     unlock: (db, password, fileName) => {
       saveSession(fileName, password);
+      const inboxSummary = runInboxChecksForDatabase(db);
       set({
         workspaceState: 'unlocked',
         db,
         password,
         activeVaultFileName: fileName,
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: {
+          added: inboxSummary.added.length,
+          updated: inboxSummary.updated.length,
+          archived: inboxSummary.archived.length,
+        },
       });
+      if (
+        inboxSummary.added.length > 0 ||
+        inboxSummary.updated.length > 0 ||
+        inboxSummary.archived.length > 0
+      ) {
+        scheduleSave();
+      }
       maybeRunDailyAutoTest(db);
     },
 
     addKey: (key) => {
       const created = get().db?.addApiKey(key);
+      if (created && get().db) {
+        runInboxChecksForDatabase(get().db!);
+      }
       set({ showAddForm: false });
       scheduleSave();
       return created;
@@ -221,13 +264,25 @@ export const useStore = create<AppState>((set, get) => {
 
     updateKey: (id, updates) => {
       get().db?.updateApiKey(id, updates);
-      set({});
+      if (get().db) {
+        runInboxChecksForDatabase(get().db!);
+      }
+      set({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+      });
       scheduleSave();
     },
 
     deleteKey: (id) => {
       get().db?.deleteApiKey(id);
-      set({});
+      if (get().db) {
+        runInboxChecksForDatabase(get().db!);
+      }
+      set({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+      });
       scheduleSave();
     },
 
@@ -264,6 +319,41 @@ export const useStore = create<AppState>((set, get) => {
       get().db?.updateSettings(updates);
       set({});
       scheduleSave();
+    },
+
+    runInboxChecks: () => {
+      const db = get().db;
+      if (!db) return { added: 0, updated: 0, archived: 0 };
+      const summary = runInboxChecksForDatabase(db);
+      set({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: {
+          added: summary.added.length,
+          updated: summary.updated.length,
+          archived: summary.archived.length,
+        },
+      });
+      if (
+        summary.added.length > 0 ||
+        summary.updated.length > 0 ||
+        summary.archived.length > 0
+      ) {
+        scheduleSave();
+      }
+      return {
+        added: summary.added.length,
+        updated: summary.updated.length,
+        archived: summary.archived.length,
+      };
+    },
+
+    archiveInboxItem: (id) => {
+      const archived = get().db?.archiveInboxItem(id) ?? null;
+      if (archived) {
+        set({});
+        scheduleSave();
+      }
+      return archived;
     },
 
     updateMeta: (updates) => {

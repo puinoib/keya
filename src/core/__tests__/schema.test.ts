@@ -27,11 +27,10 @@ describe('schema (.keya file format)', () => {
       provider: 'OpenAI',
       endpoint: 'https://api.openai.com/v1',
       group_id: base.groups[0]?.id ?? null,
-      notes: '',
+      expires_at: null,
       last_tested: null,
       test_status: null,
       test_latency_ms: null,
-      status: 'active',
     });
     db.addApiKey({
       name: 'Anthropic Production',
@@ -40,11 +39,10 @@ describe('schema (.keya file format)', () => {
       provider: 'Anthropic',
       endpoint: 'https://api.anthropic.com',
       group_id: base.groups[0]?.id ?? null,
-      notes: 'Main production key',
+      expires_at: null,
       last_tested: null,
       test_status: null,
       test_latency_ms: null,
-      status: 'active',
     });
     return { ...db.getData(), ...overrides } as KeyaDatabase;
   }
@@ -138,5 +136,13 @@ describe('schema (.keya file format)', () => {
     const bytes = await serializeToFile(db, password);
     const restored = await deserializeFromFile(bytes, password);
     expect(restored.settings.auto_test_daily).toBe(false);
+  });
+
+  it('defaults missing inbox collection to empty', async () => {
+    const db = makeTestDb();
+    delete (db as any).inbox;
+    const bytes = await serializeToFile(db, password);
+    const restored = await deserializeFromFile(bytes, password);
+    expect(restored.inbox).toEqual([]);
   });
 });

@@ -38,6 +38,35 @@ export interface Settings {
   disabled_providers: string[];
 }
 
+export type InboxItemType = 'key_expiry_upcoming' | 'key_expiry_expired';
+export type InboxItemStatus = 'open' | 'archived';
+export type InboxArchiveReason = 'user' | 'resolved';
+
+export interface InboxItem {
+  id: string;
+  type: InboxItemType;
+  title: string;
+  body: string;
+  severity: 'warning' | 'critical';
+  status: InboxItemStatus;
+  dedupe_key: string;
+  fingerprint: string;
+  entity_type: 'api_key';
+  entity_id: string;
+  vault_id: string;
+  archive_reason: InboxArchiveReason | null;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  last_detected_at: string | null;
+  metadata: {
+    key_name: string;
+    provider: string;
+    expires_at: string;
+    days_until_expiry: number;
+  };
+}
+
 export interface KeyaDatabase {
   version: '1.0';
   vault_id: string;
@@ -48,6 +77,7 @@ export interface KeyaDatabase {
   api_keys: ApiKey[];
   groups: Group[];
   settings: Settings;
+  inbox: InboxItem[];
 }
 
 export const DEFAULT_GROUPS: Omit<Group, 'id'>[] = [
@@ -64,6 +94,8 @@ export const DEFAULT_SETTINGS: Settings = {
   custom_providers: [],
   disabled_providers: [],
 };
+
+export const EXPIRY_REMINDER_DAYS = 7;
 
 export const ENDPOINT_DEFAULTS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
