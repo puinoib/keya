@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "@phosphor-icons/react"
 
 export function SettingsLayout() {
   const navigate = useNavigate()
