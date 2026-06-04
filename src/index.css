@@ -186,6 +186,13 @@
 
 /* ── Linear Design System Foundation ── */
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   :root {
     /* shadcn/ui CSS variables (dark) */
     --background: 216 8% 3%;
