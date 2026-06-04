@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useStore } from "../../store/useStore"
 import { ApiTester } from "../../lib/api-tester"
 import type { ApiKey } from "../../../core/types"
+import { ENDPOINT_DEFAULTS } from "../../../core/types"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key, Plus, Search,
+  Eye, EyeOff, Key, Plus, Search, RotateCcw,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -52,7 +53,7 @@ export function KeyList() {
     updateKey(key.id, {
       last_tested: new Date().toISOString(),
       test_status: result.success ? "success" : "failed",
-      test_latency_ms: result.latencyMs ?? null,
+      test_latency_ms: result.latency_ms ?? null,
     })
     setTesting(null)
   }
@@ -209,7 +210,11 @@ export function KeyList() {
 
 /* ── Inline Edit Dialog ── */
 
-const PROVIDERS = ["OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot", "Zhipu", "Mistral", "Cohere", "Together", "Custom"]
+const PROVIDERS = [
+  "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
+  "Zhipu", "Baidu", "Mistral", "Cohere", "Together", "OpenRouter",
+  "SiliconFlow", "Azure OpenAI", "Custom",
+]
 
 export function EditKeyDialog({ editingKey, onClose, onSave }: {
   editingKey: ApiKey | null
@@ -285,7 +290,19 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
 
           {/* Endpoint */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Endpoint</Label>
+            <Label className="text-xs flex items-center gap-1.5">
+              Endpoint
+              {ENDPOINT_DEFAULTS[form.provider.toLowerCase()] && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, endpoint: ENDPOINT_DEFAULTS[f.provider.toLowerCase()] }))}
+                  className="text-ink-quaternary hover:text-accent-bright transition-colors"
+                  title="Reset to default"
+                >
+                  <RotateCcw className="size-3" />
+                </button>
+              )}
+            </Label>
             <Input value={form.endpoint} onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))} placeholder="https://api.openai.com/v1" className="font-mono text-xs" />
           </div>
 
