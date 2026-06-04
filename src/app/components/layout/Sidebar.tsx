@@ -180,13 +180,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="px-3 py-2 border-t border-line-subtle space-y-2">
-          <a
-            href="/help"
-            className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors flex items-center justify-center gap-1"
-          >
-            帮助中心
-          </a>
+        <div className="px-3 py-2 border-t border-line-subtle">
           <a
             href="https://github.com/puinoib/keya"
             target="_blank"
