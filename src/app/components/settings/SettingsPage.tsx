@@ -5,6 +5,7 @@ import {
   Fingerprint,
   Spinner,
   Flask,
+  Folders,
   HardDrives,
   Shield,
   CaretRight,
@@ -27,6 +28,7 @@ import {
   removeBiometric,
 } from '@/app/lib/biometric';
 import { ManageProvidersDialog } from './ManageProvidersDialog';
+import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
 
 function Toggle({
   checked,
@@ -66,9 +68,11 @@ export function SettingsPage() {
   const [bioLoading, setBioLoading] = useState(false);
   const [bioError, setBioError] = useState('');
   const [showProviders, setShowProviders] = useState(false);
+  const [showGroups, setShowGroups] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
   const vaultId = data?.vault_id;
+  const groups = db?.getGroups() ?? [];
 
   useEffect(() => {
     if (!iconPickerOpen) return;
@@ -297,6 +301,61 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* ── Groups ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Folders className="size-3.5 text-ink-quaternary" />
+            <span className="text-xs font-medium text-ink-secondary">
+              Groups
+            </span>
+          </div>
+          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
+            <button
+              onClick={() => setShowGroups(true)}
+              className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors"
+            >
+              <div>
+                <p className="text-xs font-medium text-ink-primary">
+                  Manage Groups
+                </p>
+                <p className="text-xs text-ink-quaternary mt-0.5">
+                  Create, rename, and delete key groups
+                </p>
+              </div>
+              <CaretRight className="size-3.5 text-ink-quaternary" />
+            </button>
+            <div className="p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-ink-quaternary">
+                  {groups.length} groups available
+                </p>
+                {groups.length > 0 ? (
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    {groups.slice(0, 4).map((group) => (
+                      <span
+                        key={group.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-3 px-2 py-1 text-[11px] text-ink-secondary"
+                      >
+                        <span className="leading-none">{group.icon}</span>
+                        <span>{group.name}</span>
+                      </span>
+                    ))}
+                    {groups.length > 4 ? (
+                      <span className="inline-flex items-center rounded-full border border-line bg-surface-3 px-2 py-1 text-[11px] text-ink-quaternary">
+                        +{groups.length - 4}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <span className="text-xs text-ink-quaternary">
+                    No groups yet
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── Help & Support ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -329,6 +388,10 @@ export function SettingsPage() {
       <ManageProvidersDialog
         open={showProviders}
         onClose={() => setShowProviders(false)}
+      />
+      <ManageGroupsDialog
+        open={showGroups}
+        onClose={() => setShowGroups(false)}
       />
     </>
   );

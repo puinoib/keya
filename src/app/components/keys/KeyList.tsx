@@ -104,8 +104,6 @@ export function KeyList() {
     }
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
-  const _groups = db?.getGroups() ?? [];
-
   // Early return if db is not available
   if (!db) return null;
 
@@ -184,6 +182,7 @@ export function KeyList() {
           const isTesting = testing === key.id;
           const testOk = key.test_status === 'success';
           const testFail = key.test_status === 'failed';
+          const isSelected = selectedKeyId === key.id;
           const isExpired = key.expires_at
             ? new Date(key.expires_at) < new Date()
             : false;
@@ -193,63 +192,80 @@ export function KeyList() {
                   (1000 * 60 * 60 * 24) <=
                 7
               : false;
+          const status = isExpired
+            ? {
+                label: 'Expired',
+                className: 'text-danger',
+                dot: 'bg-danger',
+              }
+            : isExpiringSoon
+              ? {
+                  label: 'Expiring',
+                  className: 'text-[#d97706] dark:text-[#fbbf24]',
+                  dot: 'bg-[#f59e0b]',
+                }
+              : testOk
+                ? {
+                    label:
+                      key.test_latency_ms != null
+                        ? `${key.test_latency_ms}ms`
+                        : 'Working',
+                    className: 'text-success-bright',
+                    dot: 'bg-success-bright',
+                  }
+                : testFail
+                  ? {
+                      label: 'Failed',
+                      className: 'text-danger',
+                      dot: 'bg-danger',
+                    }
+                  : {
+                      label: 'Untested',
+                      className: 'text-ink-quaternary',
+                      dot: 'bg-ink-quaternary/35',
+                    };
 
           return (
             <div
               key={key.id}
-              onClick={() =>
-                setSelectedKeyId(selectedKeyId === key.id ? null : key.id)
-              }
+              onClick={() => setSelectedKeyId(isSelected ? null : key.id)}
               onMouseEnter={() => setHoveredKeyId(key.id)}
               onMouseLeave={() => setHoveredKeyId(null)}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg cursor-pointer
-                         transition-all duration-200
-                         ${selectedKeyId === key.id ? 'bg-surface-4' : 'hover:bg-surface-3'}`}
+              className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5
+                         transition-colors duration-150 focus-within:border-accent/30 focus-within:bg-surface-3
+                         ${
+                           isSelected
+                             ? 'border-line-2 bg-surface-4'
+                             : 'border-transparent hover:bg-surface-3'
+}`}
             >
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-ink-primary truncate">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
+                  />
+                  <span className="truncate text-sm font-medium text-ink-primary">
                     {key.name}
                   </span>
-                  {isExpired && (
-                    <span className="shrink-0 size-1.5 rounded-full bg-danger" />
-                  )}
-                  {isExpiringSoon && !isExpired && (
-                    <span className="shrink-0 size-1.5 rounded-full bg-warning" />
-                  )}
-                  {!isExpired && !isExpiringSoon && testOk && (
-                    <span className="shrink-0 size-1.5 rounded-full bg-success-bright" />
-                  )}
-                  {!isExpired && !isExpiringSoon && testFail && (
-                    <span className="shrink-0 size-1.5 rounded-full bg-danger" />
-                  )}
-                  {!isExpired && !isExpiringSoon && !key.test_status && (
-                    <span className="shrink-0 size-1.5 rounded-full bg-ink-quaternary/30" />
-                  )}
+                  <span className="hidden text-divider sm:inline">·</span>
+                  <span
+                    className={`hidden shrink-0 text-xs font-medium sm:inline ${status.className}`}
+                  >
+                    {status.label}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5 text-xs text-ink-quaternary">
-                  <span>{key.provider}</span>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
+                  <span className="shrink-0">{key.provider}</span>
                   <span className="text-divider">·</span>
-                  <span className="font-mono">{maskKey(key.key)}</span>
-                  {isExpired && (
+                  <span className="truncate font-mono tracking-tight">
+                    {maskKey(key.key)}
+                  </span>
+                  {key.description && (
                     <>
-                      <span className="text-divider">·</span>
-                      <span className="text-danger font-medium">Expired</span>
-                    </>
-                  )}
-                  {!isExpired && testOk && key.test_latency_ms != null && (
-                    <>
-                      <span className="text-divider">·</span>
-                      <span className="text-success-bright font-medium">
-                        {key.test_latency_ms}ms
+                      <span className="hidden text-divider md:inline">·</span>
+                      <span className="hidden truncate md:inline">
+                        {key.description}
                       </span>
-                    </>
-                  )}
-                  {!isExpired && testFail && (
-                    <>
-                      <span className="text-divider">·</span>
-                      <span className="text-danger font-medium">Failed</span>
                     </>
                   )}
                 </div>
@@ -258,40 +274,48 @@ export function KeyList() {
               {/* Actions */}
               <div
                 onClick={(e) => e.stopPropagation()}
-                className={`flex items-center gap-1 shrink-0 transition-opacity duration-150
-                           ${hoveredKeyId === key.id ? 'opacity-100' : 'opacity-0'}`}
+                className={`flex shrink-0 items-center gap-0.5 transition-opacity duration-150
+                           sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100
+                           ${hoveredKeyId === key.id ? 'opacity-100' : ''}`}
               >
                 <button
                   onClick={() => handleTest(key)}
                   disabled={isTesting}
-                  className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
                   title={isTesting ? 'Testing...' : 'Test key'}
+                  aria-label={isTesting ? 'Testing key' : 'Test key'}
                 >
                   {isTesting ? (
                     <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Flask className="size-4 text-ink-primary" />
+                    <Flask className="size-4" />
                   )}
                 </button>
 
                 <button
                   onClick={() => handleCopy(key.key, key.id)}
-                  className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary"
                   title={copiedId === key.id ? 'Copied!' : 'Copy to clipboard'}
+                  aria-label={
+                    copiedId === key.id ? 'Copied key' : 'Copy key to clipboard'
+                  }
                 >
                   {copiedId === key.id ? (
                     <span className="text-xs text-success-bright font-medium">
                       ✓
                     </span>
                   ) : (
-                    <Copy className="size-4 text-ink-primary" />
+                    <Copy className="size-4" />
                   )}
                 </button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center justify-center size-8 rounded-md bg-surface-2 hover:bg-surface-3 transition-colors duration-100">
-                      <DotsThree className="size-4 text-ink-primary" />
+                    <button
+                      className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary"
+                      aria-label="Open key actions"
+                    >
+                      <DotsThree className="size-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">

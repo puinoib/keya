@@ -9,14 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Plus,
-  Trash,
-  X,
-} from '@phosphor-icons/react';
+import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 
 type ProviderItem = {
   name: string;
@@ -44,15 +37,11 @@ const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
 
 function ProviderCard({
   provider,
-  actionLabel,
-  actionIcon,
-  onAction,
+  onToggle,
   onRemove,
 }: {
   provider: ProviderItem;
-  actionLabel: string;
-  actionIcon: React.ReactNode;
-  onAction: () => void;
+  onToggle: () => void;
   onRemove?: () => void;
 }) {
   return (
@@ -73,17 +62,22 @@ function ProviderCard({
             {provider.endpoint}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Button
+        <div className="flex shrink-0 items-center gap-2">
+          <button
             type="button"
-            size="sm"
-            variant="outline"
-            onClick={onAction}
-            className="h-8 gap-1.5 text-xs"
+            role="switch"
+            aria-checked={provider.isEnabled}
+            onClick={onToggle}
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all duration-200 ${
+              provider.isEnabled ? 'bg-accent' : 'bg-surface-3'
+            }`}
           >
-            {actionIcon}
-            {actionLabel}
-          </Button>
+            <span
+              className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                provider.isEnabled ? 'translate-x-4' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
           {onRemove && (
             <Button
               type="button"
@@ -140,9 +134,6 @@ export function ManageProvidersDialog({
     return [...presetItems, ...customItems];
   }, [customs, disabled]);
 
-  const enabledProviders = providers.filter((provider) => provider.isEnabled);
-  const disabledProviders = providers.filter((provider) => !provider.isEnabled);
-
   const toggleProvider = (name: string, enable: boolean) => {
     const updated = enable
       ? settings.disabled_providers.filter((n: string) => n !== name)
@@ -184,133 +175,90 @@ export function ManageProvidersDialog({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-5xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-xl flex-col overflow-hidden p-0">
         <DialogHeader className="border-b border-line px-6 py-5">
           <DialogTitle>Manage Providers</DialogTitle>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-2">
-          <section className="flex min-h-0 flex-col border-b border-line md:border-b-0 md:border-r">
-            <div className="flex items-center justify-between px-6 py-4">
-              <h3 className="text-sm font-medium text-ink-primary">Disabled</h3>
-              <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
-                {disabledProviders.length}
-              </span>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              {providers.map((provider) => (
+                <ProviderCard
+                  key={provider.name}
+                  provider={provider}
+                  onToggle={() =>
+                    toggleProvider(provider.name, !provider.isEnabled)
+                  }
+                  onRemove={
+                    provider.isCustom
+                      ? () => removeCustom(provider.name)
+                      : undefined
+                  }
+                />
+              ))}
             </div>
+          </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
-              <div className="space-y-3">
-                {disabledProviders.length > 0 ? (
-                  disabledProviders.map((provider) => (
-                    <ProviderCard
-                      key={provider.name}
-                      provider={provider}
-                      actionLabel="Enable"
-                      actionIcon={<ArrowRight className="size-4" />}
-                      onAction={() => toggleProvider(provider.name, true)}
-                      onRemove={
-                        provider.isCustom
-                          ? () => removeCustom(provider.name)
-                          : undefined
-                      }
-                    />
-                  ))
-                ) : (
-                  <div className="rounded-lg border border-dashed border-line bg-surface-2 px-4 py-8 text-center text-sm text-ink-quaternary">
-                    All providers are enabled.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="shrink-0 border-t border-line px-6 py-4">
-              {isAdding ? (
-                <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Provider name"
-                    autoFocus
-                  />
-                  <Input
-                    value={newEndpoint}
-                    onChange={(e) => setNewEndpoint(e.target.value)}
-                    placeholder="https://api.example.com/v1"
-                    className="font-mono text-xs"
-                  />
-                  {duplicateName && newName.trim() ? (
-                    <p className="text-xs text-danger">
-                      Provider name already exists.
-                    </p>
-                  ) : null}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={addCustom}
-                      disabled={
-                        !newName.trim() || !newEndpoint.trim() || duplicateName
-                      }
-                    >
-                      <Check className="size-3.5" />
-                      Add Custom Provider
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setIsAdding(false);
-                        setNewName('');
-                        setNewEndpoint('');
-                      }}
-                    >
-                      <X className="size-3.5" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-center"
-                  onClick={() => setIsAdding(true)}
-                >
-                  <Plus className="size-4" />
-                  Add Custom Provider
-                </Button>
-              )}
-            </div>
-          </section>
-
-          <section className="flex min-h-0 flex-col">
-            <div className="flex items-center justify-between px-6 py-4">
-              <h3 className="text-sm font-medium text-ink-primary">Enabled</h3>
-              <span className="rounded-full bg-surface-3 px-2.5 py-1 text-xs text-ink-secondary">
-                {enabledProviders.length}
-              </span>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
-              <div className="space-y-3">
-                {enabledProviders.map((provider) => (
-                  <ProviderCard
-                    key={provider.name}
-                    provider={provider}
-                    actionLabel="Disable"
-                    actionIcon={<ArrowLeft className="size-4" />}
-                    onAction={() => toggleProvider(provider.name, false)}
-                    onRemove={
-                      provider.isCustom
-                        ? () => removeCustom(provider.name)
-                        : undefined
+          <div className="shrink-0 border-t border-line px-6 py-4">
+            {isAdding ? (
+              <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Provider name"
+                  autoFocus
+                />
+                <Input
+                  value={newEndpoint}
+                  onChange={(e) => setNewEndpoint(e.target.value)}
+                  placeholder="https://api.example.com/v1"
+                  className="font-mono text-xs"
+                />
+                {duplicateName && newName.trim() ? (
+                  <p className="text-xs text-danger">
+                    Provider name already exists.
+                  </p>
+                ) : null}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={addCustom}
+                    disabled={
+                      !newName.trim() || !newEndpoint.trim() || duplicateName
                     }
-                  />
-                ))}
+                  >
+                    <Check className="size-3.5" />
+                    Add Custom Provider
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsAdding(false);
+                      setNewName('');
+                      setNewEndpoint('');
+                    }}
+                  >
+                    <X className="size-3.5" />
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </div>
-          </section>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-center"
+                onClick={() => setIsAdding(true)}
+              >
+                <Plus className="size-4" />
+                Add Custom Provider
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
