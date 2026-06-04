@@ -12,6 +12,16 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialogRoot as AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +32,7 @@ import {
   Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2, CalendarIcon, X,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
+import { useToast } from "@/components/ui/toast"
 
 export function KeyList() {
   const db = useStore((s) => s.db)
@@ -29,6 +40,8 @@ export function KeyList() {
   const [testing, setTesting] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
+  const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null)
+  const toast = useToast()
 
   if (!db) return null
 
@@ -64,6 +77,12 @@ export function KeyList() {
       test_latency_ms: result.latency_ms ?? null,
     })
     setTesting(null)
+    toast.add({
+      title: result.success ? "Key available" : "Key test failed",
+      description: result.success ? `${key.name} — ${result.latency_ms}ms` : (result.error || "Connection failed"),
+      type: result.success ? "success" : "error",
+      timeout: 3000,
+    })
   }
 
   const handleCopy = async (keyValue: string, keyId: string) => {
@@ -72,6 +91,7 @@ export function KeyList() {
       setCopiedId(keyId)
       setTimeout(() => setCopiedId(null), 2000)
       setTimeout(() => navigator.clipboard.writeText(""), 15000)
+      toast.add({ title: "Copied to clipboard", timeout: 2000 })
     } catch { /* clipboard unavailable */ }
   }
 
@@ -192,7 +212,7 @@ export function KeyList() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => { if (confirm("Delete this key?")) deleteKey(key.id) }}
+                      onClick={() => setDeletingKey(key)}
                       className="text-danger focus:text-danger">
                       <Trash2 className="size-3.5" /> Delete
                     </DropdownMenuItem>
@@ -211,6 +231,27 @@ export function KeyList() {
         onClose={() => setEditingKey(null)}
         onSave={(id, updates) => { updateKey(id, updates); setEditingKey(null) }}
       />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingKey} onOpenChange={(open) => { if (!open) setDeletingKey(null) }} modal>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Key</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingKey?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deletingKey) { deleteKey(deletingKey.id); toast.add({ title: `Deleted "${deletingKey.name}"`, timeout: 3000 }) } }}
+              className="bg-danger text-white hover:bg-danger/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
@@ -223,6 +264,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
   onSave: (id: string, updates: Partial<ApiKey>) => void
 }) {
   const db = useStore((s) => s.db)
+  const toast = useToast()
   const [showKey, setShowKey] = useState(false)
   const [showCalendar, setShowCalendar] = useState(false)
   const calendarRef = useRef<HTMLDivElement>(null)
@@ -265,6 +307,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return
+    toast.add({ title: "Key updated", description: form.name.trim(), timeout: 3000 })
     onSave(editingKey.id, {
       name: form.name.trim(),
       key: form.key.trim(),

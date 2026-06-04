@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { deserializeFromFile, serializeToFile, type KeyaDatabase } from "../../../core"
 import { FileStorage } from "../../lib/storage"
 import { Database } from "../../../core/database"
+import { useToast } from "@/components/ui/toast"
 
 function downloadBytes(data: Uint8Array, filename: string) {
   const blob = new Blob([data], { type: "application/octet-stream" })
@@ -44,6 +45,7 @@ function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
 
 export function TopBar() {
   const { searchQuery, setSearchQuery, setShowAddForm, theme, setTheme, db, password, setDb } = useStore()
+  const toast = useToast()
   const importKeyaRef = useRef<HTMLInputElement>(null)
   const importJsonRef = useRef<HTMLInputElement>(null)
 
@@ -54,9 +56,10 @@ export function TopBar() {
       const bytes = await serializeToFile(db.getData(), password)
       const date = new Date().toISOString().slice(0, 10)
       downloadBytes(bytes, `keya-${date}.keya`)
+      toast.add({ title: "Exported .keya file", timeout: 3000 })
     } catch (e) {
       console.error("Export .keya failed:", e)
-      alert("Failed to export .keya file.")
+      toast.add({ title: "Export failed", description: "Failed to export .keya file", type: "error", timeout: 4000 })
     }
   }
 
@@ -74,14 +77,12 @@ export function TopBar() {
       const imported = await deserializeFromFile(new Uint8Array(buffer), pw)
       mergeIntoDb(db, imported)
 
-      // Refresh store with fresh Database ref
       setDb(new Database(db.getData()))
-
-      // Save merged database to workspace
       await FileStorage.save(db.getData(), password || "")
+      toast.add({ title: "Imported .keya file", description: `${imported.api_keys.length} keys imported`, timeout: 3000 })
     } catch (e) {
       console.error("Import .keya failed:", e)
-      alert("Failed to open .keya file. Wrong password or corrupted file.")
+      toast.add({ title: "Import failed", description: "Wrong password or corrupted file", type: "error", timeout: 4000 })
     }
   }
 
@@ -90,6 +91,7 @@ export function TopBar() {
     if (!db) return
     const date = new Date().toISOString().slice(0, 10)
     downloadJSON(db.getData(), `keya-export-${date}.json`)
+    toast.add({ title: "Exported JSON file", timeout: 3000 })
   }
 
   /* ──── Import JSON ──── */
@@ -100,18 +102,16 @@ export function TopBar() {
       const text = await file.text()
       const imported = JSON.parse(text)
       if (!imported.api_keys || !Array.isArray(imported.api_keys)) {
-        alert("Invalid Keya export format.")
+        toast.add({ title: "Import failed", description: "Invalid Keya export format", type: "error", timeout: 4000 })
         return
       }
       mergeIntoDb(db, imported as KeyaDatabase)
 
-      // Refresh store with fresh Database ref
       setDb(new Database(db.getData()))
-
-      // Save to .keya
       await FileStorage.save(db.getData(), password || "")
+      toast.add({ title: "Imported JSON file", description: `${imported.api_keys.length} keys imported`, timeout: 3000 })
     } catch {
-      alert("Failed to parse file.")
+      toast.add({ title: "Import failed", description: "Failed to parse file", type: "error", timeout: 4000 })
     }
     e.target.value = ""
   }

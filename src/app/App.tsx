@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ToastProvider } from "@/components/ui/toast"
 import { Loader2 } from "lucide-react"
 import { AppLayout } from "./components/layout/AppLayout"
 import { SettingsLayout } from "./components/layout/SettingsLayout"
@@ -125,10 +126,12 @@ export default function App() {
     <BrowserRouter>
       <ThemeSync />
       <SessionRestore>
-        <TooltipProvider delayDuration={300}>
-          <AppRoutes />
-          <BiometricPromptLayer />
-        </TooltipProvider>
+        <ToastProvider>
+          <TooltipProvider delayDuration={300}>
+            <AppRoutes />
+            <BiometricPromptLayer />
+          </TooltipProvider>
+        </ToastProvider>
       </SessionRestore>
     </BrowserRouter>
   )

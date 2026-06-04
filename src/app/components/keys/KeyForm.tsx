@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
 
 interface FormData {
   name: string
@@ -40,6 +41,7 @@ const empty: FormData = {
 
 export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { addKey, updateKey, db } = useStore()
+  const toast = useToast()
   const [form, setForm] = useState<FormData>(empty)
   const [showKey, setShowKey] = useState(false)
   const [testState, setTestState] = useState<TestState>({ testing: false, result: null })
@@ -103,9 +105,12 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
     const provider = form.provider
     const endpoint = form.endpoint
     const keyValue = form.key_value
+    const keyName = form.name
     setForm(empty)
     setTestState({ testing: false, result: null })
     onClose()
+
+    toast.add({ title: "Key saved", description: keyName, timeout: 3000 })
 
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {
