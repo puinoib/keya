@@ -1,17 +1,9 @@
-import { useState, useEffect } from 'react'
 import { ArrowRight } from "@phosphor-icons/react"
-import type { HelpDocument } from '../types'
 import { loadManifest } from '../lib/manifest'
 import { cn } from '@/lib/utils'
 
 export function HelpIndex() {
-  const [documents, setDocuments] = useState<HelpDocument[]>([])
-
-  useEffect(() => {
-    loadManifest().then(manifest => {
-      setDocuments(manifest.documents.filter(doc => doc.slug !== 'index'))
-    })
-  }, [])
+  const documents = loadManifest().documents.filter(doc => doc.slug !== 'index')
 
   return (
     <div className="space-y-8">
