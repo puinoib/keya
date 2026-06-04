@@ -4,6 +4,7 @@ import { useStore } from "../../store/useStore"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
 import { VaultSwitcher } from "../vault/VaultSwitcher"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Key, Folder, FolderOpen, Settings, Filter, X, ChevronDown } from "lucide-react"
 
 function SidebarSection({
@@ -53,16 +54,18 @@ function FilterSelect({
   options: { value: string; label: string }[]
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full h-7 pl-2 pr-6 rounded-md bg-surface-2 border border-line-subtle text-2xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 hover:border-line focus:outline-none focus:ring-1 focus:ring-accent-bright/50 focus:border-accent-bright/30 appearance-none transition-all duration-150 cursor-pointer"
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        className="h-7 text-2xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 hover:border-line border-line-subtle gap-1 px-2 [&>svg]:size-3"
       >
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown className="size-3 text-ink-quaternary absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-    </div>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 

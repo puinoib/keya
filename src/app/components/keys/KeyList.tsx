@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
   Eye, EyeOff, Key, Plus, Search,
@@ -276,10 +277,14 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Provider</Label>
-              <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
-                      className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright appearance-none">
-                {PROVIDERS.map((p) => <option key={p} value={p} className="bg-canvas-raised">{p}</option>)}
-              </select>
+              <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROVIDERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Service</Label>
@@ -296,18 +301,20 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           {/* Group */}
           <div className="space-y-1.5">
             <Label className="text-xs">Group</Label>
-            <select
-              value={form.group_id ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, group_id: e.target.value || null }))}
-              className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
-                         text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
-                         focus-visible:ring-accent-bright appearance-none"
+            <Select
+              value={form.group_id ?? "__none__"}
+              onValueChange={(v) => setForm((f) => ({ ...f, group_id: v === "__none__" ? null : v }))}
             >
-              <option value="" className="bg-canvas-raised">Ungrouped</option>
-              {db?.getGroups().map((g) => (
-                <option key={g.id} value={g.id} className="bg-canvas-raised">{g.icon} {g.name}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Ungrouped</SelectItem>
+                {db?.getGroups().map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.icon} {g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Description */}

@@ -2,6 +2,7 @@ import { useStore } from "../../store/useStore"
 import { Settings as SettingsIcon, Sun, Moon, Monitor, Palette, Fingerprint, Loader2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect, useRef } from "react"
 import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
@@ -170,33 +171,37 @@ export function SettingsPage() {
         {/* Auto Lock */}
         <div className="space-y-2">
           <Label className="text-xs">Auto Lock (minutes)</Label>
-          <select
-            value={settings?.auto_lock_minutes ?? 5}
-            onChange={(e) => db?.updateSettings({ auto_lock_minutes: Number(e.target.value) })}
-            className="flex h-9 w-32 rounded-md bg-surface-2 border border-line px-3 py-2
-                       text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
-                       focus-visible:ring-accent-bright appearance-none"
+          <Select
+            value={String(settings?.auto_lock_minutes ?? 5)}
+            onValueChange={(v) => db?.updateSettings({ auto_lock_minutes: Number(v) })}
           >
-            {[1, 2, 5, 10, 15, 30].map((m) => (
-              <option key={m} value={m}>{m} min</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 5, 10, 15, 30].map((m) => (
+                <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Min Password Length */}
         <div className="space-y-2">
           <Label className="text-xs">Minimum Password Length</Label>
-          <select
-            value={settings?.min_password_length ?? 8}
-            onChange={(e) => db?.updateSettings({ min_password_length: Number(e.target.value) })}
-            className="flex h-9 w-32 rounded-md bg-surface-2 border border-line px-3 py-2
-                       text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-1
-                       focus-visible:ring-accent-bright appearance-none"
+          <Select
+            value={String(settings?.min_password_length ?? 8)}
+            onValueChange={(v) => db?.updateSettings({ min_password_length: Number(v) })}
           >
-            {[6, 8, 10, 12, 16].map((n) => (
-              <option key={n} value={n}>{n} characters</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[6, 8, 10, 12, 16].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n} characters</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </>
