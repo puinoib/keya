@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2,
+  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2, Calendar,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -113,6 +113,8 @@ export function KeyList() {
           const isTesting = testing === key.id
           const testOk = key.test_status === "success"
           const testFail = key.test_status === "failed"
+          const isExpired = key.expires_at ? new Date(key.expires_at) < new Date() : false
+          const isExpiringSoon = !isExpired && key.expires_at ? (new Date(key.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24) <= 7 : false
 
           return (
             <div
@@ -136,18 +138,21 @@ export function KeyList() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-ink-primary truncate">{key.name}</span>
-                  {testOk && <span className="shrink-0 size-1.5 rounded-full bg-success-bright" />}
-                  {testFail && <span className="shrink-0 size-1.5 rounded-full bg-danger" />}
-                  {!key.test_status && <span className="shrink-0 size-1.5 rounded-full bg-ink-quaternary/30" />}
+                  {isExpired && <span className="shrink-0 size-1.5 rounded-full bg-danger" />}
+                  {isExpiringSoon && !isExpired && <span className="shrink-0 size-1.5 rounded-full bg-warning" />}
+                  {!isExpired && !isExpiringSoon && testOk && <span className="shrink-0 size-1.5 rounded-full bg-success-bright" />}
+                  {!isExpired && !isExpiringSoon && testFail && <span className="shrink-0 size-1.5 rounded-full bg-danger" />}
+                  {!isExpired && !isExpiringSoon && !key.test_status && <span className="shrink-0 size-1.5 rounded-full bg-ink-quaternary/30" />}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5 text-xs text-ink-quaternary">
                   <span>{key.provider}</span>
                   <span className="text-divider">·</span>
                   <span className="font-mono">{maskKey(key.key)}</span>
-                  {testOk && key.test_latency_ms != null && (
+                  {isExpired && <><span className="text-divider">·</span><span className="text-danger font-medium">Expired</span></>}
+                  {!isExpired && testOk && key.test_latency_ms != null && (
                     <><span className="text-divider">·</span><span className="text-success-bright font-medium">{key.test_latency_ms}ms</span></>
                   )}
-                  {testFail && <><span className="text-divider">·</span><span className="text-danger font-medium">Failed</span></>}
+                  {!isExpired && testFail && <><span className="text-divider">·</span><span className="text-danger font-medium">Failed</span></>}
                 </div>
               </div>
 
@@ -236,6 +241,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
     endpoint: editingKey?.endpoint ?? "",
     description: editingKey?.description ?? "",
     group_id: editingKey?.group_id ?? null as string | null,
+    expires_at: editingKey?.expires_at ? editingKey.expires_at.split("T")[0] : "",
   })
   const [testState, setTestState] = useState<{ testing: boolean; result: { success: boolean; latency_ms: number; error?: string } | null }>({
     testing: false, result: null,
@@ -257,6 +263,7 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
+      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
       last_tested: testState.result ? new Date().toISOString() : undefined,
       test_status: testState.result ? (testState.result.success ? "success" : "failed") : undefined,
       test_latency_ms: testState.result?.latency_ms ?? undefined,
@@ -348,6 +355,20 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
           <div className="space-y-1.5">
             <Label className="text-xs">Description</Label>
             <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional" />
+          </div>
+
+          {/* Expiration */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Calendar className="size-3" /> Expiration (optional)
+            </Label>
+            <Input
+              type="date"
+              value={form.expires_at}
+              onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
+              min={new Date().toISOString().split("T")[0]}
+              className="text-xs"
+            />
           </div>
 
           {/* Test Result */}

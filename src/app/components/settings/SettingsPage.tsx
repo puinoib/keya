@@ -1,5 +1,5 @@
 import { useStore } from "../../store/useStore"
-import { Settings as SettingsIcon, Sun, Moon, Monitor, Palette, Fingerprint, Loader2 } from "lucide-react"
+import { Settings as SettingsIcon, Palette, Fingerprint, Loader2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,7 +8,7 @@ import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
 
 export function SettingsPage() {
-  const { db, password, theme, setTheme, updateMeta, updateSettings } = useStore()
+  const { db, password, updateMeta, updateSettings } = useStore()
   const settings = db?.getSettings()
   const data = db?.getData()
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
@@ -148,26 +148,6 @@ export function SettingsPage() {
             {bioError && <p className="text-xs text-danger">{bioError}</p>}
           </div>
         )}
-
-        {/* Theme */}
-        <div className="space-y-2">
-          <Label className="text-xs">Theme</Label>
-          <div className="flex gap-2">
-            {([
-              { value: "system" as const, icon: Monitor, label: "System" },
-              { value: "light" as const, icon: Sun, label: "Light" },
-              { value: "dark" as const, icon: Moon, label: "Dark" },
-            ]).map(({ value, icon: Icon, label }) => (
-              <button key={value} onClick={() => setTheme(value)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs transition-colors
-                        ${theme === value ? "bg-accent text-white" : "bg-surface-2 border border-line text-ink-secondary hover:bg-surface-5"}`}>
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Auto Lock */}
         <div className="space-y-2">
           <Label className="text-xs">Auto Lock (minutes)</Label>
@@ -181,24 +161,6 @@ export function SettingsPage() {
             <SelectContent>
               {[1, 2, 5, 10, 15, 30].map((m) => (
                 <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Min Password Length */}
-        <div className="space-y-2">
-          <Label className="text-xs">Minimum Password Length</Label>
-          <Select
-            value={String(settings?.min_password_length ?? 8)}
-            onValueChange={(v) => updateSettings({ min_password_length: Number(v) })}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[6, 8, 10, 12, 16].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} characters</SelectItem>
               ))}
             </SelectContent>
           </Select>
