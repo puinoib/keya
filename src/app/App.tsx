@@ -9,7 +9,7 @@ import { WelcomePage } from "./components/welcome/WelcomePage"
 import { KeysPage } from "./components/keys/KeysPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
 import { BiometricPrompt } from "./components/vault/BiometricPrompt"
-import { HelpRoutes } from "../help/HelpRoutes"
+import { HelpLayout } from "../help/components/HelpLayout"
 import { HelpIndex } from "../help/components/HelpIndex"
 import { HelpPage } from "../help/components/HelpPage"
 import { useStore } from "./store/useStore"
@@ -74,7 +74,7 @@ function AppRoutes() {
       <Route element={<AuthGuard><SettingsLayout /></AuthGuard>}>
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
-      <Route path="/help" element={<HelpRoutes />}>
+      <Route path="/help" element={<HelpLayout />}>
         <Route index element={<HelpIndex />} />
         <Route path=":slug" element={<HelpPage />} />
       </Route>
