@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ToastProvider } from "@/components/ui/toast"
-import { Loader2 } from "lucide-react"
+import { Spinner } from "@phosphor-icons/react"
 import { AppLayout } from "./components/layout/AppLayout"
 import { SettingsLayout } from "./components/layout/SettingsLayout"
 import { WelcomePage } from "./components/welcome/WelcomePage"
@@ -113,7 +113,7 @@ function SessionRestore({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="flex items-center justify-center h-screen bg-canvas-deepest">
-        <Loader2 className="size-6 animate-spin text-ink-quaternary" />
+        <Spinner className="size-6 animate-spin text-ink-quaternary" />
       </div>
     )
   }
