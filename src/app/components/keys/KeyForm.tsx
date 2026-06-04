@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Key, Eye, EyeOff, Wand2 } from "lucide-react"
 
 const PROVIDERS = [
@@ -18,7 +19,6 @@ interface FormData {
   name: string
   key_value: string
   provider: string
-  service: string
   endpoint: string
   description: string
   group_id: string | null
@@ -28,7 +28,6 @@ const empty: FormData = {
   name: "",
   key_value: "",
   provider: "OpenAI",
-  service: "ChatGPT",
   endpoint: "",
   description: "",
   group_id: null,
@@ -40,12 +39,11 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
   const [showKey, setShowKey] = useState(false)
 
   const handleProviderChange = (provider: string) => {
-    const defaults = ENDPOINT_DEFAULTS[provider]
+    const endpoint = ENDPOINT_DEFAULTS[provider.toLowerCase()]
     setForm((f) => ({
       ...f,
       provider,
-      endpoint: defaults?.endpoint ?? f.endpoint,
-      service: defaults?.service ?? f.service,
+      endpoint: endpoint ?? f.endpoint,
     }))
   }
 
@@ -57,7 +55,6 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
       name: form.name,
       key: form.key_value,
       provider: form.provider,
-      service: form.service,
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
@@ -80,7 +77,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
         {/* Name */}
         <div className="space-y-1.5">
-          <Label htmlFor="name" className="text-xs">Name</Label>
+          <Label htmlFor="name" className="text-xs">Name <span className="text-red-500">*</span></Label>
           <Input
             id="name"
             value={form.name}
@@ -92,7 +89,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
         {/* Key Value */}
         <div className="space-y-1.5">
-          <Label htmlFor="key_value" className="text-xs">API Key</Label>
+          <Label htmlFor="key_value" className="text-xs">API Key <span className="text-red-500">*</span></Label>
           <div className="relative">
             <Input
               id="key_value"
@@ -114,34 +111,19 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
           </div>
         </div>
 
-        {/* Provider & Service */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="provider" className="text-xs">Provider</Label>
-            <select
-              id="provider"
-              value={form.provider}
-              onChange={(e) => handleProviderChange(e.target.value)}
-              className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
-                         text-sm text-ink-primary
-                         focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright
-                         transition-colors duration-150 appearance-none"
-            >
+        {/* Provider */}
+        <div className="space-y-1.5">
+          <Label htmlFor="provider" className="text-xs">Provider</Label>
+          <Select value={form.provider} onValueChange={handleProviderChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
               {PROVIDERS.map((p) => (
-                <option key={p} value={p} className="bg-canvas-raised">{p}</option>
+                <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="service" className="text-xs">Service</Label>
-            <Input
-              id="service"
-              value={form.service}
-              onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))}
-              placeholder="e.g. ChatGPT"
-            />
-          </div>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Endpoint */}
@@ -151,8 +133,8 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
             <button
               type="button"
               onClick={() => {
-                const defaults = ENDPOINT_DEFAULTS[form.provider]
-                if (defaults) setForm((f) => ({ ...f, endpoint: defaults.endpoint }))
+                const ep = ENDPOINT_DEFAULTS[form.provider.toLowerCase()]
+                if (ep) setForm((f) => ({ ...f, endpoint: ep }))
               }}
               className="text-accent-bright hover:text-accent-hover transition-colors"
             >
@@ -171,20 +153,20 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
         {/* Group */}
         <div className="space-y-1.5">
           <Label htmlFor="group" className="text-xs">Group</Label>
-          <select
-            id="group"
-            value={form.group_id ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, group_id: e.target.value || null }))}
-            className="flex h-9 w-full rounded-md bg-surface-2 border border-line px-3 py-2
-                       text-sm text-ink-primary
-                       focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright
-                       transition-colors duration-150 appearance-none"
+          <Select
+            value={form.group_id ?? "__none__"}
+            onValueChange={(v) => setForm((f) => ({ ...f, group_id: v === "__none__" ? null : v }))}
           >
-            <option value="" className="bg-canvas-raised">Ungrouped</option>
-            {db?.getGroups().map((g) => (
-              <option key={g.id} value={g.id} className="bg-canvas-raised">{g.icon} {g.name}</option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Ungrouped</SelectItem>
+              {db?.getGroups().map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.icon} {g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Description */}

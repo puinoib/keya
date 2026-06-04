@@ -76,8 +76,7 @@ export class Database {
       (k) =>
         k.name.toLowerCase().includes(q) ||
         k.description.toLowerCase().includes(q) ||
-        k.provider.toLowerCase().includes(q) ||
-        k.service.toLowerCase().includes(q),
+        k.provider.toLowerCase().includes(q),
     );
   }
 

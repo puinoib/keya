@@ -5,7 +5,6 @@ export interface ApiKey {
   name: string;
   description: string;
   provider: string;
-  service: string;
   endpoint: string;
   key: string;
   status: 'active' | 'inactive' | 'expired';
