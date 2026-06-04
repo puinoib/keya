@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Loader2, ArrowRight, Lock, Fingerprint } from 'lucide-react'
+import { Spinner, ArrowRight, Lock, Fingerprint } from "@phosphor-icons/react"
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { isBiometricSupported, isBiometricRegistered, unlockWithBiometric } from '@/app/lib/biometric'
@@ -133,7 +133,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
           disabled={bioLoading}
           className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-surface-3 transition-colors disabled:opacity-50"
         >
-          {bioLoading ? <Loader2 className="size-4 animate-spin" /> : <Fingerprint className="size-4" />}
+          {bioLoading ? <Spinner className="size-4 animate-spin" /> : <Fingerprint className="size-4" />}
           Unlock with Biometrics
         </button>
       )}
@@ -143,7 +143,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
         disabled={loading || !canSubmit}
         className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
       >
-        {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+        {loading ? <Spinner className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
         {isCreate ? 'Create' : 'Unlock'}
       </button>
 

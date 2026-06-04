@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Lock, Plus, Cog, ArrowRightLeft, LogOut } from 'lucide-react'
+import { Lock, Plus, Gear, ArrowsLeftRight, SignOut } from "@phosphor-icons/react"
 import { useNavigate } from 'react-router-dom'
 
 export function VaultSwitcher() {
@@ -73,13 +73,13 @@ export function VaultSwitcher() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52 ml-2">
           <DropdownMenuItem onClick={() => navigate("/settings")} className="text-ink-quaternary">
-            <Cog className="size-3.5" />
+            <Gear className="size-3.5" />
             <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="text-ink-quaternary">
-              <ArrowRightLeft className="size-3.5" />
+              <ArrowsLeftRight className="size-3.5" />
               <span>Switch Vault</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-52 max-h-64 overflow-y-auto">
@@ -108,7 +108,7 @@ export function VaultSwitcher() {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuItem onClick={() => useStore.getState().lock()} className="text-ink-quaternary">
-            <LogOut className="size-3.5" />
+            <SignOut className="size-3.5" />
             <span>Lock</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
