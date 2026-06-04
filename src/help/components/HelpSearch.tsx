@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { MagnifyingGlass } from "@phosphor-icons/react"
 import type { HelpDocument, SearchResult } from '../types'
 import { searchDocuments, buildSearchIndex } from '../lib/search'
@@ -7,14 +6,13 @@ import { cn } from '@/lib/utils'
 
 interface HelpSearchProps {
   documents: HelpDocument[]
-  onClose?: () => void
+  onNavigate: (slug: string | null) => void
 }
 
-export function HelpSearch({ documents, onClose }: HelpSearchProps) {
+export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [isOpen, setIsOpen] = useState(false)
-  const navigate = useNavigate()
 
   const searchIndex = buildSearchIndex(documents)
 
@@ -32,8 +30,7 @@ export function HelpSearch({ documents, onClose }: HelpSearchProps) {
   const handleSelectResult = (slug: string) => {
     setQuery('')
     setIsOpen(false)
-    onClose?.()
-    navigate(slug === 'index' ? '/help' : `/help/${slug}`)
+    onNavigate(slug === 'index' ? null : slug)
   }
 
   return (
