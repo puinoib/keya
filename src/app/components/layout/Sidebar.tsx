@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { List, FolderOpen, Filter, X, Settings } from "lucide-react"
+import { List, FolderOpen, Faders, X, Gear } from "@phosphor-icons/react"
 import { useStore } from "../../store/useStore"
 import { VaultSwitcher } from "../vault/VaultSwitcher"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
@@ -108,7 +108,7 @@ export function Sidebar() {
                 onClick={() => setShowGroupsDialog(true)}
                 className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
               >
-                <Settings className="size-3" />
+                <Gear className="size-3" />
               </button>
             }
           >
@@ -140,7 +140,7 @@ export function Sidebar() {
           {/* Smart Filters Section */}
           {keyCount > 0 && (
             <SidebarSection
-              icon={Filter}
+              icon={Faders}
               label="Filters"
               action={
                 hasSmartFilters ? (
