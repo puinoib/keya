@@ -10,7 +10,6 @@ function makeKey(overrides?: Partial<Omit<ApiKey, 'id' | 'created_at' | 'updated
     key: 'sk-test123',
     description: 'A test key',
     provider: 'OpenAI',
-    service: 'ChatGPT',
     endpoint: 'https://api.openai.com/v1',
     status: 'active',
     group_id: null,
