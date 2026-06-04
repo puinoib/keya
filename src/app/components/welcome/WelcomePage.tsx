@@ -6,8 +6,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { VaultCard } from '../vault/VaultCard'
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog'
-import { FolderOpen, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus } from 'lucide-react'
+import { FolderOpen, Loader2, Upload, AlertTriangle, Sun, Moon, Monitor, Plus, Info } from 'lucide-react'
 import { EmojiPicker } from '@ferrucc-io/emoji-picker'
+import {
+  AlertDialogRoot,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 
 const supportsFSA = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
@@ -20,6 +30,7 @@ export function WelcomePage() {
   const [folderName, setFolderName] = useState<string | null>(null)
   const [vaultFiles, setVaultFiles] = useState<string[]>([])
   const [needsPermission, setNeedsPermission] = useState(false)
+  const [showFolderPickerInfo, setShowFolderPickerInfo] = useState(false)
   const [cachedMetas, setCachedMetas] = useState<Record<string, CachedVaultMeta>>({})
   const [selectedVault, setSelectedVault] = useState<string | null>(null)
   const [newVaultName, setNewVaultName] = useState('')
@@ -63,7 +74,12 @@ export function WelcomePage() {
 
   // ── Handlers ──
 
-  const handleChooseFolder = async () => {
+  const handleChooseFolder = () => {
+    setShowFolderPickerInfo(true)
+  }
+
+  const handleConfirmChooseFolder = async () => {
+    setShowFolderPickerInfo(false)
     setLoading(true)
     setError('')
     try {
@@ -91,6 +107,8 @@ export function WelcomePage() {
       setNeedsPermission(false)
       const files = await FileStorage.listVaultFiles()
       if (files) setVaultFiles(files)
+    } else {
+      setError('Permission denied. Please click "Grant Access" again and allow access when prompted by your browser.')
     }
   }
 
@@ -356,6 +374,31 @@ export function WelcomePage() {
           </div>
         </div>
       </div>
+
+      {/* Folder Picker Info Dialog */}
+      <AlertDialogRoot open={showFolderPickerInfo} onOpenChange={setShowFolderPickerInfo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="size-5 text-accent" />
+              <AlertDialogTitle>About Sync Folder</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-sm text-ink-secondary space-y-3">
+              <p>Next, you'll see a browser prompt asking for permission to access a folder.</p>
+              <div className="bg-surface-2 rounded-md px-3 py-2 border border-line">
+                <p className="text-xs text-ink-tertiary">This allows Keya to save encrypted vault files directly to your chosen folder. Your files stay on your device - nothing is uploaded to any server.</p>
+              </div>
+              <p className="text-xs text-ink-quaternary">You can change or revoke this permission at any time.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmChooseFolder} className="bg-accent text-white hover:bg-accent-bright">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogRoot>
     </div>
   )
 }

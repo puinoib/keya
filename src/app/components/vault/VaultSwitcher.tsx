@@ -56,7 +56,7 @@ export function VaultSwitcher() {
   }
 
   return (
-    <div>
+    <div className="shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="w-full h-12 flex items-center gap-2.5 px-3.5 hover:bg-surface-3 transition-colors rounded-none">
