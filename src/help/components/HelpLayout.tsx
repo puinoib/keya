@@ -32,9 +32,9 @@ export function HelpLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
+    <div className="flex h-screen bg-canvas-base text-ink-primary overflow-hidden">
       <div className="flex flex-col w-56 shrink-0">
-        <div className="p-4 border-b border-line-subtle">
+        <div className="p-4">
           <HelpSearch documents={documents} onNavigate={handleNavigate} />
         </div>
 
@@ -45,21 +45,23 @@ export function HelpLayout() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-end px-6 py-3 border-b border-line-subtle shrink-0">
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-ghost text-xs"
-          >
-            Open App
-          </a>
-        </header>
-        <div className="flex-1 overflow-y-auto">
-          <main className="p-8 max-w-4xl mx-auto w-full">
-            {currentSlug ? <HelpPage slug={currentSlug} /> : <HelpIndex />}
-          </main>
+      <div className="flex-1 flex flex-col min-w-0 p-3 pl-0">
+        <div className="flex-1 bg-surface-2 rounded-xl overflow-hidden flex flex-col">
+          <header className="flex items-center justify-end px-6 py-3 shrink-0">
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost text-xs"
+            >
+              Open App
+            </a>
+          </header>
+          <div className="flex-1 overflow-y-auto">
+            <main className="p-8 max-w-4xl mx-auto w-full">
+              {currentSlug ? <HelpPage slug={currentSlug} /> : <HelpIndex />}
+            </main>
+          </div>
         </div>
       </div>
     </div>
