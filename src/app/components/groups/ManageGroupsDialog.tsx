@@ -78,7 +78,7 @@ export function ManageGroupsDialog({ open, onClose }: { open: boolean; onClose: 
                      placeholder="Group name" className="h-8 text-sm" autoFocus
                      onKeyDown={(e) => e.key === "Enter" && handleAdd()} />
               <div className="flex items-center gap-2">
-                <Label className="text-2xs text-ink-quaternary">Icon</Label>
+                <Label className="text-xs text-ink-quaternary">Icon</Label>
                 <div className="flex gap-1">
                   {ICONS.map((icon) => (
                     <button key={icon} onClick={() => setNewIcon(icon)}

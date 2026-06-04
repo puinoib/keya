@@ -41,7 +41,7 @@ export function KeysPage() {
 
             <button
               onClick={() => useStore.getState().lock()}
-              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs text-ink-quaternary hover:text-ink-tertiary hover:bg-surface-3 transition-colors duration-150"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-ink-quaternary hover:text-ink-tertiary hover:bg-surface-3 transition-colors duration-150"
             >
               <Lock className="size-3" />
               Lock
@@ -53,7 +53,7 @@ export function KeysPage() {
               {tags.map((tag, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-2xs text-ink-secondary"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
                 >
                   {tag.label}
                   <button onClick={tag.onRemove} className="text-ink-quaternary hover:text-ink-secondary transition-colors">
@@ -63,7 +63,7 @@ export function KeysPage() {
               ))}
               <button
                 onClick={() => { clearFilters(); setSearchQuery('') }}
-                className="text-2xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
+                className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
               >
                 Clear all
               </button>

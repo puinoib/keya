@@ -142,10 +142,10 @@ export function SettingsPage() {
                 {bioRegistered ? 'Remove' : 'Enable'}
               </button>
               {bioRegistered && (
-                <span className="text-2xs text-emerald-500">Enabled</span>
+                <span className="text-xs text-emerald-500">Enabled</span>
               )}
             </div>
-            {bioError && <p className="text-2xs text-danger">{bioError}</p>}
+            {bioError && <p className="text-xs text-danger">{bioError}</p>}
           </div>
         )}
 

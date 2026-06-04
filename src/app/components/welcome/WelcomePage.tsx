@@ -150,7 +150,7 @@ export function WelcomePage() {
         {!supportsFSA && mode === 'home' && (
           <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-md bg-amber-500/10 border border-amber-500/20">
             <AlertTriangle className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-2xs text-amber-300 leading-relaxed">
+            <p className="text-xs text-amber-300 leading-relaxed">
               Your browser doesn't support automatic file syncing. Use desktop Chrome for the best experience.
             </p>
           </div>
@@ -187,7 +187,7 @@ export function WelcomePage() {
                     <div className="flex flex-col items-center gap-1.5 px-4 py-5 rounded-md border border-dashed border-line">
                       <FolderOpen className="size-5 text-ink-quaternary" />
                       <p className="text-xs text-ink-tertiary">No vaults yet</p>
-                      <p className="text-2xs text-ink-quaternary">Create your first vault to get started</p>
+                      <p className="text-xs text-ink-quaternary">Create your first vault to get started</p>
                     </div>
                   )}
 
@@ -305,19 +305,19 @@ export function WelcomePage() {
             <svg className="size-3 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            <span className="text-2xs">End-to-end encrypted. Your keys never leave your device.</span>
+            <span className="text-xs">End-to-end encrypted. Your keys never leave your device.</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="https://coryso.com" target="_blank" rel="noopener noreferrer"
-               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
+               className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
               Coryso Studio
             </a>
             <a href="https://x.com/intent/follow?screen_name=puinoib_" target="_blank" rel="noopener noreferrer"
-               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
+               className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
               X
             </a>
             <a href="https://github.com/puinoib/keya" target="_blank" rel="noopener noreferrer"
-               className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
+               className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors">
               GitHub
             </a>
           </div>

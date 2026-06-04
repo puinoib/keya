@@ -64,8 +64,6 @@
   --tracking-heading: -.016em;
   --tracking-tight: -.011em;
 
-  --text-2xs: 10px;
-
   --animate-fade-in: fade-in 0.15s ease-out;
   --animate-fade-out: fade-out 0.15s ease-out;
   --animate-slide-in-from-right: slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);

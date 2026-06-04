@@ -56,7 +56,7 @@ export function BiometricPrompt({ vaultId, password, onDone }: BiometricPromptPr
             <X className="size-4" />
           </button>
         </div>
-        <p className="text-2xs text-ink-tertiary mb-4">
+        <p className="text-xs text-ink-tertiary mb-4">
           Use fingerprint or face recognition to unlock this vault quickly next time.
         </p>
         {error && <p className="text-xs text-danger mb-3">{error}</p>}

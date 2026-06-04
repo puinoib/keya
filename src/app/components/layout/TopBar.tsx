@@ -33,9 +33,7 @@ function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
       description: key.description || "",
       provider: key.provider || "Custom",
       endpoint: key.endpoint || "",
-      status: key.status || "active",
       group_id: key.group_id || current.getData().groups[0]?.id || null,
-      notes: key.notes || "",
       last_tested: key.last_tested ?? null,
       test_status: key.test_status ?? null,
       test_latency_ms: key.test_latency_ms ?? null,
@@ -185,7 +183,7 @@ export function TopBar() {
       </DropdownMenu>
 
       <button onClick={() => setShowAddForm(true)}
-              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-accent text-2xs font-medium text-white hover:bg-accent-bright transition-colors duration-150">
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150">
         <Plus className="size-3.5" /> Add Key
       </button>
     </header>

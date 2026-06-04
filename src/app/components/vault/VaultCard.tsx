@@ -20,7 +20,7 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink-primary truncate">{displayName}</p>
-        <p className="text-2xs text-ink-quaternary">
+        <p className="text-xs text-ink-quaternary">
           {meta
             ? `${meta.keyCount} keys · Updated ${new Date(meta.updatedAt).toLocaleDateString()}`
             : fileName}

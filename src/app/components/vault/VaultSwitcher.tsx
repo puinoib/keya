@@ -95,7 +95,7 @@ export function VaultSwitcher() {
                   >
                     <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
                     <span className="truncate flex-1">{name}</span>
-                    {isActive && <span className="ml-auto text-2xs text-ink-quaternary">active</span>}
+                    {isActive && <span className="ml-auto text-xs text-ink-quaternary">active</span>}
                   </DropdownMenuItem>
                 )
               })}

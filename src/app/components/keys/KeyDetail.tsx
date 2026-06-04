@@ -68,7 +68,7 @@ export function KeyDetail() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in" style={{ animationDelay: "40ms" }}>
-          <span className="text-2xs font-medium text-ink-quaternary uppercase tracking-wider">Overview</span>
+          <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">Overview</span>
           <button
             onClick={() => setSelectedKeyId(null)}
             className="inline-flex items-center justify-center size-6 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100"
@@ -84,37 +84,34 @@ export function KeyDetail() {
               {group?.icon ? group.icon : <Key className="size-4.5" />}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-ink-primary truncate">{key.name}</h2>
-              <p className="text-2xs text-ink-quaternary">{group?.name ?? "Ungrouped"}</p>
+              <h2 className="text-base font-semibold text-ink-primary truncate">{key.name}</h2>
+              <p className="text-xs text-ink-quaternary">{group?.name ?? "Ungrouped"}</p>
             </div>
           </div>
 
           {/* Status */}
           <div className="flex items-center gap-1.5 mb-4 animate-stagger-in" style={{ animationDelay: "120ms" }}>
             {testOk && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-2xs font-medium">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-xs font-medium">
                 <CheckCircle2 className="size-3" /> Working
               </span>
             )}
             {testFail && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-2xs font-medium">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
                 <XCircle className="size-3" /> Failed
               </span>
             )}
             {!key.test_status && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-3 text-ink-quaternary text-2xs font-medium">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-3 text-ink-quaternary text-xs font-medium">
                 <MinusCircle className="size-3" /> Untested
               </span>
             )}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-3 text-ink-tertiary text-2xs font-medium">
-              {key.status}
-            </span>
           </div>
 
           {/* Key Value */}
           <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4 animate-stagger-in" style={{ animationDelay: "160ms" }}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-2xs text-ink-quaternary">API Key</span>
+              <span className="text-xs text-ink-quaternary">API Key</span>
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setShowKey(!showKey)}
@@ -196,7 +193,7 @@ function MetaRow({ icon: Icon, label, value, mono, highlight }: {
     <div className="flex items-start gap-2">
       <Icon className="size-3 text-ink-quaternary mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="text-2xs text-ink-quaternary">{label}</p>
+        <p className="text-xs text-ink-quaternary">{label}</p>
         <p className={`text-xs ${highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "break-words"}`}>
           {value}
         </p>
