@@ -98,7 +98,7 @@ export function Sidebar() {
         <VaultSwitcher />
 
         {/* Main Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-2 pt-1 pb-2">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden px-2 pt-1 pb-2">
           {/* Navigation */}
           <nav className="pb-2">
             <SidebarFilterButton
