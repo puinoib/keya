@@ -190,12 +190,6 @@ export function KeyList() {
                     <DropdownMenuItem onClick={() => setEditingKey(key)}>
                       <Pencil className="size-3.5" /> Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleCopy(key.key, key.id)}>
-                      <Copy className="size-3.5" /> Copy Key
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleTest(key)}>
-                      <FlaskConical className="size-3.5" /> Test Key
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => { if (confirm("Delete this key?")) deleteKey(key.id) }}

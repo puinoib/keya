@@ -21,11 +21,6 @@ export function SettingsLayout() {
               <Outlet />
             </main>
           </div>
-
-          <footer className="h-7 flex items-center justify-between px-4 text-xs text-ink-quaternary border-t border-line-subtle shrink-0">
-            <span />
-            <span>Keya v1.0</span>
-          </footer>
         </div>
       </div>
     </div>
