@@ -141,7 +141,7 @@ export function WelcomePage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/icon.svg" alt="Keya" className="size-14 mb-4" />
+          <img src="/icon.svg" alt="Keya" className="icon-theme size-14 mb-4" />
           <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">Keya</h1>
           <p className="text-xs text-ink-quaternary mt-1.5">Local-first AI API key manager</p>
         </div>
