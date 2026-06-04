@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 import { parseMarkdown, convertInternalLinks } from '../lib/markdown';
 
 export function MarkdownContent({ content }: { content: string }) {
@@ -22,7 +22,13 @@ export function MarkdownContent({ content }: { content: string }) {
         e.preventDefault();
         const href = link.getAttribute('data-internal-link');
         if (href) {
-          navigate(href);
+          // Check if it's a help link
+          if (href.startsWith('/help/')) {
+            const slug = href.replace('/help/', '');
+            navigate({ to: '/help/$slug', params: { slug } });
+          } else {
+            navigate({ to: href as any });
+          }
         }
       }
     };

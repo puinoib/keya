@@ -26,7 +26,7 @@ import {
   ArrowsLeftRight,
   SignOut,
 } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 
 export function VaultSwitcher() {
   const { db, activeVaultFileName } = useStore();
@@ -82,7 +82,7 @@ export function VaultSwitcher() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52 ml-2">
           <DropdownMenuItem
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate({ to: '/settings' })}
             className="text-ink-quaternary"
           >
             <Gear className="size-3.5" />

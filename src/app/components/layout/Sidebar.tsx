@@ -192,7 +192,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="px-3 py-2 border-t border-line-subtle">
+        <div className="px-3 py-2">
           <a
             href="https://github.com/puinoib/keya"
             target="_blank"
