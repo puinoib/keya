@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { List, FolderOpen, Faders, X, Gear, Tray } from '@phosphor-icons/react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
@@ -42,6 +42,9 @@ function SidebarFilterButton({
 
 export function Sidebar() {
   const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const {
     db,
     filterGroupId,
@@ -63,14 +66,19 @@ export function Sidebar() {
   const keyCount = db?.getApiKeys().length ?? 0;
   const openInboxCount = db?.getOpenInboxItems().length ?? 0;
   const hasSmartFilters = filterProvider || filterTestStatus;
+  const isInboxActive = pathname === '/inbox';
   const isAllKeysActive =
-    !filterGroupId && !filterProvider && !filterTestStatus;
+    pathname === '/keys' &&
+    !filterGroupId &&
+    !filterProvider &&
+    !filterTestStatus;
 
   const handleAllKeysClick = () => {
     setFilterGroupId(null);
     setFilterProvider(null);
     setFilterTestStatus(null);
     setSearchQuery('');
+    navigate({ to: '/keys' });
   };
 
   const handleClearSmartFilters = (e: React.MouseEvent) => {
@@ -97,7 +105,7 @@ export function Sidebar() {
               icon={<Tray className="size-3" />}
               label="Inbox"
               count={openInboxCount}
-              isActive={false}
+              isActive={isInboxActive}
               onClick={() => navigate({ to: '/inbox' })}
             />
             <SidebarFilterButton
@@ -127,12 +135,15 @@ export function Sidebar() {
               icon={<span className="text-sm">📥</span>}
               label="Ungrouped"
               count={ungroupedCount}
-              isActive={filterGroupId === '__ungrouped__'}
-              onClick={() =>
+              isActive={
+                pathname === '/keys' && filterGroupId === '__ungrouped__'
+              }
+              onClick={() => {
                 setFilterGroupId(
                   filterGroupId === '__ungrouped__' ? null : '__ungrouped__'
-                )
-              }
+                );
+                navigate({ to: '/keys' });
+              }}
             />
 
             {/* Groups */}
@@ -148,12 +159,13 @@ export function Sidebar() {
                   }
                   label={group.name}
                   count={count}
-                  isActive={filterGroupId === group.id}
-                  onClick={() =>
+                  isActive={pathname === '/keys' && filterGroupId === group.id}
+                  onClick={() => {
                     setFilterGroupId(
                       filterGroupId === group.id ? null : group.id
-                    )
-                  }
+                    );
+                    navigate({ to: '/keys' });
+                  }}
                 />
               );
             })}
