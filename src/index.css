@@ -3,6 +3,9 @@
 /* ── Class-based dark mode ── */
 @custom-variant dark (&.dark);
 
+/* ── SVG icon theme sync ── */
+:root:not(.light) .icon-theme { filter: brightness(0) invert(1); }
+
 /* ── Emoji picker in node_modules ── */
 @source "../node_modules/@ferrucc-io/emoji-picker/dist/**/*.{js,jsx,ts,tsx}";
 
@@ -68,8 +71,10 @@
   --animate-slide-in-from-right: slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-detail-fade-in: detail-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-stagger-in: stagger-in 0.2s ease-out both;
-  --animate-dialog-enter: dialog-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-dialog-exit: dialog-exit 0.15s ease-in;
+  --animate-dialog-enter: dialog-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-dialog-exit: dialog-exit 0.15s ease-in both;
+  --animate-in: enter 0.15s both;
+  --animate-out: exit 0.15s both;
 
   @keyframes fade-in {
     0% { opacity: 0; transform: translateY(4px); }
@@ -92,12 +97,12 @@
     100% { opacity: 1; transform: translateY(0); }
   }
   @keyframes dialog-enter {
-    0% { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
-    100% { opacity: 1; transform: translate(-50%, -50%); }
+    0% { opacity: 0; translate: -50% calc(-50% + 12px); }
+    100% { opacity: 1; translate: -50% -50%; }
   }
   @keyframes dialog-exit {
-    0% { opacity: 1; transform: translate(-50%, -50%); }
-    100% { opacity: 0; transform: translate(-50%, calc(-50% - 4px)); }
+    0% { opacity: 1; translate: -50% -50%; }
+    100% { opacity: 0; translate: -50% calc(-50% - 4px); }
   }
   @keyframes enter {
     from {
@@ -336,26 +341,6 @@
 }
 
 /* ── Animation utilities (replaces tailwindcss-animate) ── */
-@utility animate-in {
-  animation-name: enter;
-  animation-duration: 0.15s;
-  --tw-enter-opacity: initial;
-  --tw-enter-scale: initial;
-  --tw-enter-rotate: initial;
-  --tw-enter-translate-x: initial;
-  --tw-enter-translate-y: initial;
-}
-
-@utility animate-out {
-  animation-name: exit;
-  animation-duration: 0.15s;
-  --tw-exit-opacity: initial;
-  --tw-exit-scale: initial;
-  --tw-exit-rotate: initial;
-  --tw-exit-translate-x: initial;
-  --tw-exit-translate-y: initial;
-}
-
 @utility fade-in-0 {
   --tw-enter-opacity: 0;
 }
