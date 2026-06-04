@@ -14,7 +14,7 @@ export function HelpPage() {
   useEffect(() => {
     async function loadDoc() {
       if (!slug) {
-        setError('文档不存在')
+        setError('Document not found')
         setLoading(false)
         return
       }
@@ -27,10 +27,10 @@ export function HelpPage() {
         if (doc) {
           setDocument(doc)
         } else {
-          setError('文档不存在')
+          setError('Document not found')
         }
       } catch (err) {
-        setError('加载文档失败')
+        setError('Failed to load document')
       } finally {
         setLoading(false)
       }
@@ -50,9 +50,9 @@ export function HelpPage() {
   if (error || !document) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-semibold text-ink-primary">文档不存在</h2>
+        <h2 className="text-xl font-semibold text-ink-primary">Document not found</h2>
         <p className="text-ink-secondary mt-2">
-          您访问的文档不存在或已被移动
+          The document you are looking for does not exist or has been moved
         </p>
       </div>
     )

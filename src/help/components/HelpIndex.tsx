@@ -17,10 +17,10 @@ export function HelpIndex() {
     <div className="space-y-8">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-ink-primary">
-          欢迎使用 Keya
+          Welcome to Keya
         </h1>
         <p className="text-ink-secondary text-lg">
-          安全、简单的 API 密钥管理工具
+          Secure and simple API key manager
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export function HelpIndex() {
               {doc.description}
             </p>
             <div className="mt-4 flex items-center text-sm text-accent-bright">
-              <span>查看详情</span>
+              <span>Read more</span>
               <ArrowRight className="ml-1 size-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </a>

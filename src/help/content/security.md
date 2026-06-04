@@ -1,11 +1,11 @@
 ---
-title: 安全说明
-description: 了解 Keya 的安全机制
+title: Security
+description: How Keya keeps your data safe
 order: 5
 ---
 
-# 安全说明
+# Security
 
-## 加密
+## Encryption
 
-Keya 使用 libsodium 进行加密。
+Keya uses libsodium for encryption.

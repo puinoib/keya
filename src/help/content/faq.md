@@ -1,11 +1,11 @@
 ---
-title: 常见问题
-description: 常见问题解答
+title: FAQ
+description: Frequently asked questions
 order: 3
 ---
 
-# 常见问题
+# FAQ
 
-## Keya 是免费的吗？
+## Is Keya free?
 
-是的，Keya 完全免费开源。
+Yes, Keya is completely free and open source.

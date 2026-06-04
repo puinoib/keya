@@ -11,7 +11,7 @@ describe('manifest', () => {
   it('should get document by slug', async () => {
     const doc = await getDocument('index')
     expect(doc).toBeDefined()
-    expect(doc?.title).toBe('欢迎使用 Keya')
+    expect(doc?.title).toBe('Welcome to Keya')
   })
 
   it('should return null for non-existent document', async () => {
