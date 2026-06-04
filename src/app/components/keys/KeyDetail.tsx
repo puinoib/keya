@@ -1,6 +1,7 @@
 import { useStore } from "../../store/useStore"
 import { ApiTester } from "../../lib/api-tester"
 import { maskKey } from "@/lib/mask"
+import { useToast } from "@/components/ui/toast"
 import type { ApiKey } from "../../../core/types"
 import {
   Copy, FlaskConical, Pencil, Trash2, Key, Eye, EyeOff, X,
@@ -11,6 +12,7 @@ import { EditKeyDialog } from "./KeyList"
 
 export function KeyDetail() {
   const { db, selectedKeyId, setSelectedKeyId, updateKey, deleteKey } = useStore()
+  const toast = useToast()
   const [showKey, setShowKey] = useState(false)
   const [testing, setTesting] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -33,6 +35,7 @@ export function KeyDetail() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
       setTimeout(() => navigator.clipboard.writeText(""), 15000)
+      toast.add({ title: "Copied to clipboard", timeout: 2000 })
     } catch { /* clipboard unavailable */ }
   }
 
@@ -45,12 +48,20 @@ export function KeyDetail() {
       test_latency_ms: result.latency_ms ?? null,
     })
     setTesting(false)
+    toast.add({
+      title: result.success ? "Key available" : "Key test failed",
+      description: result.success ? `${result.latency_ms}ms` : (result.error || "Connection failed"),
+      type: result.success ? "success" : "error",
+      timeout: 3000,
+    })
   }
 
   const handleDelete = () => {
     if (confirm("Delete this key?")) {
+      const name = key.name
       deleteKey(key.id)
       setSelectedKeyId(null)
+      toast.add({ title: `Deleted "${name}"`, timeout: 3000 })
     }
   }
 
