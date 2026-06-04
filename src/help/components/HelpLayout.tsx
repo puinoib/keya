@@ -42,6 +42,16 @@ export function HelpLayout() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
+        <header className="flex items-center justify-end px-6 py-3 border-b border-line-subtle shrink-0">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost text-xs"
+          >
+            Open App
+          </a>
+        </header>
         <div className="flex-1 overflow-y-auto">
           <main className="p-8 max-w-4xl mx-auto w-full">
             <Outlet />
