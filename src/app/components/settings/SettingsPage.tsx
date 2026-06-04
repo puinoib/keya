@@ -1,5 +1,5 @@
 import { useStore } from "../../store/useStore"
-import { Settings as SettingsIcon, Palette, Fingerprint, Loader2, FlaskConical, Server, Shield, ChevronRight } from "lucide-react"
+import { Gear, Palette, Fingerprint, Spinner, Flask, HardDrives, Shield, CaretRight } from "@phosphor-icons/react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -58,7 +58,7 @@ export function SettingsPage() {
     <>
       <div className="flex items-center gap-3 mb-6">
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <SettingsIcon className="size-4" />
+          <Gear className="size-4" />
         </div>
         <div>
           <h1 className="text-sm font-semibold tracking-tight text-ink-primary">Settings</h1>
@@ -132,7 +132,7 @@ export function SettingsPage() {
                   </div>
                 </div>
                 {bioLoading
-                  ? <Loader2 className="size-4 animate-spin text-ink-quaternary" />
+                  ? <Spinner className="size-4 animate-spin text-ink-quaternary" />
                   : (
                     <button
                       onClick={async () => {
@@ -188,7 +188,7 @@ export function SettingsPage() {
         {/* ── Keys ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <FlaskConical className="size-3.5 text-ink-quaternary" />
+            <Flask className="size-3.5 text-ink-quaternary" />
             <span className="text-xs font-medium text-ink-secondary">Keys</span>
           </div>
           <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
@@ -207,10 +207,10 @@ export function SettingsPage() {
               className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors rounded-b-lg"
             >
               <div className="flex items-center gap-2.5">
-                <Server className="size-4 text-ink-quaternary" />
+                <HardDrives className="size-4 text-ink-quaternary" />
                 <p className="text-xs font-medium text-ink-primary">Providers</p>
               </div>
-              <ChevronRight className="size-3.5 text-ink-quaternary" />
+              <CaretRight className="size-3.5 text-ink-quaternary" />
             </button>
           </div>
         </section>
