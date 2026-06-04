@@ -13,7 +13,7 @@ export function HelpSidebar({
   onNavigate,
 }: HelpSidebarProps) {
   return (
-    <aside className="w-56 shrink-0 border-r border-line-subtle overflow-y-auto">
+    <aside className="w-56 shrink-0 overflow-y-auto">
       <nav className="p-4 space-y-1">
         {documents.map((doc) => (
           <button

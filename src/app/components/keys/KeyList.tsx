@@ -79,7 +79,7 @@ export function KeyList() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
-  const [_hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
+  const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
   if (!db) return null;
 
   let keys = db.getApiKeys();

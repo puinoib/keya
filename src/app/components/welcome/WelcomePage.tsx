@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
@@ -35,6 +36,7 @@ const supportsFSA =
 type Mode = 'home' | 'unlock' | 'new';
 
 export function WelcomePage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('home');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +53,14 @@ export function WelcomePage() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme, setBiometricPrompt } = useStore();
+  const { theme, setTheme, setBiometricPrompt, workspaceState } = useStore();
+
+  // Auto-redirect to /keys when unlocked
+  useEffect(() => {
+    if (workspaceState === 'unlocked') {
+      navigate({ to: '/keys' });
+    }
+  }, [workspaceState, navigate]);
 
   useEffect(() => {
     if (mode !== 'home') return;
