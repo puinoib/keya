@@ -1,5 +1,5 @@
 import { Toast } from "@base-ui/react/toast"
-import { X, CheckCircle2, XCircle } from "lucide-react"
+import { X, CheckCircle, XCircle } from "@phosphor-icons/react"
 
 export { Toast }
 
@@ -9,7 +9,7 @@ const typeStyles: Record<string, string> = {
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
-  success: <CheckCircle2 className="size-4 text-success-bright shrink-0 mt-0.5" />,
+  success: <CheckCircle className="size-4 text-success-bright shrink-0 mt-0.5" />,
   error: <XCircle className="size-4 text-danger shrink-0 mt-0.5" />,
 }
 
