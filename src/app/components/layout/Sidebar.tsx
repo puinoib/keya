@@ -22,7 +22,7 @@ function SidebarFilterButton({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
+      className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
         isActive
           ? 'bg-accent-default/20 text-accent-bright'
           : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
@@ -91,7 +91,7 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="pb-2">
             <SidebarFilterButton
-              icon={<List className="size-3.5" />}
+              icon={<List className="size-3" />}
               label="All Keys"
               count={keyCount}
               isActive={isAllKeysActive}

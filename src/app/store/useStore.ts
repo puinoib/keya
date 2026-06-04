@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Database } from '../../core/database';
 import type { ApiKey, Group } from '../../core/types';
 import { FileStorage } from '../lib/storage';
-import { saveSession, clearSession } from '../lib/session';
+import { saveSession, clearSession, loadSession } from '../lib/session';
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked';
 
@@ -105,109 +105,116 @@ const FILTER_DEFAULTS = {
   filterTestStatus: null as string | null,
 };
 
-export const useStore = create<AppState>((set, get) => ({
-  workspaceState: 'welcome',
-  db: null,
-  password: null,
-  activeVaultFileName: null,
-  searchQuery: '',
-  showAddForm: false,
-  biometricPrompt: null,
-  theme:
-    (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
-    'system',
-  ...FILTER_DEFAULTS,
-  selectedKeyId: null,
+export const useStore = create<AppState>((set, get) => {
+  // Check for existing session on initialization
+  const session = loadSession();
+  const initialWorkspaceState = session ? 'locked' : 'welcome';
+  const initialFileName = session?.fileName ?? null;
 
-  setWorkspaceState: (state) => set({ workspaceState: state }),
-  setDb: (db) => set({ db }),
-  setPassword: (pw) => set({ password: pw }),
-  setTheme: (theme) => {
-    localStorage.setItem('keya-theme', theme);
-    set({ theme });
-  },
+  return {
+    workspaceState: initialWorkspaceState,
+    db: null,
+    password: null,
+    activeVaultFileName: initialFileName,
+    searchQuery: '',
+    showAddForm: false,
+    biometricPrompt: null,
+    theme:
+      (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
+      'system',
+    ...FILTER_DEFAULTS,
+    selectedKeyId: null,
 
-  lock: () => {
-    clearSession();
-    set({
-      workspaceState: 'welcome',
-      db: null,
-      password: null,
-      activeVaultFileName: null,
-      searchQuery: '',
-      showAddForm: false,
-      ...FILTER_DEFAULTS,
-      selectedKeyId: null,
-    });
-  },
+    setWorkspaceState: (state) => set({ workspaceState: state }),
+    setDb: (db) => set({ db }),
+    setPassword: (pw) => set({ password: pw }),
+    setTheme: (theme) => {
+      localStorage.setItem('keya-theme', theme);
+      set({ theme });
+    },
 
-  unlock: (db, password, fileName) => {
-    saveSession(fileName, password);
-    set({
-      workspaceState: 'unlocked',
-      db,
-      password,
-      activeVaultFileName: fileName,
-    });
-  },
+    lock: () => {
+      clearSession();
+      set({
+        workspaceState: 'welcome',
+        db: null,
+        password: null,
+        activeVaultFileName: null,
+        searchQuery: '',
+        showAddForm: false,
+        ...FILTER_DEFAULTS,
+        selectedKeyId: null,
+      });
+    },
 
-  addKey: (key) => {
-    const created = get().db?.addApiKey(key);
-    set({ showAddForm: false });
-    scheduleSave();
-    return created;
-  },
+    unlock: (db, password, fileName) => {
+      saveSession(fileName, password);
+      set({
+        workspaceState: 'unlocked',
+        db,
+        password,
+        activeVaultFileName: fileName,
+      });
+    },
 
-  updateKey: (id, updates) => {
-    get().db?.updateApiKey(id, updates);
-    set({});
-    scheduleSave();
-  },
+    addKey: (key) => {
+      const created = get().db?.addApiKey(key);
+      set({ showAddForm: false });
+      scheduleSave();
+      return created;
+    },
 
-  deleteKey: (id) => {
-    get().db?.deleteApiKey(id);
-    set({});
-    scheduleSave();
-  },
+    updateKey: (id, updates) => {
+      get().db?.updateApiKey(id, updates);
+      set({});
+      scheduleSave();
+    },
 
-  setSearchQuery: (q) => set({ searchQuery: q }),
-  setShowAddForm: (show) => set({ showAddForm: show }),
-  setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),
-  setFilterGroupId: (id) => set({ filterGroupId: id }),
-  setFilterProvider: (p) => set({ filterProvider: p }),
-  setFilterTestStatus: (s) => set({ filterTestStatus: s }),
-  clearFilters: () => set(FILTER_DEFAULTS),
-  clearSmartFilters: () =>
-    set({ filterProvider: null, filterTestStatus: null }),
-  setSelectedKeyId: (id) => set({ selectedKeyId: id }),
+    deleteKey: (id) => {
+      get().db?.deleteApiKey(id);
+      set({});
+      scheduleSave();
+    },
 
-  addGroup: (group) => {
-    get().db?.addGroup(group);
-    set({});
-    scheduleSave();
-  },
+    setSearchQuery: (q) => set({ searchQuery: q }),
+    setShowAddForm: (show) => set({ showAddForm: show }),
+    setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),
+    setFilterGroupId: (id) => set({ filterGroupId: id }),
+    setFilterProvider: (p) => set({ filterProvider: p }),
+    setFilterTestStatus: (s) => set({ filterTestStatus: s }),
+    clearFilters: () => set(FILTER_DEFAULTS),
+    clearSmartFilters: () =>
+      set({ filterProvider: null, filterTestStatus: null }),
+    setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
-  updateGroup: (id, updates) => {
-    get().db?.updateGroup(id, updates);
-    set({});
-    scheduleSave();
-  },
+    addGroup: (group) => {
+      get().db?.addGroup(group);
+      set({});
+      scheduleSave();
+    },
 
-  deleteGroup: (id) => {
-    get().db?.deleteGroup(id);
-    set({});
-    scheduleSave();
-  },
+    updateGroup: (id, updates) => {
+      get().db?.updateGroup(id, updates);
+      set({});
+      scheduleSave();
+    },
 
-  updateSettings: (updates) => {
-    get().db?.updateSettings(updates);
-    set({});
-    scheduleSave();
-  },
+    deleteGroup: (id) => {
+      get().db?.deleteGroup(id);
+      set({});
+      scheduleSave();
+    },
 
-  updateMeta: (updates) => {
-    get().db?.updateMeta(updates);
-    set({});
-    scheduleSave();
-  },
-}));
+    updateSettings: (updates) => {
+      get().db?.updateSettings(updates);
+      set({});
+      scheduleSave();
+    },
+
+    updateMeta: (updates) => {
+      get().db?.updateMeta(updates);
+      set({});
+      scheduleSave();
+    },
+  };
+});

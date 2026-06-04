@@ -80,10 +80,9 @@ export function KeyList() {
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
-  if (!db) return null;
 
-  let keys = db.getApiKeys();
-  if (searchQuery) keys = db.searchKeys(searchQuery);
+  let keys = db?.getApiKeys() ?? [];
+  if (searchQuery && db) keys = db.searchKeys(searchQuery);
   if (filterGroupId) {
     keys =
       filterGroupId === '__ungrouped__'
@@ -102,9 +101,12 @@ export function KeyList() {
     if (selectedKeyId && !keys.some((k) => k.id === selectedKeyId)) {
       setSelectedKeyId(null);
     }
-  }, [selectedKeyId, keys]);
+  }, [selectedKeyId, keys, setSelectedKeyId]);
 
-  const _groups = db.getGroups();
+  const _groups = db?.getGroups() ?? [];
+
+  // Early return if db is not available
+  if (!db) return null;
 
   const handleTest = async (key: ApiKey) => {
     setTesting(key.id);
