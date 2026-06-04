@@ -1,12 +1,12 @@
-import { Outlet } from "react-router-dom"
-import { Sidebar } from "./Sidebar"
-import { TopBar } from "./TopBar"
-import { KeyForm } from "../keys/KeyForm"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useStore } from "../../store/useStore"
+import { Outlet } from 'react-router-dom';
+import { Sidebar } from './Sidebar';
+import { TopBar } from './TopBar';
+import { KeyForm } from '../keys/KeyForm';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useStore } from '../../store/useStore';
 
 export function AppLayout() {
-  const { showAddForm, setShowAddForm, db } = useStore()
+  const { showAddForm, setShowAddForm } = useStore();
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
@@ -26,5 +26,5 @@ export function AppLayout() {
 
       <KeyForm open={showAddForm} onClose={() => setShowAddForm(false)} />
     </div>
-  )
+  );
 }

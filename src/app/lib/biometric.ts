@@ -14,8 +14,8 @@ interface BiometricRecord {
   vault_id: string;
   credentialId: Uint8Array;
   encryptedPassword: string; // base64
-  aesKey: string;            // base64
-  iv: string;                // base64
+  aesKey: string; // base64
+  iv: string; // base64
   createdAt: string;
 }
 
@@ -33,7 +33,10 @@ function fromBase64(b64: string): Uint8Array {
 }
 
 function toBuffer(source: Uint8Array): ArrayBuffer {
-  return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  return source.buffer.slice(
+    source.byteOffset,
+    source.byteOffset + source.byteLength
+  );
 }
 
 // ── IndexedDB ──
@@ -70,16 +73,44 @@ async function deleteRecord(vaultId: string): Promise<void> {
 
 // ── AES-GCM encrypt/decrypt ──
 
-async function aesEncrypt(plaintext: string, keyBytes: Uint8Array, iv: Uint8Array): Promise<string> {
-  const key = await crypto.subtle.importKey('raw', toBuffer(keyBytes), { name: 'AES-GCM' }, false, ['encrypt']);
+async function aesEncrypt(
+  plaintext: string,
+  keyBytes: Uint8Array,
+  iv: Uint8Array
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    toBuffer(keyBytes),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
   const encoded = new TextEncoder().encode(plaintext);
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toBuffer(iv) }, key, encoded);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: toBuffer(iv) },
+    key,
+    encoded
+  );
   return toBase64(new Uint8Array(encrypted));
 }
 
-async function aesDecrypt(ciphertext: string, keyBytes: Uint8Array, iv: Uint8Array): Promise<string> {
-  const key = await crypto.subtle.importKey('raw', toBuffer(keyBytes), { name: 'AES-GCM' }, false, ['decrypt']);
-  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toBuffer(iv) }, key, fromBase64(ciphertext));
+async function aesDecrypt(
+  ciphertext: string,
+  keyBytes: Uint8Array,
+  iv: Uint8Array
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    toBuffer(keyBytes),
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: toBuffer(iv) },
+    key,
+    fromBase64(ciphertext)
+  );
   return new TextDecoder().decode(decrypted);
 }
 
@@ -94,7 +125,8 @@ function rpId(): string {
 export function isBiometricSupported(): boolean {
   return !!(
     window.PublicKeyCredential &&
-    typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
+    typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ===
+      'function'
   );
 }
 
@@ -106,9 +138,12 @@ export async function isBiometricRegistered(vaultId: string): Promise<boolean> {
 /**
  * Register biometric credential and store encrypted password.
  */
-export async function registerBiometric(vaultId: string, password: string): Promise<void> {
+export async function registerBiometric(
+  vaultId: string,
+  password: string
+): Promise<void> {
   // Step 1: Create WebAuthn credential (triggers Touch ID / Face ID)
-  const credential = await navigator.credentials.create({
+  const credential = (await navigator.credentials.create({
     publicKey: {
       rp: { id: rpId(), name: 'Keya' },
       user: {
@@ -126,7 +161,7 @@ export async function registerBiometric(vaultId: string, password: string): Prom
         userVerification: 'required',
       },
     },
-  }) as PublicKeyCredential;
+  })) as PublicKeyCredential;
 
   if (!credential) throw new Error('Biometric registration cancelled.');
 
@@ -151,25 +186,32 @@ export async function registerBiometric(vaultId: string, password: string): Prom
  */
 export async function unlockWithBiometric(vaultId: string): Promise<string> {
   const record = await getRecord(vaultId);
-  if (!record || !record.aesKey) throw new Error('No biometric credential found for this vault.');
+  if (!record || !record.aesKey)
+    throw new Error('No biometric credential found for this vault.');
 
   // Step 1: WebAuthn authentication (triggers Touch ID / Face ID)
-  const assertion = await navigator.credentials.get({
+  const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       rpId: rpId(),
-      allowCredentials: [{
-        id: toBuffer(record.credentialId),
-        type: 'public-key',
-      }],
+      allowCredentials: [
+        {
+          id: toBuffer(record.credentialId),
+          type: 'public-key',
+        },
+      ],
       userVerification: 'required',
     },
-  }) as PublicKeyCredential;
+  })) as PublicKeyCredential;
 
   if (!assertion) throw new Error('Biometric authentication cancelled.');
 
   // Step 2: Decrypt password
-  return aesDecrypt(record.encryptedPassword, fromBase64(record.aesKey), fromBase64(record.iv));
+  return aesDecrypt(
+    record.encryptedPassword,
+    fromBase64(record.aesKey),
+    fromBase64(record.iv)
+  );
 }
 
 /**

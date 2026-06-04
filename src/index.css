@@ -5,15 +5,21 @@
 @custom-variant dark (&.dark);
 
 /* ── SVG icon theme sync ── */
-:root:not(.light) .icon-theme { filter: brightness(0) invert(1); }
+:root:not(.light) .icon-theme {
+  filter: brightness(0) invert(1);
+}
 
 /* ── Emoji picker in node_modules ── */
 @source "../node_modules/@ferrucc-io/emoji-picker/dist/**/*.{js,jsx,ts,tsx}";
 
 /* ── Theme ── */
 @theme {
-  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-sans:
+    "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
   --color-canvas-deepest: var(--canvas-deepest);
   --color-canvas-base: var(--canvas-base);
@@ -61,13 +67,14 @@
   --shadow-focus: var(--shadow-focus-val);
   --shadow-inset: var(--shadow-inset-val);
 
-  --tracking-display: -.022em;
-  --tracking-heading: -.016em;
-  --tracking-tight: -.011em;
+  --tracking-display: -0.022em;
+  --tracking-heading: -0.016em;
+  --tracking-tight: -0.011em;
 
   --animate-fade-in: fade-in 0.15s ease-out;
   --animate-fade-out: fade-out 0.15s ease-out;
-  --animate-slide-in-from-right: slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-from-right: slide-in-from-right 0.25s
+    cubic-bezier(0.16, 1, 0.3, 1);
   --animate-detail-fade-in: detail-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-stagger-in: stagger-in 0.2s ease-out both;
   --animate-dialog-enter: dialog-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -76,52 +83,124 @@
   --animate-out: exit 0.15s both;
 
   @keyframes fade-in {
-    0% { opacity: 0; transform: translateY(4px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes fade-out {
-    0% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(4px); }
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
   }
   @keyframes slide-in-from-right {
-    0% { opacity: 0; transform: translateX(24px); }
-    100% { opacity: 1; transform: translateX(0); }
+    0% {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
   @keyframes detail-fade-in {
-    0% { opacity: 0; transform: translateX(16px) scale(0.98); }
-    100% { opacity: 1; transform: translateX(0) scale(1); }
+    0% {
+      opacity: 0;
+      transform: translateX(16px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
   }
   @keyframes stagger-in {
-    0% { opacity: 0; transform: translateY(6px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes dialog-enter {
-    0% { opacity: 0; translate: -50% calc(-50% + 12px); }
-    100% { opacity: 1; translate: -50% -50%; }
+    0% {
+      opacity: 0;
+      translate: -50% calc(-50% + 12px);
+    }
+    100% {
+      opacity: 1;
+      translate: -50% -50%;
+    }
   }
   @keyframes dialog-exit {
-    0% { opacity: 1; translate: -50% -50%; }
-    100% { opacity: 0; translate: -50% calc(-50% - 4px); }
+    0% {
+      opacity: 1;
+      translate: -50% -50%;
+    }
+    100% {
+      opacity: 0;
+      translate: -50% calc(-50% - 4px);
+    }
   }
   @keyframes enter {
     from {
       opacity: var(--tw-enter-opacity, 1);
-      transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+      transform: translate3d(
+          var(--tw-enter-translate-x, 0),
+          var(--tw-enter-translate-y, 0),
+          0
+        )
+        scale3d(
+          var(--tw-enter-scale, 1),
+          var(--tw-enter-scale, 1),
+          var(--tw-enter-scale, 1)
+        );
     }
   }
   @keyframes exit {
     to {
       opacity: var(--tw-exit-opacity, 1);
-      transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1));
+      transform: translate3d(
+          var(--tw-exit-translate-x, 0),
+          var(--tw-exit-translate-y, 0),
+          0
+        )
+        scale3d(
+          var(--tw-exit-scale, 1),
+          var(--tw-exit-scale, 1),
+          var(--tw-exit-scale, 1)
+        );
     }
   }
   @keyframes toast-in {
-    0% { opacity: 0; transform: translateX(100%); }
-    100% { opacity: 1; transform: translateX(0); }
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
   @keyframes toast-out {
-    0% { opacity: 1; transform: translateX(0); }
-    100% { opacity: 0; transform: translateX(100%); }
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
   }
 }
 
@@ -158,21 +237,21 @@
     --canvas-hover: #28282c;
 
     /* Surface overlays */
-    --surface-1: rgba(255,255,255,0.01);
-    --surface-2: rgba(255,255,255,0.02);
-    --surface-3: rgba(255,255,255,0.03);
-    --surface-4: rgba(255,255,255,0.04);
-    --surface-5: rgba(255,255,255,0.05);
-    --surface-6: rgba(255,255,255,0.06);
+    --surface-1: rgba(255, 255, 255, 0.01);
+    --surface-2: rgba(255, 255, 255, 0.02);
+    --surface-3: rgba(255, 255, 255, 0.03);
+    --surface-4: rgba(255, 255, 255, 0.04);
+    --surface-5: rgba(255, 255, 255, 0.05);
+    --surface-6: rgba(255, 255, 255, 0.06);
 
     /* Borders */
-    --line-1: rgba(255,255,255,0.05);
-    --line-2: rgba(255,255,255,0.06);
-    --line-3: rgba(255,255,255,0.08);
-    --line-4: rgba(255,255,255,0.10);
+    --line-1: rgba(255, 255, 255, 0.05);
+    --line-2: rgba(255, 255, 255, 0.06);
+    --line-3: rgba(255, 255, 255, 0.08);
+    --line-4: rgba(255, 255, 255, 0.1);
 
     /* Divider dots */
-    --divider: rgba(255,255,255,0.12);
+    --divider: rgba(255, 255, 255, 0.12);
 
     /* Text */
     --ink-primary: #f7f8f8;
@@ -187,11 +266,17 @@
     --accent-muted: #7a7fad;
 
     /* Shadows */
-    --shadow-card-val: rgba(0,0,0,0.2) 0px 0px 0px 1px;
-    --shadow-elevated-val: rgba(0,0,0,0.4) 0px 2px 4px;
-    --shadow-dialog-val: rgba(0,0,0,0) 0px 8px 2px, rgba(0,0,0,0.01) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.07) 0px 1px 1px, rgba(0,0,0,0.08) 0px 0px 1px;
-    --shadow-focus-val: rgba(0,0,0,0.1) 0px 4px 12px;
-    --shadow-inset-val: rgba(0,0,0,0.2) 0px 0px 12px 0px inset;
+    --shadow-card-val: rgba(0, 0, 0, 0.2) 0px 0px 0px 1px;
+    --shadow-elevated-val: rgba(0, 0, 0, 0.4) 0px 2px 4px;
+    --shadow-dialog-val:
+      rgba(0, 0, 0, 0) 0px 8px 2px, rgba(0, 0, 0, 0.01) 0px 5px 2px, rgba(
+        0,
+        0,
+        0,
+        0.04
+      ) 0px 3px 2px, rgba(0, 0, 0, 0.07) 0px 1px 1px, rgba(0, 0, 0, 0.08) 0px 0px 1px;
+    --shadow-focus-val: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+    --shadow-inset-val: rgba(0, 0, 0, 0.2) 0px 0px 12px 0px inset;
   }
 
   /* Light theme */
@@ -222,19 +307,19 @@
     --canvas-raised: #ffffff;
     --canvas-hover: #ebebeb;
 
-    --surface-1: rgba(0,0,0,0.01);
-    --surface-2: rgba(0,0,0,0.02);
-    --surface-3: rgba(0,0,0,0.03);
-    --surface-4: rgba(0,0,0,0.04);
-    --surface-5: rgba(0,0,0,0.05);
-    --surface-6: rgba(0,0,0,0.06);
+    --surface-1: rgba(0, 0, 0, 0.01);
+    --surface-2: rgba(0, 0, 0, 0.02);
+    --surface-3: rgba(0, 0, 0, 0.03);
+    --surface-4: rgba(0, 0, 0, 0.04);
+    --surface-5: rgba(0, 0, 0, 0.05);
+    --surface-6: rgba(0, 0, 0, 0.06);
 
-    --line-1: rgba(0,0,0,0.06);
-    --line-2: rgba(0,0,0,0.08);
-    --line-3: rgba(0,0,0,0.10);
-    --line-4: rgba(0,0,0,0.12);
+    --line-1: rgba(0, 0, 0, 0.06);
+    --line-2: rgba(0, 0, 0, 0.08);
+    --line-3: rgba(0, 0, 0, 0.1);
+    --line-4: rgba(0, 0, 0, 0.12);
 
-    --divider: rgba(0,0,0,0.15);
+    --divider: rgba(0, 0, 0, 0.15);
 
     --ink-primary: #171717;
     --ink-secondary: #4d4d4d;
@@ -246,11 +331,17 @@
     --accent-hover: #7170ff;
     --accent-muted: #7a7fad;
 
-    --shadow-card-val: rgba(0,0,0,0.06) 0px 0px 0px 1px;
-    --shadow-elevated-val: rgba(0,0,0,0.08) 0px 2px 4px;
-    --shadow-dialog-val: rgba(0,0,0,0.02) 0px 8px 2px, rgba(0,0,0,0.02) 0px 5px 2px, rgba(0,0,0,0.04) 0px 3px 2px, rgba(0,0,0,0.06) 0px 1px 1px, rgba(0,0,0,0.04) 0px 0px 1px;
-    --shadow-focus-val: rgba(0,0,0,0.05) 0px 4px 12px;
-    --shadow-inset-val: rgba(0,0,0,0.06) 0px 0px 12px 0px inset;
+    --shadow-card-val: rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+    --shadow-elevated-val: rgba(0, 0, 0, 0.08) 0px 2px 4px;
+    --shadow-dialog-val:
+      rgba(0, 0, 0, 0.02) 0px 8px 2px, rgba(0, 0, 0, 0.02) 0px 5px 2px, rgba(
+        0,
+        0,
+        0,
+        0.04
+      ) 0px 3px 2px, rgba(0, 0, 0, 0.06) 0px 1px 1px, rgba(0, 0, 0, 0.04) 0px 0px 1px;
+    --shadow-focus-val: rgba(0, 0, 0, 0.05) 0px 4px 12px;
+    --shadow-inset-val: rgba(0, 0, 0, 0.06) 0px 0px 12px 0px inset;
   }
 
   .light body {
@@ -265,7 +356,9 @@
   body {
     background-color: var(--canvas-base);
     color: var(--ink-primary);
-    font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+      sans-serif;
     font-variant-ligatures: common-ligatures;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

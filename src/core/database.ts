@@ -1,7 +1,10 @@
 import type { KeyaDatabase, ApiKey, Group } from './types';
 import { DEFAULT_GROUPS, DEFAULT_SETTINGS } from './types';
 
-export function createEmptyDatabase(name?: string, icon?: string): KeyaDatabase {
+export function createEmptyDatabase(
+  name?: string,
+  icon?: string
+): KeyaDatabase {
   const now = new Date().toISOString();
   return {
     version: '1.0',
@@ -23,7 +26,10 @@ export function createEmptyDatabase(name?: string, icon?: string): KeyaDatabase 
 export class Database {
   private data: KeyaDatabase;
 
-  constructor(data?: KeyaDatabase, meta?: { name?: string; icon?: string; color?: string }) {
+  constructor(
+    data?: KeyaDatabase,
+    meta?: { name?: string; icon?: string; color?: string }
+  ) {
     this.data = data ?? createEmptyDatabase(meta?.name, meta?.icon);
   }
 
@@ -43,7 +49,12 @@ export class Database {
 
   addApiKey(key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>): ApiKey {
     const now = new Date().toISOString();
-    const newKey: ApiKey = { ...key, id: crypto.randomUUID(), created_at: now, updated_at: now };
+    const newKey: ApiKey = {
+      ...key,
+      id: crypto.randomUUID(),
+      created_at: now,
+      updated_at: now,
+    };
     this.data.api_keys.push(newKey);
     this.touch();
     return newKey;
@@ -76,7 +87,7 @@ export class Database {
       (k) =>
         k.name.toLowerCase().includes(q) ||
         k.description.toLowerCase().includes(q) ||
-        k.provider.toLowerCase().includes(q),
+        k.provider.toLowerCase().includes(q)
     );
   }
 

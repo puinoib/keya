@@ -5,7 +5,12 @@
  * IndexedDB stores: workspace folder reference + cached vault metadata.
  */
 
-import { serializeToFile, deserializeFromFile, type KeyaDatabase, Database } from '../../core';
+import {
+  serializeToFile,
+  deserializeFromFile,
+  type KeyaDatabase,
+  Database,
+} from '../../core';
 
 const DB_NAME = 'keya-meta';
 const DB_VERSION = 4;
@@ -103,7 +108,9 @@ async function deleteCachedMeta(vaultId: string): Promise<void> {
 
 // ── Helpers ──
 
-async function ensurePermission(dirHandle: FileSystemDirectoryHandle): Promise<boolean> {
+async function ensurePermission(
+  dirHandle: FileSystemDirectoryHandle
+): Promise<boolean> {
   const perm = await dirHandle.queryPermission({ mode: 'readwrite' });
   if (perm === 'granted') return true;
   const req = await dirHandle.requestPermission({ mode: 'readwrite' });
@@ -137,7 +144,9 @@ export class FileStorage {
     const ws = await getWorkspace();
     if (!ws) return [];
 
-    const perm = await ws.directoryHandle.queryPermission({ mode: 'readwrite' });
+    const perm = await ws.directoryHandle.queryPermission({
+      mode: 'readwrite',
+    });
     if (perm === 'granted') {
       const files: string[] = [];
       for await (const [name] of (ws.directoryHandle as any).entries()) {
@@ -153,7 +162,10 @@ export class FileStorage {
   /**
    * Open and decrypt a specific vault file.
    */
-  static async openVault(fileName: string, password: string): Promise<Database> {
+  static async openVault(
+    fileName: string,
+    password: string
+  ): Promise<Database> {
     const ws = await getWorkspace();
     if (!ws) throw new Error('No workspace configured');
 
@@ -173,7 +185,7 @@ export class FileStorage {
   static async createVault(
     fileName: string,
     password: string,
-    meta?: { name?: string; icon?: string },
+    meta?: { name?: string; icon?: string }
   ): Promise<Database> {
     const ws = await getWorkspace();
     if (!ws) throw new Error('No workspace configured');
@@ -189,13 +201,19 @@ export class FileStorage {
   /**
    * Encrypt and save to a specific vault file.
    */
-  static async saveVault(fileName: string, db: KeyaDatabase, password: string): Promise<void> {
+  static async saveVault(
+    fileName: string,
+    db: KeyaDatabase,
+    password: string
+  ): Promise<void> {
     const ws = await getWorkspace();
     if (!ws) throw new Error('No workspace configured');
 
     await ensurePermission(ws.directoryHandle);
     const bytes = await serializeToFile(db, password);
-    const fileHandle = await ws.directoryHandle.getFileHandle(fileName, { create: true });
+    const fileHandle = await ws.directoryHandle.getFileHandle(fileName, {
+      create: true,
+    });
     const writable = await fileHandle.createWritable();
     await writable.write(bytes);
     await writable.close();
@@ -266,17 +284,25 @@ export class FileStorage {
     const ws = await getWorkspace();
     if (!ws) return false;
 
-    const perm = await ws.directoryHandle.queryPermission({ mode: 'readwrite' });
+    const perm = await ws.directoryHandle.queryPermission({
+      mode: 'readwrite',
+    });
     if (perm === 'granted') return true;
 
-    const req = await ws.directoryHandle.requestPermission({ mode: 'readwrite' });
+    const req = await ws.directoryHandle.requestPermission({
+      mode: 'readwrite',
+    });
     return req === 'granted';
   }
 
   /**
    * Legacy save via download (for browsers without File System Access API).
    */
-  static async saveViaDownload(db: KeyaDatabase, password: string, fileName = 'my-keys.keya'): Promise<void> {
+  static async saveViaDownload(
+    db: KeyaDatabase,
+    password: string,
+    fileName = 'my-keys.keya'
+  ): Promise<void> {
     const bytes = await serializeToFile(db, password);
     const blob = new Blob([bytes], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);

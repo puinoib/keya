@@ -1,32 +1,32 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { HelpSidebar, HelpSearch } from './index'
-import { HelpIndex } from './HelpIndex'
-import { HelpPage } from './HelpPage'
-import { loadManifest } from '../lib/manifest'
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { HelpSidebar, HelpSearch } from './index';
+import { HelpIndex } from './HelpIndex';
+import { HelpPage } from './HelpPage';
+import { loadManifest } from '../lib/manifest';
 
 function getSlugFromPath(pathname: string): string | null {
-  const slug = pathname.replace('/help/', '').replace('/help', '')
-  return slug || null
+  const slug = pathname.replace('/help/', '').replace('/help', '');
+  return slug || null;
 }
 
 export function HelpLayout() {
-  const { documents } = loadManifest()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const { documents } = loadManifest();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentSlug, setCurrentSlug] = useState<string | null>(() =>
     getSlugFromPath(location.pathname)
-  )
+  );
 
   // sync state when browser nav (back/forward)
   useEffect(() => {
-    setCurrentSlug(getSlugFromPath(location.pathname))
-  }, [location.pathname])
+    setCurrentSlug(getSlugFromPath(location.pathname));
+  }, [location.pathname]);
 
   const handleNavigate = (slug: string | null) => {
-    setCurrentSlug(slug)
-    navigate(slug ? `/help/${slug}` : '/help')
-  }
+    setCurrentSlug(slug);
+    navigate(slug ? `/help/${slug}` : '/help');
+  };
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
@@ -35,7 +35,11 @@ export function HelpLayout() {
           <HelpSearch documents={documents} onNavigate={handleNavigate} />
         </div>
 
-        <HelpSidebar documents={documents} currentSlug={currentSlug} onNavigate={handleNavigate} />
+        <HelpSidebar
+          documents={documents}
+          currentSlug={currentSlug}
+          onNavigate={handleNavigate}
+        />
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -56,5 +60,5 @@ export function HelpLayout() {
         </div>
       </div>
     </div>
-  )
+  );
 }

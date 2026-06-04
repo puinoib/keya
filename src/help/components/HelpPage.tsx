@@ -1,19 +1,20 @@
-import { Spinner } from "@phosphor-icons/react"
-import { getDocument } from '../lib/manifest'
-import { MarkdownContent } from './MarkdownContent'
+import { getDocument } from '../lib/manifest';
+import { MarkdownContent } from './MarkdownContent';
 
 export function HelpPage({ slug }: { slug: string }) {
-  const document = getDocument(slug)
+  const document = getDocument(slug);
 
   if (!document) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-semibold text-ink-primary">Document not found</h2>
+        <h2 className="text-xl font-semibold text-ink-primary">
+          Document not found
+        </h2>
         <p className="text-ink-secondary mt-2">
           The document you are looking for does not exist or has been moved
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -28,5 +29,5 @@ export function HelpPage({ slug }: { slug: string }) {
       )}
       <MarkdownContent content={document.content} />
     </article>
-  )
+  );
 }

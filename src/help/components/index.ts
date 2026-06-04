@@ -1,6 +1,6 @@
-export { MarkdownContent } from './MarkdownContent'
-export { HelpSidebar } from './HelpSidebar'
-export { HelpSearch } from './HelpSearch'
-export { HelpIndex } from './HelpIndex'
-export { HelpPage } from './HelpPage'
-export { HelpLayout } from './HelpLayout'
+export { MarkdownContent } from './MarkdownContent';
+export { HelpSidebar } from './HelpSidebar';
+export { HelpSearch } from './HelpSearch';
+export { HelpIndex } from './HelpIndex';
+export { HelpPage } from './HelpPage';
+export { HelpLayout } from './HelpLayout';

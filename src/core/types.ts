@@ -81,14 +81,27 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
 };
 
 export const PRESET_PROVIDERS = [
-  "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
-  "Zhipu", "Baidu", "Mistral", "Cohere", "Together", "OpenRouter",
-  "SiliconFlow", "Azure OpenAI",
+  'OpenAI',
+  'Anthropic',
+  'Google',
+  'Groq',
+  'DeepSeek',
+  'Moonshot',
+  'Zhipu',
+  'Baidu',
+  'Mistral',
+  'Cohere',
+  'Together',
+  'OpenRouter',
+  'SiliconFlow',
+  'Azure OpenAI',
 ] as const;
 
-export function getProvidersForDropdown(settings: Settings | undefined): string[] {
+export function getProvidersForDropdown(
+  settings: Settings | undefined
+): string[] {
   const disabled = new Set(settings?.disabled_providers ?? []);
   const enabled = PRESET_PROVIDERS.filter((p) => !disabled.has(p));
   const customs = (settings?.custom_providers ?? []).map((cp) => cp.name);
-  return [...enabled, ...customs, "Custom"];
+  return [...enabled, ...customs, 'Custom'];
 }

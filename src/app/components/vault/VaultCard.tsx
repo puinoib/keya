@@ -1,14 +1,14 @@
-import { Lock } from "@phosphor-icons/react"
-import type { CachedVaultMeta } from '../../lib/storage'
+import { Lock } from '@phosphor-icons/react';
+import type { CachedVaultMeta } from '../../lib/storage';
 
 interface VaultCardProps {
-  fileName: string
-  meta?: CachedVaultMeta
-  onClick: () => void
+  fileName: string;
+  meta?: CachedVaultMeta;
+  onClick: () => void;
 }
 
 export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
-  const displayName = meta?.name || fileName.replace(/\.keya$/, '')
+  const displayName = meta?.name || fileName.replace(/\.keya$/, '');
 
   return (
     <button
@@ -19,7 +19,9 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
         {meta?.icon ? meta.icon : <Lock className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-ink-primary truncate">{displayName}</p>
+        <p className="text-sm font-medium text-ink-primary truncate">
+          {displayName}
+        </p>
         <p className="text-xs text-ink-quaternary">
           {meta
             ? `${meta.keyCount} keys · Updated ${new Date(meta.updatedAt).toLocaleDateString()}`
@@ -27,5 +29,5 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
         </p>
       </div>
     </button>
-  )
+  );
 }

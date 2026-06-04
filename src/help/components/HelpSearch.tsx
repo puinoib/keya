@@ -1,37 +1,37 @@
-import { useState, useEffect } from 'react'
-import { MagnifyingGlass } from "@phosphor-icons/react"
-import type { HelpDocument, SearchResult } from '../types'
-import { searchDocuments, buildSearchIndex } from '../lib/search'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from 'react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
+import type { HelpDocument, SearchResult } from '../types';
+import { searchDocuments, buildSearchIndex } from '../lib/search';
+import { cn } from '@/lib/utils';
 
 interface HelpSearchProps {
-  documents: HelpDocument[]
-  onNavigate: (slug: string | null) => void
+  documents: HelpDocument[];
+  onNavigate: (slug: string | null) => void;
 }
 
 export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const searchIndex = buildSearchIndex(documents)
+  const searchIndex = buildSearchIndex(documents);
 
   useEffect(() => {
     if (query.trim()) {
-      const searchResults = searchDocuments(searchIndex, query)
-      setResults(searchResults)
-      setIsOpen(true)
+      const searchResults = searchDocuments(searchIndex, query);
+      setResults(searchResults);
+      setIsOpen(true);
     } else {
-      setResults([])
-      setIsOpen(false)
+      setResults([]);
+      setIsOpen(false);
     }
-  }, [query, searchIndex])
+  }, [query, searchIndex]);
 
   const handleSelectResult = (slug: string) => {
-    setQuery('')
-    setIsOpen(false)
-    onNavigate(slug === 'index' ? null : slug)
-  }
+    setQuery('');
+    setIsOpen(false);
+    onNavigate(slug === 'index' ? null : slug);
+  };
 
   return (
     <div className="relative">
@@ -79,5 +79,5 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
