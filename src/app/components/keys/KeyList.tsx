@@ -146,7 +146,7 @@ export function KeyList() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button onClick={() => handleTest(key)} disabled={isTesting}
