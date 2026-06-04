@@ -1,61 +1,74 @@
 import type { HelpDocument, HelpManifest } from '../types'
-import matter from 'gray-matter'
 
-// eager: true loads all files at import time as raw strings
 const contentModules = import.meta.glob<string>('../content/*.md', {
   eager: true,
   query: '?raw',
   import: 'default'
 })
 
-async function loadDocument(slug: string): Promise<HelpDocument | null> {
+// lightweight frontmatter parser (no Node.js deps)
+function parseFrontmatter(raw: string): { data: Record<string, unknown>; content: string } {
+  const trimmed = raw.trimStart()
+  if (!trimmed.startsWith('---')) {
+    return { data: {}, content: raw }
+  }
+
+  const end = trimmed.indexOf('---', 3)
+  if (end === -1) {
+    return { data: {}, content: raw }
+  }
+
+  const frontmatter = trimmed.slice(3, end).trim()
+  const content = trimmed.slice(end + 3).trimStart()
+
+  const data: Record<string, unknown> = {}
+  for (const line of frontmatter.split('\n')) {
+    const colon = line.indexOf(':')
+    if (colon === -1) continue
+    const key = line.slice(0, colon).trim()
+    const value = line.slice(colon + 1).trim()
+    data[key] = isNaN(Number(value)) ? value : Number(value)
+  }
+
+  return { data, content }
+}
+
+function loadDocument(slug: string, raw: string): HelpDocument | null {
   try {
-    // Find the key that ends with /{slug}.md
-    const entry = Object.entries(contentModules).find(([key]) =>
-      key === `../content/${slug}.md`
-    )
-
-    if (!entry) return null
-
-    const raw = entry[1]
-    const { data, content } = matter(raw)
-
+    const { data, content } = parseFrontmatter(raw)
     return {
       slug,
-      title: data.title || slug,
-      description: data.description || '',
+      title: (data.title as string) || slug,
+      description: (data.description as string) || '',
       content,
-      order: data.order || 999
+      order: (data.order as number) || 999
     }
-  } catch (err) {
-    console.error(`Failed to load document "${slug}":`, err)
+  } catch {
     return null
   }
 }
 
-export async function loadManifest(): Promise<HelpManifest> {
-  const slugs = Object.keys(contentModules)
-    .map(path => {
-      const match = path.match(/([^/]+)\.md$/)
-      return match ? match[1] : null
+export function loadManifest(): HelpManifest {
+  const documents = Object.entries(contentModules)
+    .map(([path, raw]) => {
+      const match = path.match(/([^/]+)\.md/)
+      const slug = match ? match[1] : null
+      if (!slug || typeof raw !== 'string') return null
+      return loadDocument(slug, raw)
     })
-    .filter((s): s is string => s !== null)
-
-  const documents = await Promise.all(
-    slugs.map(slug => loadDocument(slug))
-  )
-
-  const validDocs = documents.filter((doc): doc is HelpDocument => doc !== null)
+    .filter((doc): doc is HelpDocument => doc !== null)
     .sort((a, b) => (a.order || 999) - (b.order || 999))
 
   return {
-    documents: validDocs,
-    categories: {
-      all: validDocs,
-    }
+    documents,
+    categories: { all: documents }
   }
 }
 
-export async function getDocument(slug: string): Promise<HelpDocument | null> {
-  return loadDocument(slug)
+export function getDocument(slug: string): HelpDocument | null {
+  const entry = Object.entries(contentModules).find(([key]) =>
+    key === `../content/${slug}.md`
+  )
+  if (!entry || typeof entry[1] !== 'string') return null
+  return loadDocument(slug, entry[1])
 }
