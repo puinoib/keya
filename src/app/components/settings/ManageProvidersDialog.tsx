@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Check, X, Eye, EyeOff } from "lucide-react"
+import { Plus, Trash, Check, X, Eye, EyeSlash } from "@phosphor-icons/react"
 
 export function ManageProvidersDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { db, updateSettings } = useStore()
@@ -107,7 +107,7 @@ export function ManageProvidersDialog({ open, onClose }: { open: boolean; onClos
                     onClick={() => removeCustom(cp.name)}
                     className="text-ink-quaternary hover:text-danger transition-colors"
                   >
-                    <Trash2 className="size-3" />
+                    <Trash className="size-3" />
                   </button>
                 </div>
               )
