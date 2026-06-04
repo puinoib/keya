@@ -71,8 +71,8 @@ function FilterSelect({
 
 export function Sidebar() {
   const {
-    db, filterGroupId, filterProvider, filterStatus, filterTestStatus,
-    setFilterGroupId, setFilterProvider, setFilterStatus, setFilterTestStatus,
+    db, filterGroupId, filterProvider, filterTestStatus,
+    setFilterGroupId, setFilterProvider, setFilterTestStatus,
     clearFilters, clearSmartFilters, setSearchQuery,
   } = useStore()
   const [showGroups, setShowGroups] = useState(false)
@@ -84,7 +84,7 @@ export function Sidebar() {
 
   const keyCount = db?.getApiKeys().length ?? 0
   const groups = db?.getGroups() ?? []
-  const hasActiveFilter = filterGroupId || filterProvider || filterStatus || filterTestStatus
+  const hasActiveFilter = filterGroupId || filterProvider || filterTestStatus
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150
@@ -181,7 +181,7 @@ export function Sidebar() {
               icon={Filter}
               label="Filters"
               action={
-                (filterProvider || filterStatus || filterTestStatus) ? (
+                (filterProvider || filterTestStatus) ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); clearSmartFilters() }}
                     className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
@@ -196,16 +196,6 @@ export function Sidebar() {
                   value={filterProvider ?? "__all__"}
                   onChange={(v) => setFilterProvider(v === "__all__" ? null : v)}
                   options={[{ value: "__all__", label: "All Providers" }, ...providers.map((p) => ({ value: p, label: p }))]}
-                />
-                <FilterSelect
-                  value={filterStatus ?? "__all__"}
-                  onChange={(v) => setFilterStatus(v === "__all__" ? null : v)}
-                  options={[
-                    { value: "__all__", label: "All Status" },
-                    { value: "active", label: "Active" },
-                    { value: "inactive", label: "Inactive" },
-                    { value: "expired", label: "Expired" },
-                  ]}
                 />
                 <FilterSelect
                   value={filterTestStatus ?? "__all__"}
