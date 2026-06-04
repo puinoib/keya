@@ -129,12 +129,12 @@ export function KeyList() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-medium text-ink-primary truncate">{key.name}</span>
+                  <span className="text-sm font-medium text-ink-primary truncate">{key.name}</span>
                   {testOk && <span className="shrink-0 size-1.5 rounded-full bg-success-bright" />}
                   {testFail && <span className="shrink-0 size-1.5 rounded-full bg-danger" />}
                   {!key.test_status && <span className="shrink-0 size-1.5 rounded-full bg-ink-quaternary/30" />}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-ink-quaternary">
+                <div className="flex items-center gap-1.5 mt-0.5 text-xs text-ink-quaternary">
                   <span>{key.provider}</span>
                   <span className="text-divider">·</span>
                   <span className="font-mono">{maskKey(key.key)}</span>

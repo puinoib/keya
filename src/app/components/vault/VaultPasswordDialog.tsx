@@ -82,7 +82,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
           </div>
           <div>
             <p className="text-sm font-medium text-ink-primary">Unlock: {vaultName}</p>
-            {fileName && <p className="text-2xs text-ink-quaternary">{fileName}</p>}
+            {fileName && <p className="text-xs text-ink-quaternary">{fileName}</p>}
           </div>
         </div>
       )}
@@ -103,7 +103,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
                 <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : 'bg-surface-3'}`} />
               ))}
             </div>
-            <span className="text-2xs text-ink-quaternary">{strength.label}</span>
+            <span className="text-xs text-ink-quaternary">{strength.label}</span>
           </div>
         )}
       </div>
@@ -120,7 +120,7 @@ export function VaultPasswordDialog({ mode, vaultName, vaultIcon, fileName, vaul
             onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
           />
           {confirm && password !== confirm && (
-            <p className="text-2xs text-danger">Passwords don't match</p>
+            <p className="text-xs text-danger">Passwords don't match</p>
           )}
         </div>
       )}

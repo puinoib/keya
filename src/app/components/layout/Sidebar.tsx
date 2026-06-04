@@ -33,7 +33,7 @@ function SidebarSection({
             className={`size-2.5 text-ink-quaternary transition-transform duration-150 ${open ? "" : "-rotate-90"}`}
           />
           <Icon className="size-3 text-ink-quaternary" />
-          <span className="text-2xs font-medium text-ink-quaternary uppercase tracking-wider">{label}</span>
+          <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">{label}</span>
         </div>
         <span className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
           {action}
@@ -56,7 +56,7 @@ function FilterSelect({
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
-        className="h-7 text-2xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 hover:border-line border-line-subtle gap-1 px-2 [&>svg]:size-3"
+        className="h-7 text-xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 hover:border-line border-line-subtle gap-1 px-2 [&>svg]:size-3"
       >
         <SelectValue />
       </SelectTrigger>
@@ -87,7 +87,7 @@ export function Sidebar() {
   const hasActiveFilter = filterGroupId || filterProvider || filterStatus || filterTestStatus
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150
+    `w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150
      ${isActive
        ? "bg-surface-5 text-ink-primary font-medium"
        : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`
@@ -105,7 +105,7 @@ export function Sidebar() {
               <Key className="size-3.5 shrink-0" />
               <span className="truncate">All Keys</span>
               {keyCount > 0 && (
-                <span className="ml-auto min-w-[1.25rem] text-center text-2xs text-ink-quaternary tabular-nums">
+                <span className="ml-auto min-w-[1.25rem] text-center text-xs text-ink-quaternary tabular-nums">
                   {keyCount}
                 </span>
               )}
@@ -134,7 +134,7 @@ export function Sidebar() {
                   return (
                     <button
                       onClick={() => setFilterGroupId(active ? null : "__ungrouped__")}
-                      className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs transition-all duration-150
+                      className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-sm transition-all duration-150
                         ${active
                           ? "bg-accent-default/10 text-accent-bright"
                           : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}
@@ -142,7 +142,7 @@ export function Sidebar() {
                       <FolderOpen className="size-3.5 shrink-0" />
                       <span className="truncate flex-1 text-left">Ungrouped</span>
                       {count > 0 && (
-                        <span className={`text-2xs tabular-nums ${active ? "text-accent-bright/60" : "text-ink-quaternary"}`}>
+                        <span className={`text-xs tabular-nums ${active ? "text-accent-bright/60" : "text-ink-quaternary"}`}>
                           {count}
                         </span>
                       )}
@@ -156,7 +156,7 @@ export function Sidebar() {
                     <button
                       key={group.id}
                       onClick={() => setFilterGroupId(active ? null : group.id)}
-                      className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs transition-all duration-150
+                      className={`w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-sm transition-all duration-150
                         ${active
                           ? "bg-accent-default/10 text-accent-bright"
                           : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"}`}
@@ -164,7 +164,7 @@ export function Sidebar() {
                       <span className="text-sm leading-none">{group.icon}</span>
                       <span className="truncate flex-1 text-left">{group.name}</span>
                       {count > 0 && (
-                        <span className={`text-2xs tabular-nums ${active ? "text-accent-bright/60" : "text-ink-quaternary"}`}>
+                        <span className={`text-xs tabular-nums ${active ? "text-accent-bright/60" : "text-ink-quaternary"}`}>
                           {count}
                         </span>
                       )}
@@ -228,7 +228,7 @@ export function Sidebar() {
             href="https://github.com/puinoib/keya"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-2xs text-ink-quaternary hover:text-ink-tertiary transition-colors flex items-center justify-center gap-1"
+            className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors flex items-center justify-center gap-1"
           >
             Keya v1.0
           </a>
