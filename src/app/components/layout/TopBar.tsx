@@ -34,6 +34,7 @@ function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
       provider: key.provider || "Custom",
       endpoint: key.endpoint || "",
       group_id: key.group_id || current.getData().groups[0]?.id || null,
+      expires_at: key.expires_at ?? null,
       last_tested: key.last_tested ?? null,
       test_status: key.test_status ?? null,
       test_latency_ms: key.test_latency_ms ?? null,

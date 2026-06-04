@@ -8,6 +8,7 @@ export interface ApiKey {
   endpoint: string;
   key: string;
   group_id: string | null;
+  expires_at: string | null;
   last_tested: string | null;
   test_status: 'success' | 'failed' | null;
   test_latency_ms: number | null;
@@ -26,7 +27,6 @@ export interface Settings {
   theme: 'light' | 'dark' | 'system';
   language: 'zh-CN' | 'en-US';
   auto_lock_minutes: number;
-  min_password_length: number;
 }
 
 export interface KeyaDatabase {
@@ -50,7 +50,6 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   language: 'zh-CN',
   auto_lock_minutes: 5,
-  min_password_length: 8,
 };
 
 export const ENDPOINT_DEFAULTS: Record<string, string> = {

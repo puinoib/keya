@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2, Calendar } from "lucide-react"
 
 const PROVIDERS = [
   "OpenAI", "Anthropic", "Google", "Groq", "DeepSeek", "Moonshot",
@@ -24,6 +24,7 @@ interface FormData {
   endpoint: string
   description: string
   group_id: string | null
+  expires_at: string
 }
 
 interface TestState {
@@ -38,6 +39,7 @@ const empty: FormData = {
   endpoint: "",
   description: "",
   group_id: null,
+  expires_at: "",
 }
 
 export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -78,6 +80,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
+      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
       last_tested: testState.result ? new Date().toISOString() : null,
       test_status: testState.result?.success ? "success" : (testState.result ? "failed" : null),
       test_latency_ms: testState.result?.latency_ms ?? null,
@@ -203,6 +206,21 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="What's this key for?"
+            />
+          </div>
+
+          {/* Expiration */}
+          <div className="space-y-1.5">
+            <Label htmlFor="expires_at" className="text-xs flex items-center gap-1.5">
+              <Calendar className="size-3" /> Expiration (optional)
+            </Label>
+            <Input
+              id="expires_at"
+              type="date"
+              value={form.expires_at}
+              onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
+              min={new Date().toISOString().split("T")[0]}
+              className="text-xs"
             />
           </div>
 

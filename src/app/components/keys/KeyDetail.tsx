@@ -4,7 +4,7 @@ import { maskKey } from "@/lib/mask"
 import type { ApiKey } from "../../../core/types"
 import {
   Copy, FlaskConical, Pencil, Trash2, Key, Eye, EyeOff, X,
-  CheckCircle2, XCircle, MinusCircle, Clock, Globe, Tag, FileText,
+  CheckCircle2, XCircle, MinusCircle, Clock, Globe, Tag, FileText, AlertTriangle,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { EditKeyDialog } from "./KeyList"
@@ -59,6 +59,16 @@ export function KeyDetail() {
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
   }
 
+  const getExpiryState = (expiresAt: string | null | undefined): { expired: boolean; expiringSoon: boolean; daysLeft: number } => {
+    if (!expiresAt) return { expired: false, expiringSoon: false, daysLeft: Infinity }
+    const now = new Date()
+    const exp = new Date(expiresAt)
+    const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return { expired: daysLeft < 0, expiringSoon: daysLeft >= 0 && daysLeft <= 7, daysLeft }
+  }
+
+  const expiry = getExpiryState(key.expires_at)
+
   return (
     <>
       <div
@@ -91,6 +101,16 @@ export function KeyDetail() {
 
           {/* Status */}
           <div className="flex items-center gap-1.5 mb-4 animate-stagger-in" style={{ animationDelay: "120ms" }}>
+            {expiry.expired && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
+                <AlertTriangle className="size-3" /> Expired
+              </span>
+            )}
+            {!expiry.expired && expiry.expiringSoon && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
+                <AlertTriangle className="size-3" /> {expiry.daysLeft}d left
+              </span>
+            )}
             {testOk && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-xs font-medium">
                 <CheckCircle2 className="size-3" /> Working
@@ -136,6 +156,15 @@ export function KeyDetail() {
           <div className="space-y-3 animate-stagger-in" style={{ animationDelay: "200ms" }}>
             <MetaRow icon={Tag} label="Provider" value={key.provider} />
             {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
+            {key.expires_at && (
+              <MetaRow
+                icon={AlertTriangle}
+                label="Expires"
+                value={formatDate(key.expires_at)}
+                highlight={!expiry.expired && !expiry.expiringSoon}
+                warning={expiry.expired || expiry.expiringSoon}
+              />
+            )}
             {key.test_latency_ms != null && (
               <MetaRow icon={FlaskConical} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />
             )}
@@ -182,19 +211,20 @@ export function KeyDetail() {
   )
 }
 
-function MetaRow({ icon: Icon, label, value, mono, highlight }: {
+function MetaRow({ icon: Icon, label, value, mono, highlight, warning }: {
   icon: React.ElementType
   label: string
   value: string
   mono?: boolean
   highlight?: boolean
+  warning?: boolean
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="size-3 text-ink-quaternary mt-0.5 shrink-0" />
+      <Icon className={`size-3 mt-0.5 shrink-0 ${warning ? "text-danger" : "text-ink-quaternary"}`} />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-ink-quaternary">{label}</p>
-        <p className={`text-xs ${highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "break-words"}`}>
+        <p className={`text-xs ${warning ? "text-danger font-medium" : highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "break-words"}`}>
           {value}
         </p>
       </div>

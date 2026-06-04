@@ -264,6 +264,7 @@ export async function deserializeFromFile(
   for (const k of db.api_keys) {
     delete (k as any).status;
     delete (k as any).notes;
+    if (k.expires_at === undefined) (k as any).expires_at = null;
   }
 
   // Update modified time from header
