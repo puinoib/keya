@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { FolderOpen, Filter, X, Settings } from "lucide-react"
+import { List, FolderOpen, Filter, X, Settings } from "lucide-react"
 import { useStore } from "../../store/useStore"
 import { VaultSwitcher } from "../vault/VaultSwitcher"
 import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
@@ -24,14 +24,14 @@ function SidebarFilterButton({
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
         isActive
-          ? "bg-accent-default/10 text-accent-bright"
+          ? "bg-accent-default/20 text-accent-bright"
           : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"
       }`}
     >
       {icon}
       <span className="truncate flex-1 text-left">{label}</span>
       {count > 0 && (
-        <span className="text-xs tabular-nums text-accent-bright/60">
+        <span className="text-xs tabular-nums text-ink-quaternary">
           {count}
         </span>
       )}
@@ -91,7 +91,7 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="pb-2">
             <SidebarFilterButton
-              icon={<span className="text-sm">🗂️</span>}
+              icon={<List className="size-3.5" />}
               label="All Keys"
               count={keyCount}
               isActive={isAllKeysActive}
