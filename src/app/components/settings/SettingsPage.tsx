@@ -66,54 +66,52 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="space-y-6 max-w-sm">
+      <div className="space-y-6">
         {/* ── Vault ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Palette className="size-3.5 text-ink-quaternary" />
             <span className="text-xs font-medium text-ink-secondary">Vault</span>
           </div>
-          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
-            <div className="flex items-center gap-3 p-3">
-              <div className="relative">
-                <button
-                  onClick={() => setIconPickerOpen(!iconPickerOpen)}
-                  className="size-9 rounded-md border border-line bg-surface-2 flex items-center justify-center text-base hover:bg-surface-3 transition-colors"
-                >
-                  {data.icon || '🔒'}
-                </button>
-                {iconPickerOpen && (
-                  <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog">
-                    <EmojiPicker
-                      onEmojiSelect={(emoji) => {
-                        updateMeta({ icon: emoji })
-                        setIconPickerOpen(false)
-                      }}
-                      emojisPerRow={12}
-                      emojiSize={28}
-                      className="border-none"
-                    >
-                      <EmojiPicker.Header>
-                        <EmojiPicker.Input
-                          placeholder="Search emoji..."
-                          hideIcon
-                          className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
-                        />
-                      </EmojiPicker.Header>
-                      <EmojiPicker.Group>
-                        <EmojiPicker.List containerHeight={220} />
-                      </EmojiPicker.Group>
-                    </EmojiPicker>
-                  </div>
-                )}
-              </div>
-              <Input
-                value={data.name}
-                onChange={(e) => updateMeta({ name: e.target.value })}
-                placeholder="My Vault"
-                className="h-8 text-xs"
-              />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={() => setIconPickerOpen(!iconPickerOpen)}
+                className="size-9 rounded-md border border-line bg-surface-2 flex items-center justify-center text-base hover:bg-surface-3 transition-colors"
+              >
+                {data.icon || '🔒'}
+              </button>
+              {iconPickerOpen && (
+                <div ref={emojiPickerRef} className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog">
+                  <EmojiPicker
+                    onEmojiSelect={(emoji) => {
+                      updateMeta({ icon: emoji })
+                      setIconPickerOpen(false)
+                    }}
+                    emojisPerRow={12}
+                    emojiSize={28}
+                    className="border-none"
+                  >
+                    <EmojiPicker.Header>
+                      <EmojiPicker.Input
+                        placeholder="Search emoji..."
+                        hideIcon
+                        className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
+                      />
+                    </EmojiPicker.Header>
+                    <EmojiPicker.Group>
+                      <EmojiPicker.List containerHeight={220} />
+                    </EmojiPicker.Group>
+                  </EmojiPicker>
+                </div>
+              )}
             </div>
+            <Input
+              value={data.name}
+              onChange={(e) => updateMeta({ name: e.target.value })}
+              placeholder="My Vault"
+              className="h-8 text-xs"
+            />
           </div>
         </section>
 
