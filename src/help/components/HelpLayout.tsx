@@ -1,9 +1,14 @@
-import { Outlet } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { HelpSidebar, HelpSearch } from './index'
+import { HelpIndex } from './HelpIndex'
+import { HelpPage } from './HelpPage'
 import { loadManifest } from '../lib/manifest'
 
 export function HelpLayout() {
   const { documents } = loadManifest()
+  const location = useLocation()
+
+  const slug = location.pathname.replace('/help/', '').replace('/help', '') || null
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
@@ -28,7 +33,7 @@ export function HelpLayout() {
         </header>
         <div className="flex-1 overflow-y-auto">
           <main className="p-8 max-w-4xl mx-auto w-full">
-            <Outlet />
+            {slug ? <HelpPage slug={slug} /> : <HelpIndex />}
           </main>
         </div>
       </div>
