@@ -42,7 +42,7 @@ export function KeyDetail() {
     updateKey(key.id, {
       last_tested: new Date().toISOString(),
       test_status: result.success ? "success" : "failed",
-      test_latency_ms: result.latencyMs ?? null,
+      test_latency_ms: result.latency_ms ?? null,
     })
     setTesting(false)
   }
