@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Copy, MoreHorizontal, FlaskConical, Trash2, Pencil,
-  Eye, EyeOff, Key, Plus, Search, RotateCcw,
+  Eye, EyeOff, Key, Plus, Search, RotateCcw, CheckCircle2, XCircle, Loader2,
 } from "lucide-react"
 import { maskKey } from "@/lib/mask"
 
@@ -231,6 +231,16 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
     description: editingKey?.description ?? "",
     group_id: editingKey?.group_id ?? null as string | null,
   })
+  const [testState, setTestState] = useState<{ testing: boolean; result: { success: boolean; latency_ms: number; error?: string } | null }>({
+    testing: false, result: null,
+  })
+
+  const handleTest = async () => {
+    if (!form.key) return
+    setTestState({ testing: true, result: null })
+    const result = await ApiTester.testRaw(form.provider, form.endpoint, form.key)
+    setTestState({ testing: false, result })
+  }
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return
@@ -241,6 +251,9 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
+      last_tested: testState.result ? new Date().toISOString() : undefined,
+      test_status: testState.result ? (testState.result.success ? "success" : "failed") : undefined,
+      test_latency_ms: testState.result?.latency_ms ?? undefined,
     })
   }
 
@@ -331,10 +344,40 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
             <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional" />
           </div>
 
+          {/* Test Result */}
+          {testState.result && (
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
+              testState.result.success
+                ? "bg-success/10 text-success-bright"
+                : "bg-danger/10 text-danger"
+            }`}>
+              {testState.result.success
+                ? <CheckCircle2 className="size-3.5" />
+                : <XCircle className="size-3.5" />}
+              <span>
+                {testState.result.success
+                  ? `Available (${testState.result.latency_ms}ms)`
+                  : testState.result.error || "Connection failed"}
+              </span>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <div className="flex items-center gap-2 pt-2">
             <Button type="submit" size="sm">Save Changes</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTest}
+              disabled={!form.key || testState.testing}
+            >
+              {testState.testing
+                ? <Loader2 className="size-3.5 animate-spin" />
+                : <FlaskConical className="size-3.5" />}
+              Test
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           </div>
         </form>
       </DialogContent>
