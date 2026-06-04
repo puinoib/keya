@@ -138,7 +138,6 @@ export function KeyDetail() {
           {/* Meta fields */}
           <div className="space-y-3 animate-stagger-in" style={{ animationDelay: "200ms" }}>
             <MetaRow icon={Tag} label="Provider" value={key.provider} />
-            {key.service && <MetaRow icon={Tag} label="Service" value={key.service} />}
             {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
             {key.test_latency_ms != null && (
               <MetaRow icon={FlaskConical} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />

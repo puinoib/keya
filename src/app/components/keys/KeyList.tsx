@@ -135,7 +135,6 @@ export function KeyList() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-ink-quaternary">
                   <span>{key.provider}</span>
-                  {key.service && <><span className="text-divider">·</span><span>{key.service}</span></>}
                   <span className="text-divider">·</span>
                   <span className="font-mono">{maskKey(key.key)}</span>
                   {testOk && key.test_latency_ms != null && (
@@ -223,7 +222,6 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
     name: editingKey?.name ?? "",
     key: editingKey?.key ?? "",
     provider: editingKey?.provider ?? "OpenAI",
-    service: editingKey?.service ?? "",
     endpoint: editingKey?.endpoint ?? "",
     description: editingKey?.description ?? "",
     group_id: editingKey?.group_id ?? null as string | null,
@@ -235,7 +233,6 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
       name: form.name.trim(),
       key: form.key.trim(),
       provider: form.provider,
-      service: form.service,
       endpoint: form.endpoint,
       description: form.description,
       group_id: form.group_id,
@@ -273,23 +270,17 @@ export function EditKeyDialog({ editingKey, onClose, onSave }: {
             </div>
           </div>
 
-          {/* Provider & Service */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Provider</Label>
-              <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROVIDERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Service</Label>
-              <Input value={form.service} onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))} placeholder="e.g. ChatGPT" />
-            </div>
+          {/* Provider */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Provider</Label>
+            <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROVIDERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Endpoint */}
