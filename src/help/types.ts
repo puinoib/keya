@@ -1,20 +1,20 @@
 export interface HelpDocument {
-  slug: string
-  title: string
-  description: string
-  content: string
-  order?: number
+  slug: string;
+  title: string;
+  description: string;
+  content: string;
+  order?: number;
 }
 
 export interface SearchResult {
-  document: HelpDocument
-  matches: string[]
-  score: number
+  document: HelpDocument;
+  matches: string[];
+  score: number;
 }
 
 export interface HelpManifest {
-  documents: HelpDocument[]
+  documents: HelpDocument[];
   categories: {
-    [key: string]: HelpDocument[]
-  }
+    [key: string]: HelpDocument[];
+  };
 }

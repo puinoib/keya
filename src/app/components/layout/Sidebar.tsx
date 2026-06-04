@@ -1,10 +1,10 @@
-import { useState } from "react"
-import { List, FolderOpen, Faders, X, Gear } from "@phosphor-icons/react"
-import { useStore } from "../../store/useStore"
-import { VaultSwitcher } from "../vault/VaultSwitcher"
-import { ManageGroupsDialog } from "../groups/ManageGroupsDialog"
-import { SidebarSection } from "./SidebarSection"
-import { SidebarFilterSelect } from "./SidebarFilterSelect"
+import { useState } from 'react';
+import { List, FolderOpen, Faders, X, Gear } from '@phosphor-icons/react';
+import { useStore } from '../../store/useStore';
+import { VaultSwitcher } from '../vault/VaultSwitcher';
+import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
+import { SidebarSection } from './SidebarSection';
+import { SidebarFilterSelect } from './SidebarFilterSelect';
 
 function SidebarFilterButton({
   icon,
@@ -13,19 +13,19 @@ function SidebarFilterButton({
   isActive,
   onClick,
 }: {
-  icon: React.ReactNode
-  label: string
-  count: number
-  isActive: boolean
-  onClick: () => void
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  isActive: boolean;
+  onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
         isActive
-          ? "bg-accent-default/20 text-accent-bright"
-          : "text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3"
+          ? 'bg-accent-default/20 text-accent-bright'
+          : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
       }`}
     >
       {icon}
@@ -36,7 +36,7 @@ function SidebarFilterButton({
         </span>
       )}
     </button>
-  )
+  );
 }
 
 export function Sidebar() {
@@ -48,37 +48,37 @@ export function Sidebar() {
     setFilterGroupId,
     setFilterProvider,
     setFilterTestStatus,
-    clearFilters,
     clearSmartFilters,
     setSearchQuery,
-  } = useStore()
+  } = useStore();
 
-  const [showGroupsDialog, setShowGroupsDialog] = useState(false)
+  const [showGroupsDialog, setShowGroupsDialog] = useState(false);
 
   const providers = db
     ? [...new Set(db.getApiKeys().map((k) => k.provider))].sort()
-    : []
+    : [];
 
-  const keyCount = db?.getApiKeys().length ?? 0
-  const hasSmartFilters = filterProvider || filterTestStatus
-  const isAllKeysActive = !filterGroupId && !filterProvider && !filterTestStatus
+  const keyCount = db?.getApiKeys().length ?? 0;
+  const hasSmartFilters = filterProvider || filterTestStatus;
+  const isAllKeysActive =
+    !filterGroupId && !filterProvider && !filterTestStatus;
 
   const handleAllKeysClick = () => {
-    setFilterGroupId(null)
-    setFilterProvider(null)
-    setFilterTestStatus(null)
-    setSearchQuery("")
-  }
+    setFilterGroupId(null);
+    setFilterProvider(null);
+    setFilterTestStatus(null);
+    setSearchQuery('');
+  };
 
   const handleClearSmartFilters = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    clearSmartFilters()
-  }
+    e.stopPropagation();
+    clearSmartFilters();
+  };
 
-  if (!db) return null
+  if (!db) return null;
 
-  const groups = db.getGroups()
-  const ungroupedCount = db.getApiKeys().filter((k) => !k.group_id).length
+  const groups = db.getGroups();
+  const ungroupedCount = db.getApiKeys().filter((k) => !k.group_id).length;
 
   return (
     <>
@@ -117,23 +117,35 @@ export function Sidebar() {
               icon={<span className="text-sm">📥</span>}
               label="Ungrouped"
               count={ungroupedCount}
-              isActive={filterGroupId === "__ungrouped__"}
-              onClick={() => setFilterGroupId(filterGroupId === "__ungrouped__" ? null : "__ungrouped__")}
+              isActive={filterGroupId === '__ungrouped__'}
+              onClick={() =>
+                setFilterGroupId(
+                  filterGroupId === '__ungrouped__' ? null : '__ungrouped__'
+                )
+              }
             />
 
             {/* Groups */}
             {groups.map((group) => {
-              const count = db.getApiKeys().filter((k) => k.group_id === group.id).length
+              const count = db
+                .getApiKeys()
+                .filter((k) => k.group_id === group.id).length;
               return (
                 <SidebarFilterButton
                   key={group.id}
-                  icon={<span className="text-sm leading-none">{group.icon}</span>}
+                  icon={
+                    <span className="text-sm leading-none">{group.icon}</span>
+                  }
                   label={group.name}
                   count={count}
                   isActive={filterGroupId === group.id}
-                  onClick={() => setFilterGroupId(filterGroupId === group.id ? null : group.id)}
+                  onClick={() =>
+                    setFilterGroupId(
+                      filterGroupId === group.id ? null : group.id
+                    )
+                  }
                 />
-              )
+              );
             })}
           </SidebarSection>
 
@@ -158,7 +170,7 @@ export function Sidebar() {
                   value={filterProvider}
                   onChange={setFilterProvider}
                   options={[
-                    { value: "", label: "All Providers" },
+                    { value: '', label: 'All Providers' },
                     ...providers.map((p) => ({ value: p, label: p })),
                   ]}
                   placeholder="All Providers"
@@ -167,10 +179,10 @@ export function Sidebar() {
                   value={filterTestStatus}
                   onChange={setFilterTestStatus}
                   options={[
-                    { value: "", label: "All Results" },
-                    { value: "success", label: "Passed" },
-                    { value: "failed", label: "Failed" },
-                    { value: "untested", label: "Untested" },
+                    { value: '', label: 'All Results' },
+                    { value: 'success', label: 'Passed' },
+                    { value: 'failed', label: 'Failed' },
+                    { value: 'untested', label: 'Untested' },
                   ]}
                   placeholder="All Results"
                 />
@@ -197,5 +209,5 @@ export function Sidebar() {
         onClose={() => setShowGroupsDialog(false)}
       />
     </>
-  )
+  );
 }

@@ -1,93 +1,136 @@
-import { useState, useRef, useEffect } from "react"
-import { format } from "date-fns"
-import { useStore } from "../../store/useStore"
-import { ENDPOINT_DEFAULTS, getProvidersForDropdown } from "../../../core/types"
-import { ApiTester } from "../../lib/api-tester"
-import { DayPicker } from "./DayPicker"
+import { useState, useRef, useEffect } from 'react';
+import { format } from 'date-fns';
+import { useStore } from '../../store/useStore';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Key, Eye, EyeSlash, ArrowCounterClockwise, Flask, CheckCircle, XCircle, Spinner, Calendar, X } from "@phosphor-icons/react"
-import { useToast } from "@/components/ui/toast"
+  ENDPOINT_DEFAULTS,
+  getProvidersForDropdown,
+} from '../../../core/types';
+import { ApiTester } from '../../lib/api-tester';
+import { DayPicker } from './DayPicker';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Key,
+  Eye,
+  EyeSlash,
+  ArrowCounterClockwise,
+  Flask,
+  CheckCircle,
+  XCircle,
+  Spinner,
+  Calendar,
+  X,
+} from '@phosphor-icons/react';
+import { useToast } from '@/components/ui/toast';
 
 interface FormData {
-  name: string
-  key_value: string
-  provider: string
-  endpoint: string
-  description: string
-  group_id: string | null
-  expires_at: Date | undefined
+  name: string;
+  key_value: string;
+  provider: string;
+  endpoint: string;
+  description: string;
+  group_id: string | null;
+  expires_at: Date | undefined;
 }
 
 interface TestState {
-  testing: boolean
-  result: { success: boolean; latency_ms: number; error?: string } | null
+  testing: boolean;
+  result: { success: boolean; latency_ms: number; error?: string } | null;
 }
 
 const empty: FormData = {
-  name: "",
-  key_value: "",
-  provider: "OpenAI",
-  endpoint: "",
-  description: "",
+  name: '',
+  key_value: '',
+  provider: 'OpenAI',
+  endpoint: '',
+  description: '',
   group_id: null,
   expires_at: undefined,
-}
+};
 
-export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { addKey, updateKey, db } = useStore()
-  const toast = useToast()
-  const [form, setForm] = useState<FormData>(empty)
-  const [showKey, setShowKey] = useState(false)
-  const [testState, setTestState] = useState<TestState>({ testing: false, result: null })
-  const [showCalendar, setShowCalendar] = useState(false)
-  const calendarRef = useRef<HTMLDivElement>(null)
+export function KeyForm({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { addKey, updateKey, db } = useStore();
+  const toast = useToast();
+  const [form, setForm] = useState<FormData>(empty);
+  const [showKey, setShowKey] = useState(false);
+  const [testState, setTestState] = useState<TestState>({
+    testing: false,
+    result: null,
+  });
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!showCalendar) return
+    if (!showCalendar) return;
     const handler = (e: MouseEvent) => {
-      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
-        setShowCalendar(false)
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(e.target as Node)
+      ) {
+        setShowCalendar(false);
       }
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [showCalendar])
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCalendar]);
 
-  const settings = db?.getSettings()
-  const providers = getProvidersForDropdown(settings)
-  const defaultEndpoint = ENDPOINT_DEFAULTS[form.provider.toLowerCase()]
-    ?? settings?.custom_providers?.find((cp) => cp.name === form.provider)?.endpoint
+  const settings = db?.getSettings();
+  const providers = getProvidersForDropdown(settings);
+  const defaultEndpoint =
+    ENDPOINT_DEFAULTS[form.provider.toLowerCase()] ??
+    settings?.custom_providers?.find((cp) => cp.name === form.provider)
+      ?.endpoint;
 
   const handleProviderChange = (provider: string) => {
-    const endpoint = ENDPOINT_DEFAULTS[provider.toLowerCase()]
-      ?? settings?.custom_providers?.find((cp) => cp.name === provider)?.endpoint
-      ?? ""
-    setForm((f) => ({ ...f, provider, endpoint }))
-    setTestState({ testing: false, result: null })
-  }
+    const endpoint =
+      ENDPOINT_DEFAULTS[provider.toLowerCase()] ??
+      settings?.custom_providers?.find((cp) => cp.name === provider)
+        ?.endpoint ??
+      '';
+    setForm((f) => ({ ...f, provider, endpoint }));
+    setTestState({ testing: false, result: null });
+  };
 
   const handleResetEndpoint = () => {
     if (defaultEndpoint) {
-      setForm((f) => ({ ...f, endpoint: defaultEndpoint }))
+      setForm((f) => ({ ...f, endpoint: defaultEndpoint }));
     }
-  }
+  };
 
   const handleTest = async () => {
-    if (!form.key_value) return
-    setTestState({ testing: true, result: null })
-    const result = await ApiTester.testRaw(form.provider, form.endpoint, form.key_value)
-    setTestState({ testing: false, result })
-  }
+    if (!form.key_value) return;
+    setTestState({ testing: true, result: null });
+    const result = await ApiTester.testRaw(
+      form.provider,
+      form.endpoint,
+      form.key_value
+    );
+    setTestState({ testing: false, result });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.name || !form.key_value) return
+    e.preventDefault();
+    if (!form.name || !form.key_value) return;
 
     const created = addKey({
       name: form.name,
@@ -98,40 +141,49 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
       last_tested: testState.result ? new Date().toISOString() : null,
-      test_status: testState.result?.success ? "success" : (testState.result ? "failed" : null),
+      test_status: testState.result?.success
+        ? 'success'
+        : testState.result
+          ? 'failed'
+          : null,
       test_latency_ms: testState.result?.latency_ms ?? null,
-    })
+    });
 
-    const provider = form.provider
-    const endpoint = form.endpoint
-    const keyValue = form.key_value
-    const keyName = form.name
-    setForm(empty)
-    setTestState({ testing: false, result: null })
-    onClose()
+    const provider = form.provider;
+    const endpoint = form.endpoint;
+    const keyValue = form.key_value;
+    const keyName = form.name;
+    setForm(empty);
+    setTestState({ testing: false, result: null });
+    onClose();
 
-    toast.add({ title: "Key saved", description: keyName, timeout: 3000 })
+    toast.add({ title: 'Key saved', description: keyName, timeout: 3000 });
 
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {
       ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
         updateKey(created.id, {
           last_tested: new Date().toISOString(),
-          test_status: result.success ? "success" : "failed",
+          test_status: result.success ? 'success' : 'failed',
           test_latency_ms: result.latency_ms ?? null,
-        })
-      })
+        });
+      });
     }
-  }
+  };
 
   const handleClose = () => {
-    setForm(empty)
-    setTestState({ testing: false, result: null })
-    onClose()
-  }
+    setForm(empty);
+    setTestState({ testing: false, result: null });
+    onClose();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New API Key</DialogTitle>
@@ -140,7 +192,9 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {/* Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs">Name <span className="text-red-500">*</span></Label>
+            <Label htmlFor="name" className="text-xs">
+              Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="name"
               value={form.name}
@@ -152,13 +206,18 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
           {/* Key Value */}
           <div className="space-y-1.5">
-            <Label htmlFor="key_value" className="text-xs">API Key <span className="text-red-500">*</span></Label>
+            <Label htmlFor="key_value" className="text-xs">
+              API Key <span className="text-red-500">*</span>
+            </Label>
             <div className="relative">
               <Input
                 id="key_value"
-                type={showKey ? "text" : "password"}
+                type={showKey ? 'text' : 'password'}
                 value={form.key_value}
-                onChange={(e) => { setForm((f) => ({ ...f, key_value: e.target.value })); setTestState({ testing: false, result: null }) }}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, key_value: e.target.value }));
+                  setTestState({ testing: false, result: null });
+                }}
                 placeholder="sk-..."
                 className="pr-9 font-mono text-sm"
                 required
@@ -169,21 +228,29 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center
                            rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >
-                {showKey ? <EyeSlash className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showKey ? (
+                  <EyeSlash className="size-3.5" />
+                ) : (
+                  <Eye className="size-3.5" />
+                )}
               </button>
             </div>
           </div>
 
           {/* Provider */}
           <div className="space-y-1.5">
-            <Label htmlFor="provider" className="text-xs">Provider</Label>
+            <Label htmlFor="provider" className="text-xs">
+              Provider
+            </Label>
             <Select value={form.provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -191,7 +258,10 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
           {/* Endpoint */}
           <div className="space-y-1.5">
-            <Label htmlFor="endpoint" className="text-xs flex items-center gap-1.5">
+            <Label
+              htmlFor="endpoint"
+              className="text-xs flex items-center gap-1.5"
+            >
               Endpoint
               {defaultEndpoint && (
                 <button
@@ -207,8 +277,10 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
             <Input
               id="endpoint"
               value={form.endpoint}
-              onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
-              placeholder={defaultEndpoint || "https://api.example.com/v1"}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, endpoint: e.target.value }))
+              }
+              placeholder={defaultEndpoint || 'https://api.example.com/v1'}
               className="font-mono text-xs"
             />
           </div>
@@ -222,13 +294,24 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
             >
               <Calendar className="size-3.5 shrink-0" />
-              <span className={!form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"}>
-                {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
+              <span
+                className={
+                  !form.expires_at
+                    ? 'text-ink-quaternary'
+                    : 'text-ink-secondary'
+                }
+              >
+                {form.expires_at
+                  ? format(form.expires_at, 'MMM d, yyyy')
+                  : 'Pick a date'}
               </span>
               {form.expires_at && (
                 <span
                   role="button"
-                  onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, expires_at: undefined })) }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setForm((f) => ({ ...f, expires_at: undefined }));
+                  }}
                   className="ml-auto text-ink-quaternary hover:text-ink-secondary"
                 >
                   <X className="size-3" />
@@ -239,7 +322,10 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
                 <DayPicker
                   value={form.expires_at}
-                  onChange={(d) => { setForm((f) => ({ ...f, expires_at: d })); setShowCalendar(false) }}
+                  onChange={(d) => {
+                    setForm((f) => ({ ...f, expires_at: d }));
+                    setShowCalendar(false);
+                  }}
                 />
               </div>
             )}
@@ -247,10 +333,17 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
           {/* Group */}
           <div className="space-y-1.5">
-            <Label htmlFor="group" className="text-xs">Group</Label>
+            <Label htmlFor="group" className="text-xs">
+              Group
+            </Label>
             <Select
-              value={form.group_id ?? "__none__"}
-              onValueChange={(v) => setForm((f) => ({ ...f, group_id: v === "__none__" ? null : v }))}
+              value={form.group_id ?? '__none__'}
+              onValueChange={(v) =>
+                setForm((f) => ({
+                  ...f,
+                  group_id: v === '__none__' ? null : v,
+                }))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -258,7 +351,9 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               <SelectContent>
                 <SelectItem value="__none__">Ungrouped</SelectItem>
                 {db?.getGroups().map((g) => (
-                  <SelectItem key={g.id} value={g.id}>{g.icon} {g.name}</SelectItem>
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.icon} {g.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -266,29 +361,37 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-xs">Description</Label>
+            <Label htmlFor="description" className="text-xs">
+              Description
+            </Label>
             <Input
               id="description"
               value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
               placeholder="What's this key for?"
             />
           </div>
 
           {/* Test Result */}
           {testState.result && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
-              testState.result.success
-                ? "bg-success/10 text-success-bright"
-                : "bg-danger/10 text-danger"
-            }`}>
-              {testState.result.success
-                ? <CheckCircle className="size-3.5" />
-                : <XCircle className="size-3.5" />}
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
+                testState.result.success
+                  ? 'bg-success/10 text-success-bright'
+                  : 'bg-danger/10 text-danger'
+              }`}
+            >
+              {testState.result.success ? (
+                <CheckCircle className="size-3.5" />
+              ) : (
+                <XCircle className="size-3.5" />
+              )}
               <span>
                 {testState.result.success
                   ? `Available (${testState.result.latency_ms}ms)`
-                  : testState.result.error || "Connection failed"}
+                  : testState.result.error || 'Connection failed'}
               </span>
             </div>
           )}
@@ -306,17 +409,24 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               onClick={handleTest}
               disabled={!form.key_value || testState.testing}
             >
-              {testState.testing
-                ? <Spinner className="size-3.5 animate-spin" />
-                : <Flask className="size-3.5" />}
+              {testState.testing ? (
+                <Spinner className="size-3.5 animate-spin" />
+              ) : (
+                <Flask className="size-3.5" />
+              )}
               Test
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+            >
               Cancel
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,16 +1,18 @@
-import { Outlet, useNavigate } from "react-router-dom"
-import { ArrowLeft } from "@phosphor-icons/react"
+import { Outlet, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from '@phosphor-icons/react';
 
 export function SettingsLayout() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
       <div className="flex flex-1 flex-col min-w-0 p-3">
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
           <header className="h-12 flex items-center gap-3 px-4 shrink-0 border-b border-line-subtle">
-            <button onClick={() => navigate("/keys")}
-                    className="btn-ghost text-xs">
+            <button
+              onClick={() => navigate('/keys')}
+              className="btn-ghost text-xs"
+            >
               <ArrowLeft className="size-3.5" />
               <span>Back to app</span>
             </button>
@@ -24,5 +26,5 @@ export function SettingsLayout() {
         </div>
       </div>
     </div>
-  )
+  );
 }

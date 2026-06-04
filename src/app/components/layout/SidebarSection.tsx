@@ -1,12 +1,12 @@
-import { useState, ReactNode } from "react"
-import { CaretDown } from "@phosphor-icons/react"
+import { useState, type ReactNode } from 'react';
+import { CaretDown } from '@phosphor-icons/react';
 
 interface Props {
-  icon: React.ElementType
-  label: string
-  action?: ReactNode
-  defaultOpen?: boolean
-  children: ReactNode
+  icon: React.ElementType;
+  label: string;
+  action?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
 }
 
 export function SidebarSection({
@@ -16,7 +16,7 @@ export function SidebarSection({
   defaultOpen = true,
   children,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div className="py-1.5">
@@ -30,7 +30,7 @@ export function SidebarSection({
             {label}
           </span>
           <CaretDown
-            className={`size-2.5 text-ink-quaternary transition-transform duration-150 ${open ? "" : "-rotate-90"}`}
+            className={`size-2.5 text-ink-quaternary transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
           />
         </div>
         <div className="w-5 h-5 flex items-center justify-center">
@@ -41,5 +41,5 @@ export function SidebarSection({
       </button>
       {open && <div className="space-y-px">{children}</div>}
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { useStore } from '../../store/useStore'
-import { FileStorage, type CachedVaultMeta } from '../../lib/storage'
-import { VaultPasswordDialog } from './VaultPasswordDialog'
+import { useState, useEffect } from 'react';
+import { useStore } from '../../store/useStore';
+import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
+import { VaultPasswordDialog } from './VaultPasswordDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,50 +11,59 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from '@/components/ui/dropdown-menu'
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog'
-import { Lock, Plus, Gear, ArrowsLeftRight, SignOut } from "@phosphor-icons/react"
-import { useNavigate } from 'react-router-dom'
+} from '@/components/ui/dialog';
+import {
+  Lock,
+  Plus,
+  Gear,
+  ArrowsLeftRight,
+  SignOut,
+} from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
 
 export function VaultSwitcher() {
-  const { db, activeVaultFileName } = useStore()
-  const navigate = useNavigate()
-  const [vaults, setVaults] = useState<string[]>([])
-  const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({})
-  const [switchTarget, setSwitchTarget] = useState<string | null>(null)
-  const [showNewVault, setShowNewVault] = useState(false)
+  const { db, activeVaultFileName } = useStore();
+  const navigate = useNavigate();
+  const [vaults, setVaults] = useState<string[]>([]);
+  const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({});
+  const [switchTarget, setSwitchTarget] = useState<string | null>(null);
+  const [showNewVault, setShowNewVault] = useState(false);
 
   useEffect(() => {
-    FileStorage.listVaultFiles().then(setVaults)
+    FileStorage.listVaultFiles().then(setVaults);
     FileStorage.getCachedVaultMetas().then((list) => {
-      const map: Record<string, CachedVaultMeta> = {}
-      for (const m of list) map[m.fileName] = m
-      setMetas(map)
-    })
-  }, [activeVaultFileName])
+      const map: Record<string, CachedVaultMeta> = {};
+      for (const m of list) map[m.fileName] = m;
+      setMetas(map);
+    });
+  }, [activeVaultFileName]);
 
-  const vaultData = db?.getData()
-  const currentName = (vaultData?.name && vaultData.name.trim()) || activeVaultFileName?.replace(/\.keya$/, '') || 'Vault'
-  const currentIcon = vaultData?.icon?.trim() || ''
+  const vaultData = db?.getData();
+  const currentName =
+    (vaultData?.name && vaultData.name.trim()) ||
+    activeVaultFileName?.replace(/\.keya$/, '') ||
+    'Vault';
+  const currentIcon = vaultData?.icon?.trim() || '';
 
   const handleSwitch = async (fileName: string, password: string) => {
-    const newDb = await FileStorage.openVault(fileName, password)
-    useStore.getState().unlock(newDb, password, fileName)
-    setSwitchTarget(null)
-  }
+    const newDb = await FileStorage.openVault(fileName, password);
+    useStore.getState().unlock(newDb, password, fileName);
+    setSwitchTarget(null);
+  };
 
   const handleCreate = async (password: string) => {
-    const fileName = `vault-${Date.now()}.keya`
-    const newDb = await FileStorage.createVault(fileName, password)
-    useStore.getState().unlock(newDb, password, fileName)
-    setShowNewVault(false)
-  }
+    const fileName = `vault-${Date.now()}.keya`;
+    const newDb = await FileStorage.createVault(fileName, password);
+    useStore.getState().unlock(newDb, password, fileName);
+    setShowNewVault(false);
+  };
 
   return (
     <div className="shrink-0">
@@ -72,7 +81,10 @@ export function VaultSwitcher() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52 ml-2">
-          <DropdownMenuItem onClick={() => navigate("/settings")} className="text-ink-quaternary">
+          <DropdownMenuItem
+            onClick={() => navigate('/settings')}
+            className="text-ink-quaternary"
+          >
             <Gear className="size-3.5" />
             <span>Settings</span>
           </DropdownMenuItem>
@@ -84,47 +96,72 @@ export function VaultSwitcher() {
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-52 max-h-64 overflow-y-auto">
               {vaults.map((f) => {
-                const meta = metas[f]
-                const isActive = f === activeVaultFileName
-                const name = meta?.name || f.replace(/\.keya$/, '')
+                const meta = metas[f];
+                const isActive = f === activeVaultFileName;
+                const name = meta?.name || f.replace(/\.keya$/, '');
                 return (
                   <DropdownMenuItem
                     key={f}
                     disabled={isActive}
                     onClick={() => setSwitchTarget(f)}
-                    className={isActive ? 'bg-surface-4 text-ink-secondary' : 'text-ink-tertiary'}
+                    className={
+                      isActive
+                        ? 'bg-surface-4 text-ink-secondary'
+                        : 'text-ink-tertiary'
+                    }
                   >
-                    <span className="text-sm">{meta?.icon ? meta.icon : <Lock className="size-3.5" />}</span>
+                    <span className="text-sm">
+                      {meta?.icon ? meta.icon : <Lock className="size-3.5" />}
+                    </span>
                     <span className="truncate flex-1">{name}</span>
-                    {isActive && <span className="ml-auto text-xs text-ink-quaternary">active</span>}
+                    {isActive && (
+                      <span className="ml-auto text-xs text-ink-quaternary">
+                        active
+                      </span>
+                    )}
                   </DropdownMenuItem>
-                )
+                );
               })}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowNewVault(true)} className="text-ink-quaternary">
+              <DropdownMenuItem
+                onClick={() => setShowNewVault(true)}
+                className="text-ink-quaternary"
+              >
                 <Plus className="size-3" />
                 <span>New Vault</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuItem onClick={() => useStore.getState().lock()} className="text-ink-quaternary">
+          <DropdownMenuItem
+            onClick={() => useStore.getState().lock()}
+            className="text-ink-quaternary"
+          >
             <SignOut className="size-3.5" />
             <span>Lock</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={!!switchTarget} onOpenChange={(v) => !v && setSwitchTarget(null)}>
+      <Dialog
+        open={!!switchTarget}
+        onOpenChange={(v) => !v && setSwitchTarget(null)}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Unlock Vault</DialogTitle>
             <DialogDescription>
-              Enter the master password for {metas[switchTarget!]?.name || switchTarget?.replace(/\.keya$/, '')}
+              Enter the master password for{' '}
+              {metas[switchTarget!]?.name ||
+                switchTarget?.replace(/\.keya$/, '')}
             </DialogDescription>
           </DialogHeader>
           <VaultPasswordDialog
             mode="unlock"
-            vaultName={metas[switchTarget!]?.name || switchTarget?.replace(/\.keya$/, '') || ''}
+            vaultName={
+              metas[switchTarget!]?.name ||
+              switchTarget?.replace(/\.keya$/, '') ||
+              ''
+            }
             vaultId={metas[switchTarget!]?.vault_id}
             onSubmit={(pw) => switchTarget && handleSwitch(switchTarget, pw)}
             onCancel={() => setSwitchTarget(null)}
@@ -136,7 +173,9 @@ export function VaultSwitcher() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Create New Vault</DialogTitle>
-            <DialogDescription>Set a master password for your new vault</DialogDescription>
+            <DialogDescription>
+              Set a master password for your new vault
+            </DialogDescription>
           </DialogHeader>
           <VaultPasswordDialog
             mode="new"
@@ -147,5 +186,5 @@ export function VaultSwitcher() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

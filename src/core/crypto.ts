@@ -36,12 +36,12 @@ export function deriveKey(password: string, salt: Uint8Array): Uint8Array {
   // crypto_pwhash_argon2id() not available in all builds; ALG_ARGON2ID13 (2) is equivalent
   const algo: number = (sodium as any).crypto_pwhash_ALG_ARGON2ID13 ?? 2;
   return sodium.crypto_pwhash(
-    32,        // 256-bit key
+    32, // 256-bit key
     password,
     salt,
-    3,         // opslimit (iterations)
-    65536,     // memlimit (64 MB)
-    algo,
+    3, // opslimit (iterations)
+    65536, // memlimit (64 MB)
+    algo
   );
 }
 
@@ -49,7 +49,7 @@ export function deriveKey(password: string, salt: Uint8Array): Uint8Array {
 export function encrypt(
   plaintext: Uint8Array,
   key: Uint8Array,
-  nonce: Uint8Array,
+  nonce: Uint8Array
 ): Uint8Array {
   ensureInit();
   return sodium.crypto_secretbox_easy(plaintext, nonce, key);
@@ -59,7 +59,7 @@ export function encrypt(
 export function decrypt(
   ciphertext: Uint8Array,
   nonce: Uint8Array,
-  key: Uint8Array,
+  key: Uint8Array
 ): Uint8Array {
   ensureInit();
   const result = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
@@ -75,7 +75,7 @@ export function decrypt(
  */
 export function encryptDatabase(
   data: string,
-  password: string,
+  password: string
 ): { salt: Uint8Array; nonce: Uint8Array; encrypted: Uint8Array } {
   ensureInit();
   const salt = generateSalt();
@@ -89,14 +89,18 @@ export function encryptDatabase(
 /**
  * Pack structured encrypt output into flat buffer [salt][nonce][ciphertext+tag].
  */
-export function packEncrypted(
-  e: { salt: Uint8Array; nonce: Uint8Array; encrypted: Uint8Array },
-): Uint8Array {
-  const result = new Uint8Array(e.salt.length + e.nonce.length + e.encrypted.length)
-  result.set(e.salt, 0)
-  result.set(e.nonce, e.salt.length)
-  result.set(e.encrypted, e.salt.length + e.nonce.length)
-  return result
+export function packEncrypted(e: {
+  salt: Uint8Array;
+  nonce: Uint8Array;
+  encrypted: Uint8Array;
+}): Uint8Array {
+  const result = new Uint8Array(
+    e.salt.length + e.nonce.length + e.encrypted.length
+  );
+  result.set(e.salt, 0);
+  result.set(e.nonce, e.salt.length);
+  result.set(e.encrypted, e.salt.length + e.nonce.length);
+  return result;
 }
 
 /**
@@ -106,10 +110,10 @@ export function packEncrypted(
 export function decryptRaw(
   encrypted: Uint8Array,
   nonce: Uint8Array,
-  key: Uint8Array,
+  key: Uint8Array
 ): Uint8Array {
-  ensureInit()
-  return decrypt(encrypted, nonce, key)
+  ensureInit();
+  return decrypt(encrypted, nonce, key);
 }
 
 /**
@@ -117,10 +121,7 @@ export function decryptRaw(
  * Legacy/self-contained format — prefer decryptRaw when salt/nonce are already
  * parsed from file headers (schema.ts path).
  */
-export function decryptDatabase(
-  data: Uint8Array,
-  password: string,
-): string {
+export function decryptDatabase(data: Uint8Array, password: string): string {
   ensureInit();
   const salt = data.slice(0, 16);
   const nonce = data.slice(16, 40);

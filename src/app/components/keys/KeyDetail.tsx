@@ -1,84 +1,121 @@
-import { useStore } from "../../store/useStore"
-import { ApiTester } from "../../lib/api-tester"
-import { maskKey } from "@/lib/mask"
-import { useToast } from "@/components/ui/toast"
-import type { ApiKey } from "../../../core/types"
+import { useStore } from '../../store/useStore';
+import { ApiTester } from '../../lib/api-tester';
+import { maskKey } from '@/lib/mask';
+import { useToast } from '@/components/ui/toast';
+import type { ApiKey } from '../../../core/types';
 import {
-  Copy, Flask, PencilSimple, Trash, Key, Eye, EyeSlash, X,
-  CheckCircle, XCircle, MinusCircle, Clock, Globe, Tag, FileText, Warning,
-} from "@phosphor-icons/react"
-import { useState, useEffect } from "react"
-import { EditKeyDialog } from "./KeyList"
+  Copy,
+  Flask,
+  PencilSimple,
+  Trash,
+  Key,
+  Eye,
+  EyeSlash,
+  X,
+  CheckCircle,
+  XCircle,
+  MinusCircle,
+  Clock,
+  Globe,
+  Tag,
+  FileText,
+  Warning,
+} from '@phosphor-icons/react';
+import { useState, useEffect } from 'react';
+import { EditKeyDialog } from './KeyList';
 
 export function KeyDetail() {
-  const { db, selectedKeyId, setSelectedKeyId, updateKey, deleteKey } = useStore()
-  const toast = useToast()
-  const [showKey, setShowKey] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
+  const { db, selectedKeyId, setSelectedKeyId, updateKey, deleteKey } =
+    useStore();
+  const toast = useToast();
+  const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
 
-  useEffect(() => { setShowKey(false); setCopied(false) }, [selectedKeyId])
+  useEffect(() => {
+    setShowKey(false);
+    setCopied(false);
+  }, [selectedKeyId]);
 
-  if (!db || !selectedKeyId) return null
+  if (!db || !selectedKeyId) return null;
 
-  const key = db.getApiKeys().find((k) => k.id === selectedKeyId)
-  if (!key) return null
+  const key = db.getApiKeys().find((k) => k.id === selectedKeyId);
+  if (!key) return null;
 
-  const group = key.group_id ? db.getGroups().find((g) => g.id === key.group_id) : null
-  const testOk = key.test_status === "success"
-  const testFail = key.test_status === "failed"
+  const group = key.group_id
+    ? db.getGroups().find((g) => g.id === key.group_id)
+    : null;
+  const testOk = key.test_status === 'success';
+  const testFail = key.test_status === 'failed';
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(key.key)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      setTimeout(() => navigator.clipboard.writeText(""), 15000)
-      toast.add({ title: "Copied to clipboard", timeout: 2000 })
-    } catch { /* clipboard unavailable */ }
-  }
+      await navigator.clipboard.writeText(key.key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => navigator.clipboard.writeText(''), 15000);
+      toast.add({ title: 'Copied to clipboard', timeout: 2000 });
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   const handleTest = async () => {
-    setTesting(true)
-    const result = await ApiTester.testKey(key)
+    setTesting(true);
+    const result = await ApiTester.testKey(key);
     updateKey(key.id, {
       last_tested: new Date().toISOString(),
-      test_status: result.success ? "success" : "failed",
+      test_status: result.success ? 'success' : 'failed',
       test_latency_ms: result.latency_ms ?? null,
-    })
-    setTesting(false)
+    });
+    setTesting(false);
     toast.add({
-      title: result.success ? "Key available" : "Key test failed",
-      description: result.success ? `${result.latency_ms}ms` : (result.error || "Connection failed"),
-      type: result.success ? "success" : "error",
+      title: result.success ? 'Key available' : 'Key test failed',
+      description: result.success
+        ? `${result.latency_ms}ms`
+        : result.error || 'Connection failed',
+      type: result.success ? 'success' : 'error',
       timeout: 3000,
-    })
-  }
+    });
+  };
 
   const handleDelete = () => {
-    if (confirm("Delete this key?")) {
-      const name = key.name
-      deleteKey(key.id)
-      setSelectedKeyId(null)
-      toast.add({ title: `Deleted "${name}"`, timeout: 3000 })
+    if (confirm('Delete this key?')) {
+      const name = key.name;
+      deleteKey(key.id);
+      setSelectedKeyId(null);
+      toast.add({ title: `Deleted "${name}"`, timeout: 3000 });
     }
-  }
+  };
 
   const formatDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-  }
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
-  const getExpiryState = (expiresAt: string | null | undefined): { expired: boolean; expiringSoon: boolean; daysLeft: number } => {
-    if (!expiresAt) return { expired: false, expiringSoon: false, daysLeft: Infinity }
-    const now = new Date()
-    const exp = new Date(expiresAt)
-    const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return { expired: daysLeft < 0, expiringSoon: daysLeft >= 0 && daysLeft <= 7, daysLeft }
-  }
+  const getExpiryState = (
+    expiresAt: string | null | undefined
+  ): { expired: boolean; expiringSoon: boolean; daysLeft: number } => {
+    if (!expiresAt)
+      return { expired: false, expiringSoon: false, daysLeft: Infinity };
+    const now = new Date();
+    const exp = new Date(expiresAt);
+    const daysLeft = Math.ceil(
+      (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return {
+      expired: daysLeft < 0,
+      expiringSoon: daysLeft >= 0 && daysLeft <= 7,
+      daysLeft,
+    };
+  };
 
-  const expiry = getExpiryState(key.expires_at)
+  const expiry = getExpiryState(key.expires_at);
 
   return (
     <>
@@ -88,8 +125,13 @@ export function KeyDetail() {
                    overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in" style={{ animationDelay: "40ms" }}>
-          <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">Overview</span>
+        <div
+          className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in"
+          style={{ animationDelay: '40ms' }}
+        >
+          <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">
+            Overview
+          </span>
           <button
             onClick={() => setSelectedKeyId(null)}
             className="inline-flex items-center justify-center size-6 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100"
@@ -100,18 +142,28 @@ export function KeyDetail() {
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin">
           {/* Identity */}
-          <div className="flex items-center gap-2.5 mb-3 animate-stagger-in" style={{ animationDelay: "80ms" }}>
+          <div
+            className="flex items-center gap-2.5 mb-3 animate-stagger-in"
+            style={{ animationDelay: '80ms' }}
+          >
             <div className="flex items-center justify-center size-10 rounded-xl bg-accent/10 text-accent-bright text-lg shrink-0">
               {group?.icon ? group.icon : <Key className="size-4.5" />}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-ink-primary truncate">{key.name}</h2>
-              <p className="text-xs text-ink-quaternary">{group?.name ?? "Ungrouped"}</p>
+              <h2 className="text-base font-semibold text-ink-primary truncate">
+                {key.name}
+              </h2>
+              <p className="text-xs text-ink-quaternary">
+                {group?.name ?? 'Ungrouped'}
+              </p>
             </div>
           </div>
 
           {/* Status */}
-          <div className="flex items-center gap-1.5 mb-4 animate-stagger-in" style={{ animationDelay: "120ms" }}>
+          <div
+            className="flex items-center gap-1.5 mb-4 animate-stagger-in"
+            style={{ animationDelay: '120ms' }}
+          >
             {expiry.expired && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
                 <Warning className="size-3" /> Expired
@@ -140,7 +192,10 @@ export function KeyDetail() {
           </div>
 
           {/* Key Value */}
-          <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4 animate-stagger-in" style={{ animationDelay: "160ms" }}>
+          <div
+            className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4 animate-stagger-in"
+            style={{ animationDelay: '160ms' }}
+          >
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs text-ink-quaternary">API Key</span>
               <div className="flex items-center gap-0.5">
@@ -148,13 +203,21 @@ export function KeyDetail() {
                   onClick={() => setShowKey(!showKey)}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
-                  {showKey ? <EyeSlash className="size-3" /> : <Eye className="size-3" />}
+                  {showKey ? (
+                    <EyeSlash className="size-3" />
+                  ) : (
+                    <Eye className="size-3" />
+                  )}
                 </button>
                 <button
                   onClick={handleCopy}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
-                  {copied ? <CheckCircle className="size-3 text-success-bright" /> : <Copy className="size-3" />}
+                  {copied ? (
+                    <CheckCircle className="size-3 text-success-bright" />
+                  ) : (
+                    <Copy className="size-3" />
+                  )}
                 </button>
               </div>
             </div>
@@ -164,9 +227,19 @@ export function KeyDetail() {
           </div>
 
           {/* Meta fields */}
-          <div className="space-y-3 animate-stagger-in" style={{ animationDelay: "200ms" }}>
+          <div
+            className="space-y-3 animate-stagger-in"
+            style={{ animationDelay: '200ms' }}
+          >
             <MetaRow icon={Tag} label="Provider" value={key.provider} />
-            {key.endpoint && <MetaRow icon={Globe} label="Endpoint" value={key.endpoint} mono />}
+            {key.endpoint && (
+              <MetaRow
+                icon={Globe}
+                label="Endpoint"
+                value={key.endpoint}
+                mono
+              />
+            )}
             {key.expires_at && (
               <MetaRow
                 icon={Warning}
@@ -177,25 +250,51 @@ export function KeyDetail() {
               />
             )}
             {key.test_latency_ms != null && (
-              <MetaRow icon={Flask} label="Latency" value={`${key.test_latency_ms}ms`} highlight={testOk} />
+              <MetaRow
+                icon={Flask}
+                label="Latency"
+                value={`${key.test_latency_ms}ms`}
+                highlight={testOk}
+              />
             )}
-            {key.last_tested && <MetaRow icon={Clock} label="Last tested" value={formatDate(key.last_tested)} />}
-            <MetaRow icon={Clock} label="Created" value={formatDate(key.created_at)} />
-            {key.description && <MetaRow icon={FileText} label="Description" value={key.description} />}
+            {key.last_tested && (
+              <MetaRow
+                icon={Clock}
+                label="Last tested"
+                value={formatDate(key.last_tested)}
+              />
+            )}
+            <MetaRow
+              icon={Clock}
+              label="Created"
+              value={formatDate(key.created_at)}
+            />
+            {key.description && (
+              <MetaRow
+                icon={FileText}
+                label="Description"
+                value={key.description}
+              />
+            )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-4 py-3 border-t border-line-subtle shrink-0 space-y-1 animate-stagger-in" style={{ animationDelay: "240ms" }}>
+        <div
+          className="px-4 py-3 border-t border-line-subtle shrink-0 space-y-1 animate-stagger-in"
+          style={{ animationDelay: '240ms' }}
+        >
           <button
             onClick={handleTest}
             disabled={testing}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
           >
-            {testing
-              ? <span className="size-3 border-[1.5px] border-ink-tertiary border-t-transparent rounded-full animate-spin" />
-              : <Flask className="size-3.5" />}
-            {testing ? "Testing..." : "Test Key"}
+            {testing ? (
+              <span className="size-3 border-[1.5px] border-ink-tertiary border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Flask className="size-3.5" />
+            )}
+            {testing ? 'Testing...' : 'Test Key'}
           </button>
           <button
             onClick={() => setEditingKey(key)}
@@ -213,32 +312,46 @@ export function KeyDetail() {
       </div>
 
       <EditKeyDialog
-        key={editingKey?.id ?? "none"}
+        key={editingKey?.id ?? 'none'}
         editingKey={editingKey}
         onClose={() => setEditingKey(null)}
-        onSave={(id, updates) => { updateKey(id, updates); setEditingKey(null) }}
+        onSave={(id, updates) => {
+          updateKey(id, updates);
+          setEditingKey(null);
+        }}
       />
     </>
-  )
+  );
 }
 
-function MetaRow({ icon: Icon, label, value, mono, highlight, warning }: {
-  icon: React.ElementType
-  label: string
-  value: string
-  mono?: boolean
-  highlight?: boolean
-  warning?: boolean
+function MetaRow({
+  icon: Icon,
+  label,
+  value,
+  mono,
+  highlight,
+  warning,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  mono?: boolean;
+  highlight?: boolean;
+  warning?: boolean;
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className={`size-3 mt-0.5 shrink-0 ${warning ? "text-danger" : "text-ink-quaternary"}`} />
+      <Icon
+        className={`size-3 mt-0.5 shrink-0 ${warning ? 'text-danger' : 'text-ink-quaternary'}`}
+      />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-ink-quaternary">{label}</p>
-        <p className={`text-xs ${warning ? "text-danger font-medium" : highlight ? "text-success-bright font-medium" : "text-ink-secondary"} ${mono ? "font-mono break-all" : "break-words"}`}>
+        <p
+          className={`text-xs ${warning ? 'text-danger font-medium' : highlight ? 'text-success-bright font-medium' : 'text-ink-secondary'} ${mono ? 'font-mono break-all' : 'break-words'}`}
+        >
           {value}
         </p>
       </div>
     </div>
-  )
+  );
 }

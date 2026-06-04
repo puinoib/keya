@@ -1,7 +1,7 @@
-import type { HelpDocument, SearchResult } from '../types'
+import type { HelpDocument, SearchResult } from '../types';
 
 interface SearchIndex {
-  documents: HelpDocument[]
+  documents: HelpDocument[];
 }
 
 export function searchDocuments(
@@ -9,37 +9,37 @@ export function searchDocuments(
   query: string
 ): SearchResult[] {
   if (!query.trim()) {
-    return []
+    return [];
   }
 
-  const terms = query.toLowerCase().split(/\s+/)
-  const results: SearchResult[] = []
+  const terms = query.toLowerCase().split(/\s+/);
+  const results: SearchResult[] = [];
 
   for (const doc of index.documents) {
-    const matches: string[] = []
-    let score = 0
+    const matches: string[] = [];
+    let score = 0;
 
-    const titleLower = doc.title.toLowerCase()
-    const descLower = doc.description.toLowerCase()
-    const contentLower = doc.content.toLowerCase()
+    const titleLower = doc.title.toLowerCase();
+    const descLower = doc.description.toLowerCase();
+    const contentLower = doc.content.toLowerCase();
 
     for (const term of terms) {
       if (titleLower.includes(term)) {
-        score += 10
-        matches.push(doc.title)
+        score += 10;
+        matches.push(doc.title);
       }
 
       if (descLower.includes(term)) {
-        score += 5
-        matches.push(doc.description)
+        score += 5;
+        matches.push(doc.description);
       }
 
       if (contentLower.includes(term)) {
-        score += 1
-        const sentences = doc.content.split(/[。！？.!?]/)
+        score += 1;
+        const sentences = doc.content.split(/[。！？.!?]/);
         for (const sentence of sentences) {
           if (sentence.toLowerCase().includes(term) && matches.length < 5) {
-            matches.push(sentence.trim())
+            matches.push(sentence.trim());
           }
         }
       }
@@ -49,14 +49,14 @@ export function searchDocuments(
       results.push({
         document: doc,
         matches: [...new Set(matches)],
-        score
-      })
+        score,
+      });
     }
   }
 
-  return results.sort((a, b) => b.score - a.score)
+  return results.sort((a, b) => b.score - a.score);
 }
 
 export function buildSearchIndex(documents: HelpDocument[]): SearchIndex {
-  return { documents }
+  return { documents };
 }

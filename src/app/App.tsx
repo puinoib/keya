@@ -1,126 +1,149 @@
-import { useState, useEffect } from "react"
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { ToastProvider } from "@/components/ui/toast"
-import { Spinner } from "@phosphor-icons/react"
-import { AppLayout } from "./components/layout/AppLayout"
-import { SettingsLayout } from "./components/layout/SettingsLayout"
-import { WelcomePage } from "./components/welcome/WelcomePage"
-import { KeysPage } from "./components/keys/KeysPage"
-import { SettingsPage } from "./components/settings/SettingsPage"
-import { BiometricPrompt } from "./components/vault/BiometricPrompt"
-import { HelpLayout } from "../help/components/HelpLayout"
-import { useStore } from "./store/useStore"
-import { useAutoLock } from "./hooks/useAutoLock"
-import { loadSession, clearSession } from "./lib/session"
-import { FileStorage } from "./lib/storage"
+import { useState, useEffect } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ToastProvider } from '@/components/ui/toast';
+import { Spinner } from '@phosphor-icons/react';
+import { AppLayout } from './components/layout/AppLayout';
+import { SettingsLayout } from './components/layout/SettingsLayout';
+import { WelcomePage } from './components/welcome/WelcomePage';
+import { KeysPage } from './components/keys/KeysPage';
+import { SettingsPage } from './components/settings/SettingsPage';
+import { BiometricPrompt } from './components/vault/BiometricPrompt';
+import { HelpLayout } from '../help/components/HelpLayout';
+import { useStore } from './store/useStore';
+import { useAutoLock } from './hooks/useAutoLock';
+import { loadSession, clearSession } from './lib/session';
+import { FileStorage } from './lib/storage';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const workspaceState = useStore((s) => s.workspaceState)
-  const location = useLocation()
+  const workspaceState = useStore((s) => s.workspaceState);
+  const location = useLocation();
 
-  if (workspaceState !== "unlocked") {
-    return <Navigate to="/" state={{ from: location }} replace />
+  if (workspaceState !== 'unlocked') {
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 function WelcomeGuard() {
-  const workspaceState = useStore((s) => s.workspaceState)
-  if (workspaceState === "unlocked") {
-    return <Navigate to="/keys" replace />
+  const workspaceState = useStore((s) => s.workspaceState);
+  if (workspaceState === 'unlocked') {
+    return <Navigate to="/keys" replace />;
   }
-  return <WelcomePage />
+  return <WelcomePage />;
 }
 
 function ThemeSync() {
-  const theme = useStore((s) => s.theme)
+  const theme = useStore((s) => s.theme);
 
   useEffect(() => {
-    const root = document.documentElement
+    const root = document.documentElement;
     const applyTheme = (t: string) => {
-      if (t === "light") {
-        root.classList.add("light")
-      } else if (t === "dark") {
-        root.classList.remove("light")
+      if (t === 'light') {
+        root.classList.add('light');
+      } else if (t === 'dark') {
+        root.classList.remove('light');
       } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-        if (prefersDark) root.classList.remove("light")
-        else root.classList.add("light")
+        const prefersDark = window.matchMedia(
+          '(prefers-color-scheme: dark)'
+        ).matches;
+        if (prefersDark) root.classList.remove('light');
+        else root.classList.add('light');
       }
-    }
-    applyTheme(theme)
+    };
+    applyTheme(theme);
 
-    if (theme === "system") {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)")
-      const handler = () => applyTheme("system")
-      mq.addEventListener("change", handler)
-      return () => mq.removeEventListener("change", handler)
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => applyTheme('system');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
     }
-  }, [theme])
+  }, [theme]);
 
-  return null
+  return null;
 }
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<WelcomeGuard />} />
-      <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+      <Route
+        element={
+          <AuthGuard>
+            <AppLayout />
+          </AuthGuard>
+        }
+      >
         <Route path="/keys" element={<KeysPage />} />
       </Route>
-      <Route element={<AuthGuard><SettingsLayout /></AuthGuard>}>
+      <Route
+        element={
+          <AuthGuard>
+            <SettingsLayout />
+          </AuthGuard>
+        }
+      >
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/help/*" element={<HelpLayout />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
 
 function BiometricPromptLayer() {
-  const prompt = useStore((s) => s.biometricPrompt)
-  const setPrompt = useStore((s) => s.setBiometricPrompt)
+  const prompt = useStore((s) => s.biometricPrompt);
+  const setPrompt = useStore((s) => s.setBiometricPrompt);
 
-  if (!prompt) return null
+  if (!prompt) return null;
   return (
     <BiometricPrompt
       vaultId={prompt.vaultId}
       password={prompt.password}
       onDone={() => setPrompt(null)}
     />
-  )
+  );
 }
 
 function SessionRestore({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const session = loadSession()
-    if (!session) { setReady(true); return }
+    const session = loadSession();
+    if (!session) {
+      setReady(true);
+      return;
+    }
 
-    const { fileName, password } = session
+    const { fileName, password } = session;
     FileStorage.openVault(fileName, password)
       .then((db) => {
-        useStore.getState().unlock(db, password, fileName)
+        useStore.getState().unlock(db, password, fileName);
       })
       .catch(() => {
-        clearSession()
+        clearSession();
       })
-      .finally(() => setReady(true))
-  }, [])
+      .finally(() => setReady(true));
+  }, []);
 
-  useAutoLock()
+  useAutoLock();
 
   if (!ready) {
     return (
       <div className="flex items-center justify-center h-screen bg-canvas-deepest">
         <Spinner className="size-6 animate-spin text-ink-quaternary" />
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -136,5 +159,5 @@ export default function App() {
         </ToastProvider>
       </SessionRestore>
     </BrowserRouter>
-  )
+  );
 }

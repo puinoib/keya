@@ -1,34 +1,37 @@
-import * as React from "react"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { X } from "@phosphor-icons/react"
-import { cn } from "@/lib/utils"
+import type * as React from 'react';
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { X } from '@phosphor-icons/react';
+import { cn } from '@/lib/utils';
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root {...props} />
+  return <DialogPrimitive.Root {...props} />;
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger {...props} />
+  return <DialogPrimitive.Trigger {...props} />;
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal {...props} />
+  return <DialogPrimitive.Portal {...props} />;
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
-  return <DialogPrimitive.Close {...props} />
+  return <DialogPrimitive.Close {...props} />;
 }
 
-function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
+function DialogOverlay({
+  className,
+  ...props
+}: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/30 data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit",
+        'fixed inset-0 z-50 bg-black/30 data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function DialogContent({
@@ -41,10 +44,10 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
-          "bg-canvas-raised border border-line rounded-lg shadow-dialog",
-          "p-6 gap-4",
-          "data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit",
+          'fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]',
+          'bg-canvas-raised border border-line rounded-lg shadow-dialog',
+          'p-6 gap-4',
+          'data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
           className
         )}
         {...props}
@@ -56,43 +59,55 @@ function DialogContent({
         </DialogPrimitive.Close>
       </DialogPrimitive.Popup>
     </DialogPortal>
-  )
+  );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}
+      className={cn(
+        'flex flex-col space-y-1.5 text-center sm:text-left',
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
+      className={cn(
+        'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-base font-semibold leading-none tracking-tight text-ink-primary", className)}
+      className={cn(
+        'text-base font-semibold leading-none tracking-tight text-ink-primary',
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
+function DialogDescription({
+  className,
+  ...props
+}: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-sm text-ink-tertiary", className)}
+      className={cn('text-sm text-ink-tertiary', className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -106,4 +121,4 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-}
+};

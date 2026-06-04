@@ -19,18 +19,24 @@ const PREAMBLE_SIZE = HEADER_SIZE + ENC_PARAMS_SIZE; // everything before payloa
 
 // ── Header ──
 
-export function createHeader(fileId: string, created: Date = new Date()): Uint8Array {
+export function createHeader(
+  fileId: string,
+  created: Date = new Date()
+): Uint8Array {
   const buf = new Uint8Array(HEADER_SIZE);
   let off = 0;
 
   // Magic: 4 bytes "KEYA"
-  buf.set(MAGIC, off); off += 4;
+  buf.set(MAGIC, off);
+  off += 4;
 
   // Version: uint16 LE = 1
-  new DataView(buf.buffer).setUint16(off, 1, true); off += 2;
+  new DataView(buf.buffer).setUint16(off, 1, true);
+  off += 2;
 
   // Flags: uint16 LE = 0 (reserved)
-  new DataView(buf.buffer).setUint16(off, 0, true); off += 2;
+  new DataView(buf.buffer).setUint16(off, 0, true);
+  off += 2;
 
   // FileID: 16 bytes UUID as hex
   const hex = fileId.replace(/-/g, '');
@@ -41,8 +47,10 @@ export function createHeader(fileId: string, created: Date = new Date()): Uint8A
 
   // Created / Modified: uint64 LE (writes as uint32 x2 since JS is limited)
   const createdSec = BigInt(Math.floor(created.getTime() / 1000));
-  new DataView(buf.buffer).setBigUint64(off, createdSec, true); off += 8;
-  new DataView(buf.buffer).setBigUint64(off, createdSec, true); off += 8;
+  new DataView(buf.buffer).setBigUint64(off, createdSec, true);
+  off += 8;
+  new DataView(buf.buffer).setBigUint64(off, createdSec, true);
+  off += 8;
 
   // Remaining 88 bytes are zero (already zero-filled)
   return buf;
@@ -67,8 +75,10 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
   }
   off += 4;
 
-  const version = dv.getUint16(off, true); off += 2;
-  const flags = dv.getUint16(off, true); off += 2;
+  const version = dv.getUint16(off, true);
+  off += 2;
+  const flags = dv.getUint16(off, true);
+  off += 2;
 
   // FileID: 16 bytes → UUID string
   const hexParts: string[] = [];
@@ -84,8 +94,10 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
     hexParts.slice(10, 16).join(''),
   ].join('-');
 
-  const createdSec = Number(dv.getBigUint64(off, true)); off += 8;
-  const modifiedSec = Number(dv.getBigUint64(off, true)); off += 8;
+  const createdSec = Number(dv.getBigUint64(off, true));
+  off += 8;
+  const modifiedSec = Number(dv.getBigUint64(off, true));
+  off += 8;
 
   return {
     version,
@@ -105,27 +117,37 @@ export interface EncParams {
   nonce: Uint8Array;
 }
 
-export function createEncParams(salt: Uint8Array, nonce: Uint8Array): Uint8Array {
+export function createEncParams(
+  salt: Uint8Array,
+  nonce: Uint8Array
+): Uint8Array {
   const buf = new Uint8Array(ENC_PARAMS_SIZE);
   const dv = new DataView(buf.buffer);
   let off = 0;
 
   // KDF Algo: 0x0001 = Argon2id
-  dv.setUint16(off, 0x0001, true); off += 2;
+  dv.setUint16(off, 0x0001, true);
+  off += 2;
 
   // OpsLimit: 3
-  dv.setUint32(off, 3, true); off += 4;
+  dv.setUint32(off, 3, true);
+  off += 4;
 
   // MemLimit: 65536
-  dv.setUint32(off, 65536, true); off += 4;
+  dv.setUint32(off, 65536, true);
+  off += 4;
 
   // SaltLen + Salt
-  dv.setUint16(off, salt.length, true); off += 2;
-  buf.set(salt, off); off += salt.length;
+  dv.setUint16(off, salt.length, true);
+  off += 2;
+  buf.set(salt, off);
+  off += salt.length;
 
   // NonceLen + Nonce
-  dv.setUint16(off, nonce.length, true); off += 2;
-  buf.set(nonce, off); off += nonce.length;
+  dv.setUint16(off, nonce.length, true);
+  off += 2;
+  buf.set(nonce, off);
+  off += nonce.length;
 
   // Enc Algo: 0x0001 = XChaCha20-Poly1305
   dv.setUint16(off, 0x0001, true);
@@ -138,20 +160,31 @@ export function parseEncParams(buf: Uint8Array): EncParams {
   let off = 0;
 
   // KDF algo
-  const kdf = dv.getUint16(off, true); off += 2;
-  if (kdf !== 0x0001) throw new Error(`Unsupported KDF algorithm: 0x${kdf.toString(16)}`);
+  const kdf = dv.getUint16(off, true);
+  off += 2;
+  if (kdf !== 0x0001)
+    throw new Error(`Unsupported KDF algorithm: 0x${kdf.toString(16)}`);
 
-  const ops = dv.getUint32(off, true); off += 4;
-  const mem = dv.getUint32(off, true); off += 4;
+  const ops = dv.getUint32(off, true);
+  off += 4;
+  const mem = dv.getUint32(off, true);
+  off += 4;
 
-  const saltLen = dv.getUint16(off, true); off += 2;
-  const salt = buf.slice(off, off + saltLen); off += saltLen;
+  const saltLen = dv.getUint16(off, true);
+  off += 2;
+  const salt = buf.slice(off, off + saltLen);
+  off += saltLen;
 
-  const nonceLen = dv.getUint16(off, true); off += 2;
-  const nonce = buf.slice(off, off + nonceLen); off += nonceLen;
+  const nonceLen = dv.getUint16(off, true);
+  off += 2;
+  const nonce = buf.slice(off, off + nonceLen);
+  off += nonceLen;
 
   const encAlgo = dv.getUint16(off, true);
-  if (encAlgo !== 0x0001) throw new Error(`Unsupported encryption algorithm: 0x${encAlgo.toString(16)}`);
+  if (encAlgo !== 0x0001)
+    throw new Error(
+      `Unsupported encryption algorithm: 0x${encAlgo.toString(16)}`
+    );
 
   return { ops, mem, salt, nonce };
 }
@@ -164,13 +197,16 @@ export async function computeHMAC(data: Uint8Array): Promise<Uint8Array> {
     new TextEncoder().encode('keya-hmac-key'),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign'],
+    ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, data);
   return new Uint8Array(sig);
 }
 
-export async function verifyHMAC(data: Uint8Array, expected: Uint8Array): Promise<boolean> {
+export async function verifyHMAC(
+  data: Uint8Array,
+  expected: Uint8Array
+): Promise<boolean> {
   const computed = await computeHMAC(data);
   if (computed.length !== expected.length) return false;
   return computed.every((b, i) => b === expected[i]);
@@ -180,7 +216,7 @@ export async function verifyHMAC(data: Uint8Array, expected: Uint8Array): Promis
 
 export async function serializeToFile(
   db: KeyaDatabase,
-  password: string,
+  password: string
 ): Promise<Uint8Array> {
   await initCrypto();
 
@@ -217,7 +253,7 @@ export async function serializeToFile(
 
 export async function deserializeFromFile(
   fileBytes: Uint8Array,
-  password: string,
+  password: string
 ): Promise<KeyaDatabase> {
   await initCrypto();
 
@@ -238,14 +274,17 @@ export async function deserializeFromFile(
   const payloadLen = new DataView(
     fileBytes.buffer,
     fileBytes.byteOffset + PREAMBLE_SIZE,
-    4,
+    4
   ).getUint32(0, true);
-  const encrypted = fileBytes.slice(PREAMBLE_SIZE + 4, PREAMBLE_SIZE + 4 + payloadLen);
+  const encrypted = fileBytes.slice(
+    PREAMBLE_SIZE + 4,
+    PREAMBLE_SIZE + 4 + payloadLen
+  );
 
   // Decrypt
-  const key = deriveKey(password, params.salt)
-  const plaintext = decryptRaw(encrypted, params.nonce, key)
-  const json = sodium.to_string(plaintext)
+  const key = deriveKey(password, params.salt);
+  const plaintext = decryptRaw(encrypted, params.nonce, key);
+  const json = sodium.to_string(plaintext);
   const db = JSON.parse(json) as KeyaDatabase;
 
   // Backward compatibility: migrate file_id → vault_id
@@ -268,9 +307,12 @@ export async function deserializeFromFile(
   }
 
   // Default new settings fields for old files
-  if (db.settings.auto_test_on_save === undefined) db.settings.auto_test_on_save = false;
-  if (db.settings.custom_providers === undefined) db.settings.custom_providers = [];
-  if (db.settings.disabled_providers === undefined) db.settings.disabled_providers = [];
+  if (db.settings.auto_test_on_save === undefined)
+    db.settings.auto_test_on_save = false;
+  if (db.settings.custom_providers === undefined)
+    db.settings.custom_providers = [];
+  if (db.settings.disabled_providers === undefined)
+    db.settings.disabled_providers = [];
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();
