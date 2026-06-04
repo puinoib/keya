@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Key, Eye, EyeOff, RotateCcw, FlaskConical, CheckCircle2, XCircle, Loader2, CalendarIcon, X } from "lucide-react"
+import { Key, Eye, EyeSlash, ArrowCounterClockwise, Flask, CheckCircle, XCircle, Spinner, Calendar, X } from "@phosphor-icons/react"
 import { useToast } from "@/components/ui/toast"
 
 interface FormData {
@@ -169,7 +169,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center
                            rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >
-                {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showKey ? <EyeSlash className="size-3.5" /> : <Eye className="size-3.5" />}
               </button>
             </div>
           </div>
@@ -200,7 +200,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
                   className="text-ink-quaternary hover:text-accent-bright transition-colors"
                   title="Reset to default"
                 >
-                  <RotateCcw className="size-3" />
+                  <ArrowCounterClockwise className="size-3" />
                 </button>
               )}
             </Label>
@@ -221,7 +221,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               onClick={() => setShowCalendar(!showCalendar)}
               className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
             >
-              <CalendarIcon className="size-3.5 shrink-0" />
+              <Calendar className="size-3.5 shrink-0" />
               <span className={!form.expires_at ? "text-ink-quaternary" : "text-ink-secondary"}>
                 {form.expires_at ? format(form.expires_at, "MMM d, yyyy") : "Pick a date"}
               </span>
@@ -283,7 +283,7 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
                 : "bg-danger/10 text-danger"
             }`}>
               {testState.result.success
-                ? <CheckCircle2 className="size-3.5" />
+                ? <CheckCircle className="size-3.5" />
                 : <XCircle className="size-3.5" />}
               <span>
                 {testState.result.success
@@ -307,8 +307,8 @@ export function KeyForm({ open, onClose }: { open: boolean; onClose: () => void 
               disabled={!form.key_value || testState.testing}
             >
               {testState.testing
-                ? <Loader2 className="size-3.5 animate-spin" />
-                : <FlaskConical className="size-3.5" />}
+                ? <Spinner className="size-3.5 animate-spin" />
+                : <Flask className="size-3.5" />}
               Test
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
