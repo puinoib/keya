@@ -8,7 +8,7 @@ import { EmojiPicker } from "@ferrucc-io/emoji-picker"
 import { isBiometricSupported, isBiometricRegistered, registerBiometric, removeBiometric } from "@/app/lib/biometric"
 
 export function SettingsPage() {
-  const { db, password, theme, setTheme, updateMeta } = useStore()
+  const { db, password, theme, setTheme, updateMeta, updateSettings } = useStore()
   const settings = db?.getSettings()
   const data = db?.getData()
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
@@ -173,7 +173,7 @@ export function SettingsPage() {
           <Label className="text-xs">Auto Lock (minutes)</Label>
           <Select
             value={String(settings?.auto_lock_minutes ?? 5)}
-            onValueChange={(v) => db?.updateSettings({ auto_lock_minutes: Number(v) })}
+            onValueChange={(v) => updateSettings({ auto_lock_minutes: Number(v) })}
           >
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -191,7 +191,7 @@ export function SettingsPage() {
           <Label className="text-xs">Minimum Password Length</Label>
           <Select
             value={String(settings?.min_password_length ?? 8)}
-            onValueChange={(v) => db?.updateSettings({ min_password_length: Number(v) })}
+            onValueChange={(v) => updateSettings({ min_password_length: Number(v) })}
           >
             <SelectTrigger className="w-32">
               <SelectValue />

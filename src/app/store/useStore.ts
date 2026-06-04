@@ -56,6 +56,9 @@ interface AppState {
   updateGroup: (id: string, updates: Partial<Group>) => void
   deleteGroup: (id: string) => void
 
+  // Actions - Settings
+  updateSettings: (updates: Record<string, unknown>) => void
+
   // Actions - Vault Meta
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void
 }
@@ -176,6 +179,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteGroup: (id) => {
     get().db?.deleteGroup(id)
+    set({})
+    scheduleSave()
+  },
+
+  updateSettings: (updates) => {
+    get().db?.updateSettings(updates)
     set({})
     scheduleSave()
   },
