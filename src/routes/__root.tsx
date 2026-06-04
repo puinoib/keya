@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeSync } from '@/app/components/ThemeSync';
 import { SessionRestore } from '@/app/components/SessionRestore';
 import { BiometricPromptLayer } from '@/app/components/BiometricPromptLayer';
+import { InboxSyncNotifier } from '@/app/components/InboxSyncNotifier';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -19,6 +20,7 @@ function RootComponent() {
           <TooltipProvider>
             <Outlet />
             <BiometricPromptLayer />
+            <InboxSyncNotifier />
           </TooltipProvider>
           <Toaster />
         </div>

@@ -1,4 +1,4 @@
-import type { KeyaDatabase, ApiKey, Group } from './types';
+import type { KeyaDatabase, ApiKey, Group, InboxItem } from './types';
 import { DEFAULT_GROUPS, DEFAULT_SETTINGS } from './types';
 
 export function createEmptyDatabase(
@@ -20,6 +20,7 @@ export function createEmptyDatabase(
       order: i + 1,
     })),
     settings: { ...DEFAULT_SETTINGS },
+    inbox: [],
   };
 }
 
@@ -133,6 +134,27 @@ export class Database {
   updateSettings(updates: Partial<typeof this.data.settings>) {
     this.data.settings = { ...this.data.settings, ...updates };
     this.touch();
+  }
+
+  /* ──── Inbox ──── */
+
+  getInboxItems(): InboxItem[] {
+    return [...this.data.inbox];
+  }
+
+  getOpenInboxItems(): InboxItem[] {
+    return this.data.inbox.filter((item) => item.status === 'open');
+  }
+
+  archiveInboxItem(id: string, reason: InboxItem['archive_reason'] = 'user') {
+    const item = this.data.inbox.find((entry) => entry.id === id);
+    if (!item) return null;
+    item.status = 'archived';
+    item.archive_reason = reason;
+    item.archived_at = new Date().toISOString();
+    item.updated_at = item.archived_at;
+    this.touch();
+    return item;
   }
 
   /* ──── Vault Meta ──── */

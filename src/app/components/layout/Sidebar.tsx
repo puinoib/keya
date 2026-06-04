@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { List, FolderOpen, Faders, X, Gear } from '@phosphor-icons/react';
+import { List, FolderOpen, Faders, X, Gear, Tray } from '@phosphor-icons/react';
+import { useNavigate } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
@@ -40,6 +41,7 @@ function SidebarFilterButton({
 }
 
 export function Sidebar() {
+  const navigate = useNavigate();
   const {
     db,
     filterGroupId,
@@ -59,6 +61,7 @@ export function Sidebar() {
     : [];
 
   const keyCount = db?.getApiKeys().length ?? 0;
+  const openInboxCount = db?.getOpenInboxItems().length ?? 0;
   const hasSmartFilters = filterProvider || filterTestStatus;
   const isAllKeysActive =
     !filterGroupId && !filterProvider && !filterTestStatus;
@@ -90,6 +93,13 @@ export function Sidebar() {
         <div className="flex-1 min-h-0 overflow-y-auto px-2 pt-1 pb-2">
           {/* Navigation */}
           <nav className="pb-2">
+            <SidebarFilterButton
+              icon={<Tray className="size-3" />}
+              label="Inbox"
+              count={openInboxCount}
+              isActive={false}
+              onClick={() => navigate({ to: '/inbox' })}
+            />
             <SidebarFilterButton
               icon={<List className="size-3" />}
               label="All Keys"
