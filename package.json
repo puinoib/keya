@@ -22,7 +22,6 @@
     "date-fns": "^4.4.0",
     "gray-matter": "^4.0.3",
     "libsodium-wrappers-sumo": "^0.8.4",
-    "lucide-react": "^1.17.0",
     "marked": "^18.0.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
