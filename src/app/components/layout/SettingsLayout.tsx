@@ -12,7 +12,7 @@ export function SettingsLayout() {
             <button onClick={() => navigate("/keys")}
                     className="btn-ghost text-xs">
               <ArrowLeft className="size-3.5" />
-              <span>Back</span>
+              <span>Back to app</span>
             </button>
           </header>
 
