@@ -100,6 +100,13 @@ export function KeyForm({
     settings?.custom_providers?.find((cp) => cp.name === form.provider)
       ?.endpoint;
 
+  const currentGroup = form.group_id
+    ? db?.getGroups().find((g) => g.id === form.group_id)
+    : null;
+  const groupDisplay = currentGroup
+    ? `${currentGroup.icon} ${currentGroup.name}`
+    : 'Ungrouped';
+
   const handleProviderChange = (provider: string) => {
     const endpoint =
       ENDPOINT_DEFAULTS[provider.toLowerCase()] ??
@@ -345,7 +352,7 @@ export function KeyForm({
               }
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Ungrouped</SelectItem>

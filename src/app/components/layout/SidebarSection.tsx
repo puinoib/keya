@@ -22,7 +22,7 @@ export function SidebarSection({
     <div className="py-1.5">
       <div
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-1.5 mb-1 group cursor-pointer"
+        className="w-full flex items-center justify-between px-2.5 mb-1 group cursor-pointer"
         role="button"
         tabIndex={0}
       >

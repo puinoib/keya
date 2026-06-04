@@ -145,7 +145,7 @@ export function KeyList() {
   if (keys.length === 0 && !hasFilters) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="flex items-center justify-center size-14 rounded-2xl bg-accent-default/10 text-accent-bright mb-5">
+        <div className="flex items-center justify-center size-14 rounded-2xl bg-accent/10 text-accent-bright mb-5">
           <Key className="size-6" />
         </div>
         <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
@@ -156,7 +156,7 @@ export function KeyList() {
         </p>
         <button
           onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent-default px-4 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
         >
           <Plus className="size-3.5" />
           Add your first key
@@ -415,6 +415,13 @@ export function EditKeyDialog({
     settings?.custom_providers?.find((cp) => cp.name === form.provider)
       ?.endpoint;
 
+  const currentGroup = form.group_id
+    ? db?.getGroups().find((g) => g.id === form.group_id)
+    : null;
+  const groupDisplay = currentGroup
+    ? `${currentGroup.icon} ${currentGroup.name}`
+    : 'Ungrouped';
+
   const handleTest = async () => {
     if (!form.key) return;
     setTestState({ testing: true, result: null });
@@ -631,7 +638,7 @@ export function EditKeyDialog({
               }
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Ungrouped">{groupDisplay}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Ungrouped</SelectItem>
