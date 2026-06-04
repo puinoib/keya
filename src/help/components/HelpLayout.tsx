@@ -1,35 +1,9 @@
-import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { HelpSidebar, HelpSearch } from './index'
-import type { HelpDocument } from '../types'
 import { loadManifest } from '../lib/manifest'
 
 export function HelpLayout() {
-  const [documents, setDocuments] = useState<HelpDocument[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function loadDocs() {
-      try {
-        const manifest = await loadManifest()
-        setDocuments(manifest.documents)
-      } catch (error) {
-        console.error('Failed to load help documents:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDocs()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-ink-quaternary">Loading...</div>
-      </div>
-    )
-  }
+  const { documents } = loadManifest()
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
