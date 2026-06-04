@@ -69,7 +69,7 @@ export function VaultSwitcher() {
     <div className="shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-full h-12 flex items-center gap-2.5 px-3.5 hover:bg-surface-3 transition-colors rounded-none border-b border-line-subtle bg-canvas-panel">
+          <button className="w-full h-12 flex items-center gap-2.5 px-3.5 hover:bg-surface-3 transition-colors rounded-none bg-canvas-panel">
             <div className="flex items-center justify-center size-7 rounded-lg bg-accent/20 text-accent-bright text-sm shrink-0">
               {currentIcon ? currentIcon : <Lock className="size-3.5" />}
             </div>

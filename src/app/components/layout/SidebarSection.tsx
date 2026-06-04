@@ -18,19 +18,13 @@ export function SidebarSection({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
 
-  const handleClick = (e: React.MouseEvent) => {
-    // If action was clicked, don't toggle
-    if ((e.target as HTMLElement).closest('[data-action]')) {
-      return;
-    }
-    setOpen(!open);
-  };
-
   return (
     <div className="py-1.5">
-      <button
-        onClick={handleClick}
+      <div
+        onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-1.5 mb-1 group cursor-pointer"
+        role="button"
+        tabIndex={0}
       >
         <div className="flex items-center gap-1">
           <Icon className="size-3 text-ink-quaternary" />
@@ -42,11 +36,11 @@ export function SidebarSection({
           />
         </div>
         <div className="w-5 h-5 flex items-center justify-center">
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity" data-action>
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity">
             {action}
           </span>
         </div>
-      </button>
+      </div>
       {open && <div className="space-y-px">{children}</div>}
     </div>
   );

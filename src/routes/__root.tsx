@@ -15,11 +15,13 @@ function RootComponent() {
     <>
       <ThemeSync />
       <SessionRestore>
-        <TooltipProvider>
-          <Outlet />
-          <BiometricPromptLayer />
-        </TooltipProvider>
-        <Toaster />
+        <div className="animate-in fade-in-0 duration-300">
+          <TooltipProvider>
+            <Outlet />
+            <BiometricPromptLayer />
+          </TooltipProvider>
+          <Toaster />
+        </div>
       </SessionRestore>
       <TanStackRouterDevtools />
     </>
