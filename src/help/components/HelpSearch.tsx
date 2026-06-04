@@ -44,7 +44,7 @@ export function HelpSearch({ documents, onClose }: HelpSearchProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索帮助文档..."
+          placeholder="Search help docs..."
           className={cn(
             'w-full pl-10 pr-4 py-2 rounded-md border border-line-subtle',
             'bg-surface-2 text-ink-primary text-sm',
@@ -78,7 +78,7 @@ export function HelpSearch({ documents, onClose }: HelpSearchProps) {
 
       {isOpen && query.trim() && results.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-canvas-base border border-line-subtle rounded-md shadow-lg p-4 text-sm text-ink-secondary">
-          没有找到匹配的结果
+          No matching results
         </div>
       )}
     </div>

@@ -1,13 +1,13 @@
 ---
-title: 快速开始
-description: 了解如何快速上手 Keya
+title: Quick Start
+description: Get started with Keya
 order: 2
 ---
 
-# 快速开始
+# Quick Start
 
-## 创建第一个保险库
+## Create Your First Vault
 
-1. 点击"创建新保险库"
-2. 设置主密码
-3. 开始添加您的 API 密钥
+1. Click "Create New Vault"
+2. Set a master password
+3. Start adding your API keys

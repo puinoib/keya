@@ -1,11 +1,11 @@
 ---
-title: 备份与恢复
-description: 如何备份和恢复您的数据
+title: Backup & Restore
+description: How to back up and restore your data
 order: 4
 ---
 
-# 备份与恢复
+# Backup & Restore
 
-## 备份
+## Backup
 
-您的数据存储在本地，请定期备份保险库文件。
+Your data is stored locally. Please back up your vault file regularly.

@@ -1,15 +1,15 @@
 ---
-title: 欢迎使用 Keya
-description: Keya 帮助中心
+title: Welcome to Keya
+description: Keya Help Center
 order: 1
 ---
 
-# 欢迎使用 Keya
+# Welcome to Keya
 
-Keya 是一个安全的 API 密钥管理工具。
+Keya is a secure API key management tool.
 
-## 快速链接
+## Quick Links
 
-- [快速开始](/help/quick-start)
-- [常见问题](/help/faq)
-- [备份恢复](/help/backup)
+- [Quick Start](/help/quick-start)
+- [FAQ](/help/faq)
+- [Backup & Restore](/help/backup)

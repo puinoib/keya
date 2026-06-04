@@ -26,7 +26,7 @@ export function HelpLayout() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-ink-quaternary">加载中...</div>
+        <div className="text-ink-quaternary">Loading...</div>
       </div>
     )
   }
