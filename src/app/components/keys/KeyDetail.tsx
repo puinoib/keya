@@ -1,7 +1,7 @@
 import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
 import { maskKey } from '@/lib/mask';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 import type { ApiKey } from '../../../core/types';
 import {
   Copy,
@@ -27,7 +27,6 @@ import { EditKeyDialog } from './KeyList';
 export function KeyDetail() {
   const { db, selectedKeyId, setSelectedKeyId, updateKey, deleteKey } =
     useStore();
-  const toast = useToast();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -55,7 +54,7 @@ export function KeyDetail() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       setTimeout(() => navigator.clipboard.writeText(''), 15000);
-      toast.add({ title: 'Copied to clipboard', timeout: 2000 });
+      toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
     }
@@ -70,14 +69,14 @@ export function KeyDetail() {
       test_latency_ms: result.latency_ms ?? null,
     });
     setTesting(false);
-    toast.add({
-      title: result.success ? 'Key available' : 'Key test failed',
-      description: result.success
-        ? `${result.latency_ms}ms`
-        : result.error || 'Connection failed',
-      type: result.success ? 'success' : 'error',
-      timeout: 3000,
-    });
+    toast[result.success ? 'success' : 'error'](
+      result.success ? 'Key available' : 'Key test failed',
+      {
+        description: result.success
+          ? `${result.latency_ms}ms`
+          : result.error || 'Connection failed',
+      }
+    );
   };
 
   const handleDelete = () => {
@@ -85,7 +84,7 @@ export function KeyDetail() {
       const name = key.name;
       deleteKey(key.id);
       setSelectedKeyId(null);
-      toast.add({ title: `Deleted "${name}"`, timeout: 3000 });
+      toast.success(`Deleted "${name}"`);
     }
   };
 

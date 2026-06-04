@@ -60,7 +60,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { maskKey } from '@/lib/mask';
-import { useToast } from '@/components/ui/toast';
+import { toast } from 'sonner';
 
 export function KeyList() {
   const db = useStore((s) => s.db);
@@ -80,8 +80,6 @@ export function KeyList() {
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
   const [_hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
-  const toast = useToast();
-
   if (!db) return null;
 
   let keys = db.getApiKeys();
@@ -117,14 +115,14 @@ export function KeyList() {
       test_latency_ms: result.latency_ms ?? null,
     });
     setTesting(null);
-    toast.add({
-      title: result.success ? 'Key available' : 'Key test failed',
-      description: result.success
-        ? `${key.name} — ${result.latency_ms}ms`
-        : result.error || 'Connection failed',
-      type: result.success ? 'success' : 'error',
-      timeout: 3000,
-    });
+    toast[result.success ? 'success' : 'error'](
+      result.success ? 'Key available' : 'Key test failed',
+      {
+        description: result.success
+          ? `${key.name} — ${result.latency_ms}ms`
+          : result.error || 'Connection failed',
+      }
+    );
   };
 
   const handleCopy = async (keyValue: string, keyId: string) => {
@@ -133,7 +131,7 @@ export function KeyList() {
       setCopiedId(keyId);
       setTimeout(() => setCopiedId(null), 2000);
       setTimeout(() => navigator.clipboard.writeText(''), 15000);
-      toast.add({ title: 'Copied to clipboard', timeout: 2000 });
+      toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
     }
@@ -344,10 +342,7 @@ export function KeyList() {
               onClick={() => {
                 if (deletingKey) {
                   deleteKey(deletingKey.id);
-                  toast.add({
-                    title: `Deleted "${deletingKey.name}"`,
-                    timeout: 3000,
-                  });
+                  toast.success(`Deleted "${deletingKey.name}"`);
                 }
               }}
               className="bg-danger text-white hover:bg-danger/90"
@@ -373,7 +368,6 @@ export function EditKeyDialog({
   onSave: (id: string, updates: Partial<ApiKey>) => void;
 }) {
   const db = useStore((s) => s.db);
-  const toast = useToast();
   const [showKey, setShowKey] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -431,11 +425,7 @@ export function EditKeyDialog({
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
-    toast.add({
-      title: 'Key updated',
-      description: form.name.trim(),
-      timeout: 3000,
-    });
+    toast.success('Key updated', { description: form.name.trim() });
     onSave(editingKey.id, {
       name: form.name.trim(),
       key: form.key.trim(),
