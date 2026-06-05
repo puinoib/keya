@@ -41,6 +41,29 @@ function unwrapClipboardValue(value: string): string {
   return unwrapped;
 }
 
+function extractCandidateValues(text: string): string[] {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => unwrapClipboardValue(line))
+    .filter(Boolean);
+
+  if (lines.length === 0) return [];
+
+  const seen = new Set<string>();
+  const matches: string[] = [];
+
+  for (const line of lines) {
+    const tokens = line.match(/sk-proj-[A-Za-z0-9_-]{8,}/g) ?? [];
+    for (const token of tokens) {
+      if (seen.has(token)) continue;
+      seen.add(token);
+      matches.push(token);
+    }
+  }
+
+  return matches;
+}
+
 function maskApiKey(key: string): string {
   if (key.length <= 14) return `${key.slice(0, 6)}...`;
   return `${key.slice(0, 8)}...${key.slice(-4)}`;
@@ -89,9 +112,10 @@ export async function tryDetectClipboardKey(
 
   try {
     const text = await navigator.clipboard.readText();
-    const normalized = unwrapClipboardValue(text);
-    if (!normalized || normalized.includes('\n')) return null;
-    return detectProvider(normalized, settings);
+    const matches = extractCandidateValues(text);
+    const latest = matches.at(-1);
+    if (!latest) return null;
+    return detectProvider(latest, settings);
   } catch {
     return null;
   }
