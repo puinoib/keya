@@ -6,6 +6,12 @@ import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
 import { SidebarSection } from './SidebarSection';
 
+type IconComponent = React.ComponentType<
+  React.SVGAttributes<SVGElement> & {
+    weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+  }
+>;
+
 function SidebarFilterButton({
   icon,
   label,
@@ -13,12 +19,13 @@ function SidebarFilterButton({
   isActive,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: IconComponent | React.ReactNode;
   label: string;
   count: number;
   isActive: boolean;
   onClick: () => void;
 }) {
+  const isComponent = typeof icon === 'function';
   return (
     <button
       onClick={onClick}
@@ -28,7 +35,14 @@ function SidebarFilterButton({
           : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
       }`}
     >
-      {icon}
+      {isComponent
+        ? (() => {
+            const Icon = icon as IconComponent;
+            return (
+              <Icon className="size-3" weight={isActive ? 'fill' : 'regular'} />
+            );
+          })()
+        : (icon as React.ReactNode)}
       <span className="truncate flex-1 text-left">{label}</span>
       {count > 0 && (
         <span className="text-xs tabular-nums text-ink-quaternary">
@@ -95,21 +109,21 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="pb-2">
             <SidebarFilterButton
-              icon={<Tray className="size-3" />}
+              icon={Tray}
               label="Inbox"
               count={openInboxCount}
               isActive={isInboxActive}
               onClick={() => navigate({ to: '/inbox' })}
             />
             <SidebarFilterButton
-              icon={<Heartbeat className="size-3" />}
+              icon={Heartbeat}
               label="Health"
               count={0}
               isActive={isHealthActive}
               onClick={() => navigate({ to: '/health' })}
             />
             <SidebarFilterButton
-              icon={<List className="size-3" />}
+              icon={List}
               label="All Keys"
               count={keyCount}
               isActive={isAllKeysActive}
