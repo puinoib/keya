@@ -1,4 +1,4 @@
-// Core data types for Keya v1.0
+// Core data types for Keya
 
 export type ConnectionStatus = 'success' | 'failed' | 'untested';
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';

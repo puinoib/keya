@@ -47,7 +47,7 @@ export function AboutPage() {
           <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
             <div className="flex items-center justify-between p-3">
               <p className="text-xs text-ink-secondary">Version</p>
-              <p className="text-xs text-ink-quaternary">0.0.0</p>
+              <p className="text-xs text-ink-quaternary">{__APP_VERSION__}</p>
             </div>
             <div className="flex items-center justify-between p-3">
               <p className="text-xs text-ink-secondary">License</p>
