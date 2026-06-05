@@ -7,12 +7,9 @@ export function AboutPage() {
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
           <Question className="size-4" />
         </div>
-        <div>
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-            About
-          </h1>
-          <p className="text-xs text-ink-quaternary">Help and information</p>
-        </div>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+          About
+        </h1>
       </div>
 
       <div className="space-y-6">

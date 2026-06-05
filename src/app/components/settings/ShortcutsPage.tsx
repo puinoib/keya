@@ -123,14 +123,9 @@ export function ShortcutsPage() {
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
           <Keyboard className="size-4" />
         </div>
-        <div>
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-            Shortcuts
-          </h1>
-          <p className="text-xs text-ink-quaternary">
-            Customize keyboard shortcuts
-          </p>
-        </div>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+          Shortcuts
+        </h1>
       </div>
 
       <div className="rounded-lg border border-line bg-surface-2">

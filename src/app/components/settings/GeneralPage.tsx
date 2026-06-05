@@ -90,14 +90,9 @@ export function GeneralPage() {
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
           <Palette className="size-4" />
         </div>
-        <div>
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-            General
-          </h1>
-          <p className="text-xs text-ink-quaternary">
-            Vault and basic settings
-          </p>
-        </div>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+          General
+        </h1>
       </div>
 
       <div className="space-y-6">
