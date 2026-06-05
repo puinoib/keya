@@ -59,7 +59,7 @@ export function KeysPage() {
 
         {/* Filters row: Smart Filters + Tags (if any) */}
         {(providers.length > 0 || hasAnyFilters) && (
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 max-w-lg">
             {/* Smart Filters */}
             <SidebarFilterSelect
               value={filterProvider}
