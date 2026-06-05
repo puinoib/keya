@@ -64,44 +64,42 @@ export function KeysPage() {
   return (
     <div className="flex flex-1 min-h-0">
       <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto scrollbar-hidden">
-        <div className="w-full max-w-4xl mx-auto">
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary mb-4">
-            Keys
-            <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
-              {db?.getApiKeys().length ?? 0}
-            </span>
-          </h1>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary mb-4">
+          Keys
+          <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
+            {db?.getApiKeys().length ?? 0}
+          </span>
+        </h1>
 
-          {tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-3">
-              {tags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
-                >
-                  {tag.label}
-                  <button
-                    onClick={tag.onRemove}
-                    className="text-ink-quaternary hover:text-ink-secondary transition-colors"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              ))}
-              <button
-                onClick={() => {
-                  clearFilters();
-                  setSearchQuery('');
-                }}
-                className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
+        {tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            {tags.map((tag, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
               >
-                Clear all
-              </button>
-            </div>
-          )}
+                {tag.label}
+                <button
+                  onClick={tag.onRemove}
+                  className="text-ink-quaternary hover:text-ink-secondary transition-colors"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={() => {
+                clearFilters();
+                setSearchQuery('');
+              }}
+              className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
 
-          <KeyList />
-        </div>
+        <KeyList />
       </div>
 
       {/* Detail wrapper: animates width so flex naturally shifts the list */}
