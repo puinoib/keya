@@ -2,7 +2,7 @@
 title: Inbox
 description: Expiry reminders that surface automatically when keys need attention.
 updated: 2026-06-05
-order: 7
+order: 3
 ---
 
 The Inbox tracks API keys that are about to expire or have already expired. Items appear and disappear automatically — you don't need to add anything manually.

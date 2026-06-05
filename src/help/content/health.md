@@ -2,7 +2,7 @@
 title: Vault Health Audit
 description: Understand your vault's health score, metrics, and findings.
 updated: 2026-06-05
-order: 6
+order: 4
 ---
 
 The Health page runs a **local audit** of your vault — nothing is sent anywhere. It scans for expired keys, failed tests, stale endpoints, and grouping issues, then produces a score and a list of actionable findings.
