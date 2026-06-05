@@ -18,7 +18,7 @@ export {
 } from './types';
 
 // Crypto
-export { initCrypto, packEncrypted, decryptRaw, deriveKey } from './crypto';
+export { initCrypto, decryptRaw, deriveKey } from './crypto';
 
 // Schema (.keya file format)
 export {

@@ -5,6 +5,12 @@ import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { VaultCard } from '../vault/VaultCard';
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog';
 import {
@@ -17,6 +23,7 @@ import {
   Monitor,
   Plus,
   Info,
+  Check,
 } from '@phosphor-icons/react';
 import { EmojiPicker } from '@ferrucc-io/emoji-picker';
 import {
@@ -32,6 +39,12 @@ import {
 
 const supportsFSA =
   typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+
+const themeOptions = [
+  { value: 'system' as const, label: 'System', icon: Monitor },
+  { value: 'light' as const, label: 'Light', icon: Sun },
+  { value: 'dark' as const, label: 'Dark', icon: Moon },
+];
 
 type Mode = 'home' | 'unlock' | 'new';
 
@@ -54,6 +67,8 @@ export function WelcomePage() {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme, setBiometricPrompt, workspaceState } = useStore();
+  const CurrentIcon =
+    themeOptions.find((o) => o.value === theme)?.icon ?? Monitor;
 
   // Auto-redirect to /keys when unlocked
   useEffect(() => {

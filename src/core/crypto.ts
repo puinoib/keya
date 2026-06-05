@@ -87,23 +87,6 @@ export function encryptDatabase(
 }
 
 /**
- * Pack structured encrypt output into flat buffer [salt][nonce][ciphertext+tag].
- */
-export function packEncrypted(e: {
-  salt: Uint8Array;
-  nonce: Uint8Array;
-  encrypted: Uint8Array;
-}): Uint8Array {
-  const result = new Uint8Array(
-    e.salt.length + e.nonce.length + e.encrypted.length
-  );
-  result.set(e.salt, 0);
-  result.set(e.nonce, e.salt.length);
-  result.set(e.encrypted, e.salt.length + e.nonce.length);
-  return result;
-}
-
-/**
  * Decrypt ciphertext directly (salt & nonce already known from EncParams).
  * Used by schema.ts which stores salt/nonce in file headers.
  */
@@ -114,20 +97,4 @@ export function decryptRaw(
 ): Uint8Array {
   ensureInit();
   return decrypt(encrypted, nonce, key);
-}
-
-/**
- * Decrypt entire database from flat buffer [salt][nonce][ciphertext+tag].
- * Legacy/self-contained format — prefer decryptRaw when salt/nonce are already
- * parsed from file headers (schema.ts path).
- */
-export function decryptDatabase(data: Uint8Array, password: string): string {
-  ensureInit();
-  const salt = data.slice(0, 16);
-  const nonce = data.slice(16, 40);
-  const ciphertext = data.slice(40);
-
-  const key = deriveKey(password, salt);
-  const plaintext = decrypt(ciphertext, nonce, key);
-  return sodium.to_string(plaintext);
 }
