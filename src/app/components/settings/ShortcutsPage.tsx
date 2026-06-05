@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { Keyboard, ArrowCounterClockwise } from '@phosphor-icons/react';
+import { ArrowCounterClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -119,14 +119,9 @@ export function ShortcutsPage() {
 
   return (
     <>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <Keyboard className="size-4" />
-        </div>
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-          Shortcuts
-        </h1>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        Shortcuts
+      </h1>
 
       <div className="rounded-lg border border-line bg-surface-2">
         <div className="flex items-center justify-between gap-3 border-b border-line p-3">

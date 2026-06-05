@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Folders, CaretRight } from '@phosphor-icons/react';
+import { CaretRight } from '@phosphor-icons/react';
 import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
 
 export function GroupsPage() {
@@ -10,14 +10,9 @@ export function GroupsPage() {
 
   return (
     <>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <Folders className="size-4" />
-        </div>
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-          Groups
-        </h1>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        Groups
+      </h1>
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
         <button

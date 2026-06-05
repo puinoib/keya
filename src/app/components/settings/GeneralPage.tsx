@@ -86,14 +86,9 @@ export function GeneralPage() {
   return (
     <>
       {/* Page Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <Palette className="size-4" />
-        </div>
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-          General
-        </h1>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        General
+      </h1>
 
       <div className="space-y-6">
         {/* Vault Section */}
