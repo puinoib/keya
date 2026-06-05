@@ -71,7 +71,9 @@ export const KeyaDatabaseSchema = z.object({
 });
 
 /** Validate parsed JSON against KeyaDatabase shape. Throws on failure. */
-export function validateDatabase(data: unknown): asserts data is import('./types').KeyaDatabase {
+export function validateDatabase(
+  data: unknown
+): asserts data is import('./types').KeyaDatabase {
   const result = KeyaDatabaseSchema.safeParse(data);
   if (!result.success) {
     const issues = result.error.issues
