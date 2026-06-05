@@ -349,5 +349,9 @@ export async function deserializeFromFile(
   const parsed: unknown = JSON.parse(json);
   validateDatabase(parsed);
 
+  if (parsed.vault_id !== headerMeta.fileId) {
+    throw new Error('Vault ID mismatch: file contents may have been swapped');
+  }
+
   return parsed;
 }
