@@ -67,7 +67,6 @@ export interface InboxItem {
 }
 
 export interface KeyaDatabase {
-  version: '1.0';
   vault_id: string;
   created_at: string;
   updated_at: string;

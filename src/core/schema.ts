@@ -100,15 +100,8 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
   }
   off += 4;
 
-  const version = dv.getUint16(off, true);
-  off += 2;
-  if (version < 2) {
-    throw new Error(
-      'Unsupported file format version. Please update Keya to the latest version.'
-    );
-  }
-
-  off += 2; // skip flags
+  off += 2; // version (reserved)
+  off += 2; // flags (reserved)
 
   // FileID: 16 bytes → UUID string
   const hexParts: string[] = [];

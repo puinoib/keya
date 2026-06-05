@@ -58,7 +58,6 @@ export const InboxItemSchema = z.object({
 });
 
 export const KeyaDatabaseSchema = z.object({
-  version: z.string(),
   vault_id: z.string(),
   created_at: z.string(),
   updated_at: z.string(),

@@ -57,7 +57,6 @@ describe('schema (.keya file format)', () => {
     const bytes = await serializeToFile(db, password);
     const restored = await deserializeFromFile(bytes, password);
 
-    expect(restored.version).toBe(db.version);
     expect(restored.vault_id).toBe(db.vault_id);
     expect(restored.api_keys).toHaveLength(db.api_keys.length);
     expect(restored.api_keys[0].name).toBe(db.api_keys[0].name);
