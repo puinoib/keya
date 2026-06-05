@@ -282,7 +282,7 @@ Custom providers can be added in settings.
 
 ## License
 
-MIT License - see LICENSE file for details.
+[MIT](LICENSE) © 2026 Keya Contributors
 
 ---
 
