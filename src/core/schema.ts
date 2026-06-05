@@ -266,8 +266,10 @@ export async function serializeToFile(
     new Date(db.created_at),
     new Date(db.updated_at)
   );
-  const headerHash = sodium.crypto_hash_sha256(header);
   const params = createEncParams(salt, nonce);
+  const headerHash = sodium.crypto_hash_sha256(
+    new Uint8Array([...header, ...params])
+  );
 
   // Assemble file
   const payloadLen = new Uint8Array(4);
@@ -293,15 +295,19 @@ export async function deserializeFromFile(
   // Parse and verify header
   const headerMeta = parseHeader(fileBytes.slice(0, HEADER_SIZE));
 
-  // Verify header integrity
+  // Verify header + encParams integrity
   const storedHash = fileBytes.slice(
     HEADER_SIZE,
     HEADER_SIZE + HEADER_HASH_SIZE
   );
-  const computedHash = sodium.crypto_hash_sha256(
-    fileBytes.slice(0, HEADER_SIZE)
+  // Hash covers: header(128B) + encParams(96B), skipping the stored hash(32B) itself
+  const signedData = new Uint8Array(HEADER_SIZE + ENC_PARAMS_SIZE);
+  signedData.set(fileBytes.slice(0, HEADER_SIZE), 0);
+  signedData.set(
+    fileBytes.slice(ENC_PARAMS_OFFSET, ENC_PARAMS_OFFSET + ENC_PARAMS_SIZE),
+    HEADER_SIZE
   );
-  if (!equalBytes(storedHash, computedHash)) {
+  if (!sodium.memcmp(storedHash, sodium.crypto_hash_sha256(signedData))) {
     throw new Error(
       'Header integrity check failed: file may be corrupted. Try restoring from a backup.'
     );
@@ -335,14 +341,4 @@ export async function deserializeFromFile(
   validateDatabase(parsed);
 
   return parsed;
-}
-
-// ── Helpers ──
-
-function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
