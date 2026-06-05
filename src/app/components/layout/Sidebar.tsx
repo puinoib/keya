@@ -1,19 +1,10 @@
 import { useState } from 'react';
-import {
-  List,
-  FolderOpen,
-  Faders,
-  X,
-  Gear,
-  Tray,
-  Heartbeat,
-} from '@phosphor-icons/react';
+import { List, FolderOpen, Gear, Tray, Heartbeat } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
 import { SidebarSection } from './SidebarSection';
-import { SidebarFilterSelect } from './SidebarFilterSelect';
 
 function SidebarFilterButton({
   icon,
@@ -63,20 +54,13 @@ export function Sidebar() {
     setFilterProvider,
     setFilterTestStatus,
     setFilterExpiryStatus,
-    clearSmartFilters,
     setSearchQuery,
   } = useStore();
 
   const [showGroupsDialog, setShowGroupsDialog] = useState(false);
 
-  const providers = db
-    ? [...new Set(db.getApiKeys().map((k) => k.provider))].sort()
-    : [];
-
   const keyCount = db?.getApiKeys().length ?? 0;
   const openInboxCount = db?.getOpenInboxItems().length ?? 0;
-  const hasSmartFilters =
-    filterProvider || filterTestStatus || filterExpiryStatus;
   const isInboxActive = pathname === '/inbox';
   const isHealthActive = pathname === '/health';
   const isAllKeysActive =
@@ -93,11 +77,6 @@ export function Sidebar() {
     setFilterExpiryStatus(null);
     setSearchQuery('');
     navigate({ to: '/keys' });
-  };
-
-  const handleClearSmartFilters = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    clearSmartFilters();
   };
 
   if (!db) return null;
@@ -191,58 +170,6 @@ export function Sidebar() {
               );
             })}
           </SidebarSection>
-
-          {/* Smart Filters Section */}
-          {keyCount > 0 && (
-            <SidebarSection
-              icon={Faders}
-              label="Filters"
-              action={
-                hasSmartFilters ? (
-                  <button
-                    onClick={handleClearSmartFilters}
-                    className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
-                  >
-                    <X className="size-3" />
-                  </button>
-                ) : undefined
-              }
-            >
-              <div className="space-y-1 px-0.5">
-                <SidebarFilterSelect
-                  value={filterProvider}
-                  onChange={setFilterProvider}
-                  options={[
-                    { value: '', label: 'All Providers' },
-                    ...providers.map((p) => ({ value: p, label: p })),
-                  ]}
-                  placeholder="All Providers"
-                />
-                <SidebarFilterSelect
-                  value={filterTestStatus}
-                  onChange={setFilterTestStatus}
-                  options={[
-                    { value: '', label: 'All Results' },
-                    { value: 'success', label: 'Success' },
-                    { value: 'failed', label: 'Failed' },
-                    { value: 'untested', label: 'Untested' },
-                  ]}
-                  placeholder="All Results"
-                />
-                <SidebarFilterSelect
-                  value={filterExpiryStatus}
-                  onChange={setFilterExpiryStatus}
-                  options={[
-                    { value: '', label: 'All Expiry' },
-                    { value: 'expired', label: 'Expired' },
-                    { value: 'expiring', label: 'Expiring Soon' },
-                    { value: 'valid', label: 'No Expiry Issue' },
-                  ]}
-                  placeholder="All Expiry"
-                />
-              </div>
-            </SidebarSection>
-          )}
         </div>
 
         {/* Footer */}
