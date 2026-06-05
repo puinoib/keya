@@ -65,13 +65,8 @@ describe('schema (.keya file format)', () => {
     expect(restored.api_keys[0].key).toBe(db.api_keys[0].key);
     expect(restored.api_keys[1].key).toBe(db.api_keys[1].key);
     expect(restored.groups).toHaveLength(db.groups.length);
-    // updated_at is set from header.modified, accept close timestamps
-    expect(
-      Math.abs(
-        new Date(restored.updated_at).getTime() -
-          new Date(db.updated_at).getTime()
-      )
-    ).toBeLessThan(5000);
+    // updated_at preserved from JSON (managed by touch())
+    expect(restored.updated_at).toBe(db.updated_at);
   });
 
   it('throws on wrong password', async () => {
@@ -101,9 +96,11 @@ describe('schema (.keya file format)', () => {
 
   it('creates valid header', () => {
     const created = new Date('2026-01-15T12:00:00Z');
+    const modified = new Date('2026-06-05T09:00:00Z');
     const header = createHeader(
       '550e8400-e29b-41d4-a716-446655440000',
-      created
+      created,
+      modified
     );
     expect(header).toHaveLength(128);
     const meta = parseHeader(header);
@@ -111,6 +108,7 @@ describe('schema (.keya file format)', () => {
     expect(meta.flags).toBe(0);
     expect(meta.fileId).toBe('550e8400-e29b-41d4-a716-446655440000');
     expect(meta.created.toISOString()).toBe('2026-01-15T12:00:00.000Z');
+    expect(meta.modified.toISOString()).toBe('2026-06-05T09:00:00.000Z');
   });
 
   it('serialized file does not contain plaintext keys', async () => {

@@ -14,12 +14,9 @@ export function GroupsPage() {
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
           <Folders className="size-4" />
         </div>
-        <div>
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-            Groups
-          </h1>
-          <p className="text-xs text-ink-quaternary">Organize your keys</p>
-        </div>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+          Groups
+        </h1>
       </div>
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">

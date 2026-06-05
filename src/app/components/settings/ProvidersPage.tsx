@@ -162,12 +162,9 @@ export function ProvidersPage() {
         <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
           <HardDrives className="size-4" />
         </div>
-        <div>
-          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-            Providers
-          </h1>
-          <p className="text-xs text-ink-quaternary">Manage API providers</p>
-        </div>
+        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+          Providers
+        </h1>
       </div>
 
       <div className="space-y-4">

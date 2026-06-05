@@ -21,7 +21,8 @@ const PREAMBLE_SIZE = HEADER_SIZE + ENC_PARAMS_SIZE; // everything before payloa
 
 export function createHeader(
   fileId: string,
-  created: Date = new Date()
+  created: Date = new Date(),
+  modified: Date = new Date()
 ): Uint8Array {
   const buf = new Uint8Array(HEADER_SIZE);
   let off = 0;
@@ -45,11 +46,12 @@ export function createHeader(
   }
   off += 16;
 
-  // Created / Modified: uint64 LE (writes as uint32 x2 since JS is limited)
+  // Created / Modified: uint64 LE
   const createdSec = BigInt(Math.floor(created.getTime() / 1000));
+  const modifiedSec = BigInt(Math.floor(modified.getTime() / 1000));
   new DataView(buf.buffer).setBigUint64(off, createdSec, true);
   off += 8;
-  new DataView(buf.buffer).setBigUint64(off, createdSec, true);
+  new DataView(buf.buffer).setBigUint64(off, modifiedSec, true);
   off += 8;
 
   // Remaining 88 bytes are zero (already zero-filled)
@@ -227,7 +229,11 @@ export async function serializeToFile(
   const json = JSON.stringify(db, null, 2);
   const { salt, nonce, encrypted } = encryptDatabase(json, password);
 
-  const header = createHeader(db.vault_id, new Date(db.created_at));
+  const header = createHeader(
+    db.vault_id,
+    new Date(db.created_at),
+    new Date(db.updated_at)
+  );
   const params = createEncParams(salt, nonce);
 
   // Payload
@@ -266,8 +272,8 @@ export async function deserializeFromFile(
     throw new Error('File integrity check failed (HMAC mismatch)');
   }
 
-  // Parse header
-  const header = parseHeader(fileBytes.slice(0, HEADER_SIZE));
+  // Verify header (throws on bad magic)
+  parseHeader(fileBytes.slice(0, HEADER_SIZE));
 
   // Parse encryption params
   const params = parseEncParams(fileBytes.slice(HEADER_SIZE, PREAMBLE_SIZE));
@@ -288,9 +294,6 @@ export async function deserializeFromFile(
   const plaintext = decryptRaw(encrypted, params.nonce, key);
   const json = sodium.to_string(plaintext);
   const db = JSON.parse(json) as KeyaDatabase;
-
-  // Update modified time from header
-  db.updated_at = header.modified.toISOString();
 
   return db;
 }
