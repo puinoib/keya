@@ -1,11 +1,9 @@
 ---
 title: Quick Start
 description: Set up a folder, create a vault, and add your first API key.
-updated: 2025-06-05
+updated: 2026-06-05
 order: 2
 ---
-
-# Quick Start
 
 This walkthrough takes you from a fresh install to a working vault with one API key inside. Plan for about two minutes.
 
