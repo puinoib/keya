@@ -47,8 +47,9 @@ export function VaultPasswordDialog({
   const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
 
   const isCreate = mode === 'new';
+  const scoreOk = !isCreate || (zxcvbnResult != null && zxcvbnResult.score >= 2);
   const canSubmit = isCreate
-    ? password.length >= 8 && password === confirm
+    ? password.length >= 8 && password === confirm && scoreOk
     : password.length > 0;
 
   // Use deferred value for async zxcvbn check (React 19)
@@ -160,6 +161,11 @@ export function VaultPasswordDialog({
                 </span>
               )}
             </div>
+            {zxcvbnResult && zxcvbnResult.score < 2 && (
+              <p className="text-xs text-danger">
+                Password too weak — needs at least Fair strength
+              </p>
+            )}
             {zxcvbnResult?.feedback.warning && (
               <p className="text-xs text-danger">
                 {zxcvbnResult.feedback.warning}

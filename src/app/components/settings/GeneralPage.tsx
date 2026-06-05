@@ -99,8 +99,9 @@ export function GeneralPage() {
     zxcvbnAsync(deferredNewPw).then(setZxcvbnResult);
   }, [deferredNewPw, showPwForm]);
 
+  const scoreOk = zxcvbnResult != null && zxcvbnResult.score >= 2;
   const canChangePw =
-    oldPw.length > 0 && newPw.length >= 8 && newPw === confirmPw;
+    oldPw.length > 0 && newPw.length >= 8 && newPw === confirmPw && scoreOk;
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -312,25 +313,32 @@ export function GeneralPage() {
                       data-lpignore="true"
                     />
                     {newPw && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 flex gap-1">
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <div
-                              key={i}
-                              className={`h-1 flex-1 rounded-full transition-colors ${
-                                zxcvbnResult && i <= zxcvbnResult.score
-                                  ? STRENGTH_CONFIG[
-                                      zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
-                                    ].color
-                                  : 'bg-surface-3'
-                              }`}
-                            />
-                          ))}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 flex gap-1">
+                            {[0, 1, 2, 3, 4].map((i) => (
+                              <div
+                                key={i}
+                                className={`h-1 flex-1 rounded-full transition-colors ${
+                                  zxcvbnResult && i <= zxcvbnResult.score
+                                    ? STRENGTH_CONFIG[
+                                        zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
+                                      ].color
+                                    : 'bg-surface-3'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {strength && (
+                            <span className="text-xs text-ink-quaternary">
+                              {strength.label}
+                            </span>
+                          )}
                         </div>
-                        {strength && (
-                          <span className="text-xs text-ink-quaternary">
-                            {strength.label}
-                          </span>
+                        {zxcvbnResult && zxcvbnResult.score < 2 && (
+                          <p className="text-xs text-danger">
+                            Password too weak — needs at least Fair strength
+                          </p>
                         )}
                       </div>
                     )}
