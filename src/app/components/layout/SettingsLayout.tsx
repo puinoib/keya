@@ -55,7 +55,7 @@ export function SettingsLayout() {
             </DropdownMenu>
           </header>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto scrollbar-hidden">
             <main className="p-6 max-w-2xl mx-auto w-full">
               <Outlet />
             </main>
