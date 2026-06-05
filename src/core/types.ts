@@ -55,20 +55,12 @@ export type InboxArchiveReason = 'user' | 'resolved';
 export interface InboxItem {
   id: string;
   type: InboxItemType;
-  title: string;
-  body: string;
-  severity: 'warning' | 'critical';
-  status: InboxItemStatus;
-  dedupe_key: string;
-  fingerprint: string;
-  entity_type: 'api_key';
   entity_id: string;
-  vault_id: string;
+  status: InboxItemStatus;
   archive_reason: InboxArchiveReason | null;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
-  last_detected_at: string | null;
   metadata: {
     key_name: string;
     provider: string;

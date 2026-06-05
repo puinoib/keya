@@ -2,12 +2,7 @@ import type { ApiKey, InboxItem, KeyaDatabase } from './types';
 import { EXPIRY_REMINDER_DAYS } from './types';
 
 export interface ExpiryAlert {
-  dedupeKey: string;
-  fingerprint: string;
   type: InboxItem['type'];
-  title: string;
-  body: string;
-  severity: InboxItem['severity'];
   entityId: string;
   metadata: InboxItem['metadata'];
 }
@@ -41,9 +36,14 @@ export function getDaysUntilExpiry(
   return Math.round((expiryDay.getTime() - currentDay.getTime()) / DAY_MS);
 }
 
+// Derive dedupe_key from type + entity_id (stable across syncs)
+function dedupeKeyOf(type: InboxItem['type'], entityId: string): string {
+  return `expiry:${type}:${entityId}`;
+}
+
 export function collectExpiryAlerts(
   keys: ApiKey[],
-  vaultId: string,
+  _vaultId: string,
   now = new Date(),
   reminderDays = EXPIRY_REMINDER_DAYS
 ): ExpiryAlert[] {
@@ -55,17 +55,8 @@ export function collectExpiryAlerts(
     if (daysUntilExpiry == null) continue;
 
     if (daysUntilExpiry < 0) {
-      const overdueDays = Math.abs(daysUntilExpiry);
       alerts.push({
-        dedupeKey: `expiry:${vaultId}:${key.id}:expired`,
-        fingerprint: `expired:${key.expires_at}`,
         type: 'key_expiry_expired',
-        title: `${key.name} has expired`,
-        body:
-          overdueDays === 1
-            ? `${key.provider} key expired yesterday. Review or replace it soon.`
-            : `${key.provider} key expired ${overdueDays} days ago. Review or replace it soon.`,
-        severity: 'critical',
         entityId: key.id,
         metadata: {
           key_name: key.name,
@@ -79,15 +70,7 @@ export function collectExpiryAlerts(
 
     if (daysUntilExpiry <= reminderDays) {
       alerts.push({
-        dedupeKey: `expiry:${vaultId}:${key.id}:upcoming`,
-        fingerprint: `upcoming:${key.expires_at}`,
         type: 'key_expiry_upcoming',
-        title: `${key.name} expires soon`,
-        body:
-          daysUntilExpiry === 0
-            ? `${key.provider} key expires today. Make sure the replacement is ready.`
-            : `${key.provider} key expires in ${daysUntilExpiry} days. Plan a rotation before it stops working.`,
-        severity: 'warning',
         entityId: key.id,
         metadata: {
           key_name: key.name,
@@ -104,26 +87,17 @@ export function collectExpiryAlerts(
 
 function buildInboxItem(
   alert: ExpiryAlert,
-  vaultId: string,
   nowIso: string
 ): InboxItem {
   return {
     id: crypto.randomUUID(),
     type: alert.type,
-    title: alert.title,
-    body: alert.body,
-    severity: alert.severity,
-    status: 'open',
-    dedupe_key: alert.dedupeKey,
-    fingerprint: alert.fingerprint,
-    entity_type: 'api_key',
     entity_id: alert.entityId,
-    vault_id: vaultId,
+    status: 'open',
     archive_reason: null,
     created_at: nowIso,
     updated_at: nowIso,
     archived_at: null,
-    last_detected_at: nowIso,
     metadata: alert.metadata,
   };
 }
@@ -141,14 +115,17 @@ export function syncInboxWithAlerts(
     unchanged: [],
   };
 
-  const alertsByKey = new Map(alerts.map((alert) => [alert.dedupeKey, alert]));
+  const alertsByKey = new Map(
+    alerts.map((alert) => [dedupeKeyOf(alert.type, alert.entityId), alert])
+  );
   const nextItems = db.inbox.map((item) => ({
     ...item,
     metadata: { ...item.metadata },
   }));
 
   for (const item of nextItems) {
-    const matchingAlert = alertsByKey.get(item.dedupe_key);
+    const itemKey = dedupeKeyOf(item.type, item.entity_id);
+    const matchingAlert = alertsByKey.get(itemKey);
 
     if (!matchingAlert) {
       const shouldResolve =
@@ -164,7 +141,7 @@ export function syncInboxWithAlerts(
       continue;
     }
 
-    alertsByKey.delete(item.dedupe_key);
+    alertsByKey.delete(itemKey);
 
     if (item.status === 'archived') {
       summary.unchanged.push(item);
@@ -172,19 +149,10 @@ export function syncInboxWithAlerts(
     }
 
     const changed =
-      item.title !== matchingAlert.title ||
-      item.body !== matchingAlert.body ||
-      item.severity !== matchingAlert.severity ||
-      item.fingerprint !== matchingAlert.fingerprint ||
       item.metadata.days_until_expiry !==
         matchingAlert.metadata.days_until_expiry ||
       item.metadata.expires_at !== matchingAlert.metadata.expires_at;
 
-    item.title = matchingAlert.title;
-    item.body = matchingAlert.body;
-    item.severity = matchingAlert.severity;
-    item.fingerprint = matchingAlert.fingerprint;
-    item.last_detected_at = nowIso;
     item.updated_at = nowIso;
     item.metadata = matchingAlert.metadata;
 
@@ -193,7 +161,7 @@ export function syncInboxWithAlerts(
   }
 
   for (const alert of alertsByKey.values()) {
-    const newItem = buildInboxItem(alert, db.vault_id, nowIso);
+    const newItem = buildInboxItem(alert, nowIso);
     nextItems.push(newItem);
     summary.added.push(newItem);
   }
