@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useStore } from '../../store/useStore';
 import {
-  ENDPOINT_DEFAULTS,
+  getDefaultEndpointForProvider,
   getProvidersForDropdown,
 } from '../../../core/types';
 import { ApiTester } from '../../lib/api-tester';
@@ -97,18 +97,19 @@ export function KeyForm({
 
   const settings = db?.getSettings();
   const providers = getProvidersForDropdown(settings);
-  const defaultEndpoint =
-    ENDPOINT_DEFAULTS[form.provider.toLowerCase()] ??
-    settings?.custom_providers?.find((cp) => cp.name === form.provider)
-      ?.endpoint;
+  const defaultEndpoint = getDefaultEndpointForProvider(
+    form.provider,
+    settings
+  );
+
+  useEffect(() => {
+    if (!open || !defaultEndpoint) return;
+    setForm((f) => (f.endpoint ? f : { ...f, endpoint: defaultEndpoint }));
+  }, [open, defaultEndpoint]);
 
   const handleProviderChange = (provider: string | null) => {
     if (!provider) return;
-    const endpoint =
-      ENDPOINT_DEFAULTS[provider.toLowerCase()] ??
-      settings?.custom_providers?.find((cp) => cp.name === provider)
-        ?.endpoint ??
-      '';
+    const endpoint = getDefaultEndpointForProvider(provider, settings) ?? '';
     setForm((f) => ({ ...f, provider, endpoint }));
     setTestState({ testing: false, result: null });
   };

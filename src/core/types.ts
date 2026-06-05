@@ -122,6 +122,23 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   azure: 'https://YOUR_RESOURCE.openai.azure.com',
 };
 
+export function getDefaultEndpointForProvider(
+  provider: string,
+  settings: Settings | undefined
+): string | undefined {
+  const normalizedProvider = provider.toLowerCase();
+  const presetEndpoint =
+    ENDPOINT_DEFAULTS[normalizedProvider] ??
+    (normalizedProvider === 'azure openai'
+      ? ENDPOINT_DEFAULTS.azure
+      : undefined);
+
+  return (
+    presetEndpoint ??
+    settings?.custom_providers?.find((cp) => cp.name === provider)?.endpoint
+  );
+}
+
 export const PRESET_PROVIDERS = [
   'OpenAI',
   'Anthropic',
