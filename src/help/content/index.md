@@ -1,11 +1,9 @@
 ---
 title: Welcome to Keya
 description: Keya Help Center
-updated: 2025-06-05
+updated: 2026-06-05
 order: 1
 ---
-
-# Welcome to Keya
 
 Keya is a desktop-grade API key vault that lives entirely in your browser. There is no account, no server, and no telemetry — your keys never leave the folder you choose.
 

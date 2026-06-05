@@ -1,11 +1,9 @@
 ---
 title: Backup & Restore
 description: How to back up, restore, and migrate your Keya vaults.
-updated: 2025-06-05
+updated: 2026-06-05
 order: 5
 ---
-
-# Backup & Restore
 
 Keya stores your data in `.keya` files inside the workspace folder you picked on first launch. The file is the backup. If you have the file and the master password, you have everything.
 
