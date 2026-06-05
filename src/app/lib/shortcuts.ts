@@ -203,18 +203,18 @@ export function formatShortcut(keys: string): string {
       return trimmedCombo
         .split('+')
         .map((part) => formatShortcutPart(part, isMac))
-        .join(isMac ? '' : '+');
+        .join(' + ');
     })
     .join(' / ');
 }
 
 function formatShortcutPart(part: string, isMac: boolean): string {
   const normalized = part.toLowerCase();
-  if (normalized === 'mod') return isMac ? '⌘' : 'Ctrl';
-  if (normalized === 'ctrl') return isMac ? '⌃' : 'Ctrl';
-  if (normalized === 'shift') return isMac ? '⇧' : 'Shift';
-  if (normalized === 'alt') return isMac ? '⌥' : 'Alt';
-  if (normalized === 'meta') return isMac ? '⌘' : 'Meta';
+  if (normalized === 'mod') return isMac ? 'Cmd' : 'Ctrl';
+  if (normalized === 'ctrl') return 'Ctrl';
+  if (normalized === 'shift') return 'Shift';
+  if (normalized === 'alt') return isMac ? 'Option' : 'Alt';
+  if (normalized === 'meta') return isMac ? 'Cmd' : 'Meta';
   if (normalized === 'enter') return 'Enter';
   if (normalized === 'esc') return 'Esc';
   if (normalized === 'delete') return 'Delete';
