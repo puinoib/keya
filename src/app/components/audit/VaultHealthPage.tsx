@@ -505,10 +505,6 @@ export function VaultHealthPage() {
           <h1 className="text-base font-semibold tracking-tight text-ink-primary">
             Health
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-quaternary">
-            A local security review for this vault. Use it to find expired,
-            failing, stale, and poorly organized keys.
-          </p>
         </div>
       </div>
 

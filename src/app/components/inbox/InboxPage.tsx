@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Archive,
-  ArrowClockwise,
   Warning,
   ClockAfternoon,
 } from '@phosphor-icons/react';
@@ -41,7 +40,6 @@ export function InboxPage() {
   const navigate = useNavigate();
   const db = useStore((s) => s.db);
   const archiveInboxItem = useStore((s) => s.archiveInboxItem);
-  const runInboxChecks = useStore((s) => s.runInboxChecks);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
   const clearFilters = useStore((s) => s.clearFilters);
   const setSearchQuery = useStore((s) => s.setSearchQuery);
@@ -61,22 +59,9 @@ export function InboxPage() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-base font-semibold tracking-tight text-ink-primary">
-            Inbox
-          </h1>
-          <p className="mt-1 text-sm text-ink-quaternary max-w-2xl">
-            Persistent reminders live here until you archive them. Keya
-            refreshes expiry reminders whenever you open or unlock the vault.
-          </p>
-        </div>
-
-        <Button variant="outline" size="sm" onClick={() => runInboxChecks()}>
-          <ArrowClockwise className="size-4" />
-          Check now
-        </Button>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        Inbox
+      </h1>
 
       <div className="grid gap-3 sm:grid-cols-3 mb-6">
         <MetricCard label="Open" value={openItems.length} />
