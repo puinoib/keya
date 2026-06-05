@@ -1,4 +1,4 @@
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import {
   Gear,
   Key,
@@ -6,6 +6,7 @@ import {
   Keyboard,
   Folders,
   Question,
+  ArrowLeft,
 } from '@phosphor-icons/react';
 
 const navItems = [
@@ -18,12 +19,22 @@ const navItems = [
 ];
 
 export function SettingsSidebar() {
+  const navigate = useNavigate();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
 
   return (
     <aside className="w-48 shrink-0 flex flex-col bg-canvas-panel px-2 pt-3 pb-2">
+      <button
+        type="button"
+        onClick={() => navigate({ to: '/keys' })}
+        className="flex items-center gap-2 rounded-md px-2.5 py-1.5 mb-3 text-xs text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
+      >
+        <ArrowLeft className="size-3.5" />
+        <span>Back to app</span>
+      </button>
+
       <div className="space-y-0.5">
         {navItems.map((item) => {
           const isActive = pathname === item.path;
