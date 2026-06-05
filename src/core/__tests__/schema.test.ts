@@ -81,9 +81,8 @@ describe('schema (.keya file format)', () => {
     const bytes = new Uint8Array(256).fill(0x00);
     // Write something non-"KEYA" at start
     bytes.set(new TextEncoder().encode('NOPE'), 0);
-    // HMAC check runs first — caught as integrity failure
     await expect(deserializeFromFile(bytes, password)).rejects.toThrow(
-      'File integrity check failed'
+      'Not a valid .keya file'
     );
   });
 
@@ -94,11 +93,14 @@ describe('schema (.keya file format)', () => {
     await expect(deserializeFromFile(truncated, password)).rejects.toThrow();
   });
 
-  it('creates valid header', () => {
+  it('creates valid header with masterSeed', () => {
     const created = new Date('2026-01-15T12:00:00Z');
     const modified = new Date('2026-06-05T09:00:00Z');
+    const masterSeed = new Uint8Array(32);
+    crypto.getRandomValues(masterSeed);
     const header = createHeader(
       '550e8400-e29b-41d4-a716-446655440000',
+      masterSeed,
       created,
       modified
     );
@@ -107,6 +109,7 @@ describe('schema (.keya file format)', () => {
     expect(meta.version).toBe(1);
     expect(meta.flags).toBe(0);
     expect(meta.fileId).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(meta.masterSeed).toHaveLength(32);
     expect(meta.created.toISOString()).toBe('2026-01-15T12:00:00.000Z');
     expect(meta.modified.toISOString()).toBe('2026-06-05T09:00:00.000Z');
   });

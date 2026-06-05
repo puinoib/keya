@@ -18,7 +18,7 @@ export {
 } from './types';
 
 // Crypto
-export { initCrypto, decryptRaw, deriveKey } from './crypto';
+export { initCrypto, deriveKey } from './crypto';
 
 // Schema (.keya file format)
 export {
@@ -26,8 +26,6 @@ export {
   parseHeader,
   createEncParams,
   parseEncParams,
-  computeHMAC,
-  verifyHMAC,
   serializeToFile,
   deserializeFromFile,
 } from './schema';

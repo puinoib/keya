@@ -2,11 +2,23 @@
  * .keya file format — binary read/write
  *
  * File layout:
- *   Header (128B) | EncParams (96B) | PayloadLen (4B) | Payload (N) | HMAC (32B)
+ *   Header (128B) | EncParams (96B) | PayloadLen (4B) | Payload (N)
+ *
+ * Header layout (128B):
+ *   [Magic 4B] [Version 2B] [Flags 2B] [FileID 16B]
+ *   [Created 8B] [Modified 8B] [MasterSeed 32B] [Reserved 56B]
  */
 
 import type { KeyaDatabase } from './types';
-import { encryptDatabase, decryptRaw, deriveKey, initCrypto } from './crypto';
+import {
+  generateSalt,
+  generateNonce,
+  deriveKey,
+  finalizeKey,
+  encrypt,
+  decrypt,
+  initCrypto,
+} from './crypto';
 import sodium from 'libsodium-wrappers-sumo';
 
 // ── Constants ──
@@ -14,13 +26,15 @@ import sodium from 'libsodium-wrappers-sumo';
 const MAGIC = new TextEncoder().encode('KEYA');
 const HEADER_SIZE = 128;
 const ENC_PARAMS_SIZE = 96;
-const HMAC_SIZE = 32;
 const PREAMBLE_SIZE = HEADER_SIZE + ENC_PARAMS_SIZE; // everything before payload
+const MASTER_SEED_SIZE = 32;
+const PAD_BLOCK_SIZE = 4096;
 
 // ── Header ──
 
 export function createHeader(
   fileId: string,
+  masterSeed: Uint8Array,
   created: Date = new Date(),
   modified: Date = new Date()
 ): Uint8Array {
@@ -39,7 +53,7 @@ export function createHeader(
   new DataView(buf.buffer).setUint16(off, 0, true);
   off += 2;
 
-  // FileID: 16 bytes UUID as hex
+  // FileID: 16 bytes UUID as raw bytes
   const hex = fileId.replace(/-/g, '');
   for (let i = 0; i < 16; i++) {
     buf[off + i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -54,7 +68,10 @@ export function createHeader(
   new DataView(buf.buffer).setBigUint64(off, modifiedSec, true);
   off += 8;
 
-  // Remaining 88 bytes are zero (already zero-filled)
+  // MasterSeed: 32 bytes
+  buf.set(masterSeed, off);
+
+  // Remaining 56 bytes are zero (already zero-filled)
   return buf;
 }
 
@@ -62,6 +79,7 @@ export interface HeaderMeta {
   version: number;
   flags: number;
   fileId: string;
+  masterSeed: Uint8Array;
   created: Date;
   modified: Date;
 }
@@ -101,10 +119,14 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
   const modifiedSec = Number(dv.getBigUint64(off, true));
   off += 8;
 
+  // MasterSeed: 32 bytes
+  const masterSeed = buf.slice(off, off + MASTER_SEED_SIZE);
+
   return {
     version,
     flags,
     fileId,
+    masterSeed,
     created: new Date(createdSec * 1000),
     modified: new Date(modifiedSec * 1000),
   };
@@ -191,31 +213,17 @@ export function parseEncParams(buf: Uint8Array): EncParams {
   return { ops, mem, salt, nonce };
 }
 
-// ── HMAC ──
+// ── Padding ──
 
-export async function computeHMAC(data: Uint8Array): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode('keya-hmac-key').buffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    data.slice().buffer as ArrayBuffer
-  );
-  return new Uint8Array(sig);
-}
-
-export async function verifyHMAC(
-  data: Uint8Array,
-  expected: Uint8Array
-): Promise<boolean> {
-  const computed = await computeHMAC(data);
-  if (computed.length !== expected.length) return false;
-  return computed.every((b, i) => b === expected[i]);
+/** Pad data with spaces to next 4096-byte boundary (spaces are valid JSON whitespace) */
+function padToBlock(data: Uint8Array): Uint8Array {
+  const remainder = data.length % PAD_BLOCK_SIZE;
+  if (remainder === 0) return data;
+  const padding = PAD_BLOCK_SIZE - remainder;
+  const padded = new Uint8Array(data.length + padding);
+  padded.set(data, 0);
+  padded.fill(0x20, data.length);
+  return padded;
 }
 
 // ── Full file read/write ──
@@ -226,35 +234,41 @@ export async function serializeToFile(
 ): Promise<Uint8Array> {
   await initCrypto();
 
-  const json = JSON.stringify(db, null, 2);
-  const { salt, nonce, encrypted } = encryptDatabase(json, password);
+  // Generate cryptographic material
+  const masterSeed = sodium.randombytes_buf(MASTER_SEED_SIZE);
+  const salt = generateSalt();
+  const nonce = generateNonce();
 
+  // Derive final encryption key: Argon2id → SHA-256(masterSeed + derivedKey)
+  const derivedKey = deriveKey(password, salt);
+  const finalKey = finalizeKey(derivedKey, masterSeed);
+
+  // Serialize and pad JSON (compact, no pretty-print)
+  const json = JSON.stringify(db);
+  const plaintext = padToBlock(sodium.from_string(json));
+
+  // Encrypt
+  const encrypted = encrypt(plaintext, finalKey, nonce);
+
+  // Build header with masterSeed
   const header = createHeader(
     db.vault_id,
+    masterSeed,
     new Date(db.created_at),
     new Date(db.updated_at)
   );
   const params = createEncParams(salt, nonce);
 
-  // Payload
+  // Assemble file
   const payloadLen = new Uint8Array(4);
   new DataView(payloadLen.buffer).setUint32(0, encrypted.length, true);
 
-  // Assemble (without HMAC)
-  const preamble = new Uint8Array(PREAMBLE_SIZE);
-  preamble.set(header, 0);
-  preamble.set(params, HEADER_SIZE);
-
-  const total = PREAMBLE_SIZE + 4 + encrypted.length + HMAC_SIZE;
+  const total = PREAMBLE_SIZE + 4 + encrypted.length;
   const file = new Uint8Array(total);
-  file.set(preamble, 0);
+  file.set(header, 0);
+  file.set(params, HEADER_SIZE);
   file.set(payloadLen, PREAMBLE_SIZE);
   file.set(encrypted, PREAMBLE_SIZE + 4);
-
-  // HMAC over everything before it
-  const preHMAC = file.slice(0, total - HMAC_SIZE);
-  const hmac = await computeHMAC(preHMAC);
-  file.set(hmac, total - HMAC_SIZE);
 
   return file;
 }
@@ -265,15 +279,8 @@ export async function deserializeFromFile(
 ): Promise<KeyaDatabase> {
   await initCrypto();
 
-  // Verify HMAC
-  const preHMAC = fileBytes.slice(0, fileBytes.length - HMAC_SIZE);
-  const storedHMAC = fileBytes.slice(fileBytes.length - HMAC_SIZE);
-  if (!(await verifyHMAC(preHMAC, storedHMAC))) {
-    throw new Error('File integrity check failed (HMAC mismatch)');
-  }
-
-  // Verify header (throws on bad magic)
-  parseHeader(fileBytes.slice(0, HEADER_SIZE));
+  // Verify header and extract masterSeed
+  const headerMeta = parseHeader(fileBytes.slice(0, HEADER_SIZE));
 
   // Parse encryption params
   const params = parseEncParams(fileBytes.slice(HEADER_SIZE, PREAMBLE_SIZE));
@@ -289,10 +296,13 @@ export async function deserializeFromFile(
     PREAMBLE_SIZE + 4 + payloadLen
   );
 
-  // Decrypt
-  const key = deriveKey(password, params.salt);
-  const plaintext = decryptRaw(encrypted, params.nonce, key);
-  const json = sodium.to_string(plaintext);
+  // Derive final encryption key
+  const derivedKey = deriveKey(password, params.salt);
+  const finalKey = finalizeKey(derivedKey, headerMeta.masterSeed);
+
+  // Decrypt and parse JSON
+  const plaintext = decrypt(encrypted, params.nonce, finalKey);
+  const json = sodium.to_string(plaintext).trim();
   const db = JSON.parse(json) as KeyaDatabase;
 
   return db;
