@@ -29,7 +29,7 @@ export function KeysPage() {
   const hasSmartFilters =
     filterProvider || filterTestStatus || filterExpiryStatus;
 
-  // Build active filter tags
+  // Build tags for non-smart-filter sources (group, search only)
   const tags: { label: string; onRemove: () => void }[] = [];
   if (searchQuery)
     tags.push({
@@ -44,29 +44,8 @@ export function KeysPage() {
     if (name)
       tags.push({ label: name, onRemove: () => setFilterGroupId(null) });
   }
-  if (filterProvider)
-    tags.push({
-      label: filterProvider,
-      onRemove: () => setFilterProvider(null),
-    });
-  if (filterTestStatus) {
-    const label =
-      filterTestStatus === 'success'
-        ? 'Success'
-        : filterTestStatus === 'failed'
-          ? 'Failed'
-          : 'Untested';
-    tags.push({ label, onRemove: () => setFilterTestStatus(null) });
-  }
-  if (filterExpiryStatus) {
-    const label =
-      filterExpiryStatus === 'expired'
-        ? 'Expired'
-        : filterExpiryStatus === 'expiring'
-          ? 'Expiring Soon'
-          : 'No Expiry Issue';
-    tags.push({ label, onRemove: () => setFilterExpiryStatus(null) });
-  }
+
+  const hasAnyFilters = hasSmartFilters || tags.length > 0;
 
   return (
     <div className="flex flex-1 min-h-0">
@@ -78,9 +57,10 @@ export function KeysPage() {
           </span>
         </h1>
 
-        {/* Smart Filters - horizontal layout */}
-        {(providers.length > 0 || hasSmartFilters) && (
+        {/* Filters row: Smart Filters + Tags (if any) */}
+        {(providers.length > 0 || hasAnyFilters) && (
           <div className="flex items-center gap-2 mb-3">
+            {/* Smart Filters */}
             <SidebarFilterSelect
               value={filterProvider}
               onChange={setFilterProvider}
@@ -120,34 +100,36 @@ export function KeysPage() {
                 Clear
               </button>
             )}
-          </div>
-        )}
 
-        {tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mb-3">
-            {tags.map((tag, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
-              >
-                {tag.label}
+            {/* Separator + Tags (group, search) */}
+            {tags.length > 0 && (
+              <>
+                <span className="text-ink-quaternary mx-1">|</span>
+                {tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
+                  >
+                    {tag.label}
+                    <button
+                      onClick={tag.onRemove}
+                      className="text-ink-quaternary hover:text-ink-secondary transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                ))}
                 <button
-                  onClick={tag.onRemove}
-                  className="text-ink-quaternary hover:text-ink-secondary transition-colors"
+                  onClick={() => {
+                    clearFilters();
+                    setSearchQuery('');
+                  }}
+                  className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
                 >
-                  <X className="size-3" />
+                  Clear all
                 </button>
-              </span>
-            ))}
-            <button
-              onClick={() => {
-                clearFilters();
-                setSearchQuery('');
-              }}
-              className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
-            >
-              Clear all
-            </button>
+              </>
+            )}
           </div>
         )}
 
