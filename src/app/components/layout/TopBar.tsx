@@ -6,6 +6,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Check,
   DownloadSimple,
   Key,
   FileCode,
@@ -241,19 +242,32 @@ export function TopBar() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
-          <DropdownMenuItem onClick={() => setTheme('dark')} className="gap-2">
-            <Moon className="size-3.5" /> {theme === 'dark' ? '✓ Dark' : 'Dark'}
+          <DropdownMenuItem
+            onClick={() => setTheme('dark')}
+            className="justify-between"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Moon className="size-3.5" /> Dark
+            </span>
+            {theme === 'dark' ? <Check className="size-3.5" /> : null}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme('light')} className="gap-2">
-            <Sun className="size-3.5" />{' '}
-            {theme === 'light' ? '✓ Light' : 'Light'}
+          <DropdownMenuItem
+            onClick={() => setTheme('light')}
+            className="justify-between"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Sun className="size-3.5" /> Light
+            </span>
+            {theme === 'light' ? <Check className="size-3.5" /> : null}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setTheme('system')}
-            className="gap-2"
+            className="justify-between"
           >
-            <Monitor className="size-3.5" />{' '}
-            {theme === 'system' ? '✓ System' : 'System'}
+            <span className="inline-flex items-center gap-2">
+              <Monitor className="size-3.5" /> System
+            </span>
+            {theme === 'system' ? <Check className="size-3.5" /> : null}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

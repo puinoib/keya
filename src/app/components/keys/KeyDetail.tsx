@@ -8,7 +8,6 @@ import {
   Flask,
   PencilSimple,
   Trash,
-  Key,
   Eye,
   EyeSlash,
   X,
@@ -123,39 +122,23 @@ export function KeyDetail() {
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-4 py-3 shrink-0 animate-stagger-in"
-          style={{ animationDelay: '40ms' }}
-        >
-          <span className="text-xs font-medium text-ink-quaternary uppercase tracking-wider">
-            Overview
-          </span>
-          <button
-            onClick={() => setSelectedKeyId(null)}
-            className="inline-flex items-center justify-center size-6 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100"
-          >
-            <X className="size-3.5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 scrollbar-thin">
           {/* Identity */}
           <div
-            className="flex items-center gap-2.5 mb-3 animate-stagger-in"
-            style={{ animationDelay: '80ms' }}
+            className="flex items-start justify-between gap-3 mb-3 animate-stagger-in"
+            style={{ animationDelay: '40ms' }}
           >
-            <div className="flex items-center justify-center size-10 rounded-xl bg-accent/10 text-accent-bright text-lg shrink-0">
-              {group?.icon ? group.icon : <Key className="size-4.5" />}
-            </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold text-ink-primary truncate">
                 {key.name}
               </h2>
-              <p className="text-xs text-ink-quaternary">
-                {group?.name ?? 'Ungrouped'}
-              </p>
             </div>
+            <button
+              onClick={() => setSelectedKeyId(null)}
+              className="inline-flex items-center justify-center size-6 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100 shrink-0"
+            >
+              <X className="size-3.5" />
+            </button>
           </div>
 
           {/* Status */}
@@ -230,7 +213,10 @@ export function KeyDetail() {
             className="space-y-3 animate-stagger-in"
             style={{ animationDelay: '200ms' }}
           >
-            <MetaRow icon={Tag} label="Provider" value={key.provider} />
+            <div className="grid grid-cols-2 gap-3">
+              <MetaRow icon={Tag} label="Provider" value={key.provider} />
+              <MetaRow icon={Tag} label="Group" value={group?.name ?? 'Ungrouped'} />
+            </div>
             {key.endpoint && (
               <MetaRow
                 icon={Globe}
