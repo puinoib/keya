@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import type { ApiKey } from '../../../core/types';
 import {
   getConnectionStatusLabel,
-  getDaysUntilKeyExpiry,
   getExpiryStatus,
+  getExpiryStatusLabel,
 } from '../../../core';
 import {
   Copy,
@@ -73,14 +73,12 @@ export function KeyDetail() {
         status: result.success ? 'success' : 'failed',
         checked_at: new Date().toISOString(),
         latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : result.error ?? null,
+        error_message: result.success ? null : (result.error ?? null),
       },
     });
     setTesting(false);
     toast[result.success ? 'success' : 'error'](
-      result.success
-        ? 'Connection test succeeded'
-        : 'Connection test failed',
+      result.success ? 'Connection test succeeded' : 'Connection test failed',
       {
         description: result.success
           ? `${result.latency_ms}ms`
@@ -108,7 +106,14 @@ export function KeyDetail() {
   };
 
   const expiryStatus = getExpiryStatus(key.expires_at);
-  const daysUntilExpiry = getDaysUntilKeyExpiry(key.expires_at);
+  const groupLabel = group ? `${group.icon} ${group.name}` : '📥 Ungrouped';
+  const expiryLabel =
+    expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
+      ? getExpiryStatusLabel(expiryStatus)
+      : null;
+  const expiryValue = key.expires_at
+    ? [formatDate(key.expires_at), expiryLabel].filter(Boolean).join(' · ')
+    : 'Never';
 
   return (
     <>
@@ -127,6 +132,43 @@ export function KeyDetail() {
               <h2 className="text-base font-semibold text-ink-primary truncate">
                 {key.name}
               </h2>
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                <span className="inline-flex min-w-0 items-center rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-tertiary">
+                  <span className="truncate">{key.provider}</span>
+                </span>
+                {testOk && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
+                    <CheckCircle className="size-3" />
+                    {getConnectionStatusLabel(connectionStatus)}
+                  </span>
+                )}
+                {testFail && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                    <XCircle className="size-3" /> Failed
+                  </span>
+                )}
+                {connectionStatus === 'untested' && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                    <MinusCircle className="size-3" /> Untested
+                  </span>
+                )}
+                {expiryLabel && (
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      expiryStatus === 'expired'
+                        ? 'bg-danger/10 text-danger'
+                        : 'bg-warning/10 text-warning'
+                    }`}
+                  >
+                    <Warning className="size-3" /> {expiryLabel}
+                  </span>
+                )}
+              </div>
+              {testFail && key.connection_check.error_message && (
+                <p className="mt-1.5 text-xs text-danger/80 break-words">
+                  {key.connection_check.error_message}
+                </p>
+              )}
             </div>
             <button
               onClick={() => setSelectedKeyId(null)}
@@ -134,38 +176,6 @@ export function KeyDetail() {
             >
               <X className="size-3.5" />
             </button>
-          </div>
-
-          {/* Status */}
-          <div
-            className="flex items-center gap-1.5 mb-4 animate-stagger-in"
-            style={{ animationDelay: '120ms' }}
-          >
-            {expiryStatus === 'expired' && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
-                <Warning className="size-3" /> Expired
-              </span>
-            )}
-            {expiryStatus === 'expiring_soon' && daysUntilExpiry != null && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                <Warning className="size-3" /> {daysUntilExpiry}d left
-              </span>
-            )}
-            {testOk && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-xs font-medium">
-                <CheckCircle className="size-3" /> {getConnectionStatusLabel(connectionStatus)}
-              </span>
-            )}
-            {testFail && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
-                <XCircle className="size-3" /> Failed
-              </span>
-            )}
-            {connectionStatus === 'untested' && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-3 text-ink-quaternary text-xs font-medium">
-                <MinusCircle className="size-3" /> Untested
-              </span>
-            )}
           </div>
 
           {/* Key Value */}
@@ -208,10 +218,6 @@ export function KeyDetail() {
             className="space-y-3 animate-stagger-in"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="grid grid-cols-2 gap-3">
-              <MetaRow icon={Tag} label="Provider" value={key.provider} />
-              <MetaRow icon={Tag} label="Group" value={group?.name ?? 'Ungrouped'} />
-            </div>
             {key.endpoint && (
               <MetaRow
                 icon={Globe}
@@ -220,37 +226,7 @@ export function KeyDetail() {
                 mono
               />
             )}
-            {key.expires_at && (
-              <MetaRow
-                icon={Warning}
-                label="Expires"
-                value={formatDate(key.expires_at)}
-                highlight={expiryStatus === 'valid'}
-                warning={
-                  expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
-                }
-              />
-            )}
-            {key.connection_check.latency_ms != null && (
-              <MetaRow
-                icon={Flask}
-                label="Latency"
-                value={`${key.connection_check.latency_ms}ms`}
-                highlight={testOk}
-              />
-            )}
-            {key.connection_check.checked_at && (
-              <MetaRow
-                icon={Clock}
-                label="Last tested"
-                value={formatDate(key.connection_check.checked_at)}
-              />
-            )}
-            <MetaRow
-              icon={Clock}
-              label="Created"
-              value={formatDate(key.created_at)}
-            />
+            <MetaRow icon={Tag} label="Group" value={groupLabel} />
             {key.description && (
               <MetaRow
                 icon={FileText}
@@ -258,6 +234,47 @@ export function KeyDetail() {
                 value={key.description}
               />
             )}
+            <MetaRow
+              icon={Warning}
+              label="Expires"
+              value={expiryValue}
+              warning={
+                expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
+              }
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <MetaRow
+                icon={Clock}
+                label="Last tested"
+                value={
+                  key.connection_check.checked_at
+                    ? formatDate(key.connection_check.checked_at)
+                    : 'Never'
+                }
+              />
+              <MetaRow
+                icon={Flask}
+                label="Latency"
+                value={
+                  key.connection_check.latency_ms != null
+                    ? `${key.connection_check.latency_ms}ms`
+                    : '-'
+                }
+                highlight={testOk && key.connection_check.latency_ms != null}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MetaRow
+                icon={Clock}
+                label="Created"
+                value={formatDate(key.created_at)}
+              />
+              <MetaRow
+                icon={Clock}
+                label="Updated"
+                value={formatDate(key.updated_at)}
+              />
+            </div>
           </div>
         </div>
 
@@ -313,6 +330,7 @@ function MetaRow({
   mono,
   highlight,
   warning,
+  detail,
 }: {
   icon: React.ElementType;
   label: string;
@@ -320,6 +338,7 @@ function MetaRow({
   mono?: boolean;
   highlight?: boolean;
   warning?: boolean;
+  detail?: string;
 }) {
   return (
     <div className="flex items-start gap-2">
@@ -333,6 +352,13 @@ function MetaRow({
         >
           {value}
         </p>
+        {detail && detail !== value && (
+          <p
+            className={`mt-0.5 text-xs ${warning ? 'text-danger/80' : 'text-ink-quaternary'}`}
+          >
+            {detail}
+          </p>
+        )}
       </div>
     </div>
   );
