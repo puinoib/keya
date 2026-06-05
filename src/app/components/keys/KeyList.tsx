@@ -586,16 +586,16 @@ export function EditKeyDialog({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      connection_check: testState.result
-        ? {
-            status: testState.result.success ? 'success' : 'failed',
-            checked_at: new Date().toISOString(),
-            latency_ms: testState.result.latency_ms ?? null,
-            error_message: testState.result.success
-              ? null
-              : (testState.result.error ?? null),
-          }
-        : undefined,
+      ...(testState.result && {
+        connection_check: {
+          status: testState.result.success ? 'success' : 'failed',
+          checked_at: new Date().toISOString(),
+          latency_ms: testState.result.latency_ms ?? null,
+          error_message: testState.result.success
+            ? null
+            : (testState.result.error ?? null),
+        },
+      }),
     });
 
     // Auto-test on save

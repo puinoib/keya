@@ -24,7 +24,6 @@ import {
   Plus,
   Gear,
   ArrowsLeftRight,
-  SignOut,
   Sun,
   Moon,
   Monitor,
@@ -169,7 +168,7 @@ export function VaultSwitcher() {
             onClick={() => useStore.getState().lock()}
             className="text-ink-quaternary"
           >
-            <SignOut className="size-3.5" />
+            <Lock className="size-3.5" />
             <span>Lock</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
