@@ -60,7 +60,6 @@ import {
   Calendar,
   X,
 } from '@phosphor-icons/react';
-import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
 
 export function KeyList() {
@@ -256,13 +255,9 @@ export function KeyList() {
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
                   <span className="shrink-0">{key.provider}</span>
-                  <span className="text-divider">·</span>
-                  <span className="truncate font-mono tracking-tight">
-                    {maskKey(key.key)}
-                  </span>
                   {key.description && (
                     <>
-                      <span className="hidden text-divider md:inline">·</span>
+                      <span className="text-divider">·</span>
                       <span className="hidden truncate md:inline">
                         {key.description}
                       </span>
