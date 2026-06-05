@@ -35,7 +35,6 @@ describe('Database', () => {
   it('creates empty database with defaults', () => {
     const db = new Database();
     const data = db.getData();
-    expect(data.version).toBe('1.0');
     expect(data.vault_id).toBeTruthy();
     expect(data.name).toBe('');
     expect(data.icon).toBe('');

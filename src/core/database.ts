@@ -7,7 +7,6 @@ export function createEmptyDatabase(
 ): KeyaDatabase {
   const now = new Date().toISOString();
   return {
-    version: '1.0',
     vault_id: crypto.randomUUID(),
     created_at: now,
     updated_at: now,
