@@ -106,6 +106,11 @@ describe('auditVault', () => {
       report.checks.find((check) => check.id === 'provider-concentration')
     ).toBeTruthy();
     expect(report.metrics.providerCount).toBe(2);
+    expect(report.charts.providerDistribution[0]).toEqual({
+      provider: 'OpenAI',
+      count: 5,
+      percentage: 83,
+    });
   });
 
   it('flags placeholder and malformed endpoints', () => {
@@ -127,5 +132,56 @@ describe('auditVault', () => {
     expect(report.checks.map((check) => check.id)).toContain(
       'invalid-endpoints'
     );
+  });
+
+  it('builds chart breakdowns from the same audit inputs', () => {
+    const failed = makeKey({
+      id: 'failed',
+      connection_check: {
+        status: 'failed',
+        checked_at: '2026-06-04T00:00:00.000Z',
+        latency_ms: null,
+        error_message: 'Unauthorized',
+      },
+      expires_at: '2026-06-04T00:00:00.000Z',
+    });
+    const untested = makeKey({
+      id: 'untested',
+      group_id: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
+      expires_at: null,
+    });
+    const success = makeKey({
+      id: 'success',
+      provider: 'Anthropic',
+      expires_at: '2026-06-08T00:00:00.000Z',
+    });
+
+    const report = auditVault({
+      keys: [failed, untested, success],
+      groups: [group],
+      now,
+    });
+
+    expect(report.charts.connectionHealth).toEqual({
+      success: 1,
+      failed: 1,
+      untested: 1,
+    });
+    expect(report.charts.expiryBreakdown).toEqual({
+      expired: 1,
+      expiringSoon: 1,
+      valid: 0,
+      noExpiry: 1,
+    });
+    expect(report.charts.groupCoverage).toEqual({
+      grouped: 2,
+      ungrouped: 1,
+    });
   });
 });

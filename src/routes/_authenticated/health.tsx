@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { VaultHealthPage } from '@/app/components/audit/VaultHealthPage';
 import { AppLayout } from '@/app/components/layout/AppLayout';
+import { VaultHealthPage } from '@/app/components/audit/VaultHealthPage';
 
 export const Route = createFileRoute('/_authenticated/health')({
   component: () => (
-    <AppLayout>
+    <AppLayout topbar="minimal">
       <VaultHealthPage />
     </AppLayout>
   ),
