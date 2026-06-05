@@ -222,23 +222,26 @@ export function WelcomePage() {
     <div className="flex flex-col min-h-screen bg-canvas-deepest">
       {/* Theme toggle */}
       <div className="flex justify-end px-4 pt-4">
-        <div className="flex items-center gap-1 bg-surface-2 rounded-md border border-line p-0.5">
-          {(
-            [
-              ['system', Monitor],
-              ['light', Sun],
-              ['dark', Moon],
-            ] as const
-          ).map(([t, Icon]) => (
-            <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={`p-1.5 rounded transition-colors ${theme === t ? 'bg-surface-5 text-ink-primary' : 'text-ink-quaternary hover:text-ink-secondary'}`}
-            >
-              <Icon className="size-3.5" />
-            </button>
-          ))}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center size-8 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors">
+            <CurrentIcon className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {themeOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                onClick={() => setTheme(opt.value)}
+                className="text-xs"
+              >
+                <opt.icon className="size-3.5" />
+                <span>{opt.label}</span>
+                {theme === opt.value && (
+                  <Check className="size-3.5 ml-auto text-accent-bright" />
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-sm">
