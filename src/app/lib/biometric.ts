@@ -126,16 +126,6 @@ function rpId(): string {
   return location.hostname;
 }
 
-async function checkPrfSupport(): Promise<boolean> {
-  if (!window.PublicKeyCredential) return false;
-  try {
-    const caps = await PublicKeyCredential.getClientCapabilities();
-    return caps?.['extension:prf'] === true;
-  } catch {
-    return false;
-  }
-}
-
 async function deriveKeyFromPrf(prfOutput: ArrayBuffer): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -202,8 +192,7 @@ export async function registerBiometric(
   vaultId: string,
   password: string
 ): Promise<void> {
-  const prfCapable = await checkPrfSupport();
-  const prfSalt = prfCapable ? crypto.getRandomValues(new Uint8Array(32)) : undefined;
+  const prfSalt = crypto.getRandomValues(new Uint8Array(32));
 
   // Step 1: Create WebAuthn credential (triggers Touch ID / Face ID)
   const credential = (await navigator.credentials.create({
@@ -223,9 +212,7 @@ export async function registerBiometric(
         authenticatorAttachment: 'platform',
         userVerification: 'required',
       },
-      extensions: prfSalt
-        ? { prf: { eval: { first: toBuffer(prfSalt) } } }
-        : undefined,
+      extensions: { prf: { eval: { first: toBuffer(prfSalt) } } },
     },
   })) as PublicKeyCredential;
 
@@ -234,35 +221,32 @@ export async function registerBiometric(
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
   // Step 2: Try PRF path
-  if (prfSalt) {
-    const prfExt = credential.getClientExtensionResults().prf;
-    let prfOutput: ArrayBuffer | undefined;
+  const prfExt = credential.getClientExtensionResults().prf;
+  let prfOutput: ArrayBuffer | undefined;
 
-    if (prfExt?.enabled) {
-      prfOutput = prfExt.results?.first as ArrayBuffer | undefined;
-      // If create() didn't return PRF output, try a separate get()
-      if (!prfOutput) {
-        prfOutput = (await evalPrf(credential.rawId, prfSalt)) ?? undefined;
-      }
+  if (prfExt?.enabled) {
+    prfOutput = prfExt.results?.first as ArrayBuffer | undefined;
+    // If create() didn't return PRF output, try a separate get()
+    if (!prfOutput) {
+      prfOutput = (await evalPrf(credential.rawId, prfSalt)) ?? undefined;
     }
-
-    if (prfOutput) {
-      const aesKey = await deriveKeyFromPrf(prfOutput);
-      const encryptedPassword = await aesEncrypt(password, aesKey, iv);
-      await putRecord({
-        vault_id: vaultId,
-        credentialId: new Uint8Array(credential.rawId),
-        encryptedPassword,
-        iv: toBase64(iv),
-        prfSalt: toBase64(prfSalt),
-        createdAt: new Date().toISOString(),
-      });
-      return;
-    }
-    // PRF evaluation failed, fall through to legacy
   }
 
-  // Step 3: Legacy path — random AES key stored in IndexedDB
+  if (prfOutput) {
+    const aesKey = await deriveKeyFromPrf(prfOutput);
+    const encryptedPassword = await aesEncrypt(password, aesKey, iv);
+    await putRecord({
+      vault_id: vaultId,
+      credentialId: new Uint8Array(credential.rawId),
+      encryptedPassword,
+      iv: toBase64(iv),
+      prfSalt: toBase64(prfSalt),
+      createdAt: new Date().toISOString(),
+    });
+    return;
+  }
+
+  // Step 3: Legacy fallback — random AES key stored in IndexedDB
   const aesKey = crypto.getRandomValues(new Uint8Array(32));
   const encryptedPassword = await aesEncrypt(password, aesKey, iv);
   await putRecord({
