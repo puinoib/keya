@@ -4,7 +4,7 @@ import { InboxPage } from '@/app/components/inbox/InboxPage';
 
 export const Route = createFileRoute('/_authenticated/inbox')({
   component: () => (
-    <AppLayout>
+    <AppLayout topbar="minimal">
       <InboxPage />
     </AppLayout>
   ),

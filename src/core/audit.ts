@@ -33,6 +33,28 @@ export interface VaultAuditReport {
     expiringSoon: number;
     ungrouped: number;
   };
+  charts: {
+    providerDistribution: Array<{
+      provider: string;
+      count: number;
+      percentage: number;
+    }>;
+    connectionHealth: {
+      success: number;
+      failed: number;
+      untested: number;
+    };
+    expiryBreakdown: {
+      expired: number;
+      expiringSoon: number;
+      valid: number;
+      noExpiry: number;
+    };
+    groupCoverage: {
+      grouped: number;
+      ungrouped: number;
+    };
+  };
 }
 
 type KeyWithDays = ApiKey & { daysUntilExpiry: number };
@@ -119,6 +141,11 @@ function sortChecks(checks: VaultAuditCheck[]) {
   });
 }
 
+function percentage(count: number, total: number) {
+  if (total === 0) return 0;
+  return Math.round((count / total) * 100);
+}
+
 export function auditVault(input: {
   keys: ApiKey[];
   groups: Group[];
@@ -149,8 +176,15 @@ export function auditVault(input: {
     );
 
   const noExpiry = keys.filter((key) => !key.expires_at);
+  const validExpiry = keys.filter((key) => {
+    const days = getDaysUntil(key.expires_at, now);
+    return days !== null && days > EXPIRY_REMINDER_DAYS;
+  });
   const failedTests = keys.filter(
     (key) => key.connection_check?.status === 'failed'
+  );
+  const successfulTests = keys.filter(
+    (key) => key.connection_check?.status === 'success'
   );
   const neverTested = keys.filter(
     (key) =>
@@ -325,6 +359,13 @@ export function auditVault(input: {
 
   const sortedChecks = sortChecks(checks);
   const summary = summarize(sortedChecks);
+  const providerDistribution = [...providerCounts.entries()]
+    .map(([provider, count]) => ({
+      provider,
+      count,
+      percentage: percentage(count, keys.length),
+    }))
+    .sort((a, b) => b.count - a.count || a.provider.localeCompare(b.provider));
 
   return {
     score: calculateScore(sortedChecks, keys.length),
@@ -336,6 +377,24 @@ export function auditVault(input: {
       failedTests: failedTests.length,
       expiringSoon: expiringSoon.length,
       ungrouped: ungrouped.length,
+    },
+    charts: {
+      providerDistribution,
+      connectionHealth: {
+        success: successfulTests.length,
+        failed: failedTests.length,
+        untested: neverTested.length,
+      },
+      expiryBreakdown: {
+        expired: expired.length,
+        expiringSoon: expiringSoon.length,
+        valid: validExpiry.length,
+        noExpiry: noExpiry.length,
+      },
+      groupCoverage: {
+        grouped: keys.length - ungrouped.length,
+        ungrouped: ungrouped.length,
+      },
     },
   };
 }

@@ -3,6 +3,7 @@ import { Outlet } from '@tanstack/react-router';
 import { X } from '@phosphor-icons/react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { MinimalTopBar } from './MinimalTopBar';
 import { KeyForm } from '../keys/KeyForm';
 import {
   AlertDialogRoot,
@@ -19,7 +20,15 @@ import { useStore } from '../../store/useStore';
 import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
 import { KeyboardShortcutsDialog } from '@/app/components/KeyboardShortcutsDialog';
 
-export function AppLayout({ children }: { children?: React.ReactNode }) {
+export type AppLayoutTopbar = 'full' | 'minimal';
+
+export function AppLayout({
+  children,
+  topbar = 'full',
+}: {
+  children?: React.ReactNode;
+  topbar?: AppLayoutTopbar;
+}) {
   const {
     showAddForm,
     setShowAddForm,
@@ -37,7 +46,7 @@ export function AppLayout({ children }: { children?: React.ReactNode }) {
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-          <TopBar />
+          {topbar === 'minimal' ? <MinimalTopBar /> : <TopBar />}
 
           <ScrollArea className="min-h-0 flex-1">
             <main className="flex h-full min-h-0">

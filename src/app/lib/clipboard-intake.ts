@@ -1,7 +1,4 @@
-import {
-  getDefaultEndpointForProvider,
-  type Settings,
-} from '../../core/types';
+import { getDefaultEndpointForProvider, type Settings } from '../../core/types';
 
 export interface AddKeyDraft {
   name: string;
@@ -171,9 +168,7 @@ function parseClipboardLine(raw: string, index: number): ParsedClipboardLine {
     };
   }
 
-  const envMatch = trimmed.match(
-    /^(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.+)$/
-  );
+  const envMatch = trimmed.match(/^(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.+)$/);
   if (!envMatch) {
     return {
       index,
@@ -211,7 +206,10 @@ function isEndpointLikeEnvName(envName: string | null): boolean {
   return /(?:BASE_)?URL|ENDPOINT|HOST/i.test(envName);
 }
 
-function getTokensForLine(line: ParsedClipboardLine, rule: DetectionRule): string[] {
+function getTokensForLine(
+  line: ParsedClipboardLine,
+  rule: DetectionRule
+): string[] {
   if (isEndpointLikeEnvName(line.envName)) return [];
 
   const source = line.envValue ?? line.normalized;
@@ -233,7 +231,8 @@ function scoreCandidate(
   if (line.envName && rule.explicitEnvNames.includes(line.envName)) score += 60;
   if (line.envName && rule.fallbackEnvNames.includes(line.envName)) score += 45;
   if (rule.endpointHints.some((hint) => hint.test(line.raw))) score += 35;
-  if (rule.endpointHints.some((hint) => hint.test(line.normalized))) score += 25;
+  if (rule.endpointHints.some((hint) => hint.test(line.normalized)))
+    score += 25;
   if (
     hasGlobalEndpointHint &&
     line.envName &&

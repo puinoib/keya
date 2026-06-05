@@ -3,14 +3,10 @@ import { useStore } from '../../store/useStore';
 import {
   MagnifyingGlass,
   Plus,
-  Sun,
-  Moon,
-  Monitor,
-  Check,
-  DownloadSimple,
+  DotsThree,
   Key,
   FileCode,
-  DotsThree,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import {
   DropdownMenu,
@@ -27,6 +23,7 @@ import {
 import { FileStorage } from '../../lib/storage';
 import { Database } from '../../../core/database';
 import { toast } from 'sonner';
+import { ThemeMenu } from './ThemeMenu';
 
 function downloadBytes(data: Uint8Array, filename: string) {
   const blob = new Blob([new Uint8Array(data)], {
@@ -78,16 +75,8 @@ function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
 }
 
 export function TopBar() {
-  const {
-    searchQuery,
-    setSearchQuery,
-    beginAddKeyFlow,
-    theme,
-    setTheme,
-    db,
-    password,
-    setDb,
-  } = useStore();
+  const { searchQuery, setSearchQuery, beginAddKeyFlow, db, password, setDb } =
+    useStore();
   const importKeyaRef = useRef<HTMLInputElement>(null);
   const importJsonRef = useRef<HTMLInputElement>(null);
 
@@ -248,49 +237,7 @@ export function TopBar() {
         onChange={handleImportJson}
       />
 
-      {/* Theme toggle */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
-            {theme === 'dark' ? (
-              <Moon className="size-3.5" />
-            ) : theme === 'light' ? (
-              <Sun className="size-3.5" />
-            ) : (
-              <Monitor className="size-3.5" />
-            )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-36">
-          <DropdownMenuItem
-            onClick={() => setTheme('dark')}
-            className="justify-between"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Moon className="size-3.5" /> Dark
-            </span>
-            {theme === 'dark' ? <Check className="size-3.5" /> : null}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setTheme('light')}
-            className="justify-between"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Sun className="size-3.5" /> Light
-            </span>
-            {theme === 'light' ? <Check className="size-3.5" /> : null}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setTheme('system')}
-            className="justify-between"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Monitor className="size-3.5" /> System
-            </span>
-            {theme === 'system' ? <Check className="size-3.5" /> : null}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <ThemeMenu />
 
       <button
         onClick={() => void beginAddKeyFlow()}

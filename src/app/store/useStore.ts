@@ -322,7 +322,9 @@ export const useStore = create<AppState>((set, get) => {
       const db = get().db;
       if (
         candidate &&
-        db?.getApiKeys().some((existingKey) => existingKey.key === candidate.raw)
+        db
+          ?.getApiKeys()
+          .some((existingKey) => existingKey.key === candidate.raw)
       ) {
         toast('This API key is already saved');
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });

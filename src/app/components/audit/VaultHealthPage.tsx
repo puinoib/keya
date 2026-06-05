@@ -7,7 +7,12 @@ import {
   Warning,
   WarningCircle,
 } from '@phosphor-icons/react';
-import { auditVault, type VaultAuditCheck } from '@/core/audit';
+import {
+  auditVault,
+  type VaultAuditActionFilter,
+  type VaultAuditCheck,
+  type VaultAuditReport,
+} from '@/core/audit';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useStore } from '../../store/useStore';
@@ -51,6 +56,276 @@ function MetricCard({ label, value }: { label: string; value: number }) {
         {value}
       </div>
     </div>
+  );
+}
+
+function percent(count: number, total: number) {
+  if (total === 0) return 0;
+  return Math.round((count / total) * 100);
+}
+
+function ChartShell({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-line-subtle bg-surface-2/30 p-4">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-ink-primary">{title}</h2>
+        <p className="mt-1 text-xs text-ink-quaternary">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function StackedBar({
+  segments,
+}: {
+  segments: Array<{
+    label: string;
+    count: number;
+    className: string;
+  }>;
+}) {
+  const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+
+  return (
+    <div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-surface-4">
+        {segments.map((segment) => (
+          <div
+            key={segment.label}
+            className={segment.className}
+            style={{ width: `${percent(segment.count, total)}%` }}
+            title={`${segment.label}: ${segment.count}`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {segments.map((segment) => (
+          <div key={segment.label} className="text-xs">
+            <div className="flex items-center justify-between gap-2 text-ink-tertiary">
+              <span>{segment.label}</span>
+              <span className="tabular-nums">{segment.count}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProviderDistributionChart({
+  providers,
+  onFilter,
+}: {
+  providers: VaultAuditReport['charts']['providerDistribution'];
+  onFilter: (filter: VaultAuditActionFilter) => void;
+}) {
+  const visibleProviders = providers.slice(0, 6);
+
+  return (
+    <ChartShell
+      title="Provider distribution"
+      description="Which providers dominate this vault."
+    >
+      {visibleProviders.length === 0 ? (
+        <div className="py-8 text-center text-xs text-ink-quaternary">
+          No provider data yet.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visibleProviders.map((item) => (
+            <button
+              key={item.provider}
+              type="button"
+              onClick={() => onFilter({ provider: item.provider })}
+              className="group w-full text-left"
+            >
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-ink-secondary group-hover:text-ink-primary">
+                  {item.provider}
+                </span>
+                <span className="shrink-0 text-ink-quaternary tabular-nums">
+                  {item.count} · {item.percentage}%
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-surface-4">
+                <div
+                  className="h-full rounded-full bg-accent transition-all group-hover:bg-accent-bright"
+                  style={{ width: `${item.percentage}%` }}
+                />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </ChartShell>
+  );
+}
+
+function ConnectionHealthChart({
+  health,
+  total,
+  onFilter,
+}: {
+  health: VaultAuditReport['charts']['connectionHealth'];
+  total: number;
+  onFilter: (filter: VaultAuditActionFilter) => void;
+}) {
+  const segments = [
+    { label: 'Success', count: health.success, className: 'bg-success-bright' },
+    { label: 'Failed', count: health.failed, className: 'bg-danger' },
+    { label: 'Untested', count: health.untested, className: 'bg-surface-6' },
+  ];
+
+  return (
+    <ChartShell
+      title="Connection health"
+      description="Latest API connectivity test results."
+    >
+      <StackedBar segments={segments} />
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => onFilter({ testStatus: 'success' })}
+          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
+        >
+          <div className="text-xs text-ink-quaternary">Success</div>
+          <div className="text-sm font-medium text-success-bright tabular-nums">
+            {percent(health.success, total)}%
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onFilter({ testStatus: 'failed' })}
+          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
+        >
+          <div className="text-xs text-ink-quaternary">Failed</div>
+          <div className="text-sm font-medium text-danger tabular-nums">
+            {percent(health.failed, total)}%
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onFilter({ testStatus: 'untested' })}
+          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
+        >
+          <div className="text-xs text-ink-quaternary">Untested</div>
+          <div className="text-sm font-medium text-ink-secondary tabular-nums">
+            {percent(health.untested, total)}%
+          </div>
+        </button>
+      </div>
+    </ChartShell>
+  );
+}
+
+function ExpiryBreakdownChart({
+  expiry,
+  onFilter,
+}: {
+  expiry: VaultAuditReport['charts']['expiryBreakdown'];
+  onFilter: (filter: VaultAuditActionFilter) => void;
+}) {
+  return (
+    <ChartShell
+      title="Expiry posture"
+      description="Rotation visibility across saved keys."
+    >
+      <StackedBar
+        segments={[
+          { label: 'Expired', count: expiry.expired, className: 'bg-danger' },
+          {
+            label: 'Expiring',
+            count: expiry.expiringSoon,
+            className: 'bg-amber-500',
+          },
+          {
+            label: 'Valid',
+            count: expiry.valid,
+            className: 'bg-success-bright',
+          },
+          {
+            label: 'No expiry',
+            count: expiry.noExpiry,
+            className: 'bg-surface-6',
+          },
+        ]}
+      />
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onFilter({ expiryStatus: 'expired' })}
+          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
+        >
+          <div className="text-xs text-ink-quaternary">Expired</div>
+          <div className="text-sm font-medium text-danger tabular-nums">
+            {expiry.expired}
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onFilter({ expiryStatus: 'expiring' })}
+          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
+        >
+          <div className="text-xs text-ink-quaternary">Expiring soon</div>
+          <div className="text-sm font-medium text-amber-500 tabular-nums">
+            {expiry.expiringSoon}
+          </div>
+        </button>
+      </div>
+    </ChartShell>
+  );
+}
+
+function GroupCoverageChart({
+  coverage,
+  total,
+}: {
+  coverage: VaultAuditReport['charts']['groupCoverage'];
+  total: number;
+}) {
+  return (
+    <ChartShell
+      title="Group coverage"
+      description="How well your keys are organized into groups."
+    >
+      <StackedBar
+        segments={[
+          {
+            label: 'Grouped',
+            count: coverage.grouped,
+            className: 'bg-accent',
+          },
+          {
+            label: 'Ungrouped',
+            count: coverage.ungrouped,
+            className: 'bg-surface-6',
+          },
+        ]}
+      />
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2">
+          <div className="text-xs text-ink-quaternary">Grouped</div>
+          <div className="text-sm font-medium text-accent-bright tabular-nums">
+            {percent(coverage.grouped, total)}%
+          </div>
+        </div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2">
+          <div className="text-xs text-ink-quaternary">Ungrouped</div>
+          <div className="text-sm font-medium text-ink-secondary tabular-nums">
+            {percent(coverage.ungrouped, total)}%
+          </div>
+        </div>
+      </div>
+    </ChartShell>
   );
 }
 
@@ -209,6 +484,20 @@ export function VaultHealthPage() {
     navigate({ to: '/keys' });
   };
 
+  const handleChartFilter = (filter: VaultAuditActionFilter) => {
+    clearFilters();
+    setSearchQuery('');
+    setSelectedKeyId(null);
+
+    if (filter.provider) setFilterProvider(filter.provider);
+    if (filter.groupId) setFilterGroupId(filter.groupId);
+    if (filter.testStatus) setFilterTestStatus(filter.testStatus);
+    if (filter.expiryStatus) setFilterExpiryStatus(filter.expiryStatus);
+    if (filter.keyId) setSelectedKeyId(filter.keyId);
+
+    navigate({ to: '/keys' });
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -237,6 +526,30 @@ export function VaultHealthPage() {
         <MetricCard label="Expiring soon" value={report.metrics.expiringSoon} />
         <MetricCard label="Ungrouped" value={report.metrics.ungrouped} />
       </div>
+
+      {report.metrics.totalKeys > 0 && (
+        <div className="my-4 space-y-3">
+          <ProviderDistributionChart
+            providers={report.charts.providerDistribution}
+            onFilter={handleChartFilter}
+          />
+          <div className="grid gap-3 lg:grid-cols-2">
+            <ConnectionHealthChart
+              health={report.charts.connectionHealth}
+              total={report.metrics.totalKeys}
+              onFilter={handleChartFilter}
+            />
+            <ExpiryBreakdownChart
+              expiry={report.charts.expiryBreakdown}
+              onFilter={handleChartFilter}
+            />
+          </div>
+          <GroupCoverageChart
+            coverage={report.charts.groupCoverage}
+            total={report.metrics.totalKeys}
+          />
+        </div>
+      )}
 
       {report.metrics.totalKeys === 0 ? (
         <EmptyHealth />
