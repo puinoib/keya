@@ -4,6 +4,11 @@ import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
 import type { ApiKey } from '../../../core/types';
 import {
+  getConnectionStatusLabel,
+  getDaysUntilKeyExpiry,
+  getExpiryStatus,
+} from '../../../core';
+import {
   Copy,
   Flask,
   PencilSimple,
@@ -44,8 +49,9 @@ export function KeyDetail() {
   const group = key.group_id
     ? db.getGroups().find((g) => g.id === key.group_id)
     : null;
-  const testOk = key.test_status === 'success';
-  const testFail = key.test_status === 'failed';
+  const connectionStatus = key.connection_check.status;
+  const testOk = connectionStatus === 'success';
+  const testFail = connectionStatus === 'failed';
 
   const handleCopy = async () => {
     try {
@@ -63,13 +69,18 @@ export function KeyDetail() {
     setTesting(true);
     const result = await ApiTester.testKey(key);
     updateKey(key.id, {
-      last_tested: new Date().toISOString(),
-      test_status: result.success ? 'success' : 'failed',
-      test_latency_ms: result.latency_ms ?? null,
+      connection_check: {
+        status: result.success ? 'success' : 'failed',
+        checked_at: new Date().toISOString(),
+        latency_ms: result.latency_ms ?? null,
+        error_message: result.success ? null : result.error ?? null,
+      },
     });
     setTesting(false);
     toast[result.success ? 'success' : 'error'](
-      result.success ? 'Key available' : 'Key test failed',
+      result.success
+        ? 'Connection test succeeded'
+        : 'Connection test failed',
       {
         description: result.success
           ? `${result.latency_ms}ms`
@@ -96,24 +107,8 @@ export function KeyDetail() {
     });
   };
 
-  const getExpiryState = (
-    expiresAt: string | null | undefined
-  ): { expired: boolean; expiringSoon: boolean; daysLeft: number } => {
-    if (!expiresAt)
-      return { expired: false, expiringSoon: false, daysLeft: Infinity };
-    const now = new Date();
-    const exp = new Date(expiresAt);
-    const daysLeft = Math.ceil(
-      (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return {
-      expired: daysLeft < 0,
-      expiringSoon: daysLeft >= 0 && daysLeft <= 7,
-      daysLeft,
-    };
-  };
-
-  const expiry = getExpiryState(key.expires_at);
+  const expiryStatus = getExpiryStatus(key.expires_at);
+  const daysUntilExpiry = getDaysUntilKeyExpiry(key.expires_at);
 
   return (
     <>
@@ -146,19 +141,19 @@ export function KeyDetail() {
             className="flex items-center gap-1.5 mb-4 animate-stagger-in"
             style={{ animationDelay: '120ms' }}
           >
-            {expiry.expired && (
+            {expiryStatus === 'expired' && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-medium">
                 <Warning className="size-3" /> Expired
               </span>
             )}
-            {!expiry.expired && expiry.expiringSoon && (
+            {expiryStatus === 'expiring_soon' && daysUntilExpiry != null && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-medium">
-                <Warning className="size-3" /> {expiry.daysLeft}d left
+                <Warning className="size-3" /> {daysUntilExpiry}d left
               </span>
             )}
             {testOk && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success-bright text-xs font-medium">
-                <CheckCircle className="size-3" /> Working
+                <CheckCircle className="size-3" /> {getConnectionStatusLabel(connectionStatus)}
               </span>
             )}
             {testFail && (
@@ -166,7 +161,7 @@ export function KeyDetail() {
                 <XCircle className="size-3" /> Failed
               </span>
             )}
-            {!key.test_status && (
+            {connectionStatus === 'untested' && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-3 text-ink-quaternary text-xs font-medium">
                 <MinusCircle className="size-3" /> Untested
               </span>
@@ -230,23 +225,25 @@ export function KeyDetail() {
                 icon={Warning}
                 label="Expires"
                 value={formatDate(key.expires_at)}
-                highlight={!expiry.expired && !expiry.expiringSoon}
-                warning={expiry.expired || expiry.expiringSoon}
+                highlight={expiryStatus === 'valid'}
+                warning={
+                  expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
+                }
               />
             )}
-            {key.test_latency_ms != null && (
+            {key.connection_check.latency_ms != null && (
               <MetaRow
                 icon={Flask}
                 label="Latency"
-                value={`${key.test_latency_ms}ms`}
+                value={`${key.connection_check.latency_ms}ms`}
                 highlight={testOk}
               />
             )}
-            {key.last_tested && (
+            {key.connection_check.checked_at && (
               <MetaRow
                 icon={Clock}
                 label="Last tested"
-                value={formatDate(key.last_tested)}
+                value={formatDate(key.connection_check.checked_at)}
               />
             )}
             <MetaRow

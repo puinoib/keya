@@ -13,9 +13,12 @@ describe('inbox reminders', () => {
       endpoint: 'https://api.openai.com/v1',
       group_id: null,
       expires_at: '2026-06-10T00:00:00.000Z',
-      last_tested: null,
-      test_status: null,
-      test_latency_ms: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
     });
 
     const alerts = collectExpiryAlerts(
@@ -39,9 +42,12 @@ describe('inbox reminders', () => {
       endpoint: 'https://api.anthropic.com',
       group_id: null,
       expires_at: '2026-06-09T00:00:00.000Z',
-      last_tested: null,
-      test_status: null,
-      test_latency_ms: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
     });
 
     const now = new Date('2026-06-04T09:00:00.000Z');
@@ -72,9 +78,12 @@ describe('inbox reminders', () => {
       endpoint: 'https://api.groq.com/openai/v1',
       group_id: null,
       expires_at: '2026-06-06T00:00:00.000Z',
-      last_tested: null,
-      test_status: null,
-      test_latency_ms: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
     });
     const initialNow = new Date('2026-06-04T09:00:00.000Z');
 

@@ -11,10 +11,12 @@ export function KeysPage() {
     filterGroupId,
     filterProvider,
     filterTestStatus,
+    filterExpiryStatus,
     setSearchQuery,
     setFilterGroupId,
     setFilterProvider,
     setFilterTestStatus,
+    setFilterExpiryStatus,
     clearFilters,
   } = useStore();
 
@@ -43,11 +45,20 @@ export function KeysPage() {
   if (filterTestStatus) {
     const label =
       filterTestStatus === 'success'
-        ? 'Passed'
+        ? 'Success'
         : filterTestStatus === 'failed'
           ? 'Failed'
           : 'Untested';
     tags.push({ label, onRemove: () => setFilterTestStatus(null) });
+  }
+  if (filterExpiryStatus) {
+    const label =
+      filterExpiryStatus === 'expired'
+        ? 'Expired'
+        : filterExpiryStatus === 'expiring'
+          ? 'Expiring Soon'
+          : 'No Expiry Issue';
+    tags.push({ label, onRemove: () => setFilterExpiryStatus(null) });
   }
 
   return (

@@ -304,6 +304,22 @@ export async function deserializeFromFile(
     delete (k as any).status;
     delete (k as any).notes;
     if (k.expires_at === undefined) (k as any).expires_at = null;
+    if (!(k as any).connection_check) {
+      (k as any).connection_check = {
+        status:
+          (k as any).test_status === 'success'
+            ? 'success'
+            : (k as any).test_status === 'failed'
+              ? 'failed'
+              : 'untested',
+        checked_at: (k as any).last_tested ?? null,
+        latency_ms: (k as any).test_latency_ms ?? null,
+        error_message: null,
+      };
+    }
+    delete (k as any).last_tested;
+    delete (k as any).test_status;
+    delete (k as any).test_latency_ms;
   }
 
   // Default new settings fields for old files

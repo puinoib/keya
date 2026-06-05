@@ -25,6 +25,7 @@ interface AppState {
   filterGroupId: string | null;
   filterProvider: string | null;
   filterTestStatus: string | null;
+  filterExpiryStatus: string | null;
 
   // Selection
   selectedKeyId: string | null;
@@ -59,6 +60,7 @@ interface AppState {
   setFilterGroupId: (id: string | null) => void;
   setFilterProvider: (p: string | null) => void;
   setFilterTestStatus: (s: string | null) => void;
+  setFilterExpiryStatus: (s: string | null) => void;
   clearFilters: () => void;
   clearSmartFilters: () => void;
   setSelectedKeyId: (id: string | null) => void;
@@ -166,9 +168,12 @@ function maybeRunDailyAutoTest(db: Database) {
   runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
     const result = await ApiTester.testKey(key);
     useStore.getState().updateKey(key.id, {
-      last_tested: new Date().toISOString(),
-      test_status: result.success ? 'success' : 'failed',
-      test_latency_ms: result.latency_ms ?? null,
+      connection_check: {
+        status: result.success ? 'success' : 'failed',
+        checked_at: new Date().toISOString(),
+        latency_ms: result.latency_ms ?? null,
+        error_message: result.success ? null : result.error ?? null,
+      },
     });
   }).catch((e) => {
     console.error('Daily auto-test failed:', e);
@@ -181,6 +186,7 @@ const FILTER_DEFAULTS = {
   filterGroupId: null as string | null,
   filterProvider: null as string | null,
   filterTestStatus: null as string | null,
+  filterExpiryStatus: null as string | null,
 };
 
 export const useStore = create<AppState>((set, get) => {
@@ -292,9 +298,14 @@ export const useStore = create<AppState>((set, get) => {
     setFilterGroupId: (id) => set({ filterGroupId: id }),
     setFilterProvider: (p) => set({ filterProvider: p }),
     setFilterTestStatus: (s) => set({ filterTestStatus: s }),
+    setFilterExpiryStatus: (s) => set({ filterExpiryStatus: s }),
     clearFilters: () => set(FILTER_DEFAULTS),
     clearSmartFilters: () =>
-      set({ filterProvider: null, filterTestStatus: null }),
+      set({
+        filterProvider: null,
+        filterTestStatus: null,
+        filterExpiryStatus: null,
+      }),
     setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
     addGroup: (group) => {

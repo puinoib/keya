@@ -101,7 +101,8 @@ export function KeyForm({
     settings?.custom_providers?.find((cp) => cp.name === form.provider)
       ?.endpoint;
 
-  const handleProviderChange = (provider: string) => {
+  const handleProviderChange = (provider: string | null) => {
+    if (!provider) return;
     const endpoint =
       ENDPOINT_DEFAULTS[provider.toLowerCase()] ??
       settings?.custom_providers?.find((cp) => cp.name === provider)
@@ -140,13 +141,18 @@ export function KeyForm({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      last_tested: testState.result ? new Date().toISOString() : null,
-      test_status: testState.result?.success
-        ? 'success'
-        : testState.result
-          ? 'failed'
-          : null,
-      test_latency_ms: testState.result?.latency_ms ?? null,
+      connection_check: {
+        status: testState.result?.success
+          ? 'success'
+          : testState.result
+            ? 'failed'
+            : 'untested',
+        checked_at: testState.result ? new Date().toISOString() : null,
+        latency_ms: testState.result?.latency_ms ?? null,
+        error_message: testState.result?.success
+          ? null
+          : testState.result?.error ?? null,
+      },
     });
 
     const provider = form.provider;
@@ -163,9 +169,12 @@ export function KeyForm({
     if (settings?.auto_test_on_save && created) {
       ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
         updateKey(created.id, {
-          last_tested: new Date().toISOString(),
-          test_status: result.success ? 'success' : 'failed',
-          test_latency_ms: result.latency_ms ?? null,
+          connection_check: {
+            status: result.success ? 'success' : 'failed',
+            checked_at: new Date().toISOString(),
+            latency_ms: result.latency_ms ?? null,
+            error_message: result.success ? null : result.error ?? null,
+          },
         });
       });
     }

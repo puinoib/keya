@@ -1,3 +1,10 @@
+import { useEffect, useState } from 'react';
+
+function getMonthStart(date: Date | undefined) {
+  const source = date ?? new Date();
+  return new Date(source.getFullYear(), source.getMonth(), 1);
+}
+
 export function DayPicker({
   value,
   onChange,
@@ -5,8 +12,14 @@ export function DayPicker({
   value: Date | undefined;
   onChange: (d: Date | undefined) => void;
 }) {
-  const year = value ? value.getFullYear() : new Date().getFullYear();
-  const month = value ? value.getMonth() : new Date().getMonth();
+  const [displayMonth, setDisplayMonth] = useState(() => getMonthStart(value));
+
+  useEffect(() => {
+    setDisplayMonth(getMonthStart(value));
+  }, [value]);
+
+  const year = displayMonth.getFullYear();
+  const month = displayMonth.getMonth();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -16,10 +29,8 @@ export function DayPicker({
   for (let i = 0; i < firstDayOfWeek; i++) days.push(null);
   for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
-  const prevMonth = () =>
-    onChange(new Date(year, month - 1, value?.getDate() ?? 1));
-  const nextMonth = () =>
-    onChange(new Date(year, month + 1, value?.getDate() ?? 1));
+  const prevMonth = () => setDisplayMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setDisplayMonth(new Date(year, month + 1, 1));
 
   return (
     <div className="p-3 select-none">
@@ -63,7 +74,10 @@ export function DayPicker({
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-          <div key={d} className="text-2xs text-ink-quaternary py-1">
+          <div
+            key={d}
+            className="py-0.5 text-[9px] leading-none tracking-[0.08em] text-ink-quaternary/70"
+          >
             {d}
           </div>
         ))}
