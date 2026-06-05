@@ -16,8 +16,10 @@ export function SettingsLayout() {
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
           <header className="h-12 flex items-center gap-3 px-4 shrink-0 border-b border-line-subtle">
             <button
+              type="button"
               onClick={() => navigate({ to: '/keys' })}
               className="btn-ghost text-xs"
+              aria-label="Back to app"
             >
               <ArrowLeft className="size-3.5" />
               <span>Back to app</span>
