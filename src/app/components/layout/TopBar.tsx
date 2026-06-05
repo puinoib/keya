@@ -169,6 +169,13 @@ export function TopBar() {
 
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">
+      <button
+        onClick={() => void beginAddKeyFlow()}
+        className="inline-flex items-center gap-1 h-7 px-2.5 ml-1 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
+      >
+        <Plus className="size-3.5" /> Add Key
+      </button>
+
       <div className="relative flex-1 max-w-sm">
         <MagnifyingGlass className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary pointer-events-none" />
         <input
@@ -238,13 +245,6 @@ export function TopBar() {
       />
 
       <ThemeMenu />
-
-      <button
-        onClick={() => void beginAddKeyFlow()}
-        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
-      >
-        <Plus className="size-3.5" /> Add Key
-      </button>
     </header>
   );
 }
