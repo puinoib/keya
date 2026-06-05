@@ -24,7 +24,6 @@ import {
 import { FileStorage } from '../../lib/storage';
 import { Database } from '../../../core/database';
 import { toast } from 'sonner';
-import { ThemeMenu } from './ThemeMenu';
 
 function downloadBytes(data: Uint8Array, filename: string) {
   const blob = new Blob([new Uint8Array(data)], {
@@ -244,8 +243,6 @@ export function TopBar() {
         className="hidden"
         onChange={handleImportJson}
       />
-
-      <ThemeMenu />
 
       <button
         onClick={() => useStore.getState().lock()}

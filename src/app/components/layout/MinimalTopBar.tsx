@@ -1,11 +1,9 @@
 import { Plus, Lock } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
-import { ThemeMenu } from './ThemeMenu';
 
 /**
  * Lightweight top bar for pages that own their own page header
- * (e.g. Health, Inbox). Only exposes the global theme switch and
- * a quick Add Key action.
+ * (e.g. Health, Inbox). Only exposes a quick Add Key action.
  */
 export function MinimalTopBar() {
   const { beginAddKeyFlow } = useStore();
@@ -20,8 +18,6 @@ export function MinimalTopBar() {
       </button>
 
       <div className="flex-1" />
-
-      <ThemeMenu />
 
       <button
         onClick={() => useStore.getState().lock()}

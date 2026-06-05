@@ -25,11 +25,15 @@ import {
   Gear,
   ArrowsLeftRight,
   SignOut,
+  Sun,
+  Moon,
+  Monitor,
+  Check,
 } from '@phosphor-icons/react';
 import { useNavigate } from '@tanstack/react-router';
 
 export function VaultSwitcher() {
-  const { db, activeVaultFileName } = useStore();
+  const { db, activeVaultFileName, theme, setTheme } = useStore();
   const navigate = useNavigate();
   const [vaults, setVaults] = useState<string[]>([]);
   const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({});
@@ -88,6 +92,35 @@ export function VaultSwitcher() {
             <Gear className="size-3.5" />
             <span>Settings</span>
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="text-ink-quaternary">
+              {theme === 'dark' ? (
+                <Moon className="size-3.5" />
+              ) : theme === 'light' ? (
+                <Sun className="size-3.5" />
+              ) : (
+                <Monitor className="size-3.5" />
+              )}
+              <span>Theme</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-36">
+              <DropdownMenuItem onClick={() => setTheme('dark')}>
+                <Moon className="size-3.5" />
+                <span>Dark</span>
+                {theme === 'dark' && <Check className="size-3.5 ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('light')}>
+                <Sun className="size-3.5" />
+                <span>Light</span>
+                {theme === 'light' && <Check className="size-3.5 ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('system')}>
+                <Monitor className="size-3.5" />
+                <span>System</span>
+                {theme === 'system' && <Check className="size-3.5 ml-auto" />}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="text-ink-quaternary">
