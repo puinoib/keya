@@ -18,7 +18,6 @@ describe('schema (.keya file format)', () => {
 
   function makeTestDb(overrides?: Partial<KeyaDatabase>): KeyaDatabase {
     const base = createEmptyDatabase();
-    // Add some keys for realism
     const db = new Database(base);
     db.addApiKey({
       name: 'OpenAI Testing',
@@ -53,7 +52,7 @@ describe('schema (.keya file format)', () => {
     return { ...db.getData(), ...overrides } as KeyaDatabase;
   }
 
-  it('serializes and deserializes a complete database (V2)', async () => {
+  it('serializes and deserializes a complete database', async () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
     const restored = await deserializeFromFile(bytes, password);
@@ -91,7 +90,7 @@ describe('schema (.keya file format)', () => {
     await expect(deserializeFromFile(truncated, password)).rejects.toThrow();
   });
 
-  it('creates valid V2 header with masterSeed', () => {
+  it('creates valid header with masterSeed', () => {
     const created = new Date('2026-01-15T12:00:00Z');
     const modified = new Date('2026-06-05T09:00:00Z');
     const masterSeed = new Uint8Array(32);
@@ -99,14 +98,11 @@ describe('schema (.keya file format)', () => {
     const header = createHeader(
       '550e8400-e29b-41d4-a716-446655440000',
       masterSeed,
-      2,
       created,
       modified
     );
     expect(header).toHaveLength(128);
     const meta = parseHeader(header);
-    expect(meta.version).toBe(2);
-    expect(meta.flags).toBe(0);
     expect(meta.fileId).toBe('550e8400-e29b-41d4-a716-446655440000');
     expect(meta.masterSeed).toHaveLength(32);
     expect(meta.created.toISOString()).toBe('2026-01-15T12:00:00.000Z');
@@ -122,13 +118,10 @@ describe('schema (.keya file format)', () => {
     expect(asText.slice(0, 4)).toBe('KEYA');
   });
 
-  it('saves as V2 with header hash', async () => {
+  it('includes header hash', async () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
-    const meta = parseHeader(bytes.slice(0, 128));
-
-    expect(meta.version).toBe(2);
-    // V2 has 32B header hash at offset 128
+    // HeaderHash at offset 128, EncParams at 160
     expect(bytes.length).toBeGreaterThan(128 + 32 + 96);
   });
 
@@ -136,7 +129,7 @@ describe('schema (.keya file format)', () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
 
-    // Corrupt a byte in the header (but not magic, so it's still detected as .keya)
+    // Corrupt a byte in the header (not magic, so it passes the magic check)
     bytes[10] ^= 0xff;
 
     await expect(deserializeFromFile(bytes, password)).rejects.toThrow(
