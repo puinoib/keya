@@ -23,22 +23,22 @@ export function SettingsSidebar() {
   });
 
   return (
-    <nav className="w-[180px] shrink-0 border-r border-line bg-surface-2 p-3">
-      <div className="space-y-1">
+    <aside className="w-48 shrink-0 flex flex-col bg-canvas-panel px-2 pt-3 pb-2">
+      <div className="space-y-0.5">
         {navItems.map((item) => {
           const isActive = pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs transition-colors ${
+              className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs transition-colors ${
                 isActive
-                  ? 'bg-accent/15 text-accent-bright font-medium'
-                  : 'text-ink-secondary hover:bg-surface-3 hover:text-ink-primary'
+                  ? 'bg-accent/35 text-accent-bright font-medium'
+                  : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
               }`}
             >
               <item.icon
-                className="size-4"
+                className="size-3.5"
                 weight={isActive ? 'fill' : 'regular'}
               />
               <span>{item.label}</span>
@@ -46,6 +46,6 @@ export function SettingsSidebar() {
           );
         })}
       </div>
-    </nav>
+    </aside>
   );
 }
