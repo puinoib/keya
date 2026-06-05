@@ -499,7 +499,7 @@ export function VaultHealthPage() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-6">
+    <div className="w-full px-6 py-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-ink-primary">

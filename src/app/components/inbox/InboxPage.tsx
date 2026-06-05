@@ -58,7 +58,7 @@ export function InboxPage() {
   ).length;
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-6">
+    <div className="w-full px-6 py-6">
       <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
         Inbox
       </h1>
