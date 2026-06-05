@@ -1,15 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ENDPOINT_DEFAULTS, PRESET_PROVIDERS } from '../../../core/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, Plus, Trash, X } from '@phosphor-icons/react';
+import { Check, Plus, Trash, X, HardDrives } from '@phosphor-icons/react';
 
 type ProviderItem = {
   name: string;
@@ -96,13 +90,7 @@ function ProviderCard({
   );
 }
 
-export function ManageProvidersDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function ProvidersPage() {
   const { db, updateSettings } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -169,98 +157,91 @@ export function ManageProvidersDialog({
   const duplicateName = allNames.has(newName.trim());
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-    >
-      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-xl flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b border-line px-6 py-5">
-          <DialogTitle>Manage Providers</DialogTitle>
-        </DialogHeader>
+    <>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
+          <HardDrives className="size-4" />
+        </div>
+        <div>
+          <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
+            Providers
+          </h1>
+          <p className="text-xs text-ink-quaternary">Manage API providers</p>
+        </div>
+      </div>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            <div className="space-y-3">
-              {providers.map((provider) => (
-                <ProviderCard
-                  key={provider.name}
-                  provider={provider}
-                  onToggle={() =>
-                    toggleProvider(provider.name, !provider.isEnabled)
-                  }
-                  onRemove={
-                    provider.isCustom
-                      ? () => removeCustom(provider.name)
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          </div>
+      <div className="space-y-4">
+        {providers.map((provider) => (
+          <ProviderCard
+            key={provider.name}
+            provider={provider}
+            onToggle={() => toggleProvider(provider.name, !provider.isEnabled)}
+            onRemove={
+              provider.isCustom ? () => removeCustom(provider.name) : undefined
+            }
+          />
+        ))}
+      </div>
 
-          <div className="shrink-0 border-t border-line px-6 py-4">
-            {isAdding ? (
-              <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Provider name"
-                  autoFocus
-                />
-                <Input
-                  value={newEndpoint}
-                  onChange={(e) => setNewEndpoint(e.target.value)}
-                  placeholder="https://api.example.com/v1"
-                  className="font-mono text-xs"
-                />
-                {duplicateName && newName.trim() ? (
-                  <p className="text-xs text-danger">
-                    Provider name already exists.
-                  </p>
-                ) : null}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={addCustom}
-                    disabled={
-                      !newName.trim() || !newEndpoint.trim() || duplicateName
-                    }
-                  >
-                    <Check className="size-3.5" />
-                    Add Custom Provider
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setIsAdding(false);
-                      setNewName('');
-                      setNewEndpoint('');
-                    }}
-                  >
-                    <X className="size-3.5" />
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
+      <div className="mt-6">
+        {isAdding ? (
+          <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Provider name"
+              autoFocus
+            />
+            <Input
+              value={newEndpoint}
+              onChange={(e) => setNewEndpoint(e.target.value)}
+              placeholder="https://api.example.com/v1"
+              className="font-mono text-xs"
+            />
+            {duplicateName && newName.trim() ? (
+              <p className="text-xs text-danger">
+                Provider name already exists.
+              </p>
+            ) : null}
+            <div className="flex gap-2">
               <Button
                 type="button"
-                variant="outline"
-                className="w-full justify-center"
-                onClick={() => setIsAdding(true)}
+                size="sm"
+                onClick={addCustom}
+                disabled={
+                  !newName.trim() || !newEndpoint.trim() || duplicateName
+                }
               >
-                <Plus className="size-4" />
+                <Check className="size-3.5" />
                 Add Custom Provider
               </Button>
-            )}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsAdding(false);
+                  setNewName('');
+                  setNewEndpoint('');
+                }}
+              >
+                <X className="size-3.5" />
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-center"
+            onClick={() => setIsAdding(true)}
+          >
+            <Plus className="size-4" />
+            Add Custom Provider
+          </Button>
+        )}
+      </div>
+    </>
   );
 }

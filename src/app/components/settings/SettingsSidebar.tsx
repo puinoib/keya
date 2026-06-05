@@ -37,7 +37,10 @@ export function SettingsSidebar() {
                   : 'text-ink-secondary hover:bg-surface-3 hover:text-ink-primary'
               }`}
             >
-              <item.icon className="size-4" weight={isActive ? 'fill' : 'regular'} />
+              <item.icon
+                className="size-4"
+                weight={isActive ? 'fill' : 'regular'}
+              />
               <span>{item.label}</span>
             </Link>
           );
