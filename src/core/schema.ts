@@ -227,9 +227,7 @@ export async function serializeToFile(
   const json = JSON.stringify(db, null, 2);
   const { salt, nonce, encrypted } = encryptDatabase(json, password);
 
-  // Backward compatibility: accept file_id if vault_id is missing
-  const vaultId = db.vault_id || (db as any).file_id;
-  const header = createHeader(vaultId, new Date(db.created_at));
+  const header = createHeader(db.vault_id, new Date(db.created_at));
   const params = createEncParams(salt, nonce);
 
   // Payload
@@ -290,67 +288,6 @@ export async function deserializeFromFile(
   const plaintext = decryptRaw(encrypted, params.nonce, key);
   const json = sodium.to_string(plaintext);
   const db = JSON.parse(json) as KeyaDatabase;
-
-  // Backward compatibility: migrate file_id → vault_id
-  if (!db.vault_id && (db as any).file_id) {
-    db.vault_id = (db as any).file_id;
-    delete (db as any).file_id;
-  }
-
-  // Default vault metadata for old files without these fields
-  if (!db.name) db.name = '';
-  if (!db.icon || db.icon === '🔐') db.icon = '';
-  // Remove deprecated fields from old files
-  delete (db as any).description;
-  delete (db as any).color;
-  // Remove status/notes from individual keys in old files
-  for (const k of db.api_keys) {
-    delete (k as any).status;
-    delete (k as any).notes;
-    if (k.expires_at === undefined) (k as any).expires_at = null;
-    if (!(k as any).connection_check) {
-      (k as any).connection_check = {
-        status:
-          (k as any).test_status === 'success'
-            ? 'success'
-            : (k as any).test_status === 'failed'
-              ? 'failed'
-              : 'untested',
-        checked_at: (k as any).last_tested ?? null,
-        latency_ms: (k as any).test_latency_ms ?? null,
-        error_message: null,
-      };
-    }
-    delete (k as any).last_tested;
-    delete (k as any).test_status;
-    delete (k as any).test_latency_ms;
-  }
-
-  // Default new settings fields for old files
-  if (db.settings.auto_test_on_save === undefined)
-    db.settings.auto_test_on_save = false;
-  if (db.settings.auto_test_daily === undefined)
-    db.settings.auto_test_daily = false;
-  if ((db.settings as any).clipboard_detection_on_add === undefined)
-    (db.settings as any).clipboard_detection_on_add = true;
-  if (db.settings.custom_providers === undefined)
-    db.settings.custom_providers = [];
-  if (db.settings.disabled_providers === undefined)
-    db.settings.disabled_providers = [];
-  if ((db.settings as any).keyboard_shortcuts === undefined)
-    (db.settings as any).keyboard_shortcuts = {};
-  if (!Array.isArray((db as any).inbox)) (db as any).inbox = [];
-  // Strip legacy inbox fields
-  for (const item of (db as any).inbox) {
-    delete item.title;
-    delete item.body;
-    delete item.severity;
-    delete item.entity_type;
-    delete item.vault_id;
-    delete item.dedupe_key;
-    delete item.fingerprint;
-    delete item.last_detected_at;
-  }
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();
