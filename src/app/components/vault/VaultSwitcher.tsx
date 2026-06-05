@@ -37,7 +37,7 @@ export function VaultSwitcher() {
   const [showNewVault, setShowNewVault] = useState(false);
 
   useEffect(() => {
-    FileStorage.listVaultFiles().then(setVaults);
+    FileStorage.listVaultFiles().then((files) => setVaults(files ?? []));
     FileStorage.getCachedVaultMetas().then((list) => {
       const map: Record<string, CachedVaultMeta> = {};
       for (const m of list) map[m.fileName] = m;
@@ -80,7 +80,7 @@ export function VaultSwitcher() {
             </div>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-52 ml-2">
+        <DropdownMenuContent className="w-52 ml-2">
           <DropdownMenuItem
             onClick={() => navigate({ to: '/settings' })}
             className="text-ink-quaternary"
@@ -163,7 +163,9 @@ export function VaultSwitcher() {
               ''
             }
             vaultId={metas[switchTarget!]?.vault_id}
-            onSubmit={(pw) => switchTarget && handleSwitch(switchTarget, pw)}
+            onSubmit={(pw) =>
+              switchTarget ? handleSwitch(switchTarget, pw) : Promise.resolve()
+            }
             onCancel={() => setSwitchTarget(null)}
           />
         </DialogContent>

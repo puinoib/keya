@@ -29,7 +29,9 @@ import { Database } from '../../../core/database';
 import { toast } from 'sonner';
 
 function downloadBytes(data: Uint8Array, filename: string) {
-  const blob = new Blob([data], { type: 'application/octet-stream' });
+  const blob = new Blob([new Uint8Array(data)], {
+    type: 'application/octet-stream',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -120,7 +122,11 @@ export function TopBar() {
       mergeIntoDb(db, imported);
 
       setDb(new Database(db.getData()));
-      await FileStorage.save(db.getData(), password || '');
+      await FileStorage.saveVault(
+        useStore.getState().activeVaultFileName || `vault-${Date.now()}.keya`,
+        db.getData(),
+        password || ''
+      );
       toast.success('Imported .keya file', {
         description: `${imported.api_keys.length} keys imported`,
       });
@@ -156,7 +162,11 @@ export function TopBar() {
       mergeIntoDb(db, imported as KeyaDatabase);
 
       setDb(new Database(db.getData()));
-      await FileStorage.save(db.getData(), password || '');
+      await FileStorage.saveVault(
+        useStore.getState().activeVaultFileName || `vault-${Date.now()}.keya`,
+        db.getData(),
+        password || ''
+      );
       toast.success('Imported JSON file', {
         description: `${imported.api_keys.length} keys imported`,
       });
@@ -194,7 +204,7 @@ export function TopBar() {
             <DotsThree className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent className="w-44">
           {/* Keya import/export — encrypted, first priority */}
           <DropdownMenuItem onClick={() => importKeyaRef.current?.click()}>
             <Key className="size-3.5" /> Import .keya
@@ -244,7 +254,7 @@ export function TopBar() {
             )}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuContent className="w-36">
           <DropdownMenuItem
             onClick={() => setTheme('dark')}
             className="justify-between"

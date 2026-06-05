@@ -111,9 +111,9 @@ async function deleteCachedMeta(vaultId: string): Promise<void> {
 async function ensurePermission(
   dirHandle: FileSystemDirectoryHandle
 ): Promise<boolean> {
-  const perm = await dirHandle.queryPermission({ mode: 'readwrite' });
+  const perm = await dirHandle.queryPermission?.({ mode: 'readwrite' });
   if (perm === 'granted') return true;
-  const req = await dirHandle.requestPermission({ mode: 'readwrite' });
+  const req = await dirHandle.requestPermission?.({ mode: 'readwrite' });
   return req === 'granted';
 }
 
@@ -128,7 +128,9 @@ export class FileStorage {
    * Pick a sync folder and save workspace reference.
    */
   static async setupWorkspace(): Promise<FileSystemDirectoryHandle> {
-    const dirHandle = await window.showDirectoryPicker({
+    const picker = window.showDirectoryPicker;
+    if (!picker) throw new Error('Directory picker is not supported.');
+    const dirHandle = await picker({
       mode: 'readwrite',
       startIn: 'documents',
     });
@@ -144,12 +146,12 @@ export class FileStorage {
     const ws = await getWorkspace();
     if (!ws) return [];
 
-    const perm = await ws.directoryHandle.queryPermission({
+    const perm = await ws.directoryHandle.queryPermission?.({
       mode: 'readwrite',
     });
     if (perm === 'granted') {
       const files: string[] = [];
-      for await (const [name] of (ws.directoryHandle as any).entries()) {
+      for await (const [name] of ws.directoryHandle.entries()) {
         if (name.endsWith('.keya')) files.push(name);
       }
       return files.sort();
@@ -215,7 +217,7 @@ export class FileStorage {
       create: true,
     });
     const writable = await fileHandle.createWritable();
-    await writable.write(bytes);
+    await writable.write(new Blob([new Uint8Array(bytes)]));
     await writable.close();
   }
 
@@ -284,12 +286,12 @@ export class FileStorage {
     const ws = await getWorkspace();
     if (!ws) return false;
 
-    const perm = await ws.directoryHandle.queryPermission({
+    const perm = await ws.directoryHandle.queryPermission?.({
       mode: 'readwrite',
     });
     if (perm === 'granted') return true;
 
-    const req = await ws.directoryHandle.requestPermission({
+    const req = await ws.directoryHandle.requestPermission?.({
       mode: 'readwrite',
     });
     return req === 'granted';
@@ -304,7 +306,9 @@ export class FileStorage {
     fileName = 'my-keys.keya'
   ): Promise<void> {
     const bytes = await serializeToFile(db, password);
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const blob = new Blob([new Uint8Array(bytes)], {
+      type: 'application/octet-stream',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

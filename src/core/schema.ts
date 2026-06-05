@@ -194,12 +194,16 @@ export function parseEncParams(buf: Uint8Array): EncParams {
 export async function computeHMAC(data: Uint8Array): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode('keya-hmac-key'),
+    new TextEncoder().encode('keya-hmac-key').buffer,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', key, data);
+  const sig = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    data.slice().buffer as ArrayBuffer
+  );
   return new Uint8Array(sig);
 }
 

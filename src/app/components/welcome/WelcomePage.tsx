@@ -168,12 +168,13 @@ export function WelcomePage() {
 
   const handleOpenFolder = async () => {
     const handle = await FileStorage.getWorkspaceHandle();
-    if (!handle) return;
+    const picker = window.showDirectoryPicker;
+    if (!handle || !picker) return;
     try {
-      await window.showDirectoryPicker({
+      await picker({
         mode: 'read',
         startIn: handle,
-      } as any);
+      });
     } catch {
       /* cancelled */
     }
@@ -186,13 +187,13 @@ export function WelcomePage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    (window as any).__legacyFile = file;
+    window.__legacyFile = file;
     setSelectedVault(file.name);
     setMode('unlock');
   };
 
   const handleLegacyUnlock = async (password: string) => {
-    const file = (window as any).__legacyFile as File | undefined;
+    const file = window.__legacyFile;
     if (!file) throw new Error('Please select a .keya file first.');
     const buffer = await file.arrayBuffer();
     const data = await deserializeFromFile(new Uint8Array(buffer), password);
