@@ -27,6 +27,7 @@ interface AppState {
   addKeyDraft: AddKeyDraft | null;
   clipboardCandidate: ClipboardKeyCandidate | null;
   theme: 'dark' | 'light' | 'system';
+  keyboardShortcuts: Record<string, string>;
   biometricPrompt: { vaultId: string; password: string } | null;
 
   // Smart filters
@@ -51,6 +52,7 @@ interface AppState {
   lock: () => void;
   unlock: (db: Database, password: string, fileName: string) => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
+  updateKeyboardShortcuts: (shortcuts: Record<string, string>) => void;
 
   // Actions - Keys
   addKey: (
@@ -221,6 +223,13 @@ export const useStore = create<AppState>((set, get) => {
     theme:
       (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
       'system',
+    keyboardShortcuts: (() => {
+      try {
+        return JSON.parse(localStorage.getItem('keya-shortcuts') || '{}');
+      } catch {
+        return {};
+      }
+    })(),
     ...FILTER_DEFAULTS,
     selectedKeyId: null,
     lastInboxSyncAt: null,
@@ -232,6 +241,10 @@ export const useStore = create<AppState>((set, get) => {
     setTheme: (theme) => {
       localStorage.setItem('keya-theme', theme);
       set({ theme });
+    },
+    updateKeyboardShortcuts: (shortcuts) => {
+      localStorage.setItem('keya-shortcuts', JSON.stringify(shortcuts));
+      set({ keyboardShortcuts: shortcuts });
     },
 
     lock: () => {

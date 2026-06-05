@@ -85,10 +85,7 @@ export function collectExpiryAlerts(
   return alerts;
 }
 
-function buildInboxItem(
-  alert: ExpiryAlert,
-  nowIso: string
-): InboxItem {
+function buildInboxItem(alert: ExpiryAlert, nowIso: string): InboxItem {
   return {
     id: crypto.randomUUID(),
     type: alert.type,

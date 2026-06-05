@@ -112,10 +112,7 @@ function ShortcutSettingsRow({
 }
 
 export function ShortcutsPage() {
-  const { db, updateSettings } = useStore();
-  const settings = db?.getSettings();
-
-  if (!settings) return null;
+  const { keyboardShortcuts, updateKeyboardShortcuts } = useStore();
 
   return (
     <>
@@ -138,7 +135,7 @@ export function ShortcutsPage() {
             variant="outline"
             size="sm"
             onClick={() => {
-              updateSettings({ keyboard_shortcuts: {} });
+              updateKeyboardShortcuts({});
               toast.success('Shortcuts reset to defaults');
             }}
           >
@@ -156,26 +153,22 @@ export function ShortcutsPage() {
               <ShortcutSettingsRow
                 key={shortcut.id}
                 actionId={shortcut.id}
-                shortcutMap={settings.keyboard_shortcuts ?? {}}
+                shortcutMap={keyboardShortcuts}
                 updateShortcut={(id, keys) => {
-                  updateSettings({
-                    keyboard_shortcuts: {
-                      ...(settings.keyboard_shortcuts ?? {}),
-                      [id]: keys,
-                    },
+                  updateKeyboardShortcuts({
+                    ...keyboardShortcuts,
+                    [id]: keys,
                   });
                 }}
                 resetShortcut={(id) => {
-                  const next = { ...(settings.keyboard_shortcuts ?? {}) };
+                  const next = { ...keyboardShortcuts };
                   delete next[id];
-                  updateSettings({ keyboard_shortcuts: next });
+                  updateKeyboardShortcuts(next);
                 }}
                 disableShortcut={(id) => {
-                  updateSettings({
-                    keyboard_shortcuts: {
-                      ...(settings.keyboard_shortcuts ?? {}),
-                      [id]: '',
-                    },
+                  updateKeyboardShortcuts({
+                    ...keyboardShortcuts,
+                    [id]: '',
                   });
                 }}
               />

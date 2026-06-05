@@ -5,24 +5,7 @@ import { cn } from '@/lib/utils';
 const DropdownMenu = Menu.Root;
 const DropdownMenuGroup = Menu.Group;
 
-// Backward-compatible Trigger: supports Radix-style `asChild`
-const DropdownMenuTrigger = React.forwardRef<
-  HTMLButtonElement,
-  Menu.Trigger.Props & { asChild?: boolean }
->(({ asChild, children, ...props }, ref) => {
-  if (asChild && React.isValidElement(children)) {
-    const child = React.Children.only(children) as React.ReactElement<
-      Record<string, unknown>
-    >;
-    return <Menu.Trigger ref={ref} render={child} {...props} />;
-  }
-  return (
-    <Menu.Trigger ref={ref} {...props}>
-      {children}
-    </Menu.Trigger>
-  );
-});
-DropdownMenuTrigger.displayName = 'DropdownMenuTrigger';
+const DropdownMenuTrigger = Menu.Trigger;
 
 function DropdownMenuContent({
   className,

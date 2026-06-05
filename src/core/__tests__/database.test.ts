@@ -41,7 +41,7 @@ describe('Database', () => {
     expect(data.icon).toBe('');
     expect(data.api_keys).toEqual([]);
     expect(data.groups.length).toBeGreaterThanOrEqual(2);
-    expect(data.settings.theme).toBe('system');
+    expect(data.settings.auto_lock_minutes).toBe(5);
     expect(data.settings.auto_test_daily).toBe(false);
   });
 
@@ -259,13 +259,10 @@ describe('Database', () => {
 
   it('gets and updates settings', () => {
     const db = new Database();
-    expect(db.getSettings().theme).toBe('system');
     db.updateSettings({
-      theme: 'dark',
       auto_lock_minutes: 10,
       auto_test_daily: true,
     });
-    expect(db.getSettings().theme).toBe('dark');
     expect(db.getSettings().auto_lock_minutes).toBe(10);
     expect(db.getSettings().auto_test_daily).toBe(true);
   });

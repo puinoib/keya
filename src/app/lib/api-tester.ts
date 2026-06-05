@@ -11,7 +11,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 async function fetchWithTimeout(
   url: string,
   init: RequestInit = {},
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -44,7 +44,7 @@ export class ApiTester {
   static async testRaw(
     provider: string,
     endpoint: string,
-    key: string,
+    key: string
   ): Promise<TestResult> {
     const start = performance.now();
 
@@ -52,14 +52,18 @@ export class ApiTester {
       const result = await ApiTester.testByProvider(
         provider.toLowerCase(),
         endpoint,
-        key,
+        key
       );
       const latency = Math.round(performance.now() - start);
       return { ...result, latency_ms: latency };
     } catch (err) {
       const latency = Math.round(performance.now() - start);
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return { success: false, latency_ms: latency, error: 'Request timed out' };
+        return {
+          success: false,
+          latency_ms: latency,
+          error: 'Request timed out',
+        };
       }
       return {
         success: false,
@@ -72,11 +76,18 @@ export class ApiTester {
   private static async testByProvider(
     provider: string,
     endpoint: string,
-    key: string,
+    key: string
   ): Promise<{ success: boolean; error?: string }> {
     const openaiCompatible = [
-      'openai', 'groq', 'deepseek', 'moonshot', 'zhipu',
-      'mistral', 'together', 'openrouter', 'siliconflow',
+      'openai',
+      'groq',
+      'deepseek',
+      'moonshot',
+      'zhipu',
+      'mistral',
+      'together',
+      'openrouter',
+      'siliconflow',
     ];
     if (openaiCompatible.includes(provider))
       return ApiTester.testOpenAI(endpoint, key);
@@ -162,7 +173,10 @@ export class ApiTester {
         if (res.ok) {
           const body = await res.json();
           if (body.access_token) return { success: true };
-          return { success: false, error: body.error_description || 'Invalid credentials' };
+          return {
+            success: false,
+            error: body.error_description || 'Invalid credentials',
+          };
         }
         return { success: false, error: await extractError(res) };
       }

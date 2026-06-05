@@ -5,24 +5,7 @@ import { cn } from '@/lib/utils';
 const TooltipProvider = TooltipPrimitive.Provider;
 const Tooltip = TooltipPrimitive.Root;
 
-// Backward-compatible Trigger: supports Radix-style `asChild`
-const TooltipTrigger = React.forwardRef<
-  HTMLButtonElement,
-  TooltipPrimitive.Trigger.Props & { asChild?: boolean }
->(({ asChild, children, ...props }, ref) => {
-  if (asChild && React.isValidElement(children)) {
-    const child = React.Children.only(children) as React.ReactElement<
-      Record<string, unknown>
-    >;
-    return <TooltipPrimitive.Trigger ref={ref} render={child} {...props} />;
-  }
-  return (
-    <TooltipPrimitive.Trigger ref={ref} {...props}>
-      {children}
-    </TooltipPrimitive.Trigger>
-  );
-});
-TooltipTrigger.displayName = 'TooltipTrigger';
+const TooltipTrigger = TooltipPrimitive.Trigger;
 
 const TooltipContent = React.forwardRef<
   HTMLDivElement,

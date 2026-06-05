@@ -26,7 +26,8 @@ function SidebarFilterButton({
   onClick: () => void;
 }) {
   const isComponent =
-    typeof icon === 'function' || (typeof icon === 'object' && icon !== null && 'render' in icon);
+    typeof icon === 'function' ||
+    (typeof icon === 'object' && icon !== null && 'render' in icon);
   return (
     <button
       onClick={onClick}
