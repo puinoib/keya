@@ -4,208 +4,80 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Keya** is a secure API key management application designed for AI developers. It provides encrypted local file storage with multi-vault support, biometric authentication, and API connectivity testing.
+**Keya** is a secure API key management app for AI developers. Encrypted local `.keya` files, multi-vault support, biometric auth, API connectivity testing. Zero backend — all data synced via user's cloud storage (iCloud, Nutstore, Dropbox).
 
-### Core Philosophy
-- **User owns data**: All data stored in local `.keya` files, synced via user's cloud storage (iCloud, Nutstore, Dropbox)
-- **Encryption first**: Argon2id KDF + XChaCha20-Poly1305 (same level as KeePass/Bitwarden)
-- **Zero backend**: No server contact, no API costs
-- **Open source**: MIT license, fully auditable
+Encryption: Argon2id KDF + XChaCha20-Poly1305 via libsodium.
 
 ## Development Commands
 
 ```bash
-# Development
-pnpm dev              # Start dev server
-
-# Build & Type Check  
+pnpm dev              # Start dev server (http://localhost:5173)
 pnpm build            # Production build
-pnpm typecheck        # TypeScript type checking
-
-# Testing
+pnpm typecheck        # TypeScript type checking (tsc -b)
 pnpm test             # Run tests once
 pnpm test:watch       # Run tests in watch mode
-
-# Linting & Formatting (Biome, not ESLint)
-pnpm lint             # Check for issues
-pnpm lint:fix         # Fix auto-fixable issues
-pnpm format           # Format code
-pnpm check            # Check + format in one command
+pnpm vitest run src/core/__tests__/database.test.ts  # Run single test file
+pnpm vitest run -t "test name"                       # Run tests matching name
+pnpm lint             # Biome check
+pnpm lint:fix         # Biome fix
+pnpm format           # Biome format
+pnpm check            # Biome check + format combined
 ```
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Framework | React | 19 |
-| Language | TypeScript | ~6.0 |
-| Build | Vite | 8.x |
-| Router | TanStack Router | 1.x |
-| State | Zustand | 5.x |
-| Styling | Tailwind CSS | 4.x |
-| Crypto | libsodium-wrappers-sumo | latest |
-| Forms | React Hook Form + Zod | latest |
-| Testing | Vitest | 4.x |
-| Linting | Biome | 2.x |
-| Icons | Phosphor Icons | 2.x |
-| Toast | Sonner | 2.x |
+React 19 · TypeScript ~6.0 · Vite 8 · TanStack Router (file-based) · Zustand 5 · Tailwind CSS 4 · libsodium-wrappers-sumo · React Hook Form + Zod 4 · Vitest 4 · Biome 2 · Phosphor Icons · Sonner
 
-## Project Structure
+Path alias: `@` → `./src` (configured in vite.config.ts and tsconfig.app.json)
+
+## Architecture
+
+### Layer Dependency Rule
 
 ```
-keya/
-├── src/
-│   ├── core/                   # Core business logic (conceptually @keya/core)
-│   │   ├── crypto.ts          # Encryption/decryption (libsodium)
-│   │   ├── database.ts        # Database CRUD operations
-│   │   ├── schema.ts          # .keya binary file format
-│   │   ├── types.ts           # TypeScript types & constants
-│   │   ├── index.ts           # Public API exports
-│   │   └── __tests__/         # Core unit tests
-│   │
-│   ├── app/                   # Application layer (UI + app logic)
-│   │   ├── components/        # UI components organized by feature
-│   │   │   ├── keys/         # Key management (KeyList, KeyForm, KeyDetail)
-│   │   │   ├── groups/       # Group management
-│   │   │   ├── settings/     # Settings pages
-│   │   │   ├── vault/        # Vault components (VaultCard, VaultSwitcher)
-│   │   │   ├── welcome/      # Welcome/onboarding
-│   │   │   ├── layout/       # AppLayout, TopBar, Sidebar
-│   │   │   ├── SessionRestore.tsx
-│   │   │   ├── ThemeSync.tsx
-│   │   │   └── BiometricPromptLayer.tsx
-│   │   ├── lib/              # Application-specific libraries
-│   │   │   ├── storage.ts    # File I/O (File System Access API)
-│   │   │   ├── session.ts    # Session persistence (sessionStorage)
-│   │   │   ├── biometric.ts  # WebAuthn biometric auth
-│   │   │   └── api-tester.ts # API connectivity testing
-│   │   ├── store/            # Zustand state management
-│   │   │   └── useStore.ts   # Global app state
-│   │   └── hooks/            # Custom React hooks
-│   │
-│   ├── routes/               # TanStack Router (file-based routing)
-│   │   ├── __root.tsx       # Root layout with providers
-│   │   ├── _authenticated.tsx  # Auth guard layout
-│   │   ├── index.tsx        # Welcome page
-│   │   ├── _authenticated/keys.tsx
-│   │   ├── _authenticated/settings.tsx
-│   │   ├── help.$slug.tsx   # Dynamic help article route
-│   │   └── help.index.tsx   # Help center index
-│   │
-│   ├── help/                # Help center system
-│   │   ├── components/      # Help UI (HelpLayout, HelpSearch)
-│   │   ├── content/         # Markdown articles
-│   │   ├── lib/             # Search, markdown parsing
-│   │   └── __tests__/       # Help system tests
-│   │
-│   ├── lib/                 # General utilities
-│   │   ├── utils.ts         # Helper functions (cn, etc.)
-│   │   └── mask.ts          # Key masking utilities
-│   │
-│   ├── components/          # Shared UI components (shadcn/ui)
-│   │   └── ui/             # Reusable UI components
-│   │
-│   ├── main.tsx            # Entry point
-│   ├── routeTree.gen.ts   # Auto-generated route tree
-│   └── index.css          # Global styles
-│
-├── public/                 # Static assets
-├── biome.json             # Biome configuration
-├── vite.config.ts         # Vite + TanStack Router plugin
-└── package.json
+src/core/ → pure business logic, zero UI/browser dependencies, can become @keya/core npm package
+src/app/  → UI + app logic, imports from core but NOT vice versa
 ```
 
-## Architecture Patterns
+`app/` → `core/` ✅ | `core/` → `app/` ❌
 
-### Directory Structure Philosophy
+### Workspace States (useStore)
 
-**`src/core/`** - Pure business logic, zero UI dependencies
-- Can be extracted to `@keya/core` npm package in future
-- No imports from `src/app/` or browser-specific APIs
-- Defines .keya file format and encryption operations
+Three states: `welcome` (no vault) → `locked` (session exists, vault locked) → `unlocked` (vault decrypted).
 
-**`src/app/`** - Application code that imports from core
-- All UI components live here
-- Can import from `src/core/` but not vice versa
-- Contains app-specific logic (storage, session, biometric)
+Check: `useStore.getState().workspaceState`
 
-**Reference Rule**: `app/` → `core/` ✅ | `core/` → `app/` ❌
+Auto-save: state mutations trigger `scheduleSave()` with 500ms debounce → `FileStorage.saveVault()`.
 
-### Workspace States
+### Multi-Vault
 
-The app has three states managed in `useStore`:
-- **welcome** - No vault loaded (show WelcomePage for vault selection)
-- **locked** - Session exists but vault locked (show unlock prompt)  
-- **unlocked** - Vault decrypted and accessible
-
-Check current state: `useStore.getState().workspaceState`
-
-### Multi-Vault Architecture
-
-- **Workspace folder** - User selects a sync folder via `showDirectoryPicker()`
-- **Vault files** - Multiple `.keya` files in workspace folder
-- **IndexedDB storage** - Caches vault metadata (name, icon, keyCount) without decryption
-- **Vault switching** - `VaultSwitcher` component lets users switch between vaults
+User selects workspace folder via `showDirectoryPicker()`. Multiple `.keya` files per folder. IndexedDB caches vault metadata without decryption.
 
 ```typescript
-// Storage pattern
-await FileStorage.setupWorkspace();           // Select folder
-const files = await FileStorage.listVaultFiles();  // List .keya files
-const db = await FileStorage.openVault(fileName, password);  // Decrypt
+await FileStorage.setupWorkspace();
+const files = await FileStorage.listVaultFiles();
+const db = await FileStorage.openVault(fileName, password);
 ```
 
 ### Session Persistence
 
-When vault is unlocked:
+Session stored in `sessionStorage` via `session.ts`. `SessionRestore` component handles auto-restore on app load.
+
+### TanStack Router (file-based)
+
+- `__root.tsx` — root layout (ThemeSync, SessionRestore, Toaster, BiometricPromptLayer)
+- `_authenticated.tsx` — auth guard layout, redirects to `/` if no session
+- `_authenticated/keys` — key management
+- `_authenticated/settings` — settings layout with nested routes (general, groups, providers, shortcuts, about)
+- `_authenticated/health` — health audit page
+- `_authenticated/inbox` — inbox for expiry alerts
+- `help.index.tsx` / `help.$slug.tsx` — help center
+
+Protected route pattern:
 ```typescript
-saveSession(fileName, encryptedPassword);     // Store in sessionStorage
-```
-
-On page load:
-```typescript
-const session = loadSession();                // Restore from sessionStorage
-if (session) {
-  const db = await FileStorage.openVault(session.fileName, session.password);
-}
-```
-
-`SessionRestore` component handles auto-restore on app initialization.
-
-### Auto-save Debouncing
-
-State changes in `useStore` trigger `scheduleSave()`:
-- Debounces file writes by 500ms
-- Prevents excessive I/O during rapid edits
-- Uses `FileStorage.saveVault()` for actual write
-
-### .keya File Format
-
-Binary structure:
-```
-[Header (128B)] [EncParams (96B)] [PayloadLen (4B)] [Payload (N)] [HMAC (32B)]
-```
-
-- **Header**: Magic "KEYA", version 1, vault UUID, timestamps
-- **EncParams**: Argon2id settings (ops=3, mem=64MB), salt, nonce
-- **Payload**: Encrypted UTF-8 JSON (KeyaDatabase)
-- **HMAC**: HMAC-SHA256 for integrity verification
-
-Encryption: Argon2id KDF → XChaCha20-Poly1305 → libsodium
-
-### TanStack Router
-
-File-based routing with special prefixes:
-- `__root.tsx` - Root layout (wraps all routes, renders providers)
-- `_authenticated.tsx` - Layout route (auth guard, renders `<Outlet />`)
-- `$slug` - Dynamic route parameter (e.g., `help.$slug.tsx`)
-
-Route access pattern:
-```typescript
-// Protected route
 export const Route = createFileRoute('/_authenticated/keys')({
   beforeLoad: () => {
-    const session = loadSession();
-    if (!session) throw redirect({ to: '/' });
+    if (!loadSession()) throw redirect({ to: '/' });
   },
   component: () => <KeysPage />
 });
@@ -213,79 +85,45 @@ export const Route = createFileRoute('/_authenticated/keys')({
 
 ### Data Model
 
-**ApiKey** - Core entity for API keys
+**ApiKey** — core entity:
 ```typescript
 interface ApiKey {
-  id: string;                    // UUID
-  name: string;                  // Display name
-  description: string;           // Usage notes
-  provider: string;              // OpenAI / Anthropic / Custom
-  endpoint: string;              // API base URL
-  key: string;                   // The actual API key (encrypted)
-  group_id: string | null;       // Associated group
-  expires_at: string | null;     // ISO timestamp
-  last_tested: string | null;    // ISO timestamp
-  test_status: 'success' | 'failed' | null;
-  test_latency_ms: number | null;
-  created_at: string;            // ISO timestamp
-  updated_at: string;            // ISO timestamp
+  id: string; name: string; description: string;
+  provider: string; endpoint: string; key: string;
+  group_id: string | null;
+  expires_at: string | null;
+  connection_check: ConnectionCheck;  // { status, checked_at, latency_ms, error_message }
+  created_at: string; updated_at: string;
 }
 ```
 
-**Group** - Organizational categories (formerly "categories")
-```typescript
-interface Group {
-  id: string;
-  name: string;      // e.g., "Production", "Development"
-  icon: string;      // emoji
-  order: number;    // display order
-}
-```
-
-**Settings** - User preferences
+**Settings** — vault-level preferences (theme managed separately in localStorage):
 ```typescript
 interface Settings {
-  theme: 'light' | 'dark' | 'system';
-  language: 'zh-CN' | 'en-US';
-  auto_lock_minutes: number;     // 0 = never
+  auto_lock_minutes: number;  // 0 = never
   auto_test_on_save: boolean;
-  custom_providers: CustomProvider[];  // User-defined providers
-  disabled_providers: string[];        // Hidden preset providers
+  auto_test_daily: boolean;
+  clipboard_detection_on_add: boolean;
+  custom_providers: CustomProvider[];
+  disabled_providers: string[];
 }
 ```
 
-### Testing Strategy
+**InboxItem** — proactive alerts (key expiry upcoming/expired), synced via `collectExpiryAlerts` + `syncInboxWithAlerts`.
 
-- **Unit tests**: `__tests__/` directories alongside source files
-- **Test framework**: Vitest with `describe`, `it`, `expect`
-- **Coverage**: Core logic (crypto, database, schema) has comprehensive tests
+### .keya Binary Format
 
-Run tests: `pnpm test` or `pnpm test:watch`
+`[Header 128B] [EncParams 96B] [PayloadLen 4B] [Payload N] [HMAC 32B]`
+- Header: magic "KEYA", version 1, UUID, timestamps
+- EncParams: Argon2id (ops=3, mem=64MB), salt, nonce
+- Payload: encrypted UTF-8 JSON (KeyaDatabase)
+- HMAC-SHA256 integrity
 
-### Browser Compatibility
+## Conventions
 
-| Feature | Chrome/Edge | Firefox | Safari |
-|---------|-------------|---------|--------|
-| Directory Picker | ✅ | ❌ | ❌ |
-| File Picker | ✅ | ✅ | ✅ |
-| WebAuthn | ✅ | ✅ | ✅ |
-| PWA Install | ✅ | ✅ | ✅ |
-
-**Fallback**: `FileStorage.saveViaDownload()` for browsers without Directory Picker API.
-
-### Important Conventions
-
-- **Python**: Use `python3` instead of `python`
-- **Language**: Respond in Chinese, but code comments in English
+- **Language**: Respond in Chinese, code comments in English
 - **Minimal changes**: Keep modifications focused, avoid over-engineering
 - **Code reuse**: Watch cyclomatic complexity, reuse existing modules
-- **Reference patterns**: Use `src/core/` pattern for portable business logic
-
-### Component Organization
-
-Components are organized by feature, not type:
-- ✅ `src/app/components/keys/KeyList.tsx`
-- ✅ `src/app/components/vault/VaultSwitcher.tsx`
-- ❌ Avoid: `src/app/components/List.tsx` (too generic)
-
-This makes features easier to find and maintain.
+- **Components**: organized by feature (`keys/`, `vault/`, `settings/`), not by type
+- **Linting**: Biome (not ESLint). 2-space indent, single quotes, 80 char width. `noExplicitAny` off.
+- **Tests**: `__tests__/` alongside source. Vitest, import `{ describe, it, expect } from 'vitest'`.
