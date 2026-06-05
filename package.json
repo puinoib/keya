@@ -28,6 +28,7 @@
     "libsodium-wrappers-sumo": "^0.8.4",
     "marked": "^18.0.4",
     "react": "^19.2.6",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.77.0",
     "sonner": "^2.0.7",

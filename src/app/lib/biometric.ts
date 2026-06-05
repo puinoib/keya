@@ -36,7 +36,7 @@ function toBuffer(source: Uint8Array): ArrayBuffer {
   return source.buffer.slice(
     source.byteOffset,
     source.byteOffset + source.byteLength
-  );
+  ) as ArrayBuffer;
 }
 
 // ── IndexedDB ──
@@ -109,7 +109,7 @@ async function aesDecrypt(
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: toBuffer(iv) },
     key,
-    fromBase64(ciphertext)
+    toBuffer(fromBase64(ciphertext))
   );
   return new TextDecoder().decode(decrypted);
 }
