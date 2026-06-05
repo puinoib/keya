@@ -2,6 +2,7 @@ import { X } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
 import { KeyList } from '../keys/KeyList';
 import { KeyDetail } from '../keys/KeyDetail';
+import { SidebarFilterSelect } from '../layout/SidebarFilterSelect';
 
 export function KeysPage() {
   const {
@@ -18,9 +19,15 @@ export function KeysPage() {
     setFilterTestStatus,
     setFilterExpiryStatus,
     clearFilters,
+    clearSmartFilters,
   } = useStore();
 
   const groups = db?.getGroups() ?? [];
+  const providers = db
+    ? [...new Set(db.getApiKeys().map((k) => k.provider))].sort()
+    : [];
+  const hasSmartFilters =
+    filterProvider || filterTestStatus || filterExpiryStatus;
 
   // Build active filter tags
   const tags: { label: string; onRemove: () => void }[] = [];
@@ -70,6 +77,51 @@ export function KeysPage() {
             {db?.getApiKeys().length ?? 0}
           </span>
         </h1>
+
+        {/* Smart Filters - horizontal layout */}
+        {(providers.length > 0 || hasSmartFilters) && (
+          <div className="flex items-center gap-2 mb-3">
+            <SidebarFilterSelect
+              value={filterProvider}
+              onChange={setFilterProvider}
+              options={[
+                { value: '', label: 'All Providers' },
+                ...providers.map((p) => ({ value: p, label: p })),
+              ]}
+              placeholder="All Providers"
+            />
+            <SidebarFilterSelect
+              value={filterTestStatus}
+              onChange={setFilterTestStatus}
+              options={[
+                { value: '', label: 'All Results' },
+                { value: 'success', label: 'Success' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'untested', label: 'Untested' },
+              ]}
+              placeholder="All Results"
+            />
+            <SidebarFilterSelect
+              value={filterExpiryStatus}
+              onChange={setFilterExpiryStatus}
+              options={[
+                { value: '', label: 'All Expiry' },
+                { value: 'expired', label: 'Expired' },
+                { value: 'expiring', label: 'Expiring Soon' },
+                { value: 'valid', label: 'No Expiry Issue' },
+              ]}
+              placeholder="All Expiry"
+            />
+            {hasSmartFilters && (
+              <button
+                onClick={clearSmartFilters}
+                className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         {tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 mb-3">

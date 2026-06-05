@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useDeferredValue } from 'react';
 import { Spinner, ArrowRight, Lock, Fingerprint } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,9 @@ import {
   isBiometricRegistered,
   unlockWithBiometric,
 } from '@/app/lib/biometric';
+import '@/app/lib/zxcvbn';
+import { zxcvbnAsync } from '@zxcvbn-ts/core';
+import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new';
@@ -18,19 +21,13 @@ interface VaultPasswordDialogProps {
   onCancel: () => void;
 }
 
-function evalStrength(pw: string) {
-  if (!pw) return { score: 0, label: '', color: '' };
-  let s = 0;
-  if (pw.length >= 8) s++;
-  if (pw.length >= 12) s++;
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
-  if (/\d/.test(pw)) s++;
-  if (/[^a-zA-Z0-9]/.test(pw)) s++;
-  if (s <= 1) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-  if (s <= 2) return { score: 2, label: 'Fair', color: 'bg-orange-500' };
-  if (s <= 3) return { score: 3, label: 'Good', color: 'bg-yellow-500' };
-  return { score: 4, label: 'Strong', color: 'bg-emerald-500' };
-}
+const STRENGTH_CONFIG = {
+  0: { label: 'Very Weak', color: 'bg-red-500' },
+  1: { label: 'Weak', color: 'bg-red-500' },
+  2: { label: 'Fair', color: 'bg-orange-500' },
+  3: { label: 'Good', color: 'bg-yellow-500' },
+  4: { label: 'Strong', color: 'bg-emerald-500' },
+} as const;
 
 export function VaultPasswordDialog({
   mode,
@@ -47,12 +44,27 @@ export function VaultPasswordDialog({
   const [loading, setLoading] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
+  const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
 
   const isCreate = mode === 'new';
   const canSubmit = isCreate
     ? password.length >= 8 && password === confirm
     : password.length > 0;
-  const strength = useMemo(() => evalStrength(password), [password]);
+
+  // Use deferred value for async zxcvbn check (React 19)
+  const deferredPassword = useDeferredValue(password);
+
+  useEffect(() => {
+    if (!deferredPassword || !isCreate) {
+      setZxcvbnResult(null);
+      return;
+    }
+    zxcvbnAsync(deferredPassword).then(setZxcvbnResult);
+  }, [deferredPassword, isCreate]);
+
+  const strength = zxcvbnResult
+    ? STRENGTH_CONFIG[zxcvbnResult.score as keyof typeof STRENGTH_CONFIG]
+    : null;
 
   useEffect(() => {
     if (isCreate || !vaultId) return;
@@ -126,18 +138,40 @@ export function VaultPasswordDialog({
           onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
         />
         {isCreate && password && (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex gap-1">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : 'bg-surface-3'}`}
-                />
-              ))}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex gap-1">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full transition-colors ${
+                      zxcvbnResult && i <= zxcvbnResult.score
+                        ? STRENGTH_CONFIG[
+                            zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
+                          ].color
+                        : 'bg-surface-3'
+                    }`}
+                  />
+                ))}
+              </div>
+              {strength && (
+                <span className="text-xs text-ink-quaternary">
+                  {strength.label}
+                </span>
+              )}
             </div>
-            <span className="text-xs text-ink-quaternary">
-              {strength.label}
-            </span>
+            {zxcvbnResult?.feedback.warning && (
+              <p className="text-xs text-danger">
+                {zxcvbnResult.feedback.warning}
+              </p>
+            )}
+            {zxcvbnResult &&
+              zxcvbnResult.feedback.suggestions &&
+              zxcvbnResult.feedback.suggestions.length > 0 && (
+                <p className="text-xs text-ink-quaternary">
+                  {zxcvbnResult.feedback.suggestions[0]}
+                </p>
+              )}
           </div>
         )}
       </div>

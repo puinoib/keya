@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import {
-  Archive,
-  Warning,
-  ClockAfternoon,
-} from '@phosphor-icons/react';
+import { Archive, Warning, ClockAfternoon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
