@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import {
   Gear,
   Key,
@@ -18,15 +18,15 @@ const navItems = [
 ];
 
 export function SettingsSidebar() {
-  const location = useLocation();
-
-  const currentPath = location.pathname;
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
 
   return (
     <nav className="w-[180px] shrink-0 border-r border-line bg-surface-2 p-3">
       <div className="space-y-1">
         {navItems.map((item) => {
-          const isActive = currentPath === item.path;
+          const isActive = pathname === item.path;
           return (
             <Link
               key={item.path}
