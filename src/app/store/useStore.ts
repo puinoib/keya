@@ -87,6 +87,7 @@ interface AppState {
 
   // Actions - Settings
   updateSettings: (updates: Record<string, unknown>) => void;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   runInboxChecks: () => { added: number; updated: number; archived: number };
   archiveInboxItem: (id: string) => InboxItem | null;
 
@@ -408,6 +409,17 @@ export const useStore = create<AppState>((set, get) => {
       get().db?.updateSettings(updates);
       set({});
       scheduleSave();
+    },
+
+    changePassword: async (oldPassword, newPassword) => {
+      const { db, password, activeVaultFileName } = get();
+      if (!db || !password || !activeVaultFileName)
+        throw new Error('No vault open');
+      if (oldPassword !== password)
+        throw new Error('Current password is incorrect');
+      await FileStorage.saveVault(activeVaultFileName, db.getData(), newPassword);
+      set({ password: newPassword });
+      saveSession(activeVaultFileName, newPassword);
     },
 
     runInboxChecks: () => {

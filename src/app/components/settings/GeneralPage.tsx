@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore';
-import { Palette, Fingerprint, Spinner, Shield } from '@phosphor-icons/react';
+import { Palette, Fingerprint, Spinner, Shield, LockOpen } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -8,14 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useDeferredValue } from 'react';
 import { EmojiPicker } from '@ferrucc-io/emoji-picker';
+import { toast } from 'sonner';
 import {
   isBiometricSupported,
   isBiometricRegistered,
   registerBiometric,
   removeBiometric,
 } from '@/app/lib/biometric';
+import '@/app/lib/zxcvbn';
+import { zxcvbnAsync } from '@zxcvbn-ts/core';
+import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 
 function Toggle({
   checked,
@@ -46,17 +50,50 @@ function Toggle({
   );
 }
 
+const STRENGTH_CONFIG = {
+  0: { label: 'Very Weak', color: 'bg-red-500' },
+  1: { label: 'Weak', color: 'bg-red-500' },
+  2: { label: 'Fair', color: 'bg-orange-500' },
+  3: { label: 'Good', color: 'bg-yellow-500' },
+  4: { label: 'Strong', color: 'bg-emerald-500' },
+} as const;
+
 export function GeneralPage() {
-  const { db, password, updateMeta, updateSettings } = useStore();
+  const { db, password, updateMeta, updateSettings, changePassword } = useStore();
   const settings = db?.getSettings();
   const data = db?.getData();
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [bioRegistered, setBioRegistered] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
   const [bioError, setBioError] = useState('');
+
+  // Change password state
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [oldPw, setOldPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
+
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
   const vaultId = data?.vault_id;
+  const strength = zxcvbnResult
+    ? STRENGTH_CONFIG[zxcvbnResult.score as keyof typeof STRENGTH_CONFIG]
+    : null;
+
+  const deferredNewPw = useDeferredValue(newPw);
+  useEffect(() => {
+    if (!deferredNewPw || !showPwForm) {
+      setZxcvbnResult(null);
+      return;
+    }
+    zxcvbnAsync(deferredNewPw).then(setZxcvbnResult);
+  }, [deferredNewPw, showPwForm]);
+
+  const canChangePw =
+    oldPw.length > 0 && newPw.length >= 8 && newPw === confirmPw;
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -221,6 +258,128 @@ export function GeneralPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            {/* Change Master Password */}
+            <div className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <LockOpen className="size-4 text-ink-quaternary" />
+                  <p className="text-xs font-medium text-ink-primary">
+                    Master Password
+                  </p>
+                </div>
+                {!showPwForm && (
+                  <button
+                    onClick={() => setShowPwForm(true)}
+                    className="text-xs text-accent-bright hover:text-accent transition-colors"
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+              {showPwForm && (
+                <div className="mt-3 space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Current password"
+                    value={oldPw}
+                    onChange={(e) => { setOldPw(e.target.value); setPwError(''); }}
+                    className="h-7 text-xs"
+                    autoComplete="off"
+                    data-lpignore="true"
+                  />
+                  <div className="space-y-1">
+                    <Input
+                      type="password"
+                      placeholder="New password (min 8 chars)"
+                      value={newPw}
+                      onChange={(e) => { setNewPw(e.target.value); setPwError(''); }}
+                      className="h-7 text-xs"
+                      autoComplete="off"
+                      data-lpignore="true"
+                    />
+                    {newPw && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex gap-1">
+                          {[0, 1, 2, 3, 4].map((i) => (
+                            <div
+                              key={i}
+                              className={`h-1 flex-1 rounded-full transition-colors ${
+                                zxcvbnResult && i <= zxcvbnResult.score
+                                  ? STRENGTH_CONFIG[
+                                      zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
+                                    ].color
+                                  : 'bg-surface-3'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        {strength && (
+                          <span className="text-xs text-ink-quaternary">
+                            {strength.label}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPw}
+                    onChange={(e) => { setConfirmPw(e.target.value); setPwError(''); }}
+                    className={`h-7 text-xs ${confirmPw && newPw !== confirmPw ? 'border-red-500/50' : ''}`}
+                    autoComplete="off"
+                    data-lpignore="true"
+                  />
+                  {confirmPw && newPw !== confirmPw && (
+                    <p className="text-xs text-danger">Passwords don't match</p>
+                  )}
+                  {pwError && <p className="text-xs text-danger">{pwError}</p>}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={async () => {
+                        if (!canChangePw) return;
+                        setPwLoading(true);
+                        setPwError('');
+                        try {
+                          await changePassword(oldPw, newPw);
+                          // Re-register biometrics if previously registered
+                          if (bioRegistered && vaultId) {
+                            await registerBiometric(vaultId, newPw);
+                          }
+                          toast.success('Password changed');
+                          setShowPwForm(false);
+                          setOldPw('');
+                          setNewPw('');
+                          setConfirmPw('');
+                        } catch (e) {
+                          setPwError(
+                            e instanceof Error ? e.message : 'Failed to change password'
+                          );
+                        } finally {
+                          setPwLoading(false);
+                        }
+                      }}
+                      disabled={pwLoading || !canChangePw}
+                      className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
+                    >
+                      {pwLoading ? <Spinner className="size-3.5 animate-spin" /> : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPwForm(false);
+                        setOldPw('');
+                        setNewPw('');
+                        setConfirmPw('');
+                        setPwError('');
+                      }}
+                      className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
