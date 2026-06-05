@@ -180,7 +180,7 @@ export function Sidebar() {
             rel="noopener noreferrer"
             className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors flex items-center justify-center gap-1"
           >
-            Keya v1.0
+            Keya
           </a>
         </div>
       </aside>

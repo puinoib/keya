@@ -123,7 +123,7 @@ export function KeyDetail() {
   return (
     <>
       <div
-        className="w-72 mr-3 mt-10 mb-3 flex flex-col rounded-xl
+        className="w-72 mr-3 mt-12 mb-3 flex flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >
