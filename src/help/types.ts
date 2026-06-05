@@ -3,6 +3,7 @@ export interface HelpDocument {
   title: string;
   description: string;
   content: string;
+  updated?: string;
   order?: number;
 }
 
