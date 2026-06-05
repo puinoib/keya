@@ -28,7 +28,9 @@ export function getDaysUntilExpiry(
   );
 }
 
-export function getConnectionStatusLabel(status: ApiKey['connection_check']['status']): string {
+export function getConnectionStatusLabel(
+  status: ApiKey['connection_check']['status']
+): string {
   if (status === 'success') return 'Success';
   if (status === 'failed') return 'Failed';
   return 'Untested';

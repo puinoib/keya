@@ -44,6 +44,7 @@ export interface Settings {
   auto_test_daily: boolean;
   custom_providers: CustomProvider[];
   disabled_providers: string[];
+  keyboard_shortcuts: Record<string, string>;
 }
 
 export type InboxItemType = 'key_expiry_upcoming' | 'key_expiry_expired';
@@ -101,6 +102,7 @@ export const DEFAULT_SETTINGS: Settings = {
   auto_test_daily: false,
   custom_providers: [],
   disabled_providers: [],
+  keyboard_shortcuts: {},
 };
 
 export const EXPIRY_REMINDER_DAYS = 7;

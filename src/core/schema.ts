@@ -335,6 +335,8 @@ export async function deserializeFromFile(
     db.settings.custom_providers = [];
   if (db.settings.disabled_providers === undefined)
     db.settings.disabled_providers = [];
+  if ((db.settings as any).keyboard_shortcuts === undefined)
+    (db.settings as any).keyboard_shortcuts = {};
   if (!Array.isArray((db as any).inbox)) (db as any).inbox = [];
 
   // Update modified time from header

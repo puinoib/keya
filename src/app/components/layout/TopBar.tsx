@@ -186,7 +186,14 @@ export function TopBar() {
           type="text"
           placeholder="Search keys..."
           value={searchQuery}
+          data-keya-search="true"
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              if (searchQuery) setSearchQuery('');
+              else e.currentTarget.blur();
+            }
+          }}
           className="w-full h-7 pl-8 pr-3 rounded-md bg-surface-2 border border-transparent
                           text-xs text-ink-primary placeholder:text-ink-quaternary
                           hover:bg-surface-3 hover:border-line-subtle

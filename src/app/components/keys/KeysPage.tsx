@@ -63,7 +63,7 @@ export function KeysPage() {
 
   return (
     <div className="flex flex-1 min-h-0">
-      <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto">
+      <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto scrollbar-hidden">
         <div className="w-full max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-sm font-semibold tracking-tight text-ink-primary">

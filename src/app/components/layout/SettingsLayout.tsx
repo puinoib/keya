@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from '@phosphor-icons/react';
 import { Outlet } from '@tanstack/react-router';
+import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
+import { KeyboardShortcutsDialog } from '@/app/components/KeyboardShortcutsDialog';
 
 export function SettingsLayout({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  useGlobalShortcuts(() => setShowShortcuts(true));
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
@@ -26,6 +31,10 @@ export function SettingsLayout({ children }: { children?: React.ReactNode }) {
           </div>
         </div>
       </div>
+      <KeyboardShortcutsDialog
+        open={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }
