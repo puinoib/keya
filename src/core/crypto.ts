@@ -30,19 +30,22 @@ export function generateNonce(): Uint8Array {
   return sodium.randombytes_buf(24);
 }
 
-/** Derive 256-bit key from password using Argon2id */
-export function deriveKey(password: string, salt: Uint8Array): Uint8Array {
+/** Pre-hash password for KDF input (enables future keyfile support) */
+export function preHashPassword(password: string): Uint8Array {
   ensureInit();
-  // crypto_pwhash_argon2id() not available in all builds; ALG_ARGON2ID13 (2) is equivalent
+  return sodium.crypto_hash_sha256(sodium.from_string(password));
+}
+
+/** Derive 256-bit key from password using Argon2id */
+export function deriveKey(
+  password: string | Uint8Array,
+  salt: Uint8Array,
+  ops: number = 10,
+  mem: number = 65536
+): Uint8Array {
+  ensureInit();
   const algo: number = (sodium as any).crypto_pwhash_ALG_ARGON2ID13 ?? 2;
-  return sodium.crypto_pwhash(
-    32, // 256-bit key
-    password,
-    salt,
-    3, // opslimit (iterations)
-    65536, // memlimit (64 MB)
-    algo
-  );
+  return sodium.crypto_pwhash(32, password, salt, ops, mem, algo);
 }
 
 /** Combine derived key with master seed to produce final encryption key */

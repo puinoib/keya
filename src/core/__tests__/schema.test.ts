@@ -53,7 +53,7 @@ describe('schema (.keya file format)', () => {
     return { ...db.getData(), ...overrides } as KeyaDatabase;
   }
 
-  it('serializes and deserializes a complete database', async () => {
+  it('serializes and deserializes a complete database (V2)', async () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
     const restored = await deserializeFromFile(bytes, password);
@@ -65,7 +65,6 @@ describe('schema (.keya file format)', () => {
     expect(restored.api_keys[0].key).toBe(db.api_keys[0].key);
     expect(restored.api_keys[1].key).toBe(db.api_keys[1].key);
     expect(restored.groups).toHaveLength(db.groups.length);
-    // updated_at preserved from JSON (managed by touch())
     expect(restored.updated_at).toBe(db.updated_at);
   });
 
@@ -79,7 +78,6 @@ describe('schema (.keya file format)', () => {
 
   it('throws on bad magic bytes (not a .keya file)', async () => {
     const bytes = new Uint8Array(256).fill(0x00);
-    // Write something non-"KEYA" at start
     bytes.set(new TextEncoder().encode('NOPE'), 0);
     await expect(deserializeFromFile(bytes, password)).rejects.toThrow(
       'Not a valid .keya file'
@@ -93,7 +91,7 @@ describe('schema (.keya file format)', () => {
     await expect(deserializeFromFile(truncated, password)).rejects.toThrow();
   });
 
-  it('creates valid header with masterSeed', () => {
+  it('creates valid V2 header with masterSeed', () => {
     const created = new Date('2026-01-15T12:00:00Z');
     const modified = new Date('2026-06-05T09:00:00Z');
     const masterSeed = new Uint8Array(32);
@@ -101,12 +99,13 @@ describe('schema (.keya file format)', () => {
     const header = createHeader(
       '550e8400-e29b-41d4-a716-446655440000',
       masterSeed,
+      2,
       created,
       modified
     );
     expect(header).toHaveLength(128);
     const meta = parseHeader(header);
-    expect(meta.version).toBe(1);
+    expect(meta.version).toBe(2);
     expect(meta.flags).toBe(0);
     expect(meta.fileId).toBe('550e8400-e29b-41d4-a716-446655440000');
     expect(meta.masterSeed).toHaveLength(32);
@@ -118,10 +117,30 @@ describe('schema (.keya file format)', () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
     const asText = new TextDecoder().decode(bytes);
-    // The actual key values should NOT appear in plaintext
     expect(asText).not.toContain('sk-proj-abc123def456');
     expect(asText).not.toContain('sk-ant-api03-xyz789');
-    // But the magic header should be visible
     expect(asText.slice(0, 4)).toBe('KEYA');
+  });
+
+  it('saves as V2 with header hash', async () => {
+    const db = makeTestDb();
+    const bytes = await serializeToFile(db, password);
+    const meta = parseHeader(bytes.slice(0, 128));
+
+    expect(meta.version).toBe(2);
+    // V2 has 32B header hash at offset 128
+    expect(bytes.length).toBeGreaterThan(128 + 32 + 96);
+  });
+
+  it('detects corrupted header', async () => {
+    const db = makeTestDb();
+    const bytes = await serializeToFile(db, password);
+
+    // Corrupt a byte in the header (but not magic, so it's still detected as .keya)
+    bytes[10] ^= 0xff;
+
+    await expect(deserializeFromFile(bytes, password)).rejects.toThrow(
+      'Header integrity check failed'
+    );
   });
 });
