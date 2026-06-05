@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import {
   getDefaultEndpointForProvider,
   getProvidersForDropdown,
+  type Settings,
 } from '../../../core/types';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
 import { ApiTester } from '../../lib/api-tester';
@@ -32,8 +33,6 @@ import {
   EyeSlash,
   ArrowCounterClockwise,
   Flask,
-  CheckCircle,
-  XCircle,
   Spinner,
   Calendar,
   X,
@@ -68,6 +67,13 @@ const empty: FormData = {
 function toFormData(draft: AddKeyDraft): FormData {
   return {
     ...draft,
+  };
+}
+
+function getEmptyForm(settings: Settings | undefined): FormData {
+  return {
+    ...empty,
+    endpoint: getDefaultEndpointForProvider(empty.provider, settings) ?? '',
   };
 }
 
@@ -117,15 +123,22 @@ export function KeyForm({
   useEffect(() => {
     if (!open) return;
     if (addKeyDraft) {
-      setForm(toFormData(addKeyDraft));
+      const draftForm = toFormData(addKeyDraft);
+      setForm({
+        ...draftForm,
+        endpoint:
+          draftForm.endpoint ||
+          getDefaultEndpointForProvider(draftForm.provider, settings) ||
+          '',
+      });
       setShowKey(false);
       setTestState({ testing: false, result: null });
       return;
     }
-    setForm(empty);
+    setForm(getEmptyForm(settings));
     setShowKey(false);
     setTestState({ testing: false, result: null });
-  }, [open, addKeyDraft]);
+  }, [open, addKeyDraft, settings]);
 
   const handleProviderChange = (provider: string | null) => {
     if (!provider) return;
@@ -149,6 +162,14 @@ export function KeyForm({
       form.key_value
     );
     setTestState({ testing: false, result });
+    toast[result.success ? 'success' : 'error'](
+      result.success ? 'Connection test succeeded' : 'Connection test failed',
+      {
+        description: result.success
+          ? `${form.name || form.provider} — ${result.latency_ms}ms`
+          : result.error || 'Connection failed',
+      }
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -217,7 +238,7 @@ export function KeyForm({
   };
 
   const handleClose = () => {
-    setForm(empty);
+    setForm(getEmptyForm(settings));
     clearAddKeyDraft();
     setTestState({ testing: false, result: null });
     onClose();
@@ -408,28 +429,6 @@ export function KeyForm({
               placeholder="What's this key for?"
             />
           </div>
-
-          {/* Test Result */}
-          {testState.result && (
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
-                testState.result.success
-                  ? 'bg-success/10 text-success-bright'
-                  : 'bg-danger/10 text-danger'
-              }`}
-            >
-              {testState.result.success ? (
-                <CheckCircle className="size-3.5" />
-              ) : (
-                <XCircle className="size-3.5" />
-              )}
-              <span>
-                {testState.result.success
-                  ? `Available (${testState.result.latency_ms}ms)`
-                  : testState.result.error || 'Connection failed'}
-              </span>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">

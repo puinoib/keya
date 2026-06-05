@@ -10,15 +10,17 @@ export function AlertDialogContent({
   return (
     <AlertDialog.Portal>
       <AlertDialog.Backdrop className="fixed inset-0 z-[80] bg-black/30" />
-      <AlertDialog.Popup
-        className={cn(
-          'fixed left-[50%] top-[50%] z-[81] w-full max-w-md translate-x-[-50%] translate-y-[-50%]',
-          'bg-canvas-raised border border-line rounded-lg shadow-dialog p-6',
-          'data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
-          className
-        )}
-        {...props}
-      />
+      <div className="fixed inset-0 z-[81] flex items-center justify-center p-4">
+        <AlertDialog.Popup
+          className={cn(
+            'w-full max-w-md',
+            'bg-canvas-raised border border-line rounded-lg shadow-dialog p-6',
+            'data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
+            className
+          )}
+          {...props}
+        />
+      </div>
     </AlertDialog.Portal>
   );
 }

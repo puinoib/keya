@@ -64,6 +64,7 @@ interface AppState {
   setShowAddForm: (show: boolean) => void;
   beginAddKeyFlow: () => Promise<void>;
   confirmClipboardCandidate: () => void;
+  skipClipboardCandidate: () => void;
   dismissClipboardCandidate: () => void;
   clearAddKeyDraft: () => void;
   setBiometricPrompt: (
@@ -348,6 +349,12 @@ export const useStore = create<AppState>((set, get) => {
         showAddForm: true,
       });
     },
+    skipClipboardCandidate: () =>
+      set({
+        clipboardCandidate: null,
+        addKeyDraft: null,
+        showAddForm: true,
+      }),
     dismissClipboardCandidate: () => set({ clipboardCandidate: null }),
     clearAddKeyDraft: () => set({ addKeyDraft: null }),
     setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),

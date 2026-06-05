@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from '@tanstack/react-router';
+import { X } from '@phosphor-icons/react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { KeyForm } from '../keys/KeyForm';
@@ -24,6 +25,7 @@ export function AppLayout({ children }: { children?: React.ReactNode }) {
     setShowAddForm,
     clipboardCandidate,
     confirmClipboardCandidate,
+    skipClipboardCandidate,
     dismissClipboardCandidate,
   } = useStore();
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -52,12 +54,17 @@ export function AppLayout({ children }: { children?: React.ReactNode }) {
           if (!open) dismissClipboardCandidate();
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="relative">
+          <AlertDialogCancel
+            aria-label="Close"
+            className="absolute right-4 top-4 border-0 bg-transparent p-1 text-ink-quaternary hover:bg-surface-3 hover:text-ink-secondary"
+          >
+            <X className="size-4" />
+          </AlertDialogCancel>
           <AlertDialogHeader>
-            <AlertDialogTitle>Detected API Key in Clipboard</AlertDialogTitle>
+            <AlertDialogTitle>Use clipboard key?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 text-sm text-ink-secondary">
-              <p>Keya detected a possible {clipboardCandidate?.provider} API key.</p>
-              <p>Do you want to prefill a new entry and save it to this vault?</p>
+              <p>Detected a possible {clipboardCandidate?.provider} API key.</p>
               {clipboardCandidate ? (
                 <p className="font-mono text-xs text-ink-quaternary">
                   {clipboardCandidate.masked}
@@ -65,13 +72,18 @@ export function AppLayout({ children }: { children?: React.ReactNode }) {
               ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogAction
+              onClick={() => skipClipboardCandidate()}
+              className="bg-surface-2 border border-line text-ink-secondary hover:bg-surface-3"
+            >
+              Blank Form
+            </AlertDialogAction>
             <AlertDialogAction
               onClick={() => confirmClipboardCandidate()}
               className="bg-accent text-white hover:bg-accent-bright"
             >
-              Save to Keya
+              Use Key
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -60,8 +60,6 @@ import {
   Plus,
   MagnifyingGlass,
   ArrowCounterClockwise,
-  CheckCircle,
-  XCircle,
   Spinner,
   Calendar,
   X,
@@ -560,6 +558,14 @@ export function EditKeyDialog({
       form.key
     );
     setTestState({ testing: false, result });
+    toast[result.success ? 'success' : 'error'](
+      result.success ? 'Connection test succeeded' : 'Connection test failed',
+      {
+        description: result.success
+          ? `${form.name.trim() || form.provider} — ${result.latency_ms}ms`
+          : result.error || 'Connection failed',
+      }
+    );
   };
 
   const handleSave = () => {
@@ -788,28 +794,6 @@ export function EditKeyDialog({
               placeholder="What's this key for?"
             />
           </div>
-
-          {/* Test Result */}
-          {testState.result && (
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
-                testState.result.success
-                  ? 'bg-success/10 text-success-bright'
-                  : 'bg-danger/10 text-danger'
-              }`}
-            >
-              {testState.result.success ? (
-                <CheckCircle className="size-3.5" />
-              ) : (
-                <XCircle className="size-3.5" />
-              )}
-              <span>
-                {testState.result.success
-                  ? `Available (${testState.result.latency_ms}ms)`
-                  : testState.result.error || 'Connection failed'}
-              </span>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">
