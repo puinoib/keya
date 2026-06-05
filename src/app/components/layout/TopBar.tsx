@@ -202,10 +202,8 @@ export function TopBar() {
 
       {/* Import/Export menu */}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
-            <Download className="size-3.5" />
-          </button>
+        <DropdownMenuTrigger className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
+          <Download className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-44">
           {/* Keya import/export — encrypted, first priority */}
