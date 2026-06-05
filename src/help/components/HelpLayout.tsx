@@ -1,9 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
+import { Sun, Moon, Monitor, Check } from '@phosphor-icons/react';
 import { HelpSidebar, HelpSearch } from './index';
 import { HelpIndex } from './HelpIndex';
 import { HelpPage } from './HelpPage';
 import { loadManifest } from '../lib/manifest';
+import { useStore } from '@/app/store/useStore';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+
+const themeOptions = [
+  { value: 'system' as const, label: 'System', icon: Monitor },
+  { value: 'light' as const, label: 'Light', icon: Sun },
+  { value: 'dark' as const, label: 'Dark', icon: Moon },
+];
 
 function getSlugFromPath(pathname: string): string | null {
   const slug = pathname.replace('/help/', '').replace('/help', '');
@@ -14,9 +28,12 @@ export function HelpLayout() {
   const { documents } = loadManifest();
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, setTheme } = useStore();
   const [currentSlug, setCurrentSlug] = useState<string | null>(() =>
     getSlugFromPath(location.pathname)
   );
+  const CurrentIcon =
+    themeOptions.find((o) => o.value === theme)?.icon ?? Monitor;
 
   // sync state when browser nav (back/forward)
   useEffect(() => {
@@ -41,8 +58,28 @@ export function HelpLayout() {
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-          <header className="h-12 flex items-center px-4 shrink-0">
+          <header className="h-12 flex items-center px-4 shrink-0 gap-2">
             <HelpSearch documents={documents} onNavigate={handleNavigate} />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="ml-auto inline-flex items-center justify-center size-8 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors">
+                <CurrentIcon className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {themeOptions.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => setTheme(opt.value)}
+                    className="text-xs"
+                  >
+                    <opt.icon className="size-3.5" />
+                    <span>{opt.label}</span>
+                    {theme === opt.value && (
+                      <Check className="size-3.5 ml-auto text-accent-bright" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </header>
           <div className="flex-1 overflow-y-auto">
             <main className="p-10 max-w-4xl mx-auto w-full">
