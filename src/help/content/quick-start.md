@@ -7,7 +7,7 @@ order: 2
 
 This walkthrough takes you from a fresh install to a working vault with one API key inside. Plan for about two minutes.
 
-## Before you start
+## 1. Before you start
 
 - Use a **Chromium-based browser** (Chrome, Edge, Arc, Brave). The folder picker relies on the File System Access API, which Firefox and Safari do not ship. If you're stuck on Firefox, see [the FAQ entry on unsupported browsers](/help/faq).
 - Pick a **synced folder** for your workspace — iCloud Drive, Dropbox, Nutstore, OneDrive, or a plain local folder. The folder holds your `.keya` files, and choosing a synced folder is what makes multi-device work later.
@@ -73,9 +73,22 @@ Locking purges the in-memory key and the `sessionStorage` session. The vault fil
 - **Treat the master password like a root password.** If you lose it, the vault is gone. There is no reset email.
 - **Use the workspace folder in a synced cloud drive.** That's how you get free, end-to-end-encrypted multi-device access — Keya never talks to a server, but your cloud does.
 - **Test keys after rotating them.** The `Success` / `Failed` connection badges and expiry warnings are how you spot a key that quietly expired or got revoked.
+- **Check Inbox regularly.** Expired and expiring keys appear as reminders automatically. See [Inbox](/help/inbox).
+- **Run a health audit.** The [Health](/help/health) page scores your vault and lists issues by severity.
+
+## Settings worth knowing
+
+Keya has a few settings that change daily behavior. Find them under **Settings** in the sidebar.
+
+- **General** — vault name and icon, biometric toggle, auto-lock timer, change master password.
+- **Providers** — toggle the 14 presets (OpenAI, Anthropic, Google, Groq, DeepSeek, Moonshot, Zhipu, Baidu, Mistral, Cohere, Together, OpenRouter, SiliconFlow, Azure OpenAI), or add custom providers with a name and endpoint.
+- **Groups** — create, rename, and delete groups. Deleting a group ungroups its keys but doesn't delete them.
+- **Keys** — Auto-Test on Save (tests after every save), Daily First-Open Test (tests all keys on first unlock each day), Detect Clipboard on Add (pre-fills key value from clipboard).
+- **Shortcuts** — full list of keyboard shortcuts with recording and conflict detection. Defaults include `/` (search), `N` (add key), `Cmd+Shift+L` (lock), `J/K` (navigate), `C` (copy), `E` (edit), `T` (test).
 
 ## What's next?
 
 - Read the [Security](/help/security) page to understand what's actually protecting your data.
 - Skim the [FAQ](/help/faq) for the questions people ask most.
 - Set up [Backup &amp; Restore](/help/backup) once you have more than a couple of keys.
+- Run a [Vault Health Audit](/help/health) to see how your vault scores.

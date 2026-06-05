@@ -13,6 +13,7 @@ Keya is a desktop-grade API key vault that lives entirely in your browser. There
 - **Strong encryption by default.** Vaults are sealed with Argon2id (3 iterations, 64 MB) and XChaCha20-Poly1305. The master password is the only thing that can open them.
 - **Multi-vault.** Keep work, personal, and client keys in separate files. Switch from the sidebar without re-authenticating the whole app.
 - **Built-in connectivity test.** Hit a provider's API with your key, see latency and pass/fail in one click.
+- **Health audit & expiry reminders.** Spot expired keys, failed tests, and stale endpoints at a glance.
 - **Open source (MIT).** Auditable on GitHub.
 
 ## Where to go next
@@ -21,6 +22,14 @@ Keya is a desktop-grade API key vault that lives entirely in your browser. There
   <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/quick-start">
     <div class="text-sm font-semibold text-ink-primary">Quick Start</div>
     <div class="text-xs text-ink-quaternary mt-1">Set up a folder, create a vault, add your first key.</div>
+  </a>
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/health">
+    <div class="text-sm font-semibold text-ink-primary">Vault Health Audit</div>
+    <div class="text-xs text-ink-quaternary mt-1">Health score, findings, and actionable recommendations.</div>
+  </a>
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/inbox">
+    <div class="text-sm font-semibold text-ink-primary">Inbox</div>
+    <div class="text-xs text-ink-quaternary mt-1">Expiry reminders that surface when keys need attention.</div>
   </a>
   <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/faq">
     <div class="text-sm font-semibold text-ink-primary">FAQ</div>

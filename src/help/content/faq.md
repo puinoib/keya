@@ -44,10 +44,6 @@ Probably not, if you use Keya on **one device at a time per vault**. Cloud drive
 
 It's a convenience, not a replacement for the master password. Keya stores a WebAuthn passkey in IndexedDB, scoped to the vault and device. It doesn't sync across devices. Clearing browser data removes it — re-enroll with the master password.
 
-## What is a "provider"?
-
-A label that bundles a name with a default API endpoint. Keya ships with 14 presets (OpenAI, Anthropic, Google, etc.). You can add custom providers in Settings for private deployments or OpenAI-compatible APIs.
-
 ## How do I move Keya to a new computer?
 
 1. Ensure the workspace folder syncs through your cloud drive.
@@ -69,21 +65,3 @@ See the GitHub link in the app footer. Everything is in one repository under MIT
 ## How do I change my master password?
 
 Settings → General → Master Password → **Change**. Enter your current password, then the new one (min 8 chars). If biometric unlock is active, it re-registers automatically.
-
-## How do groups work?
-
-Groups are optional tags for organizing keys. Keya starts with **Production** and **Development**. Manage them in Settings → Groups — add, rename, or delete. Deleting a group ungroups its keys but doesn't delete them.
-
-## How do I disable a provider or add a custom one?
-
-Settings → Providers. Toggle off any preset you don't use, or click **Add Custom Provider** for self-hosted gateways and OpenAI-compatible APIs.
-
-## What do the Keys settings do?
-
-- **Auto-Test on Save** — tests the key every time you save.
-- **Daily First-Open Test** — tests all keys on the first open each day.
-- **Detect Clipboard on Add** — pre-fills the key field if it detects an API key pattern on your clipboard.
-
-## What keyboard shortcuts are available?
-
-Settings → Shortcuts shows the full list. Defaults include `/` (search), `N` (add key), `Cmd+Shift+L` (lock), `J/K` (navigate), `C` (copy), `E` (edit), `T` (test). Click any row to re-record; conflicts are caught automatically.
