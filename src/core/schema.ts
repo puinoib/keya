@@ -55,8 +55,8 @@ export function createHeader(
   buf.set(MAGIC, off);
   off += 4;
 
-  // Version: uint16 LE = 2
-  new DataView(buf.buffer).setUint16(off, 2, true);
+  // Version: uint16 LE = 1
+  new DataView(buf.buffer).setUint16(off, 1, true);
   off += 2;
 
   // Flags: uint16 LE = 0 (reserved)
@@ -105,9 +105,9 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
 
   const version = dv.getUint16(off, true);
   off += 2;
-  if (version !== 2) {
+  if (version !== 1) {
     throw new Error(
-      `Unsupported .keya file version: ${version} (expected 2)`
+      `Unsupported .keya file version: ${version} (expected 1)`
     );
   }
   off += 2; // flags (reserved)
