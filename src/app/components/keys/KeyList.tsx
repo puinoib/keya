@@ -9,7 +9,10 @@ import {
   getDefaultEndpointForProvider,
   getProvidersForDropdown,
 } from '../../../core/types';
-import { getExpiryStatus, getExpiryStatusLabel } from '../../../core/key-status';
+import {
+  getExpiryStatus,
+  getExpiryStatusLabel,
+} from '../../../core/key-status';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +67,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
+import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 
 export function KeyList() {
   const db = useStore((s) => s.db);
@@ -84,6 +88,7 @@ export function KeyList() {
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
+  const keyItemRefs = useRef(new Map<string, HTMLDivElement>());
 
   let keys = db?.getApiKeys() ?? [];
   if (searchQuery && db) keys = db.searchKeys(searchQuery);
@@ -117,9 +122,6 @@ export function KeyList() {
     }
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
-  // Early return if db is not available
-  if (!db) return null;
-
   const handleTest = async (key: ApiKey) => {
     setTesting(key.id);
     const result = await ApiTester.testKey(key);
@@ -128,14 +130,12 @@ export function KeyList() {
         status: result.success ? 'success' : 'failed',
         checked_at: new Date().toISOString(),
         latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : result.error ?? null,
+        error_message: result.success ? null : (result.error ?? null),
       },
     });
     setTesting(null);
     toast[result.success ? 'success' : 'error'](
-      result.success
-        ? 'Connection test succeeded'
-        : 'Connection test failed',
+      result.success ? 'Connection test succeeded' : 'Connection test failed',
       {
         description: result.success
           ? `${key.name} — ${result.latency_ms}ms`
@@ -162,6 +162,85 @@ export function KeyList() {
     filterProvider ||
     filterTestStatus ||
     filterExpiryStatus;
+
+  const selectedKey = selectedKeyId
+    ? keys.find((key) => key.id === selectedKeyId)
+    : null;
+  const keyShortcutsEnabled = keys.length > 0 && !editingKey && !deletingKey;
+
+  const selectKeyAt = (index: number) => {
+    if (keys.length === 0) return;
+    const clampedIndex = Math.max(0, Math.min(index, keys.length - 1));
+    setSelectedKeyId(keys[clampedIndex].id);
+  };
+
+  const moveSelection = (direction: 1 | -1) => {
+    if (keys.length === 0) return;
+    const currentIndex = selectedKeyId
+      ? keys.findIndex((key) => key.id === selectedKeyId)
+      : -1;
+    const nextIndex =
+      currentIndex === -1
+        ? direction === 1
+          ? 0
+          : keys.length - 1
+        : (currentIndex + direction + keys.length) % keys.length;
+    selectKeyAt(nextIndex);
+  };
+
+  useEffect(() => {
+    if (!selectedKeyId) return;
+    keyItemRefs.current
+      .get(selectedKeyId)
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [selectedKeyId]);
+
+  useAppHotkey('key.next', () => moveSelection(1), {
+    enabled: keyShortcutsEnabled,
+  });
+  useAppHotkey('key.previous', () => moveSelection(-1), {
+    enabled: keyShortcutsEnabled,
+  });
+  useAppHotkey(
+    'key.open',
+    () => {
+      if (!selectedKeyId) selectKeyAt(0);
+    },
+    { enabled: keyShortcutsEnabled }
+  );
+  useAppHotkey(
+    'key.copy',
+    () => {
+      if (selectedKey) handleCopy(selectedKey.key, selectedKey.id);
+    },
+    { enabled: keyShortcutsEnabled && !!selectedKey }
+  );
+  useAppHotkey(
+    'key.edit',
+    () => {
+      if (selectedKey) setEditingKey(selectedKey);
+    },
+    { enabled: keyShortcutsEnabled && !!selectedKey }
+  );
+  useAppHotkey(
+    'key.test',
+    () => {
+      if (selectedKey) handleTest(selectedKey);
+    },
+    { enabled: keyShortcutsEnabled && !!selectedKey }
+  );
+  useAppHotkey(
+    'key.delete',
+    () => {
+      if (selectedKey) setDeletingKey(selectedKey);
+    },
+    { enabled: keyShortcutsEnabled && !!selectedKey }
+  );
+  useAppHotkey('key.closeDetail', () => setSelectedKeyId(null), {
+    enabled: !!selectedKeyId && !editingKey && !deletingKey,
+  });
+
+  if (!db) return null;
 
   if (keys.length === 0 && !hasFilters) {
     return (
@@ -204,33 +283,48 @@ export function KeyList() {
           const isTesting = testing === key.id;
           const isSelected = selectedKeyId === key.id;
           const expiryStatus = getExpiryStatus(key.expires_at);
-          const status = key.connection_check.status === 'success'
-            ? {
-                dot: 'bg-success-bright',
-              }
-            : key.connection_check.status === 'failed'
+          const status =
+            key.connection_check.status === 'success'
               ? {
-                  dot: 'bg-danger',
+                  dot: 'bg-success-bright',
                 }
-              : {
-                  dot: 'bg-ink-quaternary/35',
-                };
+              : key.connection_check.status === 'failed'
+                ? {
+                    dot: 'bg-danger',
+                  }
+                : {
+                    dot: 'bg-ink-quaternary/35',
+                  };
           const expiryLabel =
             expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
               ? getExpiryStatusLabel(expiryStatus)
               : null;
-          const expiryClassName = expiryStatus === 'expired'
-            ? 'text-danger'
-            : 'text-[#d97706] dark:text-[#fbbf24]';
+          const expiryClassName =
+            expiryStatus === 'expired'
+              ? 'text-danger'
+              : 'text-[#d97706] dark:text-[#fbbf24]';
 
           return (
             <div
               key={key.id}
+              ref={(node) => {
+                if (node) keyItemRefs.current.set(key.id, node);
+                else keyItemRefs.current.delete(key.id);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
               onClick={() => setSelectedKeyId(isSelected ? null : key.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedKeyId(isSelected ? null : key.id);
+                }
+              }}
               onMouseEnter={() => setHoveredKeyId(key.id)}
               onMouseLeave={() => setHoveredKeyId(null)}
               className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5
-                         transition-colors duration-150 focus-within:border-accent/30 focus-within:bg-surface-3
+                         transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-accent-bright/40 focus-within:border-accent/30 focus-within:bg-surface-3
                          ${
                            isSelected
                              ? 'border-line-2 bg-surface-4'
@@ -486,7 +580,7 @@ export function EditKeyDialog({
             latency_ms: testState.result.latency_ms ?? null,
             error_message: testState.result.success
               ? null
-              : testState.result.error ?? null,
+              : (testState.result.error ?? null),
           }
         : undefined,
     });
@@ -501,7 +595,7 @@ export function EditKeyDialog({
             status: result.success ? 'success' : 'failed',
             checked_at: new Date().toISOString(),
             latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : result.error ?? null,
+            error_message: result.success ? null : (result.error ?? null),
           },
         });
       });

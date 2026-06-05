@@ -27,6 +27,7 @@ import {
 } from '@phosphor-icons/react';
 import { useState, useEffect } from 'react';
 import { EditKeyDialog } from './KeyList';
+import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 
 export function KeyDetail() {
   const { db, selectedKeyId, setSelectedKeyId, updateKey, deleteKey } =
@@ -40,6 +41,10 @@ export function KeyDetail() {
     setShowKey(false);
     setCopied(false);
   }, [selectedKeyId]);
+
+  useAppHotkey('key.reveal', () => setShowKey((visible) => !visible), {
+    enabled: !!selectedKeyId && !editingKey,
+  });
 
   if (!db || !selectedKeyId) return null;
 
@@ -132,8 +137,8 @@ export function KeyDetail() {
               <h2 className="text-base font-semibold text-ink-primary truncate">
                 {key.name}
               </h2>
-              <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                <span className="inline-flex min-w-0 items-center rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-tertiary">
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="inline-flex min-w-0 max-w-full items-center rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-tertiary">
                   <span className="truncate">{key.provider}</span>
                 </span>
                 {testOk && (
@@ -157,7 +162,7 @@ export function KeyDetail() {
                     className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                       expiryStatus === 'expired'
                         ? 'bg-danger/10 text-danger'
-                        : 'bg-warning/10 text-warning'
+                        : 'bg-[#d97706]/10 text-[#d97706] dark:bg-[#fbbf24]/10 dark:text-[#fbbf24]'
                     }`}
                   >
                     <Warning className="size-3" /> {expiryLabel}
@@ -238,8 +243,13 @@ export function KeyDetail() {
               icon={Warning}
               label="Expires"
               value={expiryValue}
-              warning={
-                expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
+              nowrap
+              tone={
+                expiryStatus === 'expired'
+                  ? 'danger'
+                  : expiryStatus === 'expiring_soon'
+                    ? 'warning'
+                    : undefined
               }
             />
             <div className="grid grid-cols-2 gap-3">
@@ -329,35 +339,52 @@ function MetaRow({
   value,
   mono,
   highlight,
-  warning,
+  tone,
   detail,
+  nowrap,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
   mono?: boolean;
   highlight?: boolean;
-  warning?: boolean;
+  tone?: 'danger' | 'warning';
   detail?: string;
+  nowrap?: boolean;
 }) {
+  const iconClassName =
+    tone === 'danger'
+      ? 'text-danger'
+      : tone === 'warning'
+        ? 'text-[#d97706] dark:text-[#fbbf24]'
+        : 'text-ink-quaternary';
+  const valueClassName =
+    tone === 'danger'
+      ? 'text-danger font-medium'
+      : tone === 'warning'
+        ? 'text-[#d97706] dark:text-[#fbbf24] font-medium'
+        : highlight
+          ? 'text-success-bright font-medium'
+          : 'text-ink-secondary';
+  const detailClassName =
+    tone === 'danger'
+      ? 'text-danger/80'
+      : tone === 'warning'
+        ? 'text-[#d97706]/80 dark:text-[#fbbf24]/80'
+        : 'text-ink-quaternary';
+
   return (
     <div className="flex items-start gap-2">
-      <Icon
-        className={`size-3 mt-0.5 shrink-0 ${warning ? 'text-danger' : 'text-ink-quaternary'}`}
-      />
+      <Icon className={`size-3 mt-0.5 shrink-0 ${iconClassName}`} />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-ink-quaternary">{label}</p>
         <p
-          className={`text-xs ${warning ? 'text-danger font-medium' : highlight ? 'text-success-bright font-medium' : 'text-ink-secondary'} ${mono ? 'font-mono break-all' : 'break-words'}`}
+          className={`text-xs ${valueClassName} ${mono ? 'font-mono break-all' : nowrap ? 'whitespace-nowrap' : 'break-words'}`}
         >
           {value}
         </p>
         {detail && detail !== value && (
-          <p
-            className={`mt-0.5 text-xs ${warning ? 'text-danger/80' : 'text-ink-quaternary'}`}
-          >
-            {detail}
-          </p>
+          <p className={`mt-0.5 text-xs ${detailClassName}`}>{detail}</p>
         )}
       </div>
     </div>

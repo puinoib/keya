@@ -172,7 +172,7 @@ function maybeRunDailyAutoTest(db: Database) {
         status: result.success ? 'success' : 'failed',
         checked_at: new Date().toISOString(),
         latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : result.error ?? null,
+        error_message: result.success ? null : (result.error ?? null),
       },
     });
   }).catch((e) => {

@@ -153,7 +153,7 @@ export function KeyForm({
         latency_ms: testState.result?.latency_ms ?? null,
         error_message: testState.result?.success
           ? null
-          : testState.result?.error ?? null,
+          : (testState.result?.error ?? null),
       },
     });
 
@@ -175,7 +175,7 @@ export function KeyForm({
             status: result.success ? 'success' : 'failed',
             checked_at: new Date().toISOString(),
             latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : result.error ?? null,
+            error_message: result.success ? null : (result.error ?? null),
           },
         });
       });
