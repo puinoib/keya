@@ -36,7 +36,7 @@ The Keys page is the default landing view after unlock.
 2. Fill in the form:
    - **Name** — a human label, like `Production OpenAI`. Required.
    - **API Key** — paste the actual key. Use the eye icon to reveal it for a moment. Required.
-   - **Provider** — pick from the preset list (OpenAI, Anthropic, Google, Groq, DeepSeek, Moonshot, Zhipu, Baidu, Mistral, Cohere, Together, OpenRouter, SiliconFlow, Azure) or a custom provider you've added in Settings. Switching the provider auto-fills a sensible Endpoint.
+   - **Provider** — pick from the preset list (OpenAI, Anthropic, Google, DeepSeek, Moonshot, Zhipu, Mistral, xAI, MiniMax, Alibaba Cloud, Amazon Bedrock, SiliconFlow, Azure) or a custom provider you've added in Settings. Switching the provider auto-fills a sensible Endpoint.
    - **Endpoint** — defaults to the provider's standard base URL. Override it for proxies or private deployments. The ↺ icon resets the field to the default.
    - **Expiration** — optional. Useful for keys you rotate on a schedule. The detail panel shows an **Expired** or **Nd left** badge when this is set.
    - **Group** — optional folder-like organization. Leave on `Ungrouped` if you're starting fresh; you can add groups in Settings.
@@ -81,7 +81,7 @@ Locking purges the in-memory key and the `sessionStorage` session. The vault fil
 Keya has a few settings that change daily behavior. Find them under **Settings** in the sidebar.
 
 - **General** — vault name and icon, biometric toggle, auto-lock timer, change master password.
-- **Providers** — toggle the 14 presets (OpenAI, Anthropic, Google, Groq, DeepSeek, Moonshot, Zhipu, Baidu, Mistral, Cohere, Together, OpenRouter, SiliconFlow, Azure OpenAI), or add custom providers with a name and endpoint.
+- **Providers** — toggle the 13 presets (OpenAI, Anthropic, Google, DeepSeek, Moonshot, Zhipu, Mistral, xAI, MiniMax, Alibaba Cloud, Amazon Bedrock, SiliconFlow, Azure OpenAI), or add custom providers with a name and endpoint.
 - **Groups** — create, rename, and delete groups. Deleting a group ungroups its keys but doesn't delete them.
 - **Keys** — Auto-Test on Save (tests after every save), Daily First-Open Test (tests all keys on first unlock each day), Detect Clipboard on Add (pre-fills key value from clipboard).
 - **Shortcuts** — full list of keyboard shortcuts with recording and conflict detection. Defaults include `/` (search), `N` (add key), `Cmd+Shift+L` (lock), `J/K` (navigate), `C` (copy), `E` (edit), `T` (test).
