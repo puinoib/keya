@@ -1,8 +1,27 @@
 import { X } from '@phosphor-icons/react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 import { useStore } from '../../store/useStore';
 import { KeyList } from '../keys/KeyList';
 import { KeyDetail } from '../keys/KeyDetail';
-import { SidebarFilterSelect } from '../layout/SidebarFilterSelect';
+
+const TEST_STATUS_LABELS: Record<string, string> = {
+  '': 'All Results',
+  success: 'Success',
+  failed: 'Failed',
+  untested: 'Untested',
+};
+
+const EXPIRY_STATUS_LABELS: Record<string, string> = {
+  '': 'All Expiry',
+  expired: 'Expired',
+  expiring: 'Expiring Soon',
+  valid: 'No Expiry Issue',
+};
 
 export function KeysPage() {
   const {
@@ -61,57 +80,67 @@ export function KeysPage() {
         {(providers.length > 0 || hasAnyFilters) && (
           <div className="flex items-center gap-2 mb-3">
             {/* Smart Filters */}
-            <SidebarFilterSelect
-              value={filterProvider}
-              onChange={setFilterProvider}
-              options={[
-                { value: '', label: 'All Providers' },
-                ...providers.map((p) => ({ value: p, label: p })),
-              ]}
-              placeholder="All Providers"
-            />
-            <SidebarFilterSelect
-              value={filterTestStatus}
-              onChange={setFilterTestStatus}
-              options={[
-                { value: '', label: 'All Results' },
-                { value: 'success', label: 'Success' },
-                { value: 'failed', label: 'Failed' },
-                { value: 'untested', label: 'Untested' },
-              ]}
-              placeholder="All Results"
-            />
-            <SidebarFilterSelect
-              value={filterExpiryStatus}
-              onChange={setFilterExpiryStatus}
-              options={[
-                { value: '', label: 'All Expiry' },
-                { value: 'expired', label: 'Expired' },
-                { value: 'expiring', label: 'Expiring Soon' },
-                { value: 'valid', label: 'No Expiry Issue' },
-              ]}
-              placeholder="All Expiry"
-            />
+            <Select
+              value={filterProvider ?? ''}
+              onValueChange={(v) => setFilterProvider(v === '' ? null : v)}
+            >
+              <SelectTrigger className="h-7 w-auto text-xs px-2">
+                {filterProvider || 'All Providers'}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Providers</SelectItem>
+                {providers.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterTestStatus ?? ''}
+              onValueChange={(v) => setFilterTestStatus(v === '' ? null : v)}
+            >
+              <SelectTrigger className="h-7 w-auto text-xs px-2">
+                {TEST_STATUS_LABELS[filterTestStatus ?? '']}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Results</SelectItem>
+                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="untested">Untested</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterExpiryStatus ?? ''}
+              onValueChange={(v) => setFilterExpiryStatus(v === '' ? null : v)}
+            >
+              <SelectTrigger className="h-7 w-auto text-xs px-2">
+                {EXPIRY_STATUS_LABELS[filterExpiryStatus ?? '']}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Expiry</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="expiring">Expiring Soon</SelectItem>
+                <SelectItem value="valid">No Expiry Issue</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Tags (group, search) */}
-            {tags.length > 0 && (
-              <>
-                {tags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-surface-3 text-xs text-ink-secondary truncate max-w-24"
+            {tags.length > 0 &&
+              tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-surface-3 text-xs text-ink-secondary truncate max-w-24"
+                >
+                  <span className="truncate">{tag.label}</span>
+                  <button
+                    onClick={tag.onRemove}
+                    className="shrink-0 text-ink-quaternary hover:text-ink-secondary transition-colors"
                   >
-                    <span className="truncate">{tag.label}</span>
-                    <button
-                      onClick={tag.onRemove}
-                      className="shrink-0 text-ink-quaternary hover:text-ink-secondary transition-colors"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                ))}
-              </>
-            )}
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
 
             {/* Single Clear all button */}
             {hasAnyFilters && (
