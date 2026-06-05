@@ -34,7 +34,7 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-xs">
       <div className="relative">
         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
         <input
@@ -43,8 +43,8 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search help docs..."
           className={cn(
-            'w-full pl-10 pr-4 py-2 rounded-md border border-line-subtle',
-            'bg-surface-2 text-ink-primary text-sm',
+            'w-full pl-9 pr-3 py-1.5 rounded-md border border-line-subtle',
+            'bg-surface-2 text-ink-primary text-xs',
             'placeholder:text-ink-quaternary',
             'focus:outline-none focus:ring-1 focus:ring-accent-bright',
             'transition-all duration-150'

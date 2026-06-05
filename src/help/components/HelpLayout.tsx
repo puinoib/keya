@@ -33,29 +33,16 @@ export function HelpLayout() {
 
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
-      <div className="flex flex-col w-56 shrink-0">
-        <div className="p-4">
-          <HelpSearch documents={documents} onNavigate={handleNavigate} />
-        </div>
-
-        <HelpSidebar
-          documents={documents}
-          currentSlug={currentSlug}
-          onNavigate={handleNavigate}
-        />
-      </div>
+      <HelpSidebar
+        documents={documents}
+        currentSlug={currentSlug}
+        onNavigate={handleNavigate}
+      />
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-          <header className="flex items-center justify-end px-6 py-3 shrink-0">
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost text-xs"
-            >
-              Open App
-            </a>
+          <header className="h-12 flex items-center px-4 shrink-0">
+            <HelpSearch documents={documents} onNavigate={handleNavigate} />
           </header>
           <div className="flex-1 overflow-y-auto">
             <main className="p-8 max-w-4xl mx-auto w-full">
