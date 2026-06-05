@@ -49,8 +49,8 @@ export function KeysPage() {
 
   return (
     <div className="flex flex-1 min-h-0">
-      <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto scrollbar-hidden">
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary mb-4">
+      <div className="flex-1 min-w-0 px-6 py-6 overflow-y-auto scrollbar-hidden">
+        <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
           Keys
           <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
             {db?.getApiKeys().length ?? 0}
@@ -59,7 +59,7 @@ export function KeysPage() {
 
         {/* Filters row: Smart Filters + Tags (if any) */}
         {(providers.length > 0 || hasAnyFilters) && (
-          <div className="flex items-center gap-2 mb-3 max-w-lg">
+          <div className="flex items-center gap-2 mb-3">
             {/* Smart Filters */}
             <SidebarFilterSelect
               value={filterProvider}
@@ -92,43 +92,39 @@ export function KeysPage() {
               ]}
               placeholder="All Expiry"
             />
-            {hasSmartFilters && (
-              <button
-                onClick={clearSmartFilters}
-                className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
-              >
-                Clear
-              </button>
-            )}
 
-            {/* Separator + Tags (group, search) */}
+            {/* Tags (group, search) */}
             {tags.length > 0 && (
               <>
-                <span className="text-ink-quaternary mx-1">|</span>
                 {tags.map((tag, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-3 text-xs text-ink-secondary"
+                    className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-surface-3 text-xs text-ink-secondary truncate max-w-24"
                   >
-                    {tag.label}
+                    <span className="truncate">{tag.label}</span>
                     <button
                       onClick={tag.onRemove}
-                      className="text-ink-quaternary hover:text-ink-secondary transition-colors"
+                      className="shrink-0 text-ink-quaternary hover:text-ink-secondary transition-colors"
                     >
                       <X className="size-3" />
                     </button>
                   </span>
                 ))}
-                <button
-                  onClick={() => {
-                    clearFilters();
-                    setSearchQuery('');
-                  }}
-                  className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1"
-                >
-                  Clear all
-                </button>
               </>
+            )}
+
+            {/* Single Clear all button */}
+            {hasAnyFilters && (
+              <button
+                onClick={() => {
+                  clearSmartFilters();
+                  clearFilters();
+                  setSearchQuery('');
+                }}
+                className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1 ml-1"
+              >
+                Clear all
+              </button>
             )}
           </div>
         )}

@@ -30,8 +30,10 @@ export function SidebarFilterSelect({
       value={value ?? ''}
       onValueChange={(v) => onChange(v === '' ? null : v)}
     >
-      <SelectTrigger className="h-7 text-xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 border border-transparent hover:border-line-subtle transition-colors gap-1 px-2 [&>svg]:size-3">
-        <SelectValue placeholder={placeholder}>{displayLabel}</SelectValue>
+      <SelectTrigger className="h-7 text-xs text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3 border border-transparent hover:border-line-subtle transition-colors gap-1 px-2 max-w-28 flex overflow-hidden justify-start">
+        <SelectValue placeholder={placeholder} className="truncate min-w-0">
+          <span className="truncate">{displayLabel}</span>
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
