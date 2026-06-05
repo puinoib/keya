@@ -416,6 +416,7 @@ export const useStore = create<AppState>((set, get) => {
         throw new Error('No vault open');
       if (oldPassword !== password)
         throw new Error('Current password is incorrect');
+      await FileStorage.backupVault(activeVaultFileName);
       await FileStorage.saveVault(
         activeVaultFileName,
         db.getData(),

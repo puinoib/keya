@@ -20,6 +20,7 @@ import {
   decrypt,
   initCrypto,
 } from './crypto';
+import { validateDatabase } from './validators';
 import sodium from 'libsodium-wrappers-sumo';
 
 // ── Constants ──
@@ -327,9 +328,10 @@ export async function deserializeFromFile(
   // Decrypt and parse JSON
   const plaintext = decrypt(encrypted, params.nonce, finalKey);
   const json = sodium.to_string(plaintext).trim();
-  const db = JSON.parse(json) as KeyaDatabase;
+  const parsed: unknown = JSON.parse(json);
+  validateDatabase(parsed);
 
-  return db;
+  return parsed;
 }
 
 // ── Helpers ──

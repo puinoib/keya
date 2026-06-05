@@ -195,6 +195,27 @@ export class FileStorage {
   }
 
   /**
+   * Create a .bak backup of the current vault file.
+   */
+  static async backupVault(fileName: string): Promise<void> {
+    const ws = await getWorkspace();
+    if (!ws) throw new Error('No workspace configured');
+
+    await ensurePermission(ws.directoryHandle);
+    const srcHandle = await ws.directoryHandle.getFileHandle(fileName);
+    const file = await srcHandle.getFile();
+    const content = await file.arrayBuffer();
+
+    const bakName = `${fileName}.bak`;
+    const bakHandle = await ws.directoryHandle.getFileHandle(bakName, {
+      create: true,
+    });
+    const writable = await bakHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  }
+
+  /**
    * Encrypt and save to a specific vault file.
    */
   static async saveVault(
