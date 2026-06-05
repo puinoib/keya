@@ -1,9 +1,9 @@
 /**
  * Biometric unlock via WebAuthn platform authenticator.
  *
- * WebAuthn serves as a biometric UI gate (Touch ID / Face ID / Windows Hello).
- * The vault password is encrypted with a random AES-GCM key stored in IndexedDB.
- * Authentication via WebAuthn must succeed before decryption proceeds.
+ * When the PRF extension is supported, the encryption key is derived from the
+ * biometric credential itself (never stored in any database). Falls back to
+ * storing a random AES key in IndexedDB when PRF is unavailable.
  */
 
 import { openMetaDB, BIOMETRIC_STORE } from './storage';
@@ -13,10 +13,11 @@ import { openMetaDB, BIOMETRIC_STORE } from './storage';
 interface BiometricRecord {
   vault_id: string;
   credentialId: Uint8Array;
-  encryptedPassword: string; // base64
-  aesKey: string; // base64
-  iv: string; // base64
+  encryptedPassword: string;
+  iv: string;
   createdAt: string;
+  prfSalt?: string;
+  aesKey?: string;
 }
 
 // ── Helpers ──
@@ -75,49 +76,107 @@ async function deleteRecord(vaultId: string): Promise<void> {
 
 async function aesEncrypt(
   plaintext: string,
-  keyBytes: Uint8Array,
+  key: Uint8Array | CryptoKey,
   iv: Uint8Array
 ): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    toBuffer(keyBytes),
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  );
-  const encoded = new TextEncoder().encode(plaintext);
+  const cryptoKey =
+    key instanceof CryptoKey
+      ? key
+      : await crypto.subtle.importKey(
+          'raw',
+          toBuffer(key),
+          { name: 'AES-GCM' },
+          false,
+          ['encrypt']
+        );
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: toBuffer(iv) },
-    key,
-    encoded
+    cryptoKey,
+    new TextEncoder().encode(plaintext)
   );
   return toBase64(new Uint8Array(encrypted));
 }
 
 async function aesDecrypt(
   ciphertext: string,
-  keyBytes: Uint8Array,
+  key: Uint8Array | CryptoKey,
   iv: Uint8Array
 ): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    toBuffer(keyBytes),
-    { name: 'AES-GCM' },
-    false,
-    ['decrypt']
-  );
+  const cryptoKey =
+    key instanceof CryptoKey
+      ? key
+      : await crypto.subtle.importKey(
+          'raw',
+          toBuffer(key),
+          { name: 'AES-GCM' },
+          false,
+          ['decrypt']
+        );
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: toBuffer(iv) },
-    key,
+    cryptoKey,
     toBuffer(fromBase64(ciphertext))
   );
   return new TextDecoder().decode(decrypted);
 }
 
-// ── WebAuthn ──
+// ── WebAuthn PRF ──
 
 function rpId(): string {
   return location.hostname;
+}
+
+async function checkPrfSupport(): Promise<boolean> {
+  if (!window.PublicKeyCredential) return false;
+  try {
+    const caps = await PublicKeyCredential.getClientCapabilities();
+    return caps?.['extension:prf'] === true;
+  } catch {
+    return false;
+  }
+}
+
+async function deriveKeyFromPrf(prfOutput: ArrayBuffer): Promise<CryptoKey> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    prfOutput,
+    'HKDF',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(),
+      info: new TextEncoder().encode('keya-biometric-v1'),
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+/** Perform a separate get() to evaluate PRF when create() didn't return results. */
+async function evalPrf(
+  credentialId: ArrayBuffer,
+  prfSalt: Uint8Array
+): Promise<ArrayBuffer | null> {
+  try {
+    const assertion = (await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rpId: rpId(),
+        allowCredentials: [{ id: credentialId, type: 'public-key' }],
+        userVerification: 'required',
+        extensions: { prf: { eval: { first: toBuffer(prfSalt) } } },
+      },
+    })) as PublicKeyCredential;
+    return (assertion?.getClientExtensionResults().prf?.results?.first as ArrayBuffer) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Public API ──
@@ -132,16 +191,20 @@ export function isBiometricSupported(): boolean {
 
 export async function isBiometricRegistered(vaultId: string): Promise<boolean> {
   const record = await getRecord(vaultId);
-  return record !== null && !!record.aesKey;
+  return record !== null && (!!record.aesKey || !!record.prfSalt);
 }
 
 /**
  * Register biometric credential and store encrypted password.
+ * Uses PRF when available (key never stored), falls back to random AES key.
  */
 export async function registerBiometric(
   vaultId: string,
   password: string
 ): Promise<void> {
+  const prfCapable = await checkPrfSupport();
+  const prfSalt = prfCapable ? crypto.getRandomValues(new Uint8Array(32)) : undefined;
+
   // Step 1: Create WebAuthn credential (triggers Touch ID / Face ID)
   const credential = (await navigator.credentials.create({
     publicKey: {
@@ -160,17 +223,48 @@ export async function registerBiometric(
         authenticatorAttachment: 'platform',
         userVerification: 'required',
       },
+      extensions: prfSalt
+        ? { prf: { eval: { first: toBuffer(prfSalt) } } }
+        : undefined,
     },
   })) as PublicKeyCredential;
 
   if (!credential) throw new Error('Biometric registration cancelled.');
 
-  // Step 2: Encrypt password with random AES key
-  const aesKey = crypto.getRandomValues(new Uint8Array(32));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encryptedPassword = await aesEncrypt(password, aesKey, iv);
 
-  // Step 3: Store
+  // Step 2: Try PRF path
+  if (prfSalt) {
+    const prfExt = credential.getClientExtensionResults().prf;
+    let prfOutput: ArrayBuffer | undefined;
+
+    if (prfExt?.enabled) {
+      prfOutput = prfExt.results?.first as ArrayBuffer | undefined;
+      // If create() didn't return PRF output, try a separate get()
+      if (!prfOutput) {
+        prfOutput = (await evalPrf(credential.rawId, prfSalt)) ?? undefined;
+      }
+    }
+
+    if (prfOutput) {
+      const aesKey = await deriveKeyFromPrf(prfOutput);
+      const encryptedPassword = await aesEncrypt(password, aesKey, iv);
+      await putRecord({
+        vault_id: vaultId,
+        credentialId: new Uint8Array(credential.rawId),
+        encryptedPassword,
+        iv: toBase64(iv),
+        prfSalt: toBase64(prfSalt),
+        createdAt: new Date().toISOString(),
+      });
+      return;
+    }
+    // PRF evaluation failed, fall through to legacy
+  }
+
+  // Step 3: Legacy path — random AES key stored in IndexedDB
+  const aesKey = crypto.getRandomValues(new Uint8Array(32));
+  const encryptedPassword = await aesEncrypt(password, aesKey, iv);
   await putRecord({
     vault_id: vaultId,
     credentialId: new Uint8Array(credential.rawId),
@@ -183,22 +277,45 @@ export async function registerBiometric(
 
 /**
  * Authenticate via biometric and return decrypted vault password.
+ * Automatically detects PRF or legacy mode from the stored record.
  */
 export async function unlockWithBiometric(vaultId: string): Promise<string> {
   const record = await getRecord(vaultId);
-  if (!record || !record.aesKey)
+  if (!record)
     throw new Error('No biometric credential found for this vault.');
 
-  // Step 1: WebAuthn authentication (triggers Touch ID / Face ID)
+  if (record.prfSalt) {
+    // PRF mode: derive key from biometric + credential
+    const assertion = (await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rpId: rpId(),
+        allowCredentials: [
+          { id: toBuffer(record.credentialId), type: 'public-key' },
+        ],
+        userVerification: 'required',
+        extensions: {
+          prf: { eval: { first: toBuffer(fromBase64(record.prfSalt)) } },
+        },
+      },
+    })) as PublicKeyCredential;
+
+    if (!assertion) throw new Error('Biometric authentication cancelled.');
+
+    const prfOutput = assertion.getClientExtensionResults().prf?.results?.first as ArrayBuffer | undefined;
+    if (!prfOutput) throw new Error('PRF evaluation failed.');
+
+    const aesKey = await deriveKeyFromPrf(prfOutput);
+    return aesDecrypt(record.encryptedPassword, aesKey, fromBase64(record.iv));
+  }
+
+  // Legacy mode: AES key from IndexedDB
   const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       rpId: rpId(),
       allowCredentials: [
-        {
-          id: toBuffer(record.credentialId),
-          type: 'public-key',
-        },
+        { id: toBuffer(record.credentialId), type: 'public-key' },
       ],
       userVerification: 'required',
     },
@@ -206,10 +323,9 @@ export async function unlockWithBiometric(vaultId: string): Promise<string> {
 
   if (!assertion) throw new Error('Biometric authentication cancelled.');
 
-  // Step 2: Decrypt password
   return aesDecrypt(
     record.encryptedPassword,
-    fromBase64(record.aesKey),
+    fromBase64(record.aesKey!),
     fromBase64(record.iv)
   );
 }

@@ -73,9 +73,13 @@ export function BiometricPrompt({
             <X className="size-4" />
           </button>
         </div>
-        <p className="text-xs text-ink-tertiary mb-4">
+        <p className="text-xs text-ink-tertiary mb-2">
           Use fingerprint or face recognition to unlock this vault quickly next
           time.
+        </p>
+        <p className="text-xs text-ink-quaternary mb-4">
+          Make sure you remember your vault password — if this device's passkey
+          is deleted, biometric unlock will stop working.
         </p>
         {error && <p className="text-xs text-danger mb-3">{error}</p>}
         <div className="flex gap-2">
