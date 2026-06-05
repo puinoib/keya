@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, Outlet } from '@tanstack/react-router';
 import { ArrowLeft } from '@phosphor-icons/react';
-import { Outlet } from '@tanstack/react-router';
 import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
 import { KeyboardShortcutsDialog } from '@/app/components/KeyboardShortcutsDialog';
+import { SettingsSidebar } from '@/app/components/settings/SettingsSidebar';
 
-export function SettingsLayout({ children }: { children?: React.ReactNode }) {
+export function SettingsLayout() {
   const navigate = useNavigate();
   const [showShortcuts, setShowShortcuts] = useState(false);
   useGlobalShortcuts(() => setShowShortcuts(true));
@@ -24,10 +24,13 @@ export function SettingsLayout({ children }: { children?: React.ReactNode }) {
             </button>
           </header>
 
-          <div className="flex-1 overflow-auto">
-            <main className="p-6 max-w-4xl mx-auto w-full">
-              {children || <Outlet />}
-            </main>
+          <div className="flex flex-1 min-h-0">
+            <SettingsSidebar />
+            <div className="flex-1 overflow-auto">
+              <main className="p-6 max-w-2xl mx-auto w-full">
+                <Outlet />
+              </main>
+            </div>
           </div>
         </div>
       </div>
