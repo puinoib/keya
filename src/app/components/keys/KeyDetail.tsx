@@ -137,38 +137,9 @@ export function KeyDetail() {
               <h2 className="text-base font-semibold text-ink-primary truncate">
                 {key.name}
               </h2>
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="inline-flex min-w-0 max-w-full items-center rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-tertiary">
-                  <span className="truncate">{key.provider}</span>
-                </span>
-                {testOk && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
-                    <CheckCircle className="size-3" />
-                    {getConnectionStatusLabel(connectionStatus)}
-                  </span>
-                )}
-                {testFail && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-                    <XCircle className="size-3" /> Failed
-                  </span>
-                )}
-                {connectionStatus === 'untested' && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
-                    <MinusCircle className="size-3" /> Untested
-                  </span>
-                )}
-                {expiryLabel && (
-                  <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      expiryStatus === 'expired'
-                        ? 'bg-danger/10 text-danger'
-                        : 'bg-[#d97706]/10 text-[#d97706] dark:bg-[#fbbf24]/10 dark:text-[#fbbf24]'
-                    }`}
-                  >
-                    <Warning className="size-3" /> {expiryLabel}
-                  </span>
-                )}
-              </div>
+              <p className="mt-1 truncate text-xs text-ink-tertiary">
+                {key.provider}
+              </p>
               {testFail && key.connection_check.error_message && (
                 <p className="mt-1.5 text-xs text-danger/80 break-words">
                   {key.connection_check.error_message}
@@ -181,6 +152,40 @@ export function KeyDetail() {
             >
               <X className="size-3.5" />
             </button>
+          </div>
+
+          {/* Status */}
+          <div
+            className="mb-4 flex flex-wrap items-center gap-1.5 animate-stagger-in"
+            style={{ animationDelay: '120ms' }}
+          >
+            {testOk && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
+                <CheckCircle className="size-3" />
+                {getConnectionStatusLabel(connectionStatus)}
+              </span>
+            )}
+            {testFail && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                <XCircle className="size-3" /> Failed
+              </span>
+            )}
+            {connectionStatus === 'untested' && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                <MinusCircle className="size-3" /> Untested
+              </span>
+            )}
+            {expiryLabel && (
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  expiryStatus === 'expired'
+                    ? 'bg-danger/10 text-danger'
+                    : 'bg-[#d97706]/10 text-[#d97706] dark:bg-[#fbbf24]/10 dark:text-[#fbbf24]'
+                }`}
+              >
+                <Warning className="size-3" /> {expiryLabel}
+              </span>
+            )}
           </div>
 
           {/* Key Value */}
