@@ -144,6 +144,14 @@ describe('schema (.keya file format)', () => {
     expect(restored.settings.auto_test_daily).toBe(false);
   });
 
+  it('defaults missing clipboard detection setting to on', async () => {
+    const db = makeTestDb();
+    delete (db.settings as any).clipboard_detection_on_add;
+    const bytes = await serializeToFile(db, password);
+    const restored = await deserializeFromFile(bytes, password);
+    expect(restored.settings.clipboard_detection_on_add).toBe(true);
+  });
+
   it('defaults missing inbox collection to empty', async () => {
     const db = makeTestDb();
     delete (db as any).inbox;

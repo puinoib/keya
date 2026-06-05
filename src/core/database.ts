@@ -48,7 +48,16 @@ export class Database {
     return this.data.api_keys.find((k) => k.id === id);
   }
 
+  hasDuplicateApiKeyValue(keyValue: string, excludeId?: string): boolean {
+    return this.data.api_keys.some(
+      (key) => key.key === keyValue && key.id !== excludeId
+    );
+  }
+
   addApiKey(key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>): ApiKey {
+    if (this.hasDuplicateApiKeyValue(key.key)) {
+      throw new Error('DUPLICATE_API_KEY');
+    }
     const now = new Date().toISOString();
     const newKey: ApiKey = {
       ...key,
@@ -64,6 +73,10 @@ export class Database {
   updateApiKey(id: string, updates: Partial<ApiKey>): ApiKey | null {
     const idx = this.data.api_keys.findIndex((k) => k.id === id);
     if (idx === -1) return null;
+    const nextKeyValue = updates.key ?? this.data.api_keys[idx].key;
+    if (this.hasDuplicateApiKeyValue(nextKeyValue, id)) {
+      throw new Error('DUPLICATE_API_KEY');
+    }
     this.data.api_keys[idx] = {
       ...this.data.api_keys[idx],
       ...updates,

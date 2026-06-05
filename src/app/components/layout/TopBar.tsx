@@ -81,7 +81,7 @@ export function TopBar() {
   const {
     searchQuery,
     setSearchQuery,
-    setShowAddForm,
+    beginAddKeyFlow,
     theme,
     setTheme,
     db,
@@ -228,7 +228,7 @@ export function TopBar() {
             <DownloadSimple className="size-3.5" /> Export JSON
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowAddForm(true)}>
+          <DropdownMenuItem onClick={() => void beginAddKeyFlow()}>
             <Plus className="size-3.5" /> Add Key
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -293,7 +293,7 @@ export function TopBar() {
       </DropdownMenu>
 
       <button
-        onClick={() => setShowAddForm(true)}
+        onClick={() => void beginAddKeyFlow()}
         className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
       >
         <Plus className="size-3.5" /> Add Key

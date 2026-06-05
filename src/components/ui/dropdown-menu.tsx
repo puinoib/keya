@@ -33,7 +33,7 @@ function DropdownMenuContent({
       <Menu.Positioner sideOffset={props.sideOffset ?? 4}>
         <Menu.Popup
           className={cn(
-            'z-50 min-w-[8rem] overflow-hidden rounded-md bg-canvas-raised border border-line p-1 shadow-dialog',
+            'z-[70] min-w-[8rem] overflow-hidden rounded-md bg-canvas-raised border border-line p-1 shadow-dialog',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             className
@@ -112,7 +112,7 @@ function DropdownMenuSubContent({ className, ...props }: Menu.Popup.Props) {
       <Menu.Positioner>
         <Menu.Popup
           className={cn(
-            'z-50 min-w-[8rem] overflow-hidden rounded-md bg-canvas-raised border border-line p-1 shadow-dialog',
+            'z-[70] min-w-[8rem] overflow-hidden rounded-md bg-canvas-raised border border-line p-1 shadow-dialog',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             className

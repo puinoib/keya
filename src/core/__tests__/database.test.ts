@@ -68,10 +68,18 @@ describe('Database', () => {
 
   it('adds multiple keys', () => {
     const db = new Database();
-    db.addApiKey(makeKey({ name: 'Key A' }));
-    db.addApiKey(makeKey({ name: 'Key B' }));
-    db.addApiKey(makeKey({ name: 'Key C' }));
+    db.addApiKey(makeKey({ name: 'Key A', key: 'sk-key-a' }));
+    db.addApiKey(makeKey({ name: 'Key B', key: 'sk-key-b' }));
+    db.addApiKey(makeKey({ name: 'Key C', key: 'sk-key-c' }));
     expect(db.getApiKeys()).toHaveLength(3);
+  });
+
+  it('rejects adding a duplicate API key value', () => {
+    const db = new Database();
+    db.addApiKey(makeKey({ key: 'sk-duplicate' }));
+    expect(() => db.addApiKey(makeKey({ key: 'sk-duplicate' }))).toThrow(
+      'DUPLICATE_API_KEY'
+    );
   });
 
   it('gets a key by ID', () => {
@@ -98,6 +106,23 @@ describe('Database', () => {
     const created = db.addApiKey(makeKey());
     db.updateApiKey(created.id, { name: 'Changed' });
     expect(db.getApiKey(created.id)?.id).toBe(created.id);
+  });
+
+  it('rejects updating a key to a duplicate API key value', () => {
+    const db = new Database();
+    const first = db.addApiKey(makeKey({ key: 'sk-first' }));
+    const second = db.addApiKey(makeKey({ key: 'sk-second' }));
+    expect(() => db.updateApiKey(second.id, { key: first.key })).toThrow(
+      'DUPLICATE_API_KEY'
+    );
+  });
+
+  it('allows updating a key without changing its own API key value', () => {
+    const db = new Database();
+    const created = db.addApiKey(makeKey({ key: 'sk-stable' }));
+    const updated = db.updateApiKey(created.id, { name: 'Renamed' });
+    expect(updated?.name).toBe('Renamed');
+    expect(updated?.key).toBe('sk-stable');
   });
 
   it('returns null when updating non-existent key', () => {
@@ -144,9 +169,27 @@ describe('Database', () => {
 
   it('searches keys by name', () => {
     const db = new Database();
-    db.addApiKey(makeKey({ name: 'Production OpenAI', provider: 'OpenAI' }));
-    db.addApiKey(makeKey({ name: 'Staging Anthropic', provider: 'Anthropic' }));
-    db.addApiKey(makeKey({ name: 'Dev Groq', provider: 'Groq' }));
+    db.addApiKey(
+      makeKey({
+        name: 'Production OpenAI',
+        provider: 'OpenAI',
+        key: 'sk-search-openai',
+      })
+    );
+    db.addApiKey(
+      makeKey({
+        name: 'Staging Anthropic',
+        provider: 'Anthropic',
+        key: 'sk-search-anthropic',
+      })
+    );
+    db.addApiKey(
+      makeKey({
+        name: 'Dev Groq',
+        provider: 'Groq',
+        key: 'sk-search-groq',
+      })
+    );
     expect(db.searchKeys('openai')).toHaveLength(1);
     expect(db.searchKeys('anthropic')).toHaveLength(1);
     expect(db.searchKeys('production')).toHaveLength(1);
@@ -160,10 +203,16 @@ describe('Database', () => {
         name: 'K1',
         description: 'Main key for production',
         provider: 'OpenAI',
+        key: 'sk-desc-openai',
       })
     );
     db.addApiKey(
-      makeKey({ name: 'K2', description: 'Backup key', provider: 'Anthropic' })
+      makeKey({
+        name: 'K2',
+        description: 'Backup key',
+        provider: 'Anthropic',
+        key: 'sk-desc-anthropic',
+      })
     );
     expect(db.searchKeys('production')).toHaveLength(1);
     expect(db.searchKeys('backup')).toHaveLength(1);
