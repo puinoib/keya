@@ -1,5 +1,5 @@
 import { useStore } from '../../store/useStore';
-import { Flask } from '@phosphor-icons/react';
+
 
 function Toggle({
   checked,
@@ -38,14 +38,9 @@ export function KeysPage() {
 
   return (
     <>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <Flask className="size-4" />
-        </div>
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-          Keys
-        </h1>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        Keys
+      </h1>
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
         <div className="flex items-center justify-between p-3">

@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore';
 import { ENDPOINT_DEFAULTS, PRESET_PROVIDERS } from '../../../core/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, Plus, Trash, X, HardDrives } from '@phosphor-icons/react';
+import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 
 type ProviderItem = {
   name: string;
@@ -158,14 +158,9 @@ export function ProvidersPage() {
 
   return (
     <>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-          <HardDrives className="size-4" />
-        </div>
-        <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-          Providers
-        </h1>
-      </div>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+        Providers
+      </h1>
 
       <div className="space-y-4">
         {providers.map((provider) => (
