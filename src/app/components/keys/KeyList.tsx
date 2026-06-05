@@ -34,6 +34,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -517,20 +518,22 @@ export function EditKeyDialog({
           <div className="space-y-1.5">
             <Label className="text-xs">API Key</Label>
             <div className="relative">
-              <Input
-                type={showKey ? 'text' : 'password'}
+              <AutoResizeTextarea
                 value={form.key}
+                masked={!showKey}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, key: e.target.value }))
                 }
                 placeholder="sk-..."
-                className="pr-9 font-mono text-sm"
+                className="pr-9 font-mono text-sm break-all"
+                autoComplete="off"
+                spellCheck={false}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-quaternary hover:text-ink-secondary"
+                className="absolute right-2 top-2 size-6 flex items-center justify-center rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >
                 {showKey ? (
                   <EyeSlash className="size-3.5" />
