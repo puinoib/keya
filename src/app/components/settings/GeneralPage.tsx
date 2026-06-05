@@ -1,10 +1,5 @@
 import { useStore } from '../../store/useStore';
-import {
-  Palette,
-  Fingerprint,
-  Spinner,
-  Shield,
-} from '@phosphor-icons/react';
+import { Palette, Fingerprint, Spinner, Shield } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -81,7 +76,9 @@ export function GeneralPage() {
   // Check biometric registration status
   useEffect(() => {
     if (!bioSupported || !vaultId) return;
-    isBiometricRegistered(vaultId).then(setBioRegistered);
+    isBiometricRegistered(vaultId)
+      .then(setBioRegistered)
+      .catch(() => setBioRegistered(false));
   }, [bioSupported, vaultId]);
 
   if (!data) return null;
@@ -97,7 +94,9 @@ export function GeneralPage() {
           <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
             General
           </h1>
-          <p className="text-xs text-ink-quaternary">Vault and basic settings</p>
+          <p className="text-xs text-ink-quaternary">
+            Vault and basic settings
+          </p>
         </div>
       </div>
 
@@ -185,6 +184,7 @@ export function GeneralPage() {
                     checked={bioRegistered}
                     disabled={bioLoading}
                     onChange={async () => {
+                      if (!password) return;
                       setBioLoading(true);
                       setBioError('');
                       try {
@@ -192,7 +192,7 @@ export function GeneralPage() {
                           await removeBiometric(vaultId);
                           setBioRegistered(false);
                         } else {
-                          await registerBiometric(vaultId, password!);
+                          await registerBiometric(vaultId, password);
                           setBioRegistered(true);
                         }
                       } catch (e) {
