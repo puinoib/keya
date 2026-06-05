@@ -13,7 +13,7 @@ import {
 } from '../../core';
 
 const DB_NAME = 'keya-meta';
-const DB_VERSION = 4;
+const DB_VERSION = 1;
 const WORKSPACE_STORE = 'workspace';
 const VAULT_META_STORE = 'vault-meta';
 const BIOMETRIC_STORE = 'biometric';
@@ -41,15 +41,9 @@ function openMetaDB(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(WORKSPACE_STORE)) {
-        db.createObjectStore(WORKSPACE_STORE, { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains(VAULT_META_STORE)) {
-        db.createObjectStore(VAULT_META_STORE, { keyPath: 'vault_id' });
-      }
-      if (!db.objectStoreNames.contains(BIOMETRIC_STORE)) {
-        db.createObjectStore(BIOMETRIC_STORE, { keyPath: 'vault_id' });
-      }
+      db.createObjectStore(WORKSPACE_STORE, { keyPath: 'id' });
+      db.createObjectStore(VAULT_META_STORE, { keyPath: 'vault_id' });
+      db.createObjectStore(BIOMETRIC_STORE, { keyPath: 'vault_id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

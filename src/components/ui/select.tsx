@@ -42,7 +42,7 @@ function SelectContent({
       <SelectPrimitive.Positioner className="z-[70]">
         <SelectPrimitive.Popup
           className={cn(
-            'z-[70] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-canvas-raised border border-line shadow-dialog',
+            'z-[70] overflow-hidden rounded-md bg-canvas-raised border border-line shadow-dialog',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

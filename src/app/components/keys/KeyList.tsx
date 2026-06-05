@@ -400,13 +400,11 @@ export function KeyList() {
                 </button>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary"
-                      aria-label="Open key actions"
-                    >
-                      <DotsThree className="size-4" />
-                    </button>
+                  <DropdownMenuTrigger
+                    className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary"
+                    aria-label="Open key actions"
+                  >
+                    <DotsThree className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-44">
                     <DropdownMenuItem onClick={() => setEditingKey(key)}>

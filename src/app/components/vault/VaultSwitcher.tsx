@@ -71,17 +71,15 @@ export function VaultSwitcher() {
   return (
     <div className="shrink-0 pt-3 px-2">
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="w-full h-12 flex items-center gap-2.5 px-2.5 hover:bg-surface-3 transition-colors rounded-md bg-canvas-panel">
-            <div className="flex items-center justify-center size-7 rounded-lg bg-accent/20 text-accent-bright text-sm shrink-0">
-              {currentIcon ? currentIcon : <Lock className="size-3.5" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold tracking-tight text-ink-primary truncate block text-left">
-                {currentName || 'Vault'}
-              </span>
-            </div>
-          </button>
+        <DropdownMenuTrigger className="w-full h-12 flex items-center gap-2.5 px-2.5 hover:bg-surface-3 transition-colors rounded-md bg-canvas-panel">
+          <div className="flex items-center justify-center size-7 rounded-lg bg-accent/20 text-accent-bright text-sm shrink-0">
+            {currentIcon ? currentIcon : <Lock className="size-3.5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-semibold tracking-tight text-ink-primary truncate block text-left">
+              {currentName || 'Vault'}
+            </span>
+          </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-52 ml-2">
           <DropdownMenuItem
