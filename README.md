@@ -2,7 +2,7 @@
 
 > Your Key Guardian — Secure API Key Management for AI Developers
 
-**Status**: ✅ Development Complete (Multi-vault, Biometric Auth, Help Center)
+**Status**: ✅ Development Complete (Multi-vault, Biometric Auth, Health Audit, Inbox, Help Center)
 
 **License**: MIT (Open Source)
 
@@ -17,8 +17,12 @@ Keya is a secure API key management application designed specifically for AI dev
 - 🔐 **Secure Encrypted Storage** - Military-grade encryption (Argon2id + XChaCha20-Poly1305)
 - 🗄️ **Multi-Vault Support** - Separate vaults for work, personal, team projects
 - 🧪 **API Connectivity Testing** - Test API key validity with one click
-- 🏷️ **Groups & Organization** - Organize keys by provider, environment, or purpose
+- 📊 **Vault Health Audit** - 0–100 health score with actionable findings
+- 📬 **Inbox & Expiry Reminders** - Automatic alerts for expiring/expired keys
+- 📋 **Clipboard Key Detection** - Auto-detect API keys from clipboard when adding
+- 🏷️ **Groups & Smart Filters** - Organize and filter keys by group, provider, status, expiry
 - 🔍 **Search & Filter** - Quickly find keys by name, provider, or description
+- ⌨️ **Keyboard Shortcuts** - 16 customizable shortcuts for power users
 - 👆 **Biometric Unlock** - Touch ID / Face ID support (WebAuthn)
 - 💾 **Cloud Sync Ready** - Works with iCloud, Nutstore, Dropbox, or any cloud storage
 - 🌐 **Zero Backend** - All data stored locally, no server costs
@@ -72,6 +76,9 @@ pnpm test
 
 # Run tests in watch mode
 pnpm test:watch
+
+# Run a single test file
+pnpm vitest run src/core/__tests__/database.test.ts
 ```
 
 ---
@@ -140,8 +147,12 @@ keya/
 │   │   ├── crypto.ts          # Encryption/decryption
 │   │   ├── database.ts        # Database CRUD operations
 │   │   ├── schema.ts          # .keya file format
-│   │   ├── types.ts           # TypeScript types
-│   │   └── index.ts          # Public API
+│   │   ├── types.ts           # TypeScript types & constants
+│   │   ├── validators.ts      # Zod runtime validation
+│   │   ├── inbox.ts           # Expiry alert collection & sync
+│   │   ├── key-status.ts      # Connection/expiry status labels
+│   │   ├── audit.ts           # Vault health audit engine
+│   │   └── index.ts           # Public API
 │   │
 │   ├── app/                   # Application layer
 │   │   ├── components/       # UI components by feature
@@ -149,23 +160,32 @@ keya/
 │   │   │   ├── groups/      # Group management
 │   │   │   ├── vault/       # Vault components
 │   │   │   ├── welcome/     # Onboarding
-│   │   │   └── layout/      # App layout
+│   │   │   ├── layout/      # App layout
+│   │   │   ├── audit/       # Vault health audit page
+│   │   │   ├── inbox/       # Inbox/reminders page
+│   │   │   └── settings/    # Settings pages (6 sections)
 │   │   ├── lib/             # App-specific libraries
 │   │   │   ├── storage.ts   # File I/O
 │   │   │   ├── session.ts   # Session management
 │   │   │   ├── biometric.ts # WebAuthn
-│   │   │   └── api-tester.ts# API testing
+│   │   │   ├── api-tester.ts# API testing (14 providers)
+│   │   │   ├── clipboard-intake.ts # Clipboard key detection
+│   │   │   ├── shortcuts.ts # Keyboard shortcut system
+│   │   │   └── inbox.ts     # Inbox toast copy
 │   │   └── store/           # Zustand state
 │   │
-│   ├── routes/              # TanStack Router
+│   ├── routes/              # TanStack Router (file-based)
 │   │   ├── __root.tsx      # Root layout
-│   │   ├── _authenticated.tsx  # Auth guard
-│   │   └── index.tsx       # Welcome page
+│   │   ├── _authenticated.tsx     # Auth guard
+│   │   ├── _authenticated/keys    # Key management
+│   │   ├── _authenticated/inbox   # Inbox
+│   │   ├── _authenticated/health  # Health audit
+│   │   └── _authenticated/settings/* # Settings (6 sub-routes)
 │   │
 │   └── help/                # Help center
-│       ├── content/         # Markdown articles
+│       ├── content/         # 7 markdown articles
 │       ├── components/      # Help UI
-│       └── lib/            # Search, parsing
+│       └── lib/            # Search, markdown parsing
 │
 ├── public/                 # Static assets
 ├── biome.json             # Biome config
@@ -272,6 +292,44 @@ Custom providers can be added in settings.
 - Create multiple vaults as separate `.keya` files
 - Vault switcher for quick switching between vaults
 - Vault metadata cached for fast display without decryption
+
+### Data Model
+
+**ApiKey** — core entity:
+```typescript
+interface ApiKey {
+  id: string; name: string; description: string;
+  provider: string; endpoint: string; key: string;
+  group_id: string | null;
+  expires_at: string | null;
+  connection_check: ConnectionCheck;  // { status, checked_at, latency_ms, error_message }
+  created_at: string; updated_at: string;
+}
+```
+
+**Settings** — vault-level preferences:
+```typescript
+interface Settings {
+  auto_lock_minutes: number;  // 0 = never
+  auto_test_on_save: boolean;
+  auto_test_daily: boolean;
+  clipboard_detection_on_add: boolean;
+  custom_providers: CustomProvider[];
+  disabled_providers: string[];
+}
+```
+
+**InboxItem** — proactive expiry alerts:
+```typescript
+interface InboxItem {
+  id: string;
+  type: 'key_expiry_upcoming' | 'key_expiry_expired';
+  entity_id: string;
+  status: 'open' | 'archived';
+  archive_reason: 'user' | 'resolved' | null;
+  metadata: { key_name, provider, expires_at, days_until_expiry };
+}
+```
 
 ### Auto-save
 - Changes auto-saved with 500ms debouncing
