@@ -1,5 +1,5 @@
 /**
- * Encryption module using libsodium (Argon2id + ChaCha20-Poly1305)
+ * Encryption module using libsodium (Argon2id + XChaCha20-Poly1305)
  */
 import sodium from 'libsodium-wrappers-sumo';
 
@@ -18,10 +18,10 @@ function ensureInit(): void {
   }
 }
 
-/** Generate 16-byte random salt */
+/** Generate 16-byte random salt (libsodium crypto_pwhash requirement) */
 export function generateSalt(): Uint8Array {
   ensureInit();
-  return sodium.randombytes_buf(16);
+  return sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
 }
 
 /** Generate 24-byte random nonce */
@@ -45,7 +45,19 @@ export function deriveKey(password: string, salt: Uint8Array): Uint8Array {
   );
 }
 
-/** Encrypt plaintext with key using ChaCha20-Poly1305 */
+/** Combine derived key with master seed to produce final encryption key */
+export function finalizeKey(
+  derivedKey: Uint8Array,
+  masterSeed: Uint8Array
+): Uint8Array {
+  ensureInit();
+  const combined = new Uint8Array(masterSeed.length + derivedKey.length);
+  combined.set(masterSeed, 0);
+  combined.set(derivedKey, masterSeed.length);
+  return sodium.crypto_hash_sha256(combined);
+}
+
+/** Encrypt plaintext with key using XChaCha20-Poly1305 */
 export function encrypt(
   plaintext: Uint8Array,
   key: Uint8Array,
@@ -55,7 +67,7 @@ export function encrypt(
   return sodium.crypto_secretbox_easy(plaintext, nonce, key);
 }
 
-/** Decrypt ciphertext with key using ChaCha20-Poly1305 */
+/** Decrypt ciphertext with key using XChaCha20-Poly1305 */
 export function decrypt(
   ciphertext: Uint8Array,
   nonce: Uint8Array,
@@ -67,34 +79,4 @@ export function decrypt(
     throw new Error('Decryption failed: wrong password or corrupted data');
   }
   return result;
-}
-
-/**
- * Encrypt entire database
- * Returns structured object so callers can access salt/nonce for metadata.
- */
-export function encryptDatabase(
-  data: string,
-  password: string
-): { salt: Uint8Array; nonce: Uint8Array; encrypted: Uint8Array } {
-  ensureInit();
-  const salt = generateSalt();
-  const nonce = generateNonce();
-  const key = deriveKey(password, salt);
-  const plaintext = sodium.from_string(data);
-  const encrypted = encrypt(plaintext, key, nonce);
-  return { salt, nonce, encrypted };
-}
-
-/**
- * Decrypt ciphertext directly (salt & nonce already known from EncParams).
- * Used by schema.ts which stores salt/nonce in file headers.
- */
-export function decryptRaw(
-  encrypted: Uint8Array,
-  nonce: Uint8Array,
-  key: Uint8Array
-): Uint8Array {
-  ensureInit();
-  return decrypt(encrypted, nonce, key);
 }
