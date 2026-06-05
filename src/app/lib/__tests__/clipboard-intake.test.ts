@@ -36,7 +36,7 @@ describe('clipboard intake', () => {
     const candidate = await tryDetectClipboardKey();
 
     expect(candidate?.provider).toBe('Groq');
-    expect(candidate?.draft.endpoint).toBe('https://api.groq.com/openai/v1');
+    expect(candidate?.draft.endpoint).toBe('');
   });
 
   it('detects an OpenRouter key from direct token format', async () => {
@@ -45,7 +45,7 @@ describe('clipboard intake', () => {
     const candidate = await tryDetectClipboardKey();
 
     expect(candidate?.provider).toBe('OpenRouter');
-    expect(candidate?.draft.endpoint).toBe('https://openrouter.ai/api/v1');
+    expect(candidate?.draft.endpoint).toBe('');
   });
 
   it('detects provider by env name when token has no special prefix', async () => {

@@ -80,21 +80,18 @@ export class ApiTester {
   ): Promise<{ success: boolean; error?: string }> {
     const openaiCompatible = [
       'openai',
-      'groq',
       'deepseek',
       'moonshot',
       'zhipu',
       'mistral',
-      'together',
-      'openrouter',
       'siliconflow',
+      'xai',
+      'minimax',
     ];
     if (openaiCompatible.includes(provider))
       return ApiTester.testOpenAI(endpoint, key);
     if (provider === 'anthropic') return ApiTester.testAnthropic(endpoint, key);
     if (provider === 'google') return ApiTester.testGoogle(endpoint, key);
-    if (provider === 'cohere') return ApiTester.testCohere(endpoint, key);
-    if (provider === 'baidu') return ApiTester.testBaidu(endpoint, key);
     if (provider === 'azure') return ApiTester.testOpenAI(endpoint, key);
     return ApiTester.testGeneric(endpoint, key);
   }
@@ -144,46 +141,6 @@ export class ApiTester {
   private static async testGoogle(endpoint: string, key: string) {
     try {
       const res = await fetchWithTimeout(`${endpoint}/models?key=${key}`);
-      if (res.ok) return { success: true };
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
-    }
-  }
-
-  private static async testCohere(endpoint: string, key: string) {
-    try {
-      const res = await fetchWithTimeout(`${endpoint}/v2/models`, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (res.ok) return { success: true };
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
-    }
-  }
-
-  private static async testBaidu(endpoint: string, key: string) {
-    try {
-      const parts = key.split(':');
-      if (parts.length === 2) {
-        const [ak, sk] = parts;
-        const tokenUrl = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${ak}&client_secret=${sk}`;
-        const res = await fetchWithTimeout(tokenUrl);
-        if (res.ok) {
-          const body = await res.json();
-          if (body.access_token) return { success: true };
-          return {
-            success: false,
-            error: body.error_description || 'Invalid credentials',
-          };
-        }
-        return { success: false, error: await extractError(res) };
-      }
-      // Fallback: treat as access_token
-      const res = await fetchWithTimeout(endpoint, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
       if (res.ok) return { success: true };
       return { success: false, error: await extractError(res) };
     } catch (e) {
