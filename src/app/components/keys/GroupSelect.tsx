@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Key } from '@phosphor-icons/react';
 import type { Group } from '../../../core/types';
 import {
   Select,
@@ -39,7 +38,7 @@ export function GroupSelect({ groups, value, onChange }: GroupSelectProps) {
             </span>
           ) : (
             <span className="flex min-w-0 items-center gap-2 truncate">
-              <Key className="size-4 shrink-0 text-ink-quaternary" />
+              <span className="text-sm leading-none">📥</span>
               <span className="truncate text-ink-secondary">Ungrouped</span>
             </span>
           )}
@@ -48,7 +47,7 @@ export function GroupSelect({ groups, value, onChange }: GroupSelectProps) {
       <SelectContent className="max-h-64 overflow-y-auto">
         <SelectItem value={UNGROUPED_VALUE}>
           <span className="flex min-w-0 items-center gap-2">
-            <Key className="size-4 shrink-0 text-ink-quaternary" />
+            <span className="text-sm leading-none">📥</span>
             <span>Ungrouped</span>
           </span>
         </SelectItem>

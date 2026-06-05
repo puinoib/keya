@@ -7,15 +7,11 @@ export function DayPicker({
   value: Date | undefined;
   onChange: (d: Date | undefined) => void;
 }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   return (
     <Calendar
       mode="single"
       selected={value}
-      defaultMonth={value ?? today}
-      disabled={{ before: today }}
+      defaultMonth={value ?? new Date()}
       onSelect={(date) => {
         if (date) onChange(date);
       }}

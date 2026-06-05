@@ -6,7 +6,7 @@ import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
 import type { ApiKey } from '../../../core/types';
 import {
-  ENDPOINT_DEFAULTS,
+  getDefaultEndpointForProvider,
   getProvidersForDropdown,
 } from '../../../core/types';
 import { getExpiryStatus, getExpiryStatusLabel } from '../../../core/key-status';
@@ -428,10 +428,30 @@ export function EditKeyDialog({
 
   const settings = db?.getSettings();
   const providers = getProvidersForDropdown(settings);
-  const defaultEndpoint =
-    ENDPOINT_DEFAULTS[form.provider.toLowerCase()] ??
-    settings?.custom_providers?.find((cp) => cp.name === form.provider)
-      ?.endpoint;
+  const defaultEndpoint = getDefaultEndpointForProvider(
+    form.provider,
+    settings
+  );
+
+  useEffect(() => {
+    if (!editingKey) return;
+    const endpoint =
+      editingKey.endpoint ||
+      getDefaultEndpointForProvider(editingKey.provider, settings) ||
+      '';
+    setForm({
+      name: editingKey.name,
+      key: editingKey.key,
+      provider: editingKey.provider,
+      endpoint,
+      description: editingKey.description,
+      group_id: editingKey.group_id,
+      expires_at: editingKey.expires_at
+        ? new Date(editingKey.expires_at)
+        : undefined,
+    });
+    setTestState({ testing: false, result: null });
+  }, [editingKey, settings]);
 
   const handleTest = async () => {
     if (!form.key) return;
@@ -551,12 +571,9 @@ export function EditKeyDialog({
               value={form.provider}
               onValueChange={(v) => {
                 if (!v) return;
-                const ep =
-                  ENDPOINT_DEFAULTS[v.toLowerCase()] ??
-                  settings?.custom_providers?.find((cp) => cp.name === v)
-                    ?.endpoint ??
-                  form.endpoint;
-                setForm((f) => ({ ...f, provider: v, endpoint: ep }));
+                const endpoint =
+                  getDefaultEndpointForProvider(v, settings) ?? form.endpoint;
+                setForm((f) => ({ ...f, provider: v, endpoint }));
               }}
             >
               <SelectTrigger>
