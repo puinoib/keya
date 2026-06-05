@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { List, FolderOpen, Faders, X, Gear, Tray } from '@phosphor-icons/react';
+import {
+  List,
+  FolderOpen,
+  Faders,
+  X,
+  Gear,
+  Tray,
+  Heartbeat,
+} from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
@@ -70,6 +78,7 @@ export function Sidebar() {
   const hasSmartFilters =
     filterProvider || filterTestStatus || filterExpiryStatus;
   const isInboxActive = pathname === '/inbox';
+  const isHealthActive = pathname === '/health';
   const isAllKeysActive =
     pathname === '/keys' &&
     !filterGroupId &&
@@ -112,6 +121,13 @@ export function Sidebar() {
               count={openInboxCount}
               isActive={isInboxActive}
               onClick={() => navigate({ to: '/inbox' })}
+            />
+            <SidebarFilterButton
+              icon={<Heartbeat className="size-3" />}
+              label="Health"
+              count={0}
+              isActive={isHealthActive}
+              onClick={() => navigate({ to: '/health' })}
             />
             <SidebarFilterButton
               icon={<List className="size-3" />}
