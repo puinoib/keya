@@ -34,6 +34,9 @@ export type { HeaderMeta, EncParams } from './schema';
 // Database
 export { Database, createEmptyDatabase } from './database';
 
+// Validators
+export { validateDatabase, KeyaDatabaseSchema } from './validators';
+
 // Inbox
 export {
   collectExpiryAlerts,
