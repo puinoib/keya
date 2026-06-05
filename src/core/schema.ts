@@ -294,7 +294,10 @@ export async function deserializeFromFile(
   const headerMeta = parseHeader(fileBytes.slice(0, HEADER_SIZE));
 
   // Verify header integrity
-  const storedHash = fileBytes.slice(HEADER_SIZE, HEADER_SIZE + HEADER_HASH_SIZE);
+  const storedHash = fileBytes.slice(
+    HEADER_SIZE,
+    HEADER_SIZE + HEADER_HASH_SIZE
+  );
   const computedHash = sodium.crypto_hash_sha256(
     fileBytes.slice(0, HEADER_SIZE)
   );

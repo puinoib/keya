@@ -16,16 +16,14 @@ function RootComponent() {
     <>
       <ThemeSync />
       <SessionRestore>
-        <>
-          <div className="animate-in fade-in-0 duration-300">
-            <TooltipProvider>
-              <Outlet />
-              <BiometricPromptLayer />
-              <InboxSyncNotifier />
-            </TooltipProvider>
-          </div>
-          <Toaster />
-        </>
+        <div className="animate-in fade-in-0 duration-300">
+          <TooltipProvider>
+            <Outlet />
+            <BiometricPromptLayer />
+            <InboxSyncNotifier />
+          </TooltipProvider>
+        </div>
+        <Toaster />
       </SessionRestore>
       <TanStackRouterDevtools />
     </>
