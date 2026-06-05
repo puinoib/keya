@@ -4,6 +4,9 @@
  * File layout:
  *   Header (128B) | HeaderHash (32B) | EncParams (96B) | PayloadLen (4B) | Payload (N)
  *
+ * HeaderHash covers: Header + EncParams + PayloadLen
+ *   (everything before Payload, excluding the hash itself)
+ *
  * Header layout (128B):
  *   [Magic 4B] [Version 2B] [Flags 2B] [FileID 16B]
  *   [Created 8B] [Modified 8B] [MasterSeed 32B] [Reserved 56B]
@@ -35,7 +38,7 @@ const PAD_BLOCK_SIZE = 4096;
 const MASTER_SEED_SIZE = 32;
 
 const DEFAULT_OPS = 10;
-const DEFAULT_MEM = 65536;
+const DEFAULT_MEM = 67108864;
 
 // ── Header ──
 
@@ -100,7 +103,13 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
   }
   off += 4;
 
-  off += 2; // version (reserved)
+  const version = dv.getUint16(off, true);
+  off += 2;
+  if (version !== 2) {
+    throw new Error(
+      `Unsupported .keya file version: ${version} (expected 2)`
+    );
+  }
   off += 2; // flags (reserved)
 
   // FileID: 16 bytes → UUID string
@@ -260,13 +269,15 @@ export async function serializeToFile(
     new Date(db.updated_at)
   );
   const params = createEncParams(salt, nonce);
-  const headerHash = sodium.crypto_hash_sha256(
-    new Uint8Array([...header, ...params])
-  );
 
   // Assemble file
   const payloadLen = new Uint8Array(4);
   new DataView(payloadLen.buffer).setUint32(0, encrypted.length, true);
+
+  // Hash covers: header(128B) + encParams(96B) + payloadLen(4B)
+  const headerHash = sodium.crypto_hash_sha256(
+    new Uint8Array([...header, ...params, ...payloadLen])
+  );
 
   const total = PREAMBLE_SIZE + 4 + encrypted.length;
   const file = new Uint8Array(total);
@@ -288,18 +299,29 @@ export async function deserializeFromFile(
   // Parse and verify header
   const headerMeta = parseHeader(fileBytes.slice(0, HEADER_SIZE));
 
-  // Verify header + encParams integrity
+  // Verify header + encParams + payloadLen integrity
   const storedHash = fileBytes.slice(
     HEADER_SIZE,
     HEADER_SIZE + HEADER_HASH_SIZE
   );
-  // Hash covers: header(128B) + encParams(96B), skipping the stored hash(32B) itself
-  const signedData = new Uint8Array(HEADER_SIZE + ENC_PARAMS_SIZE);
+  // Read payloadLen first so it can be included in hash
+  const payloadLen = new DataView(
+    fileBytes.buffer,
+    fileBytes.byteOffset + PREAMBLE_SIZE,
+    4
+  ).getUint32(0, true);
+  const payloadLenBytes = fileBytes.slice(PREAMBLE_SIZE, PREAMBLE_SIZE + 4);
+
+  // Hash covers: header(128B) + encParams(96B) + payloadLen(4B)
+  const signedData = new Uint8Array(
+    HEADER_SIZE + ENC_PARAMS_SIZE + 4
+  );
   signedData.set(fileBytes.slice(0, HEADER_SIZE), 0);
   signedData.set(
     fileBytes.slice(ENC_PARAMS_OFFSET, ENC_PARAMS_OFFSET + ENC_PARAMS_SIZE),
     HEADER_SIZE
   );
+  signedData.set(payloadLenBytes, HEADER_SIZE + ENC_PARAMS_SIZE);
   if (!sodium.memcmp(storedHash, sodium.crypto_hash_sha256(signedData))) {
     throw new Error(
       'Header integrity check failed: file may be corrupted. Try restoring from a backup.'
@@ -311,12 +333,6 @@ export async function deserializeFromFile(
     fileBytes.slice(ENC_PARAMS_OFFSET, ENC_PARAMS_OFFSET + ENC_PARAMS_SIZE)
   );
 
-  // Read payload
-  const payloadLen = new DataView(
-    fileBytes.buffer,
-    fileBytes.byteOffset + PREAMBLE_SIZE,
-    4
-  ).getUint32(0, true);
   const encrypted = fileBytes.slice(
     PREAMBLE_SIZE + 4,
     PREAMBLE_SIZE + 4 + payloadLen

@@ -70,7 +70,7 @@ describe('schema (.keya file format)', () => {
     const db = makeTestDb();
     const bytes = await serializeToFile(db, password);
     await expect(deserializeFromFile(bytes, 'wrong-password')).rejects.toThrow(
-      'wrong secret key for the given ciphertext'
+      'ciphertext cannot be decrypted using that key'
     );
   });
 
