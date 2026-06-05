@@ -37,15 +37,12 @@ export interface CustomProvider {
 }
 
 export interface Settings {
-  theme: 'light' | 'dark' | 'system';
-  language: 'zh-CN' | 'en-US';
   auto_lock_minutes: number;
   auto_test_on_save: boolean;
   auto_test_daily: boolean;
   clipboard_detection_on_add: boolean;
   custom_providers: CustomProvider[];
   disabled_providers: string[];
-  keyboard_shortcuts: Record<string, string>;
 }
 
 export type InboxItemType = 'key_expiry_upcoming' | 'key_expiry_expired';
@@ -88,15 +85,12 @@ export const DEFAULT_GROUPS: Omit<Group, 'id'>[] = [
 ];
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'system',
-  language: 'zh-CN',
   auto_lock_minutes: 5,
   auto_test_on_save: false,
   auto_test_daily: false,
   clipboard_detection_on_add: true,
   custom_providers: [],
   disabled_providers: [],
-  keyboard_shortcuts: {},
 };
 
 export const EXPIRY_REMINDER_DAYS = 7;

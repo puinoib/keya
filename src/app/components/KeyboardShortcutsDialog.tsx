@@ -26,9 +26,7 @@ export function KeyboardShortcutsDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const shortcuts = useStore((s) => s.db?.getSettings().keyboard_shortcuts) as
-    | ShortcutMap
-    | undefined;
+  const shortcuts = useStore((s) => s.keyboardShortcuts) as ShortcutMap;
   const resolved = getResolvedShortcuts(shortcuts);
 
   return (

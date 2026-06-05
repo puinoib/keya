@@ -9,7 +9,9 @@ import { formatInboxItemTime } from '../../lib/inbox';
 
 // Derive display fields from type + metadata
 function getSeverity(item: InboxItem) {
-  return item.type === 'key_expiry_expired' ? 'critical' as const : 'warning' as const;
+  return item.type === 'key_expiry_expired'
+    ? ('critical' as const)
+    : ('warning' as const);
 }
 
 function getTitle(item: InboxItem) {
@@ -170,7 +172,10 @@ export function InboxPage() {
                       >
                         View key
                       </Button>
-                      <Button size="sm" onClick={() => archiveInboxItem(item.id)}>
+                      <Button
+                        size="sm"
+                        onClick={() => archiveInboxItem(item.id)}
+                      >
                         Archive
                       </Button>
                     </div>

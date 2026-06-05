@@ -1,6 +1,5 @@
 import { useStore } from '../../store/useStore';
 
-
 function Toggle({
   checked,
   onChange,

@@ -7,7 +7,7 @@ export function useAppHotkey(
   callback: (event: KeyboardEvent) => void,
   options: { enabled?: boolean; enableOnFormTags?: boolean } = {}
 ) {
-  const shortcuts = useStore((s) => s.db?.getSettings().keyboard_shortcuts);
+  const shortcuts = useStore((s) => s.keyboardShortcuts);
   const keys = getShortcutKeys(shortcuts, actionId);
   const enabled = (options.enabled ?? true) && keys.trim().length > 0;
 

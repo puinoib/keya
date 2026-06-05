@@ -121,5 +121,4 @@ describe('schema (.keya file format)', () => {
     // But the magic header should be visible
     expect(asText.slice(0, 4)).toBe('KEYA');
   });
-
 });
