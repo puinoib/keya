@@ -45,7 +45,7 @@ export function HelpLayout() {
             <HelpSearch documents={documents} onNavigate={handleNavigate} />
           </header>
           <div className="flex-1 overflow-y-auto">
-            <main className="p-8 max-w-4xl mx-auto w-full">
+            <main className="p-10 max-w-3xl mx-auto w-full">
               {currentSlug ? <HelpPage slug={currentSlug} /> : <HelpIndex />}
             </main>
           </div>
