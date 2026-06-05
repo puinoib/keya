@@ -34,7 +34,7 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   };
 
   return (
-    <div className="relative w-full max-w-xs">
+    <div className="relative w-full max-w-sm">
       <div className="relative">
         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
         <input
