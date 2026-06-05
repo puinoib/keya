@@ -1,5 +1,11 @@
 import { useStore } from '../../store/useStore';
-import { Palette, Fingerprint, Spinner, Shield, LockOpen } from '@phosphor-icons/react';
+import {
+  Palette,
+  Fingerprint,
+  Spinner,
+  Shield,
+  LockOpen,
+} from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -59,7 +65,8 @@ const STRENGTH_CONFIG = {
 } as const;
 
 export function GeneralPage() {
-  const { db, password, updateMeta, updateSettings, changePassword } = useStore();
+  const { db, password, updateMeta, updateSettings, changePassword } =
+    useStore();
   const settings = db?.getSettings();
   const data = db?.getData();
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -283,7 +290,10 @@ export function GeneralPage() {
                     type="password"
                     placeholder="Current password"
                     value={oldPw}
-                    onChange={(e) => { setOldPw(e.target.value); setPwError(''); }}
+                    onChange={(e) => {
+                      setOldPw(e.target.value);
+                      setPwError('');
+                    }}
                     className="h-7 text-xs"
                     autoComplete="off"
                     data-lpignore="true"
@@ -293,7 +303,10 @@ export function GeneralPage() {
                       type="password"
                       placeholder="New password (min 8 chars)"
                       value={newPw}
-                      onChange={(e) => { setNewPw(e.target.value); setPwError(''); }}
+                      onChange={(e) => {
+                        setNewPw(e.target.value);
+                        setPwError('');
+                      }}
                       className="h-7 text-xs"
                       autoComplete="off"
                       data-lpignore="true"
@@ -326,7 +339,10 @@ export function GeneralPage() {
                     type="password"
                     placeholder="Confirm new password"
                     value={confirmPw}
-                    onChange={(e) => { setConfirmPw(e.target.value); setPwError(''); }}
+                    onChange={(e) => {
+                      setConfirmPw(e.target.value);
+                      setPwError('');
+                    }}
                     className={`h-7 text-xs ${confirmPw && newPw !== confirmPw ? 'border-red-500/50' : ''}`}
                     autoComplete="off"
                     data-lpignore="true"
@@ -354,7 +370,9 @@ export function GeneralPage() {
                           setConfirmPw('');
                         } catch (e) {
                           setPwError(
-                            e instanceof Error ? e.message : 'Failed to change password'
+                            e instanceof Error
+                              ? e.message
+                              : 'Failed to change password'
                           );
                         } finally {
                           setPwLoading(false);
@@ -363,7 +381,11 @@ export function GeneralPage() {
                       disabled={pwLoading || !canChangePw}
                       className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
                     >
-                      {pwLoading ? <Spinner className="size-3.5 animate-spin" /> : 'Save'}
+                      {pwLoading ? (
+                        <Spinner className="size-3.5 animate-spin" />
+                      ) : (
+                        'Save'
+                      )}
                     </button>
                     <button
                       onClick={() => {

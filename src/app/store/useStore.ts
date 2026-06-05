@@ -8,7 +8,7 @@ import {
   type ClipboardKeyCandidate,
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
-import { saveSession, clearSession, loadSession } from '../lib/session';
+import { saveSession, clearSession, hasSession } from '../lib/session';
 import { collectExpiryAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
@@ -50,7 +50,7 @@ interface AppState {
   setDb: (db: Database) => void;
   setPassword: (pw: string) => void;
   lock: () => void;
-  unlock: (db: Database, password: string, fileName: string) => void;
+  unlock: (db: Database, password: string, fileName: string) => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   updateKeyboardShortcuts: (shortcuts: Record<string, string>) => void;
 
@@ -207,15 +207,13 @@ const FILTER_DEFAULTS = {
 
 export const useStore = create<AppState>((set, get) => {
   // Check for existing session on initialization
-  const session = loadSession();
-  const initialWorkspaceState = session ? 'locked' : 'welcome';
-  const initialFileName = session?.fileName ?? null;
+  const initialWorkspaceState = hasSession() ? 'locked' : 'welcome';
 
   return {
     workspaceState: initialWorkspaceState,
     db: null,
     password: null,
-    activeVaultFileName: initialFileName,
+    activeVaultFileName: null,
     searchQuery: '',
     showAddForm: false,
     addKeyDraft: null,
@@ -264,8 +262,9 @@ export const useStore = create<AppState>((set, get) => {
       });
     },
 
-    unlock: (db, password, fileName) => {
-      saveSession(fileName, password);
+    unlock: async (db, password, fileName) => {
+      const vaultId = db.getData().vault_id;
+      await saveSession(fileName, password, vaultId);
       const inboxSummary = runInboxChecksForDatabase(db);
       set({
         workspaceState: 'unlocked',
@@ -417,9 +416,17 @@ export const useStore = create<AppState>((set, get) => {
         throw new Error('No vault open');
       if (oldPassword !== password)
         throw new Error('Current password is incorrect');
-      await FileStorage.saveVault(activeVaultFileName, db.getData(), newPassword);
+      await FileStorage.saveVault(
+        activeVaultFileName,
+        db.getData(),
+        newPassword
+      );
       set({ password: newPassword });
-      saveSession(activeVaultFileName, newPassword);
+      await saveSession(
+        activeVaultFileName,
+        newPassword,
+        db.getData().vault_id
+      );
     },
 
     runInboxChecks: () => {

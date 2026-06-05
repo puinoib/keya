@@ -6,17 +6,18 @@ import { FileStorage } from '../lib/storage';
 
 export function SessionRestore({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const session = loadSession();
-    if (!session) return;
+    (async () => {
+      const session = await loadSession();
+      if (!session) return;
 
-    const { fileName, password } = session;
-    FileStorage.openVault(fileName, password)
-      .then((db) => {
-        useStore.getState().unlock(db, password, fileName);
-      })
-      .catch(() => {
+      const { fileName, password } = session;
+      try {
+        const db = await FileStorage.openVault(fileName, password);
+        await useStore.getState().unlock(db, password, fileName);
+      } catch {
         clearSession();
-      });
+      }
+    })();
   }, []);
 
   useAutoLock();
