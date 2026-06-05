@@ -12,7 +12,7 @@ This walkthrough takes you from a fresh install to a working vault with one API 
 - Use a **Chromium-based browser** (Chrome, Edge, Arc, Brave). The folder picker relies on the File System Access API, which Firefox and Safari do not ship. If you're stuck on Firefox, see [the FAQ entry on unsupported browsers](/help/faq).
 - Pick a **synced folder** for your workspace — iCloud Drive, Dropbox, Nutstore, OneDrive, or a plain local folder. The folder holds your `.keya` files, and choosing a synced folder is what makes multi-device work later.
 
-## 1. Choose a workspace folder
+### Choose a workspace folder
 
 The first time you open Keya you'll land on the welcome screen. Click **Open Folder** and grant access to the folder you want to use. Keya stores a handle to that folder in IndexedDB so it can read and write your vault files without re-asking on every reload.
 
