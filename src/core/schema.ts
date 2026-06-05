@@ -340,6 +340,17 @@ export async function deserializeFromFile(
   if ((db.settings as any).keyboard_shortcuts === undefined)
     (db.settings as any).keyboard_shortcuts = {};
   if (!Array.isArray((db as any).inbox)) (db as any).inbox = [];
+  // Strip legacy inbox fields
+  for (const item of (db as any).inbox) {
+    delete item.title;
+    delete item.body;
+    delete item.severity;
+    delete item.entity_type;
+    delete item.vault_id;
+    delete item.dedupe_key;
+    delete item.fingerprint;
+    delete item.last_detected_at;
+  }
 
   // Update modified time from header
   db.updated_at = header.modified.toISOString();
