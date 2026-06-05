@@ -28,9 +28,12 @@ describe('schema (.keya file format)', () => {
       endpoint: 'https://api.openai.com/v1',
       group_id: base.groups[0]?.id ?? null,
       expires_at: null,
-      last_tested: null,
-      test_status: null,
-      test_latency_ms: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
     });
     db.addApiKey({
       name: 'Anthropic Production',
@@ -40,9 +43,12 @@ describe('schema (.keya file format)', () => {
       endpoint: 'https://api.anthropic.com',
       group_id: base.groups[0]?.id ?? null,
       expires_at: null,
-      last_tested: null,
-      test_status: null,
-      test_latency_ms: null,
+      connection_check: {
+        status: 'untested',
+        checked_at: null,
+        latency_ms: null,
+        error_message: null,
+      },
     });
     return { ...db.getData(), ...overrides } as KeyaDatabase;
   }

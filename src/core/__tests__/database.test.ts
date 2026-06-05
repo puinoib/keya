@@ -19,9 +19,12 @@ function makeKey(
     endpoint: 'https://api.openai.com/v1',
     group_id: null,
     expires_at: null,
-    last_tested: null,
-    test_status: null,
-    test_latency_ms: null,
+    connection_check: {
+      status: 'untested',
+      checked_at: null,
+      latency_ms: null,
+      error_message: null,
+    },
     ...overrides,
   };
 }

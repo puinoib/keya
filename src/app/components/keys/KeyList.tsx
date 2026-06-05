@@ -9,6 +9,7 @@ import {
   ENDPOINT_DEFAULTS,
   getProvidersForDropdown,
 } from '../../../core/types';
+import { getExpiryStatus, getExpiryStatusLabel } from '../../../core/key-status';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,7 @@ export function KeyList() {
     filterGroupId,
     filterProvider,
     filterTestStatus,
+    filterExpiryStatus,
     selectedKeyId,
     setSelectedKeyId,
     setShowAddForm,
@@ -92,9 +94,19 @@ export function KeyList() {
   if (filterProvider) keys = keys.filter((k) => k.provider === filterProvider);
   if (filterTestStatus)
     keys = keys.filter((k) => {
-      if (filterTestStatus === 'untested') return !k.test_status;
-      return k.test_status === filterTestStatus;
+      return k.connection_check.status === filterTestStatus;
     });
+  if (filterExpiryStatus) {
+    keys = keys.filter((k) => {
+      const expiryStatus = getExpiryStatus(k.expires_at);
+      if (filterExpiryStatus === 'expired') return expiryStatus === 'expired';
+      if (filterExpiryStatus === 'expiring')
+        return expiryStatus === 'expiring_soon';
+      if (filterExpiryStatus === 'valid')
+        return expiryStatus === 'valid' || expiryStatus === 'none';
+      return true;
+    });
+  }
 
   // Deselect if the selected key is filtered out
   useEffect(() => {
@@ -110,13 +122,18 @@ export function KeyList() {
     setTesting(key.id);
     const result = await ApiTester.testKey(key);
     updateKey(key.id, {
-      last_tested: new Date().toISOString(),
-      test_status: result.success ? 'success' : 'failed',
-      test_latency_ms: result.latency_ms ?? null,
+      connection_check: {
+        status: result.success ? 'success' : 'failed',
+        checked_at: new Date().toISOString(),
+        latency_ms: result.latency_ms ?? null,
+        error_message: result.success ? null : result.error ?? null,
+      },
     });
     setTesting(null);
     toast[result.success ? 'success' : 'error'](
-      result.success ? 'Key available' : 'Key test failed',
+      result.success
+        ? 'Connection test succeeded'
+        : 'Connection test failed',
       {
         description: result.success
           ? `${key.name} — ${result.latency_ms}ms`
@@ -138,7 +155,11 @@ export function KeyList() {
   };
 
   const hasFilters =
-    searchQuery || filterGroupId || filterProvider || filterTestStatus;
+    searchQuery ||
+    filterGroupId ||
+    filterProvider ||
+    filterTestStatus ||
+    filterExpiryStatus;
 
   if (keys.length === 0 && !hasFilters) {
     return (
@@ -179,50 +200,23 @@ export function KeyList() {
       <div className="space-y-1">
         {keys.map((key) => {
           const isTesting = testing === key.id;
-          const testOk = key.test_status === 'success';
-          const testFail = key.test_status === 'failed';
           const isSelected = selectedKeyId === key.id;
-          const isExpired = key.expires_at
-            ? new Date(key.expires_at) < new Date()
-            : false;
-          const isExpiringSoon =
-            !isExpired && key.expires_at
-              ? (new Date(key.expires_at).getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24) <=
-                7
-              : false;
-          const status = isExpired
+          const expiryStatus = getExpiryStatus(key.expires_at);
+          const status = key.connection_check.status === 'success'
             ? {
-                label: 'Expired',
-                className: 'text-danger',
-                dot: 'bg-danger',
+                dot: 'bg-success-bright',
               }
-            : isExpiringSoon
+            : key.connection_check.status === 'failed'
               ? {
-                  label: 'Expiring',
-                  className: 'text-[#d97706] dark:text-[#fbbf24]',
-                  dot: 'bg-[#f59e0b]',
+                  dot: 'bg-danger',
                 }
-              : testOk
-                ? {
-                    label:
-                      key.test_latency_ms != null
-                        ? `${key.test_latency_ms}ms`
-                        : 'Working',
-                    className: 'text-success-bright',
-                    dot: 'bg-success-bright',
-                  }
-                : testFail
-                  ? {
-                      label: 'Failed',
-                      className: 'text-danger',
-                      dot: 'bg-danger',
-                    }
-                  : {
-                      label: 'Untested',
-                      className: 'text-ink-quaternary',
-                      dot: 'bg-ink-quaternary/35',
-                    };
+              : {
+                  dot: 'bg-ink-quaternary/35',
+                };
+          const expiryLabel = getExpiryStatusLabel(expiryStatus);
+          const expiryClassName = expiryStatus === 'expired'
+            ? 'text-danger'
+            : 'text-[#d97706] dark:text-[#fbbf24]';
 
           return (
             <div
@@ -246,12 +240,16 @@ export function KeyList() {
                   <span className="truncate text-sm font-medium text-ink-primary">
                     {key.name}
                   </span>
-                  <span className="hidden text-divider sm:inline">·</span>
-                  <span
-                    className={`hidden shrink-0 text-xs font-medium sm:inline ${status.className}`}
-                  >
-                    {status.label}
-                  </span>
+                  {expiryLabel && (
+                    <>
+                      <span className="hidden text-divider sm:inline">·</span>
+                      <span
+                        className={`hidden shrink-0 text-xs font-medium sm:inline ${expiryClassName}`}
+                      >
+                        {expiryLabel}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
                   <span className="shrink-0">{key.provider}</span>
@@ -313,7 +311,7 @@ export function KeyList() {
                       <DotsThree className="size-4" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuContent className="w-44">
                     <DropdownMenuItem onClick={() => setEditingKey(key)}>
                       <PencilSimple className="size-3.5" /> Edit
                     </DropdownMenuItem>
@@ -349,7 +347,6 @@ export function KeyList() {
         onOpenChange={(open) => {
           if (!open) setDeletingKey(null);
         }}
-        modal
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -457,13 +454,16 @@ export function EditKeyDialog({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      last_tested: testState.result ? new Date().toISOString() : undefined,
-      test_status: testState.result
-        ? testState.result.success
-          ? 'success'
-          : 'failed'
+      connection_check: testState.result
+        ? {
+            status: testState.result.success ? 'success' : 'failed',
+            checked_at: new Date().toISOString(),
+            latency_ms: testState.result.latency_ms ?? null,
+            error_message: testState.result.success
+              ? null
+              : testState.result.error ?? null,
+          }
         : undefined,
-      test_latency_ms: testState.result?.latency_ms ?? undefined,
     });
 
     // Auto-test on save
@@ -472,9 +472,12 @@ export function EditKeyDialog({
       const keyId = editingKey.id;
       ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
         useStore.getState().updateKey(keyId, {
-          last_tested: new Date().toISOString(),
-          test_status: result.success ? 'success' : 'failed',
-          test_latency_ms: result.latency_ms ?? null,
+          connection_check: {
+            status: result.success ? 'success' : 'failed',
+            checked_at: new Date().toISOString(),
+            latency_ms: result.latency_ms ?? null,
+            error_message: result.success ? null : result.error ?? null,
+          },
         });
       });
     }
@@ -544,6 +547,7 @@ export function EditKeyDialog({
             <Select
               value={form.provider}
               onValueChange={(v) => {
+                if (!v) return;
                 const ep =
                   ENDPOINT_DEFAULTS[v.toLowerCase()] ??
                   settings?.custom_providers?.find((cp) => cp.name === v)

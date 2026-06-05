@@ -50,9 +50,11 @@ export function Sidebar() {
     filterGroupId,
     filterProvider,
     filterTestStatus,
+    filterExpiryStatus,
     setFilterGroupId,
     setFilterProvider,
     setFilterTestStatus,
+    setFilterExpiryStatus,
     clearSmartFilters,
     setSearchQuery,
   } = useStore();
@@ -65,18 +67,21 @@ export function Sidebar() {
 
   const keyCount = db?.getApiKeys().length ?? 0;
   const openInboxCount = db?.getOpenInboxItems().length ?? 0;
-  const hasSmartFilters = filterProvider || filterTestStatus;
+  const hasSmartFilters =
+    filterProvider || filterTestStatus || filterExpiryStatus;
   const isInboxActive = pathname === '/inbox';
   const isAllKeysActive =
     pathname === '/keys' &&
     !filterGroupId &&
     !filterProvider &&
-    !filterTestStatus;
+    !filterTestStatus &&
+    !filterExpiryStatus;
 
   const handleAllKeysClick = () => {
     setFilterGroupId(null);
     setFilterProvider(null);
     setFilterTestStatus(null);
+    setFilterExpiryStatus(null);
     setSearchQuery('');
     navigate({ to: '/keys' });
   };
@@ -202,11 +207,22 @@ export function Sidebar() {
                   onChange={setFilterTestStatus}
                   options={[
                     { value: '', label: 'All Results' },
-                    { value: 'success', label: 'Passed' },
+                    { value: 'success', label: 'Success' },
                     { value: 'failed', label: 'Failed' },
                     { value: 'untested', label: 'Untested' },
                   ]}
                   placeholder="All Results"
+                />
+                <SidebarFilterSelect
+                  value={filterExpiryStatus}
+                  onChange={setFilterExpiryStatus}
+                  options={[
+                    { value: '', label: 'All Expiry' },
+                    { value: 'expired', label: 'Expired' },
+                    { value: 'expiring', label: 'Expiring Soon' },
+                    { value: 'valid', label: 'No Expiry Issue' },
+                  ]}
+                  placeholder="All Expiry"
                 />
               </div>
             </SidebarSection>

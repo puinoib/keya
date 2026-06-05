@@ -1,5 +1,15 @@
 // Core data types for Keya v1.0
 
+export type ConnectionStatus = 'success' | 'failed' | 'untested';
+export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
+
+export interface ConnectionCheck {
+  status: ConnectionStatus;
+  checked_at: string | null;
+  latency_ms: number | null;
+  error_message: string | null;
+}
+
 export interface ApiKey {
   id: string;
   name: string;
@@ -9,9 +19,7 @@ export interface ApiKey {
   key: string;
   group_id: string | null;
   expires_at: string | null;
-  last_tested: string | null;
-  test_status: 'success' | 'failed' | null;
-  test_latency_ms: number | null;
+  connection_check: ConnectionCheck;
   created_at: string;
   updated_at: string;
 }

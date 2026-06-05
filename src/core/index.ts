@@ -43,3 +43,10 @@ export {
   syncInboxWithAlerts,
 } from './inbox';
 export type { ExpiryAlert, InboxSyncSummary } from './inbox';
+
+export {
+  getConnectionStatusLabel,
+  getDaysUntilExpiry as getDaysUntilKeyExpiry,
+  getExpiryStatus,
+  getExpiryStatusLabel,
+} from './key-status';

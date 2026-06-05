@@ -59,7 +59,7 @@ Click any row to slide open the detail panel on the right. From there you can:
 
 The top of the Keys page has a search box that matches against name, provider, description, and the key value itself. As you type, filter tags appear above the list — click the × on a tag to clear that filter, or **Clear all** to reset.
 
-You can also filter by **group** (including an `Ungrouped` bucket) and by **test status** (`Passed`, `Failed`, `Untested`).
+You can also filter by **group** (including an `Ungrouped` bucket), **test result** (`Success`, `Failed`, `Untested`), and **expiry status** (`Expired`, `Expiring Soon`).
 
 ## 6. Lock up
 
@@ -73,7 +73,7 @@ Locking purges the in-memory key and the `sessionStorage` session. The vault fil
 
 - **Treat the master password like a root password.** If you lose it, the vault is gone. There is no reset email.
 - **Use the workspace folder in a synced cloud drive.** That's how you get free, end-to-end-encrypted multi-device access — Keya never talks to a server, but your cloud does.
-- **Test keys after rotating them.** The `Working` / `Failed` / `Nd left` badges are how you spot a key that quietly expired or got revoked.
+- **Test keys after rotating them.** The `Success` / `Failed` connection badges and expiry warnings are how you spot a key that quietly expired or got revoked.
 
 ## What's next?
 
