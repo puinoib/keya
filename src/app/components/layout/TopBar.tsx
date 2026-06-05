@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore';
 import {
   MagnifyingGlass,
   Plus,
-  DotsThree,
+  Download,
   Key,
   FileCode,
   DownloadSimple,
@@ -200,11 +200,11 @@ export function TopBar() {
 
       <div className="flex-1" />
 
-      {/* More menu */}
+      {/* Import/Export menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
-            <DotsThree className="size-3.5" />
+            <Download className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-44">
@@ -222,10 +222,6 @@ export function TopBar() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportJson}>
             <DownloadSimple className="size-3.5" /> Export JSON
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void beginAddKeyFlow()}>
-            <Plus className="size-3.5" /> Add Key
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
