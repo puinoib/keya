@@ -67,7 +67,7 @@ export const KeyaDatabaseSchema = z.object({
   groups: z.array(GroupSchema),
   settings: SettingsSchema,
   inbox: z.array(InboxItemSchema),
-});
+}).passthrough();
 
 /** Validate parsed JSON against KeyaDatabase shape. Throws on failure. */
 export function validateDatabase(
