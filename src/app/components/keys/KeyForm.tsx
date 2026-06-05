@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -219,27 +220,27 @@ export function KeyForm({
               API Key <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <Input
+              <AutoResizeTextarea
                 id="key_value"
-                type={showKey ? 'text' : 'password'}
                 name="api-key-secret"
                 autoComplete="off"
                 data-form-type="other"
                 data-lpignore="true"
                 spellCheck={false}
                 value={form.key_value}
+                masked={!showKey}
                 onChange={(e) => {
                   setForm((f) => ({ ...f, key_value: e.target.value }));
                   setTestState({ testing: false, result: null });
                 }}
                 placeholder="sk-..."
-                className="pr-9 font-mono text-sm"
+                className="pr-9 font-mono text-sm break-all"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center
+                className="absolute right-2 top-2 size-6 flex items-center justify-center
                            rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >
                 {showKey ? (
