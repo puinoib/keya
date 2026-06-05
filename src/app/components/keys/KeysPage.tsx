@@ -1,4 +1,4 @@
-import { Lock, X } from '@phosphor-icons/react';
+import { X } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
 import { KeyList } from '../keys/KeyList';
 import { KeyDetail } from '../keys/KeyDetail';
@@ -65,22 +65,12 @@ export function KeysPage() {
     <div className="flex flex-1 min-h-0">
       <div className="flex-1 min-w-0 px-6 py-5 overflow-y-auto scrollbar-hidden">
         <div className="w-full max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-sm font-semibold tracking-tight text-ink-primary">
-              Keys
-              <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
-                {db?.getApiKeys().length ?? 0}
-              </span>
-            </h1>
-
-            <button
-              onClick={() => useStore.getState().lock()}
-              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-ink-quaternary hover:text-ink-tertiary hover:bg-surface-3 transition-colors duration-150"
-            >
-              <Lock className="size-3" />
-              Lock
-            </button>
-          </div>
+          <h1 className="text-sm font-semibold tracking-tight text-ink-primary mb-4">
+            Keys
+            <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
+              {db?.getApiKeys().length ?? 0}
+            </span>
+          </h1>
 
           {tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3">

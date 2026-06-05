@@ -1,4 +1,4 @@
-import { Plus } from '@phosphor-icons/react';
+import { Plus, Lock } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
 import { ThemeMenu } from './ThemeMenu';
 
@@ -22,6 +22,14 @@ export function MinimalTopBar() {
       <div className="flex-1" />
 
       <ThemeMenu />
+
+      <button
+        onClick={() => useStore.getState().lock()}
+        className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150"
+      >
+        <Lock className="size-3.5" />
+        Lock
+      </button>
     </header>
   );
 }
