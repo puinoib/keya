@@ -2,7 +2,7 @@
 title: Security
 description: How Keya encrypts your data and what it does — and does not — protect.
 updated: 2026-06-05
-order: 4
+order: 6
 ---
 
 This page describes the actual cryptography in use and the threat model it covers. It is intentionally specific: you should be able to read the code and verify every claim.

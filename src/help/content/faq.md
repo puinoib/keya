@@ -2,7 +2,7 @@
 title: FAQ
 description: Common questions about cost, sync, recovery, and behavior.
 updated: 2026-06-05
-order: 3
+order: 5
 ---
 
 ## Is Keya free?
