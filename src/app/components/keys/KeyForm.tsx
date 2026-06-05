@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { useStore } from '../../store/useStore';
 import {
@@ -84,6 +85,7 @@ export function KeyForm({
   open: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const { addKey, updateKey, db, addKeyDraft, clearAddKeyDraft } = useStore();
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
@@ -215,10 +217,12 @@ export function KeyForm({
     const endpoint = form.endpoint;
     const keyValue = form.key_value;
     const keyName = form.name;
+    const newKeyId = created.id;
     setForm(empty);
     clearAddKeyDraft();
     setTestState({ testing: false, result: null });
     onClose();
+    navigate({ to: '/keys', search: { select: newKeyId } });
 
     toast.success('Key saved', { description: keyName });
 
