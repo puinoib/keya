@@ -5,6 +5,7 @@ import {
   getDefaultEndpointForProvider,
   getProvidersForDropdown,
 } from '../../../core/types';
+import type { AddKeyDraft } from '../../lib/clipboard-intake';
 import { ApiTester } from '../../lib/api-tester';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
@@ -64,6 +65,12 @@ const empty: FormData = {
   expires_at: undefined,
 };
 
+function toFormData(draft: AddKeyDraft): FormData {
+  return {
+    ...draft,
+  };
+}
+
 export function KeyForm({
   open,
   onClose,
@@ -71,7 +78,7 @@ export function KeyForm({
   open: boolean;
   onClose: () => void;
 }) {
-  const { addKey, updateKey, db } = useStore();
+  const { addKey, updateKey, db, addKeyDraft, clearAddKeyDraft } = useStore();
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -107,6 +114,19 @@ export function KeyForm({
     setForm((f) => (f.endpoint ? f : { ...f, endpoint: defaultEndpoint }));
   }, [open, defaultEndpoint]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (addKeyDraft) {
+      setForm(toFormData(addKeyDraft));
+      setShowKey(false);
+      setTestState({ testing: false, result: null });
+      return;
+    }
+    setForm(empty);
+    setShowKey(false);
+    setTestState({ testing: false, result: null });
+  }, [open, addKeyDraft]);
+
   const handleProviderChange = (provider: string | null) => {
     if (!provider) return;
     const endpoint = getDefaultEndpointForProvider(provider, settings) ?? '';
@@ -134,6 +154,12 @@ export function KeyForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.key_value) return;
+    if (db?.hasDuplicateApiKeyValue(form.key_value)) {
+      toast.error('API Key already exists', {
+        description: 'A matching key value is already saved in this vault.',
+      });
+      return;
+    }
 
     const created = addKey({
       name: form.name,
@@ -157,11 +183,19 @@ export function KeyForm({
       },
     });
 
+    if (!created) {
+      toast.error('API Key already exists', {
+        description: 'A matching key value is already saved in this vault.',
+      });
+      return;
+    }
+
     const provider = form.provider;
     const endpoint = form.endpoint;
     const keyValue = form.key_value;
     const keyName = form.name;
     setForm(empty);
+    clearAddKeyDraft();
     setTestState({ testing: false, result: null });
     onClose();
 
@@ -184,6 +218,7 @@ export function KeyForm({
 
   const handleClose = () => {
     setForm(empty);
+    clearAddKeyDraft();
     setTestState({ testing: false, result: null });
     onClose();
   };

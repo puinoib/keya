@@ -331,6 +331,8 @@ export async function deserializeFromFile(
     db.settings.auto_test_on_save = false;
   if (db.settings.auto_test_daily === undefined)
     db.settings.auto_test_daily = false;
+  if ((db.settings as any).clipboard_detection_on_add === undefined)
+    (db.settings as any).clipboard_detection_on_add = true;
   if (db.settings.custom_providers === undefined)
     db.settings.custom_providers = [];
   if (db.settings.disabled_providers === undefined)

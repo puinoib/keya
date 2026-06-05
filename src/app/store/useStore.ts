@@ -2,9 +2,15 @@ import { create } from 'zustand';
 import type { Database } from '../../core/database';
 import type { ApiKey, Group, InboxItem } from '../../core/types';
 import { ApiTester } from '../lib/api-tester';
+import {
+  tryDetectClipboardKey,
+  type AddKeyDraft,
+  type ClipboardKeyCandidate,
+} from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
 import { saveSession, clearSession, loadSession } from '../lib/session';
 import { collectExpiryAlerts, syncInboxWithAlerts } from '../../core/inbox';
+import { toast } from 'sonner';
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked';
 
@@ -18,6 +24,8 @@ interface AppState {
   // UI
   searchQuery: string;
   showAddForm: boolean;
+  addKeyDraft: AddKeyDraft | null;
+  clipboardCandidate: ClipboardKeyCandidate | null;
   theme: 'dark' | 'light' | 'system';
   biometricPrompt: { vaultId: string; password: string } | null;
 
@@ -54,6 +62,10 @@ interface AppState {
   // Actions - UI
   setSearchQuery: (q: string) => void;
   setShowAddForm: (show: boolean) => void;
+  beginAddKeyFlow: () => Promise<void>;
+  confirmClipboardCandidate: () => void;
+  dismissClipboardCandidate: () => void;
+  clearAddKeyDraft: () => void;
   setBiometricPrompt: (
     prompt: { vaultId: string; password: string } | null
   ) => void;
@@ -202,6 +214,8 @@ export const useStore = create<AppState>((set, get) => {
     activeVaultFileName: initialFileName,
     searchQuery: '',
     showAddForm: false,
+    addKeyDraft: null,
+    clipboardCandidate: null,
     biometricPrompt: null,
     theme:
       (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
@@ -228,6 +242,8 @@ export const useStore = create<AppState>((set, get) => {
         activeVaultFileName: null,
         searchQuery: '',
         showAddForm: false,
+        addKeyDraft: null,
+        clipboardCandidate: null,
         ...FILTER_DEFAULTS,
         selectedKeyId: null,
       });
@@ -263,7 +279,7 @@ export const useStore = create<AppState>((set, get) => {
       if (created && get().db) {
         runInboxChecksForDatabase(get().db!);
       }
-      set({ showAddForm: false });
+      set({ showAddForm: false, addKeyDraft: null });
       scheduleSave();
       return created;
     },
@@ -294,6 +310,46 @@ export const useStore = create<AppState>((set, get) => {
 
     setSearchQuery: (q) => set({ searchQuery: q }),
     setShowAddForm: (show) => set({ showAddForm: show }),
+    beginAddKeyFlow: async () => {
+      const settings = get().db?.getSettings();
+      if (!settings?.clipboard_detection_on_add) {
+        set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
+        return;
+      }
+
+      const candidate = await tryDetectClipboardKey(settings);
+      const db = get().db;
+      if (
+        candidate &&
+        db?.getApiKeys().some((existingKey) => existingKey.key === candidate.raw)
+      ) {
+        toast('This API key is already saved');
+        set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
+        return;
+      }
+
+      if (candidate) {
+        set({
+          showAddForm: false,
+          addKeyDraft: null,
+          clipboardCandidate: candidate,
+        });
+        return;
+      }
+
+      set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
+    },
+    confirmClipboardCandidate: () => {
+      const candidate = get().clipboardCandidate;
+      if (!candidate) return;
+      set({
+        clipboardCandidate: null,
+        addKeyDraft: candidate.draft,
+        showAddForm: true,
+      });
+    },
+    dismissClipboardCandidate: () => set({ clipboardCandidate: null }),
+    clearAddKeyDraft: () => set({ addKeyDraft: null }),
     setBiometricPrompt: (prompt) => set({ biometricPrompt: prompt }),
     setFilterGroupId: (id) => set({ filterGroupId: id }),
     setFilterProvider: (p) => set({ filterProvider: p }),

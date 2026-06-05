@@ -57,7 +57,7 @@ export function BiometricPrompt({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in">
+    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/40 animate-fade-in">
       <div className="bg-canvas-panel border border-line rounded-lg p-5 w-80 shadow-dialog">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

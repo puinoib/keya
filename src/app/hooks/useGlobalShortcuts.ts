@@ -5,7 +5,7 @@ import { useAppHotkey } from './useAppHotkey';
 export function useGlobalShortcuts(openShortcutHelp: () => void) {
   const navigate = useNavigate();
   const workspaceState = useStore((s) => s.workspaceState);
-  const setShowAddForm = useStore((s) => s.setShowAddForm);
+  const beginAddKeyFlow = useStore((s) => s.beginAddKeyFlow);
   const lock = useStore((s) => s.lock);
   const enabled = workspaceState === 'unlocked';
 
@@ -25,7 +25,7 @@ export function useGlobalShortcuts(openShortcutHelp: () => void) {
     'key.add',
     () => {
       navigate({ to: '/keys' });
-      setShowAddForm(true);
+      void beginAddKeyFlow();
     },
     { enabled }
   );

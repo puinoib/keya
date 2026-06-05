@@ -79,7 +79,7 @@ export function KeyList() {
     filterExpiryStatus,
     selectedKeyId,
     setSelectedKeyId,
-    setShowAddForm,
+    beginAddKeyFlow,
     updateKey,
     deleteKey,
   } = useStore();
@@ -255,7 +255,7 @@ export function KeyList() {
           Securely store and manage your API keys in one place
         </p>
         <button
-          onClick={() => setShowAddForm(true)}
+          onClick={() => void beginAddKeyFlow()}
           className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors duration-150"
         >
           <Plus className="size-3.5" />
@@ -564,6 +564,13 @@ export function EditKeyDialog({
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
+    if (db?.hasDuplicateApiKeyValue(form.key.trim(), editingKey.id)) {
+      toast.error('API Key already exists', {
+        description: 'A matching key value is already saved in this vault.',
+      });
+      return;
+    }
+
     toast.success('Key updated', { description: form.name.trim() });
     onSave(editingKey.id, {
       name: form.name.trim(),

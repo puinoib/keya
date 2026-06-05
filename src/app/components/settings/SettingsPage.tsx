@@ -397,6 +397,26 @@ export function SettingsPage() {
                 }
               />
             </div>
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="text-xs font-medium text-ink-primary">
+                  Detect Clipboard on Add
+                </p>
+                <p className="text-xs text-ink-quaternary mt-0.5">
+                  When you click Add Key, try to detect an OpenAI key from the
+                  clipboard first
+                </p>
+              </div>
+              <Toggle
+                checked={!!settings?.clipboard_detection_on_add}
+                onChange={() =>
+                  updateSettings({
+                    clipboard_detection_on_add:
+                      !settings?.clipboard_detection_on_add,
+                  })
+                }
+              />
+            </div>
             <button
               onClick={() => setShowProviders(true)}
               className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors rounded-b-lg"
