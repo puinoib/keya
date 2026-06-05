@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Key,
+  FloppyDisk,
   Eye,
   EyeSlash,
   ArrowCounterClockwise,
@@ -399,7 +399,7 @@ export function KeyForm({
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">
             <Button type="submit" size="sm">
-              <Key className="size-3.5" />
+              <FloppyDisk className="size-3.5" />
               Save Key
             </Button>
             <Button
@@ -422,6 +422,7 @@ export function KeyForm({
               size="sm"
               onClick={handleClose}
             >
+              <X className="size-3.5" />
               Cancel
             </Button>
           </div>

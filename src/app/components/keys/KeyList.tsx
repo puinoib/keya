@@ -47,6 +47,7 @@ import {
 import {
   Copy,
   DotsThree,
+  FloppyDisk,
   Flask,
   Trash,
   PencilSimple,
@@ -214,7 +215,10 @@ export function KeyList() {
               : {
                   dot: 'bg-ink-quaternary/35',
                 };
-          const expiryLabel = getExpiryStatusLabel(expiryStatus);
+          const expiryLabel =
+            expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
+              ? getExpiryStatusLabel(expiryStatus)
+              : null;
           const expiryClassName = expiryStatus === 'expired'
             ? 'text-danger'
             : 'text-[#d97706] dark:text-[#fbbf24]';
@@ -709,6 +713,7 @@ export function EditKeyDialog({
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">
             <Button type="submit" size="sm">
+              <FloppyDisk className="size-3.5" />
               Save Changes
             </Button>
             <Button
@@ -726,6 +731,7 @@ export function EditKeyDialog({
               Test
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              <X className="size-3.5" />
               Cancel
             </Button>
           </div>
