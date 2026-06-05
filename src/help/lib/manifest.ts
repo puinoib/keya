@@ -44,6 +44,7 @@ function loadDocument(slug: string, raw: string): HelpDocument | null {
       title: (data.title as string) || slug,
       description: (data.description as string) || '',
       content,
+      updated: (data.updated as string) || undefined,
       order: (data.order as number) || 999,
     };
   } catch {

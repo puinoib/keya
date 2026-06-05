@@ -1,6 +1,7 @@
 ---
 title: Security
 description: How Keya encrypts your data and what it does — and does not — protect.
+updated: 2025-06-05
 order: 4
 ---
 

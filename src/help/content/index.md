@@ -1,6 +1,7 @@
 ---
 title: Welcome to Keya
 description: Keya Help Center
+updated: 2025-06-05
 order: 1
 ---
 

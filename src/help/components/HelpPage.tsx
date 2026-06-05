@@ -27,6 +27,11 @@ export function HelpPage({ slug }: { slug: string }) {
           {document.description}
         </p>
       )}
+      {document.updated && (
+        <p className="text-xs text-ink-quaternary mb-8">
+          Updated {document.updated}
+        </p>
+      )}
       <MarkdownContent content={document.content} />
     </article>
   );

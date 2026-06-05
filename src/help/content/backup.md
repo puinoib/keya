@@ -1,6 +1,7 @@
 ---
 title: Backup & Restore
 description: How to back up, restore, and migrate your Keya vaults.
+updated: 2025-06-05
 order: 5
 ---
 

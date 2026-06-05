@@ -1,6 +1,7 @@
 ---
 title: FAQ
 description: Common questions about cost, sync, recovery, and behavior.
+updated: 2025-06-05
 order: 3
 ---
 
@@ -91,3 +92,55 @@ Open an issue on the GitHub repository. Include:
 ## Where's the source code?
 
 See the GitHub link in the project footer. Everything — encryption, file format, UI — is in one repository under MIT.
+
+---
+
+## Settings
+
+### How do I change my master password?
+
+Settings → General → Master Password → **Change**. You'll need to enter your current password, then the new one (minimum 8 characters). Keya shows a strength meter — aim for **Strong** (four bars).
+
+If biometric unlock is active, Keya re-registers your biometric credential automatically after the password change.
+
+### How do groups work?
+
+Groups are optional tags for organizing keys — like folders but flatter. Keya starts with two built-in groups: **Production** and **Development**.
+
+To manage groups, go to Settings → Groups → **Manage Groups**. You can:
+- **Add** a group with a name and an emoji icon.
+- **Rename** an existing group inline.
+- **Delete** a group (keys in that group become ungrouped, they are not deleted).
+
+Assign a group when adding or editing a key. On the Keys page, use the filter bar to show only keys in a specific group.
+
+### How do I disable a provider or add a custom one?
+
+Settings → Providers.
+
+- **Disable a preset** — toggle off any provider you don't use. It won't appear in the provider dropdown when adding a key, but existing keys keep their provider label.
+- **Add a custom provider** — click **Add Custom Provider** at the bottom, enter a name and endpoint URL. This is useful for self-hosted gateways, OpenAI-compatible APIs, or corporate proxies.
+
+### What do the Keys settings do?
+
+Settings → Keys has three toggles:
+
+| Setting | What it does |
+|---|---|
+| **Auto-Test on Save** | Runs a connection test every time you save a key |
+| **Daily First-Open Test** | Tests all keys automatically the first time you open Keya each day |
+| **Detect Clipboard on Add** | When you click "Add Key", pre-fills the key field if it detects an API key pattern on your clipboard |
+
+### What keyboard shortcuts are available?
+
+Settings → Shortcuts shows the full list. The defaults:
+
+- `/` — focus search
+- `N` — add a new key
+- `Cmd/Ctrl+Shift+L` — lock vault
+- `J` / `K` or arrow keys — navigate between keys
+- `Enter` — open key detail
+- `C` — copy key value
+- `E` — edit, `T` — test, `V` — reveal, `Delete` — delete
+
+Click any shortcut row to re-record it with your preferred key combo. Conflicts are caught automatically. Use **Reset all** to go back to defaults.
