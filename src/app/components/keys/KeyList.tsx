@@ -690,12 +690,12 @@ export function EditKeyDialog({
               }}
             >
               <SelectTrigger>
-                <SelectValue>
+                <span className="inline-flex items-center gap-1.5 truncate">
                   {form.provider && getProviderLogo(form.provider) && (
                     <img src={getProviderLogo(form.provider)!} alt="" className="size-3.5 shrink-0" />
                   )}
                   {form.provider}
-                </SelectValue>
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
