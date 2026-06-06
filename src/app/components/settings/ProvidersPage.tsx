@@ -15,6 +15,7 @@ import MistralLogo from '@/assets/providers/mistral.svg';
 import GrokLogo from '@/assets/providers/grok.svg';
 import QwenLogo from '@/assets/providers/qwen.svg';
 import BedrockLogo from '@/assets/providers/bedrock.svg';
+import MiniMaxLogo from '@/assets/providers/minimax.svg';
 import AzureLogo from '@/assets/providers/azureai.svg';
 
 const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
@@ -41,6 +42,7 @@ const LOGO_MAP: Partial<Record<(typeof PRESET_PROVIDERS)[number], string>> = {
   Zhipu: ZhipuLogo,
   Mistral: MistralLogo,
   xAI: GrokLogo,
+  MiniMax: MiniMaxLogo,
   'Alibaba Cloud': QwenLogo,
   'Amazon Bedrock': BedrockLogo,
   'Azure OpenAI': AzureLogo,
