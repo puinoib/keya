@@ -55,5 +55,4 @@ When new reminders appear during unlock, Keya shows a toast notification in the 
 
 ## Related
 
-- [Vault Health Audit](/help/health) — broader vault analysis beyond expiry.
 - [Quick Start](/help/quick-start) — setting expiry dates on keys.

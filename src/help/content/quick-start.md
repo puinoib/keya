@@ -74,7 +74,6 @@ Locking purges the in-memory key and the `sessionStorage` session. The vault fil
 - **Use the workspace folder in a synced cloud drive.** That's how you get free, end-to-end-encrypted multi-device access — Keya never talks to a server, but your cloud does.
 - **Test keys after rotating them.** The `Success` / `Failed` connection badges and expiry warnings are how you spot a key that quietly expired or got revoked.
 - **Check Inbox regularly.** Expired and expiring keys appear as reminders automatically. See [Inbox](/help/inbox).
-- **Run a health audit.** The [Health](/help/health) page scores your vault and lists issues by severity.
 
 ## Settings worth knowing
 
@@ -91,4 +90,4 @@ Keya has a few settings that change daily behavior. Find them under **Settings**
 - Read the [Security](/help/security) page to understand what's actually protecting your data.
 - Skim the [FAQ](/help/faq) for the questions people ask most.
 - Set up [Backup &amp; Restore](/help/backup) once you have more than a couple of keys.
-- Run a [Vault Health Audit](/help/health) to see how your vault scores.
+- Run a [Vault Health Audit](/help/inbox) to review expiring keys.
