@@ -5,13 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 
-type ProviderItem = {
-  name: string;
-  endpoint?: string;
-  isCustom: boolean;
-  isEnabled: boolean;
-};
-
 const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
   OpenAI: ENDPOINT_DEFAULTS.openai,
   Anthropic: ENDPOINT_DEFAULTS.anthropic,
@@ -28,64 +21,29 @@ const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
   'Azure OpenAI': ENDPOINT_DEFAULTS.azure,
 };
 
-function ProviderCard({
-  provider,
-  onToggle,
-  onRemove,
+function Toggle({
+  checked,
+  onChange,
 }: {
-  provider: ProviderItem;
-  onToggle: () => void;
-  onRemove?: () => void;
+  checked: boolean;
+  onChange: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-line bg-surface-2 p-3">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-ink-primary">
-              {provider.name}
-            </p>
-            {provider.isCustom && (
-              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-bright">
-                Custom
-              </span>
-            )}
-          </div>
-          <p className="mt-1 truncate font-mono text-xs text-ink-quaternary">
-            {provider.endpoint}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={provider.isEnabled}
-            onClick={onToggle}
-            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all duration-200 ${
-              provider.isEnabled ? 'bg-accent' : 'bg-surface-3'
-            }`}
-          >
-            <span
-              className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                provider.isEnabled ? 'translate-x-4' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-          {onRemove && (
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={onRemove}
-              className="size-8 text-ink-quaternary hover:text-danger"
-              aria-label={`Delete ${provider.name}`}
-            >
-              <Trash className="size-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all duration-200 ${
+        checked ? 'bg-accent' : 'bg-surface-3'
+      }`}
+    >
+      <span
+        className={`inline-block size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          checked ? 'translate-x-4' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
   );
 }
 
@@ -105,14 +63,14 @@ export function ProvidersPage() {
     ...customs.map((cp) => cp.name),
   ]);
 
-  const providers = useMemo<ProviderItem[]>(() => {
-    const presetItems: ProviderItem[] = PRESET_PROVIDERS.map((name) => ({
+  const providers = useMemo(() => {
+    const presetItems = PRESET_PROVIDERS.map((name) => ({
       name,
       endpoint: presetEndpoints[name],
       isCustom: false,
       isEnabled: !disabled.has(name),
     }));
-    const customItems: ProviderItem[] = customs.map((cp) => ({
+    const customItems = customs.map((cp) => ({
       name: cp.name,
       endpoint: cp.endpoint,
       isCustom: true,
@@ -136,7 +94,7 @@ export function ProvidersPage() {
     updateSettings({
       custom_providers: [...customs, { name, endpoint }],
       disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name
+        (providerName: string) => providerName !== name,
       ),
     });
     setNewName('');
@@ -148,7 +106,7 @@ export function ProvidersPage() {
     updateSettings({
       custom_providers: customs.filter((cp) => cp.name !== name),
       disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name
+        (providerName: string) => providerName !== name,
       ),
     });
   };
@@ -161,53 +119,72 @@ export function ProvidersPage() {
         Providers
       </h1>
 
-      <div className="space-y-4">
+      <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
         {providers.map((provider) => (
-          <ProviderCard
-            key={provider.name}
-            provider={provider}
-            onToggle={() => toggleProvider(provider.name, !provider.isEnabled)}
-            onRemove={
-              provider.isCustom ? () => removeCustom(provider.name) : undefined
-            }
-          />
+          <div key={provider.name} className="flex items-center justify-between p-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-xs font-medium text-ink-primary">
+                  {provider.name}
+                </p>
+                {provider.isCustom && (
+                  <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-bright">
+                    Custom
+                  </span>
+                )}
+              </div>
+              {provider.isCustom && (
+                <p className="mt-0.5 truncate font-mono text-[11px] text-ink-quaternary">
+                  {provider.endpoint}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {provider.isCustom && (
+                <button
+                  onClick={() => removeCustom(provider.name)}
+                  className="text-ink-quaternary transition-colors hover:text-danger"
+                >
+                  <Trash className="size-3.5" />
+                </button>
+              )}
+              <Toggle
+                checked={provider.isEnabled}
+                onChange={() => toggleProvider(provider.name, !provider.isEnabled)}
+              />
+            </div>
+          </div>
         ))}
-      </div>
 
-      <div className="mt-6">
         {isAdding ? (
-          <div className="space-y-3 rounded-lg border border-accent/30 bg-surface-2 p-4">
+          <div className="p-3 space-y-2">
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Provider name"
+              className="h-7 text-xs"
               autoFocus
             />
             <Input
               value={newEndpoint}
               onChange={(e) => setNewEndpoint(e.target.value)}
               placeholder="https://api.example.com/v1"
-              className="font-mono text-xs"
+              className="h-7 text-xs font-mono"
             />
-            {duplicateName && newName.trim() ? (
+            {duplicateName && newName.trim() && (
               <p className="text-xs text-danger">
                 Provider name already exists.
               </p>
-            ) : null}
-            <div className="flex gap-2">
+            )}
+            <div className="flex gap-2 pt-1">
               <Button
-                type="button"
                 size="sm"
                 onClick={addCustom}
-                disabled={
-                  !newName.trim() || !newEndpoint.trim() || duplicateName
-                }
+                disabled={!newName.trim() || !newEndpoint.trim() || duplicateName}
               >
-                <Check className="size-3.5" />
-                Add Custom Provider
+                <Check className="size-3.5" /> Add
               </Button>
               <Button
-                type="button"
                 size="sm"
                 variant="ghost"
                 onClick={() => {
@@ -216,21 +193,17 @@ export function ProvidersPage() {
                   setNewEndpoint('');
                 }}
               >
-                <X className="size-3.5" />
-                Cancel
+                <X className="size-3.5" /> Cancel
               </Button>
             </div>
           </div>
         ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-center"
+          <button
             onClick={() => setIsAdding(true)}
+            className="flex w-full items-center justify-center gap-1.5 p-3 text-xs text-ink-tertiary transition-colors hover:bg-surface-3 hover:text-ink-primary"
           >
-            <Plus className="size-4" />
-            Add Custom Provider
-          </Button>
+            <Plus className="size-3.5" /> Add Custom Provider
+          </button>
         )}
       </div>
     </>
