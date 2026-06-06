@@ -9,6 +9,7 @@ import {
   getDefaultEndpointForProvider,
   getProvidersForDropdown,
 } from '../../../core/types';
+import { getProviderLogo } from '@/app/lib/provider-logo';
 import {
   getExpiryStatus,
   getExpiryStatusLabel,
@@ -349,6 +350,9 @@ export function KeyList() {
                   )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
+                  {getProviderLogo(key.provider) && (
+                    <img src={getProviderLogo(key.provider)!} alt="" className="size-3 shrink-0" />
+                  )}
                   <span className="shrink-0">{key.provider}</span>
                   {key.description && (
                     <>
@@ -686,12 +690,22 @@ export function EditKeyDialog({
               }}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {form.provider && getProviderLogo(form.provider) && (
+                    <img src={getProviderLogo(form.provider)!} alt="" className="size-3.5 shrink-0" />
+                  )}
+                  {form.provider}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {p}
+                    <div className="flex items-center gap-2">
+                      {getProviderLogo(p) && (
+                        <img src={getProviderLogo(p)!} alt="" className="size-3.5 shrink-0" />
+                      )}
+                      <span>{p}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
