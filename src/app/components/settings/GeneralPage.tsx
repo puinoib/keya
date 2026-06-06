@@ -256,12 +256,14 @@ export function GeneralPage() {
                 }
               >
                 <SelectTrigger className="w-24 h-7 text-xs">
-                  <SelectValue />
+                  <SelectValue>
+                    {settings?.auto_lock_minutes ?? 5}{(settings?.auto_lock_minutes ?? 5) > 1 ? ' mins' : ' min'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[1, 2, 5, 10, 15, 30].map((m) => (
                     <SelectItem key={m} value={String(m)}>
-                      {m} min
+                      {m}{m > 1 ? ' mins' : ' min'}
                     </SelectItem>
                   ))}
                 </SelectContent>
