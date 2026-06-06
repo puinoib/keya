@@ -9,7 +9,7 @@ import {
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
 import { saveSession, clearSession, hasSession } from '../lib/session';
-import { collectExpiryAlerts, syncInboxWithAlerts } from '../../core/inbox';
+import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
 type WorkspaceState = 'welcome' | 'locked' | 'unlocked';
@@ -128,7 +128,7 @@ function scheduleSave() {
 }
 
 function runInboxChecksForDatabase(db: Database) {
-  const alerts = collectExpiryAlerts(db.getApiKeys(), db.getData().vault_id);
+  const alerts = collectAllAlerts(db.getApiKeys(), db.getData().vault_id);
   const summary = syncInboxWithAlerts(db.getData(), alerts);
 
   if (

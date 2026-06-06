@@ -45,9 +45,30 @@ export interface Settings {
   disabled_providers: string[];
 }
 
-export type InboxItemType = 'key_expiry_upcoming' | 'key_expiry_expired';
+export type InboxItemType =
+  | 'key_expiry_expired'
+  | 'key_expiry_upcoming'
+  | 'connection_failed'
+  | 'never_tested'
+  | 'insecure_endpoint'
+  | 'stale_test';
 export type InboxItemStatus = 'open' | 'archived';
 export type InboxArchiveReason = 'user' | 'resolved';
+
+export interface InboxItemMetadata {
+  key_name: string;
+  provider: string;
+  // Expiry-specific
+  expires_at?: string;
+  days_until_expiry?: number;
+  // Connection-specific
+  checked_at?: string | null;
+  error_message?: string | null;
+  // Endpoint-specific
+  endpoint?: string;
+  // Stale test
+  days_since_test?: number;
+}
 
 export interface InboxItem {
   id: string;
@@ -58,12 +79,7 @@ export interface InboxItem {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
-  metadata: {
-    key_name: string;
-    provider: string;
-    expires_at: string;
-    days_until_expiry: number;
-  };
+  metadata: InboxItemMetadata;
 }
 
 export interface KeyaDatabase {
