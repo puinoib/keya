@@ -42,19 +42,26 @@ export const SettingsSchema = z.object({
 
 export const InboxItemSchema = z.object({
   id: z.string(),
-  type: z.enum(['key_expiry_upcoming', 'key_expiry_expired']),
+  type: z.enum([
+    'key_expiry_upcoming',
+    'key_expiry_expired',
+    'connection_failed',
+    'never_tested',
+    'insecure_endpoint',
+    'stale_test',
+  ]),
   entity_id: z.string(),
   status: z.enum(['open', 'archived']),
   archive_reason: z.enum(['user', 'resolved']).nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   archived_at: z.string().nullable(),
-  metadata: z.object({
-    key_name: z.string(),
-    provider: z.string(),
-    expires_at: z.string(),
-    days_until_expiry: z.number(),
-  }),
+  metadata: z
+    .object({
+      key_name: z.string(),
+      provider: z.string(),
+    })
+    .passthrough(),
 });
 
 export const KeyaDatabaseSchema = z.object({

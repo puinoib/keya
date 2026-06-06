@@ -135,4 +135,64 @@ describe('schema (.keya file format)', () => {
       'Header integrity check failed'
     );
   });
+
+  it('round-trips with connection alert inbox items', async () => {
+    const db = makeTestDb();
+    // Simulate connection alerts being added (e.g. never_tested)
+    db.inbox = [
+      {
+        id: crypto.randomUUID(),
+        type: 'never_tested',
+        entity_id: db.api_keys[0].id,
+        status: 'open',
+        archive_reason: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        archived_at: null,
+        metadata: {
+          key_name: db.api_keys[0].name,
+          provider: db.api_keys[0].provider,
+        },
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'connection_failed',
+        entity_id: db.api_keys[1].id,
+        status: 'open',
+        archive_reason: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        archived_at: null,
+        metadata: {
+          key_name: db.api_keys[1].name,
+          provider: db.api_keys[1].provider,
+          checked_at: new Date().toISOString(),
+          error_message: 'Connection refused',
+        },
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'insecure_endpoint',
+        entity_id: db.api_keys[0].id,
+        status: 'archived',
+        archive_reason: 'resolved',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        archived_at: new Date().toISOString(),
+        metadata: {
+          key_name: db.api_keys[0].name,
+          provider: db.api_keys[0].provider,
+          endpoint: 'http://insecure.example.com',
+        },
+      },
+    ];
+
+    const bytes = await serializeToFile(db, password);
+    const restored = await deserializeFromFile(bytes, password);
+
+    expect(restored.inbox).toHaveLength(3);
+    expect(restored.inbox[0].type).toBe('never_tested');
+    expect(restored.inbox[1].type).toBe('connection_failed');
+    expect(restored.inbox[2].type).toBe('insecure_endpoint');
+  });
 });
