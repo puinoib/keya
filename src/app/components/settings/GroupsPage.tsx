@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@ferrucc-io/emoji-picker';
 import {
   Plus,
   Trash,
@@ -11,7 +11,65 @@ import {
   X,
 } from '@phosphor-icons/react';
 
-const ICONS = ['🚀', '👤', '🏢', '☁️', '📦', '🔧', '💾', '🌐'];
+function EmojiPickerPopover({
+  icon,
+  onSelect,
+}: {
+  icon: string;
+  onSelect: (emoji: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="size-7 rounded-md border border-line bg-surface-2 flex items-center justify-center text-sm hover:bg-surface-3 transition-colors"
+      >
+        {icon}
+      </button>
+      {open && (
+        <div
+          ref={ref}
+          className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog"
+        >
+          <EmojiPicker
+            onEmojiSelect={(emoji) => {
+              onSelect(emoji);
+              setOpen(false);
+            }}
+            emojisPerRow={12}
+            emojiSize={28}
+            className="border-none"
+          >
+            <EmojiPicker.Header>
+              <EmojiPicker.Input
+                placeholder="Search emoji..."
+                hideIcon
+                className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
+              />
+            </EmojiPicker.Header>
+            <EmojiPicker.Group>
+              <EmojiPicker.List containerHeight={220} />
+            </EmojiPicker.Group>
+          </EmojiPicker>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function GroupsPage() {
   const { db, addGroup, updateGroup, deleteGroup } = useStore();
@@ -102,27 +160,19 @@ export function GroupsPage() {
 
         {isAdding ? (
           <div className="p-3 space-y-2">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Group name"
-              className="h-7 text-xs"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            />
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-ink-quaternary">Icon</Label>
-              <div className="flex gap-1">
-                {ICONS.map((icon) => (
-                  <button
-                    key={icon}
-                    onClick={() => setNewIcon(icon)}
-                    className={`size-6 flex items-center justify-center rounded text-sm ${newIcon === icon ? 'bg-accent/20 ring-1 ring-accent-bright' : 'hover:bg-surface-5'}`}
-                  >
-                    {icon}
-                  </button>
-                ))}
-              </div>
+              <EmojiPickerPopover
+                icon={newIcon}
+                onSelect={setNewIcon}
+              />
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Group name"
+                className="h-7 flex-1 text-xs"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              />
             </div>
             <div className="flex gap-2 pt-1">
               <Button size="sm" onClick={handleAdd}>
