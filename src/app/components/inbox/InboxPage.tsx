@@ -90,13 +90,18 @@ function getArchivedContext(item: InboxItem): string {
 export function InboxPage() {
   const navigate = useNavigate();
   const db = useStore((s) => s.db);
+  const inboxVersion = useStore((s) => s.inboxVersion);
   const archiveInboxItem = useStore((s) => s.archiveInboxItem);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
   const clearFilters = useStore((s) => s.clearFilters);
   const setSearchQuery = useStore((s) => s.setSearchQuery);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
 
-  const items = db?.getInboxItems() ?? [];
+  const items = useMemo(
+    () => db?.getInboxItems() ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [db, inboxVersion]
+  );
   const openItems = useMemo(() => {
     const open = items.filter((item) => item.status === 'open');
     return open.sort((a, b) => {
@@ -122,16 +127,14 @@ export function InboxPage() {
 
   return (
     <div className="w-full px-6 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-base font-semibold tracking-tight text-ink-primary">
-          Inbox
-        </h1>
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-4">
+        Inbox
         {openItems.length > 0 && (
-          <span className="text-xs tabular-nums text-ink-quaternary">
-            {openItems.length} open
+          <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
+            {openItems.length}
           </span>
         )}
-      </div>
+      </h1>
 
       {openItems.length === 0 ? (
         <div className="py-14 text-center">
