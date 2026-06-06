@@ -1,10 +1,10 @@
-import type { ApiKey, InboxItem, KeyaDatabase } from './types';
+import type { ApiKey, InboxItem, InboxItemMetadata, KeyaDatabase } from './types';
 import { EXPIRY_REMINDER_DAYS } from './types';
 
-export interface ExpiryAlert {
+export interface Alert {
   type: InboxItem['type'];
   entityId: string;
-  metadata: InboxItem['metadata'];
+  metadata: InboxItemMetadata;
 }
 
 export interface InboxSyncSummary {
@@ -15,6 +15,7 @@ export interface InboxSyncSummary {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const STALE_TEST_DAYS = 30;
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -36,18 +37,26 @@ export function getDaysUntilExpiry(
   return Math.round((expiryDay.getTime() - currentDay.getTime()) / DAY_MS);
 }
 
-// Derive dedupe_key from type + entity_id (stable across syncs)
-function dedupeKeyOf(type: InboxItem['type'], entityId: string): string {
-  return `expiry:${type}:${entityId}`;
+function daysBetween(dateStr: string, now: Date): number {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return Infinity;
+  return Math.floor((now.getTime() - d.getTime()) / DAY_MS);
 }
+
+// Dedupe key from type + entity_id (stable across syncs)
+function dedupeKeyOf(type: InboxItem['type'], entityId: string): string {
+  return `${type}:${entityId}`;
+}
+
+// ── Expiry alerts ──
 
 export function collectExpiryAlerts(
   keys: ApiKey[],
   _vaultId: string,
   now = new Date(),
   reminderDays = EXPIRY_REMINDER_DAYS
-): ExpiryAlert[] {
-  const alerts: ExpiryAlert[] = [];
+): Alert[] {
+  const alerts: Alert[] = [];
 
   for (const key of keys) {
     if (!key.expires_at) continue;
@@ -85,7 +94,91 @@ export function collectExpiryAlerts(
   return alerts;
 }
 
-function buildInboxItem(alert: ExpiryAlert, nowIso: string): InboxItem {
+// ── Connection alerts ──
+
+export function collectConnectionAlerts(
+  keys: ApiKey[],
+  now = new Date()
+): Alert[] {
+  const alerts: Alert[] = [];
+
+  for (const key of keys) {
+    // Insecure endpoint (http://)
+    if (key.endpoint.startsWith('http://')) {
+      alerts.push({
+        type: 'insecure_endpoint',
+        entityId: key.id,
+        metadata: {
+          key_name: key.name,
+          provider: key.provider,
+          endpoint: key.endpoint,
+        },
+      });
+    }
+
+    const check = key.connection_check;
+
+    // Never tested
+    if (!check.checked_at || check.status === 'untested') {
+      alerts.push({
+        type: 'never_tested',
+        entityId: key.id,
+        metadata: {
+          key_name: key.name,
+          provider: key.provider,
+        },
+      });
+      continue; // skip stale/failed checks for untested keys
+    }
+
+    // Connection failed
+    if (check.status === 'failed') {
+      alerts.push({
+        type: 'connection_failed',
+        entityId: key.id,
+        metadata: {
+          key_name: key.name,
+          provider: key.provider,
+          checked_at: check.checked_at,
+          error_message: check.error_message,
+        },
+      });
+    }
+
+    // Stale test (30+ days)
+    if (check.checked_at && daysBetween(check.checked_at, now) >= STALE_TEST_DAYS) {
+      alerts.push({
+        type: 'stale_test',
+        entityId: key.id,
+        metadata: {
+          key_name: key.name,
+          provider: key.provider,
+          checked_at: check.checked_at,
+          days_since_test: daysBetween(check.checked_at, now),
+        },
+      });
+    }
+  }
+
+  return alerts;
+}
+
+// ── Combined ──
+
+export function collectAllAlerts(
+  keys: ApiKey[],
+  vaultId: string,
+  now = new Date()
+): Alert[] {
+  return [
+    ...collectExpiryAlerts(keys, vaultId, now),
+    ...collectConnectionAlerts(keys, now),
+  ];
+}
+
+// ── Sync ──
+
+function buildInboxItem(alert: Alert, nowIso: string): InboxItem {
   return {
     id: crypto.randomUUID(),
     type: alert.type,
@@ -101,7 +194,7 @@ function buildInboxItem(alert: ExpiryAlert, nowIso: string): InboxItem {
 
 export function syncInboxWithAlerts(
   db: KeyaDatabase,
-  alerts: ExpiryAlert[],
+  alerts: Alert[],
   now = new Date()
 ): InboxSyncSummary {
   const nowIso = now.toISOString();
@@ -125,10 +218,8 @@ export function syncInboxWithAlerts(
     const matchingAlert = alertsByKey.get(itemKey);
 
     if (!matchingAlert) {
-      const shouldResolve =
-        item.type === 'key_expiry_upcoming' ||
-        item.type === 'key_expiry_expired';
-      if (item.status === 'open' && shouldResolve) {
+      // Auto-archive any open item whose alert is gone
+      if (item.status === 'open') {
         item.status = 'archived';
         item.archive_reason = 'resolved';
         item.archived_at = nowIso;
@@ -146,9 +237,8 @@ export function syncInboxWithAlerts(
     }
 
     const changed =
-      item.metadata.days_until_expiry !==
-        matchingAlert.metadata.days_until_expiry ||
-      item.metadata.expires_at !== matchingAlert.metadata.expires_at;
+      JSON.stringify(item.metadata) !==
+      JSON.stringify(matchingAlert.metadata);
 
     item.updated_at = nowIso;
     item.metadata = matchingAlert.metadata;

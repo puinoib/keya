@@ -1,37 +1,156 @@
 import { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Archive, Warning, ClockAfternoon } from '@phosphor-icons/react';
-import type { InboxItem } from '@/core/types';
+import {
+  Archive,
+  Warning,
+  ClockAfternoon,
+  ShieldWarning,
+  Lightning,
+  Question,
+  Timer,
+} from '@phosphor-icons/react';
+import type { InboxItem, InboxItemType } from '@/core/types';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { formatInboxItemTime } from '../../lib/inbox';
 
-// Derive display fields from type + metadata
-function getSeverity(item: InboxItem) {
-  return item.type === 'key_expiry_expired'
-    ? ('critical' as const)
-    : ('warning' as const);
-}
+type Severity = 'critical' | 'warning' | 'info';
 
-function getTitle(item: InboxItem) {
-  return item.type === 'key_expiry_expired'
-    ? `${item.metadata.key_name} has expired`
-    : `${item.metadata.key_name} expires soon`;
-}
+const SEVERITY_ORDER: Record<Severity, number> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+};
 
-function getBody(item: InboxItem) {
-  const { provider, days_until_expiry } = item.metadata;
-  if (item.type === 'key_expiry_expired') {
-    const overdue = Math.abs(days_until_expiry);
-    return overdue === 1
-      ? `${provider} key expired yesterday. Review or replace it soon.`
-      : `${provider} key expired ${overdue} days ago. Review or replace it soon.`;
+function getSeverity(item: InboxItem): Severity {
+  switch (item.type) {
+    case 'key_expiry_expired':
+    case 'connection_failed':
+    case 'insecure_endpoint':
+      return 'critical';
+    case 'key_expiry_upcoming':
+    case 'never_tested':
+      return 'warning';
+    case 'stale_test':
+      return 'info';
   }
-  return days_until_expiry === 0
-    ? `${provider} key expires today. Make sure the replacement is ready.`
-    : `${provider} key expires in ${days_until_expiry} days. Plan a rotation before it stops working.`;
 }
+
+const TYPE_BADGE: Record<InboxItemType, { label: string; icon: typeof Warning }> = {
+  key_expiry_expired: { label: 'Expired', icon: Warning },
+  key_expiry_upcoming: { label: 'Upcoming', icon: ClockAfternoon },
+  connection_failed: { label: 'Failed', icon: Lightning },
+  never_tested: { label: 'Untested', icon: Question },
+  insecure_endpoint: { label: 'Insecure', icon: ShieldWarning },
+  stale_test: { label: 'Stale', icon: Timer },
+};
+
+function getTitle(item: InboxItem): string {
+  const { key_name } = item.metadata;
+  switch (item.type) {
+    case 'key_expiry_expired':
+      return `${key_name} has expired`;
+    case 'key_expiry_upcoming':
+      return `${key_name} expires soon`;
+    case 'connection_failed':
+      return `${key_name} connection failed`;
+    case 'never_tested':
+      return `${key_name} has never been tested`;
+    case 'insecure_endpoint':
+      return `${key_name} uses an insecure endpoint`;
+    case 'stale_test':
+      return `${key_name} test result is outdated`;
+  }
+}
+
+function getBody(item: InboxItem): string {
+  const { provider, days_until_expiry, error_message, endpoint, days_since_test } =
+    item.metadata;
+  switch (item.type) {
+    case 'key_expiry_expired': {
+      const overdue = Math.abs(days_until_expiry ?? 0);
+      return overdue === 1
+        ? `${provider} key expired yesterday. Review or replace it soon.`
+        : `${provider} key expired ${overdue} days ago. Review or replace it soon.`;
+    }
+    case 'key_expiry_upcoming': {
+      const days = days_until_expiry ?? 0;
+      return days === 0
+        ? `${provider} key expires today. Make sure the replacement is ready.`
+        : `${provider} key expires in ${days} days. Plan a rotation before it stops working.`;
+    }
+    case 'connection_failed':
+      return error_message
+        ? `${provider} key failed to connect: ${error_message}. Test again or check the key value.`
+        : `${provider} key failed to connect. Test again or check the key value.`;
+    case 'never_tested':
+      return `${provider} key has never been tested. Run a connectivity test to verify it works.`;
+    case 'insecure_endpoint':
+      return `${provider} key is using an insecure HTTP endpoint (${endpoint}). Switch to HTTPS to protect your key in transit.`;
+    case 'stale_test': {
+      const days = days_since_test ?? 0;
+      return `${provider} key was last tested ${days} days ago. The result may no longer be reliable.`;
+    }
+  }
+}
+
+function getMetaItems(item: InboxItem): { label: string; value: string }[] {
+  const { provider } = item.metadata;
+  const meta: { label: string; value: string }[] = [
+    { label: 'Provider', value: provider },
+  ];
+
+  switch (item.type) {
+    case 'key_expiry_expired':
+    case 'key_expiry_upcoming':
+      meta.push({ label: 'Expires', value: formatInboxItemTime(item) });
+      break;
+    case 'connection_failed':
+      if (item.metadata.checked_at) {
+        meta.push({
+          label: 'Last tested',
+          value: new Intl.DateTimeFormat('en', {
+            month: 'short',
+            day: 'numeric',
+          }).format(new Date(item.metadata.checked_at)),
+        });
+      }
+      break;
+    case 'stale_test':
+      if (item.metadata.checked_at) {
+        meta.push({
+          label: 'Last tested',
+          value: new Intl.DateTimeFormat('en', {
+            month: 'short',
+            day: 'numeric',
+          }).format(new Date(item.metadata.checked_at)),
+        });
+      }
+      break;
+    case 'insecure_endpoint':
+      meta.push({ label: 'Endpoint', value: item.metadata.endpoint ?? '' });
+      break;
+  }
+
+  meta.push({ label: 'Key', value: item.metadata.key_name });
+  return meta;
+}
+
+const SEVERITY_STYLES: Record<Severity, { badge: string; tone: 'default' | 'critical' }> = {
+  critical: {
+    badge: 'bg-danger/10 text-danger',
+    tone: 'critical',
+  },
+  warning: {
+    badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    tone: 'default',
+  },
+  info: {
+    badge: 'bg-ink-quaternary/10 text-ink-tertiary',
+    tone: 'default',
+  },
+};
 
 function MetricCard({
   label,
@@ -68,16 +187,23 @@ export function InboxPage() {
   const setSearchQuery = useStore((s) => s.setSearchQuery);
 
   const items = db?.getInboxItems() ?? [];
-  const openItems = useMemo(
-    () => items.filter((item) => item.status === 'open'),
-    [items]
-  );
+  const openItems = useMemo(() => {
+    const open = items.filter((item) => item.status === 'open');
+    return open.sort((a, b) => {
+      const sa = SEVERITY_ORDER[getSeverity(a)];
+      const sb = SEVERITY_ORDER[getSeverity(b)];
+      if (sa !== sb) return sa - sb;
+      return (
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    });
+  }, [items]);
   const archivedItems = useMemo(
     () => items.filter((item) => item.status === 'archived'),
     [items]
   );
   const criticalCount = openItems.filter(
-    (item) => item.type === 'key_expiry_expired'
+    (item) => getSeverity(item) === 'critical'
   ).length;
 
   return (
@@ -123,6 +249,9 @@ export function InboxPage() {
           <div className="divide-y divide-line-subtle">
             {openItems.map((item) => {
               const severity = getSeverity(item);
+              const badge = TYPE_BADGE[item.type];
+              const style = SEVERITY_STYLES[severity];
+              const BadgeIcon = badge.icon;
               return (
                 <article key={item.id} className="px-4 py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -131,17 +260,11 @@ export function InboxPage() {
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
-                            severity === 'critical'
-                              ? 'bg-danger/10 text-danger'
-                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            style.badge
                           )}
                         >
-                          {severity === 'critical' ? (
-                            <Warning className="size-3" />
-                          ) : (
-                            <ClockAfternoon className="size-3" />
-                          )}
-                          {severity === 'critical' ? 'Expired' : 'Upcoming'}
+                          <BadgeIcon className="size-3" />
+                          {badge.label}
                         </span>
                         <h3 className="text-sm font-medium text-ink-primary">
                           {getTitle(item)}
@@ -153,9 +276,11 @@ export function InboxPage() {
                       </p>
 
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-quaternary">
-                        <span>Provider: {item.metadata.provider}</span>
-                        <span>Expires: {formatInboxItemTime(item)}</span>
-                        <span>Key: {item.metadata.key_name}</span>
+                        {getMetaItems(item).map((m) => (
+                          <span key={m.label}>
+                            {m.label}: {m.value}
+                          </span>
+                        ))}
                       </div>
                     </div>
 

@@ -40,10 +40,12 @@ export { validateDatabase, KeyaDatabaseSchema } from './validators';
 // Inbox
 export {
   collectExpiryAlerts,
+  collectConnectionAlerts,
+  collectAllAlerts,
   getDaysUntilExpiry,
   syncInboxWithAlerts,
 } from './inbox';
-export type { ExpiryAlert, InboxSyncSummary } from './inbox';
+export type { Alert, InboxSyncSummary } from './inbox';
 
 export {
   getConnectionStatusLabel,
