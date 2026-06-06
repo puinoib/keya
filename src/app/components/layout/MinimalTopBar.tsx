@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore';
 
 /**
  * Lightweight top bar for pages that own their own page header
- * (e.g. Health, Inbox). Only exposes a quick Add Key action.
+ * (e.g. Inbox). Only exposes a quick Add Key action.
  */
 export function MinimalTopBar() {
   const { beginAddKeyFlow } = useStore();
