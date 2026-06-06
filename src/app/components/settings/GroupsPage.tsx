@@ -77,6 +77,7 @@ export function GroupsPage() {
   const keys = db?.getApiKeys() ?? [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingIcon, setEditingIcon] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('📦');
@@ -108,24 +109,53 @@ export function GroupsPage() {
         {groups.map((g) => (
           <div key={g.id} className="p-3">
             {editingId === g.id ? (
-              <Input
-                defaultValue={g.name}
-                autoFocus
-                className="h-7 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    updateGroup(g.id, {
-                      name: (e.target as HTMLInputElement).value,
-                    });
-                    setEditingId(null);
-                  }
-                  if (e.key === 'Escape') setEditingId(null);
-                }}
-                onBlur={(e) => {
-                  updateGroup(g.id, { name: e.target.value });
-                  setEditingId(null);
-                }}
-              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <EmojiPickerPopover
+                    icon={editingIcon || g.icon}
+                    onSelect={setEditingIcon}
+                  />
+                  <Input
+                    defaultValue={g.name}
+                    autoFocus
+                    className="h-7 flex-1 text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        updateGroup(g.id, {
+                          name: (e.target as HTMLInputElement).value,
+                          ...(editingIcon && { icon: editingIcon }),
+                        });
+                        setEditingId(null);
+                      }
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      const input = (e.currentTarget as HTMLElement)
+                        .closest('.space-y-2')
+                        ?.querySelector('input');
+                      updateGroup(g.id, {
+                        name: input?.value ?? g.name,
+                        ...(editingIcon && { icon: editingIcon }),
+                      });
+                      setEditingId(null);
+                    }}
+                  >
+                    <Check className="size-3.5" /> Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingId(null)}
+                  >
+                    <X className="size-3.5" /> Cancel
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-2.5">
                 <span className="text-base leading-none">{g.icon}</span>
@@ -136,7 +166,7 @@ export function GroupsPage() {
                   {getKeyCount(g.id)} keys
                 </span>
                 <button
-                  onClick={() => setEditingId(g.id)}
+                  onClick={() => { setEditingIcon(''); setEditingId(g.id); }}
                   className="text-ink-quaternary transition-colors hover:text-ink-primary"
                 >
                   <PencilSimple className="size-3.5" />
