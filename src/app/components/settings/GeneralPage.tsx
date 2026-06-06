@@ -1,10 +1,8 @@
 import { useStore } from '../../store/useStore';
 import {
   Palette,
-  Fingerprint,
   Spinner,
   Shield,
-  LockOpen,
 } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
@@ -200,16 +198,13 @@ export function GeneralPage() {
           <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
             {bioSupported && vaultId && (
               <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-2.5">
-                  <Fingerprint className="size-4 text-ink-quaternary" />
-                  <div>
-                    <p className="text-xs font-medium text-ink-primary">
-                      Biometric Unlock
-                    </p>
-                    {bioError && (
-                      <p className="text-xs text-danger mt-0.5">{bioError}</p>
-                    )}
-                  </div>
+                <div>
+                  <p className="text-xs font-medium text-ink-primary">
+                    Biometric Unlock
+                  </p>
+                  {bioError && (
+                    <p className="text-xs text-danger mt-0.5">{bioError}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {bioLoading && (
@@ -272,8 +267,7 @@ export function GeneralPage() {
             {/* Change Master Password */}
             <div className="p-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <LockOpen className="size-4 text-ink-quaternary" />
+                <div>
                   <p className="text-xs font-medium text-ink-primary">
                     Master Password
                   </p>

@@ -63,10 +63,10 @@ export function KeysPage() {
         <div className="flex items-center justify-between p-3">
           <div>
             <p className="text-xs font-medium text-ink-primary">
-              Daily First-Open Test
+              Daily Auto-Test
             </p>
             <p className="text-xs text-ink-quaternary mt-0.5">
-              Test all keys only on the first time you open Keya each day
+              Test all keys on first daily launch
             </p>
           </div>
           <Toggle
@@ -81,11 +81,10 @@ export function KeysPage() {
         <div className="flex items-center justify-between p-3">
           <div>
             <p className="text-xs font-medium text-ink-primary">
-              Detect Clipboard on Add
+              Clipboard Detection
             </p>
             <p className="text-xs text-ink-quaternary mt-0.5">
-              When you click Add Key, try to detect an OpenAI key from the
-              clipboard first
+              Auto-detect API key from clipboard when adding
             </p>
           </div>
           <Toggle
