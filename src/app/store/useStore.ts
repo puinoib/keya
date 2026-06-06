@@ -38,6 +38,7 @@ interface AppState {
 
   // Selection
   selectedKeyId: string | null;
+  inboxVersion: number;
   lastInboxSyncAt: string | null;
   lastInboxSyncResult: {
     added: number;
@@ -231,6 +232,7 @@ export const useStore = create<AppState>((set, get) => {
     })(),
     ...FILTER_DEFAULTS,
     selectedKeyId: null,
+    inboxVersion: 0,
     lastInboxSyncAt: null,
     lastInboxSyncResult: null,
 
@@ -457,9 +459,10 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     archiveInboxItem: (id) => {
-      const archived = get().db?.archiveInboxItem(id) ?? null;
+      const db = get().db;
+      const archived = db?.archiveInboxItem(id) ?? null;
       if (archived) {
-        set({});
+        set((s) => ({ inboxVersion: s.inboxVersion + 1 }));
         scheduleSave();
       }
       return archived;
