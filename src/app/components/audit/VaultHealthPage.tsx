@@ -23,6 +23,12 @@ function scoreTone(score: number) {
   return 'text-danger';
 }
 
+function scoreColor(score: number): string {
+  if (score >= 85) return '#22c55e';
+  if (score >= 60) return '#f59e0b';
+  return '#ef4444';
+}
+
 function severityStyles(severity: VaultAuditCheck['severity']) {
   if (severity === 'critical') {
     return {
@@ -84,42 +90,190 @@ function ChartShell({
   );
 }
 
-function StackedBar({
+// ── SVG Donut Chart ──
+
+interface DonutSegment {
+  label: string;
+  count: number;
+  color: string;
+}
+
+function DonutChart({
   segments,
+  size = 120,
+  strokeWidth = 20,
+  animated = true,
 }: {
-  segments: Array<{
-    label: string;
-    count: number;
-    className: string;
-  }>;
+  segments: DonutSegment[];
+  size?: number;
+  strokeWidth?: number;
+  animated?: boolean;
 }) {
-  const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+  const total = segments.reduce((s, seg) => s + seg.count, 0);
+  if (total === 0) return null;
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * r;
+
+  let cumulativePercent = 0;
 
   return (
-    <div>
-      <div className="flex h-2 overflow-hidden rounded-full bg-surface-4">
-        {segments.map((segment) => (
-          <div
-            key={segment.label}
-            className={segment.className}
-            style={{ width: `${percent(segment.count, total)}%` }}
-            title={`${segment.label}: ${segment.count}`}
-          />
-        ))}
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        {segments.map((segment) => (
-          <div key={segment.label} className="text-xs">
-            <div className="flex items-center justify-between gap-2 text-ink-tertiary">
-              <span>{segment.label}</span>
-              <span className="tabular-nums">{segment.count}</span>
-            </div>
-          </div>
-        ))}
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="shrink-0"
+    >
+      {/* Background track */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        className="text-surface-4"
+        strokeWidth={strokeWidth}
+      />
+      {/* Segments */}
+      {segments
+        .filter((seg) => seg.count > 0)
+        .map((seg) => {
+          const percent = seg.count / total;
+          const dashLength = percent * circumference;
+          const offset = -cumulativePercent * circumference;
+          cumulativePercent += percent;
+
+          return (
+            <circle
+              key={seg.label}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke={seg.color}
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${dashLength} ${circumference - dashLength}`}
+              strokeDashoffset={offset}
+              strokeLinecap="butt"
+              transform={`rotate(-90 ${cx} ${cy})`}
+              className={animated ? 'transition-all duration-700 ease-out' : ''}
+            />
+          );
+        })}
+    </svg>
+  );
+}
+
+// ── Score Ring ──
+
+function ScoreRing({
+  score,
+  size = 100,
+  strokeWidth = 6,
+}: {
+  score: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * r;
+  const dashLength = (score / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="shrink-0"
+      >
+        {/* Background track - subtle */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          className="text-surface-4"
+          strokeWidth={strokeWidth}
+        />
+        {/* Score arc */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke={scoreColor(score)}
+          strokeWidth={strokeWidth}
+          strokeDasharray={`${dashLength} ${circumference - dashLength}`}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${cx} ${cy})`}
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      {/* Score number centered */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className={cn(
+            'text-2xl font-semibold tracking-tight tabular-nums',
+            scoreTone(score)
+          )}
+        >
+          {score}
+        </span>
       </div>
     </div>
   );
 }
+
+// ── Donut Legend (list) ──
+
+function DonutLegend({
+  segments,
+  onClick,
+}: {
+  segments: (DonutSegment & { active?: boolean })[];
+  onClick?: (label: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {segments
+        .filter((s) => s.count > 0)
+        .map((seg) => (
+          <button
+            key={seg.label}
+            type="button"
+            disabled={!onClick}
+            onClick={() => onClick?.(seg.label)}
+            className={cn(
+              'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+              seg.active
+                ? 'bg-surface-3/60'
+                : 'hover:bg-surface-3/30',
+              onClick && 'cursor-pointer'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: seg.color }}
+              />
+              <span className="text-ink-tertiary">{seg.label}</span>
+            </div>
+            <span className="tabular-nums text-ink-secondary font-medium">
+              {seg.count}
+            </span>
+          </button>
+        ))}
+    </div>
+  );
+}
+
+// ── Provider Distribution ──
 
 function ProviderDistributionChart({
   providers,
@@ -128,7 +282,8 @@ function ProviderDistributionChart({
   providers: VaultAuditReport['charts']['providerDistribution'];
   onFilter: (filter: VaultAuditActionFilter) => void;
 }) {
-  const visibleProviders = providers.slice(0, 6);
+  const visibleProviders = providers.slice(0, 8);
+  const maxCount = Math.max(...visibleProviders.map((p) => p.count), 1);
 
   return (
     <ChartShell
@@ -141,91 +296,103 @@ function ProviderDistributionChart({
         </div>
       ) : (
         <div className="space-y-3">
-          {visibleProviders.map((item) => (
-            <button
-              key={item.provider}
-              type="button"
-              onClick={() => onFilter({ provider: item.provider })}
-              className="group w-full text-left"
-            >
-              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-ink-secondary group-hover:text-ink-primary">
-                  {item.provider}
-                </span>
-                <span className="shrink-0 text-ink-quaternary tabular-nums">
-                  {item.count} · {item.percentage}%
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-4">
-                <div
-                  className="h-full rounded-full bg-accent transition-all group-hover:bg-accent-bright"
-                  style={{ width: `${item.percentage}%` }}
-                />
-              </div>
-            </button>
-          ))}
+          {visibleProviders.map((item, i) => {
+            const hue = 210 + (i / visibleProviders.length) * 120;
+            return (
+              <button
+                key={item.provider}
+                type="button"
+                onClick={() => onFilter({ provider: item.provider })}
+                className="group w-full text-left"
+              >
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                  <span className="truncate text-ink-secondary group-hover:text-ink-primary">
+                    {item.provider}
+                  </span>
+                  <span className="shrink-0 text-ink-quaternary tabular-nums">
+                    {item.count} · {item.percentage}%
+                  </span>
+                </div>
+                <div className="relative h-2.5 overflow-hidden rounded-full bg-surface-4">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{
+                      width: `${(item.count / maxCount) * 100}%`,
+                      background: `linear-gradient(90deg, hsl(${hue}, 60%, 50%), hsl(${hue + 20}, 70%, 55%))`,
+                    }}
+                  />
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </ChartShell>
   );
 }
 
+// ── Connection Health ──
+
 function ConnectionHealthChart({
   health,
-  total,
   onFilter,
 }: {
   health: VaultAuditReport['charts']['connectionHealth'];
-  total: number;
   onFilter: (filter: VaultAuditActionFilter) => void;
 }) {
-  const segments = [
-    { label: 'Success', count: health.success, className: 'bg-success-bright' },
-    { label: 'Failed', count: health.failed, className: 'bg-danger' },
-    { label: 'Untested', count: health.untested, className: 'bg-surface-6' },
+  const total = health.success + health.failed + health.untested;
+  const segments: DonutSegment[] = [
+    { label: 'Success', count: health.success, color: '#22c55e' },
+    { label: 'Failed', count: health.failed, color: '#ef4444' },
+    { label: 'Untested', count: health.untested, color: '#6b7280' },
   ];
+  const legendSegments = segments.map((s) => ({
+    ...s,
+    active: false,
+  }));
 
   return (
     <ChartShell
       title="Connection health"
       description="Latest API connectivity test results."
     >
-      <StackedBar segments={segments} />
+      <div className="flex items-center gap-6">
+        <DonutChart segments={segments} size={100} strokeWidth={16} />
+        <div className="flex-1">
+          <DonutLegend
+            segments={legendSegments}
+            onClick={(label) => {
+              const status = label.toLowerCase() as 'success' | 'failed' | 'untested';
+              onFilter({ testStatus: status });
+            }}
+          />
+        </div>
+      </div>
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={() => onFilter({ testStatus: 'success' })}
-          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
-        >
-          <div className="text-xs text-ink-quaternary">Success</div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2.5 py-2">
+          <div className="text-xs text-ink-quaternary">Success rate</div>
           <div className="text-sm font-medium text-success-bright tabular-nums">
             {percent(health.success, total)}%
           </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onFilter({ testStatus: 'failed' })}
-          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
-        >
-          <div className="text-xs text-ink-quaternary">Failed</div>
+        </div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2.5 py-2">
+          <div className="text-xs text-ink-quaternary">Failure rate</div>
           <div className="text-sm font-medium text-danger tabular-nums">
             {percent(health.failed, total)}%
           </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onFilter({ testStatus: 'untested' })}
-          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
-        >
-          <div className="text-xs text-ink-quaternary">Untested</div>
+        </div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2.5 py-2">
+          <div className="text-xs text-ink-quaternary">Coverage</div>
           <div className="text-sm font-medium text-ink-secondary tabular-nums">
-            {percent(health.untested, total)}%
+            {percent(health.success + health.failed, total)}%
           </div>
-        </button>
+        </div>
       </div>
     </ChartShell>
   );
 }
+
+// ── Expiry Breakdown ──
 
 function ExpiryBreakdownChart({
   expiry,
@@ -234,100 +401,92 @@ function ExpiryBreakdownChart({
   expiry: VaultAuditReport['charts']['expiryBreakdown'];
   onFilter: (filter: VaultAuditActionFilter) => void;
 }) {
+  const segments: DonutSegment[] = [
+    { label: 'Expired', count: expiry.expired, color: '#ef4444' },
+    { label: 'Expiring', count: expiry.expiringSoon, color: '#f59e0b' },
+    { label: 'Valid', count: expiry.valid, color: '#22c55e' },
+    { label: 'No expiry', count: expiry.noExpiry, color: '#6b7280' },
+  ];
+  const legendSegments = segments.map((s) => ({
+    ...s,
+    active: false,
+  }));
+
   return (
     <ChartShell
       title="Expiry posture"
       description="Rotation visibility across saved keys."
     >
-      <StackedBar
-        segments={[
-          { label: 'Expired', count: expiry.expired, className: 'bg-danger' },
-          {
-            label: 'Expiring',
-            count: expiry.expiringSoon,
-            className: 'bg-amber-500',
-          },
-          {
-            label: 'Valid',
-            count: expiry.valid,
-            className: 'bg-success-bright',
-          },
-          {
-            label: 'No expiry',
-            count: expiry.noExpiry,
-            className: 'bg-surface-6',
-          },
-        ]}
-      />
+      <div className="flex items-center gap-6">
+        <DonutChart segments={segments} size={100} strokeWidth={16} />
+        <div className="flex-1">
+          <DonutLegend
+            segments={legendSegments}
+            onClick={(label) => {
+              if (label === 'Expired') onFilter({ expiryStatus: 'expired' });
+              if (label === 'Expiring') onFilter({ expiryStatus: 'expiring' });
+            }}
+          />
+        </div>
+      </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => onFilter({ expiryStatus: 'expired' })}
-          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
-        >
-          <div className="text-xs text-ink-quaternary">Expired</div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2.5 py-2">
+          <div className="text-xs text-ink-quaternary">At risk</div>
           <div className="text-sm font-medium text-danger tabular-nums">
-            {expiry.expired}
+            {expiry.expired + expiry.expiringSoon}
           </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onFilter({ expiryStatus: 'expiring' })}
-          className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2 text-left hover:bg-surface-4"
-        >
-          <div className="text-xs text-ink-quaternary">Expiring soon</div>
-          <div className="text-sm font-medium text-amber-500 tabular-nums">
-            {expiry.expiringSoon}
+        </div>
+        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2.5 py-2">
+          <div className="text-xs text-ink-quaternary">With expiry</div>
+          <div className="text-sm font-medium text-success-bright tabular-nums">
+            {expiry.expired + expiry.expiringSoon + expiry.valid}
           </div>
-        </button>
+        </div>
       </div>
     </ChartShell>
   );
 }
 
+// ── Group Coverage ──
+
 function GroupCoverageChart({
   coverage,
-  total,
 }: {
   coverage: VaultAuditReport['charts']['groupCoverage'];
   total: number;
 }) {
+  const total = coverage.grouped + coverage.ungrouped;
+  const segments: DonutSegment[] = [
+    { label: 'Grouped', count: coverage.grouped, color: '#3b82f6' },
+    { label: 'Ungrouped', count: coverage.ungrouped, color: '#6b7280' },
+  ];
+  const legendSegments = segments.map((s) => ({
+    ...s,
+    active: false,
+  }));
+
   return (
     <ChartShell
       title="Group coverage"
       description="How well your keys are organized into groups."
     >
-      <StackedBar
-        segments={[
-          {
-            label: 'Grouped',
-            count: coverage.grouped,
-            className: 'bg-accent',
-          },
-          {
-            label: 'Ungrouped',
-            count: coverage.ungrouped,
-            className: 'bg-surface-6',
-          },
-        ]}
-      />
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2">
-          <div className="text-xs text-ink-quaternary">Grouped</div>
-          <div className="text-sm font-medium text-accent-bright tabular-nums">
-            {percent(coverage.grouped, total)}%
-          </div>
+      <div className="flex items-center gap-6">
+        <DonutChart segments={segments} size={80} strokeWidth={14} />
+        <div className="flex-1">
+          <DonutLegend segments={legendSegments} />
         </div>
-        <div className="rounded-lg border border-line-subtle bg-surface-2 px-2 py-2">
-          <div className="text-xs text-ink-quaternary">Ungrouped</div>
-          <div className="text-sm font-medium text-ink-secondary tabular-nums">
-            {percent(coverage.ungrouped, total)}%
+        <div className="shrink-0 text-right">
+          <div className="text-xs text-ink-quaternary">Grouped</div>
+          <div className="text-lg font-semibold text-accent-bright tabular-nums">
+            {percent(coverage.grouped, total)}%
           </div>
         </div>
       </div>
     </ChartShell>
   );
 }
+
+// ── Score Card ──
 
 function ScoreCard({
   score,
@@ -358,19 +517,9 @@ function ScoreCard({
           </p>
         </div>
 
-        <div className="flex items-end gap-5">
-          <div className="text-right">
-            <div
-              className={cn(
-                'text-5xl font-semibold tracking-tight tabular-nums',
-                scoreTone(score)
-              )}
-            >
-              {score}
-            </div>
-            <div className="mt-1 text-xs text-ink-quaternary">out of 100</div>
-          </div>
-          <div className="space-y-1 text-xs text-ink-quaternary">
+        <div className="flex items-center gap-5">
+          <ScoreRing score={score} size={100} />
+          <div className="space-y-1.5 text-xs text-ink-quaternary">
             <div>
               <span className="text-danger tabular-nums">{critical}</span>{' '}
               critical
@@ -532,7 +681,6 @@ export function VaultHealthPage() {
           <div className="grid gap-3 lg:grid-cols-2">
             <ConnectionHealthChart
               health={report.charts.connectionHealth}
-              total={report.metrics.totalKeys}
               onFilter={handleChartFilter}
             />
             <ExpiryBreakdownChart
