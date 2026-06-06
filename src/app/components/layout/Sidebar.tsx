@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { List, FolderOpen, Gear, Tray, Heartbeat } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
-import { ManageGroupsDialog } from '../groups/ManageGroupsDialog';
 import { SidebarSection } from './SidebarSection';
 
 type IconComponent = React.ComponentType<
@@ -73,8 +71,6 @@ export function Sidebar() {
     setSearchQuery,
   } = useStore();
 
-  const [showGroupsDialog, setShowGroupsDialog] = useState(false);
-
   const keyCount = db?.getApiKeys().length ?? 0;
   const openInboxCount = db?.getOpenInboxItems().length ?? 0;
   const isInboxActive = pathname === '/inbox';
@@ -139,7 +135,7 @@ export function Sidebar() {
             label="Groups"
             action={
               <button
-                onClick={() => setShowGroupsDialog(true)}
+                onClick={() => navigate({ to: '/settings/groups' })}
                 className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
               >
                 <Gear className="size-3" />
@@ -200,11 +196,6 @@ export function Sidebar() {
           </a>
         </div>
       </aside>
-
-      <ManageGroupsDialog
-        open={showGroupsDialog}
-        onClose={() => setShowGroupsDialog(false)}
-      />
     </>
   );
 }
