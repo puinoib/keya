@@ -15,7 +15,7 @@ import type { InboxItem, InboxItemType } from '@/core/types';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
-import { formatInboxItemTime } from '../../lib/inbox';
+import { getProviderLogo } from '@/app/lib/provider-logo';
 
 type Severity = 'critical' | 'warning' | 'info';
 
@@ -58,30 +58,26 @@ function getTitle(item: InboxItem): string {
   return item.metadata.key_name;
 }
 
-function getContext(item: InboxItem): string {
-  const { provider, days_until_expiry, error_message, endpoint, days_since_test } =
+function getContextSuffix(item: InboxItem): string {
+  const { days_until_expiry, error_message, endpoint, days_since_test } =
     item.metadata;
   switch (item.type) {
     case 'key_expiry_expired': {
       const overdue = Math.abs(days_until_expiry ?? 0);
-      return `${provider} · expired ${overdue === 1 ? 'yesterday' : `${overdue} days ago`}`;
+      return overdue === 1 ? 'expired yesterday' : `expired ${overdue} days ago`;
     }
     case 'key_expiry_upcoming': {
       const days = days_until_expiry ?? 0;
-      return days === 0
-        ? `${provider} · expires today`
-        : `${provider} · expires in ${days} days`;
+      return days === 0 ? 'expires today' : `expires in ${days} days`;
     }
     case 'connection_failed':
-      return error_message
-        ? `${provider} · ${error_message}`
-        : `${provider} · connection failed`;
+      return error_message ?? 'connection failed';
     case 'never_tested':
-      return `${provider} · never tested`;
+      return 'never tested';
     case 'insecure_endpoint':
-      return `${provider} · ${endpoint}`;
+      return endpoint ?? 'insecure endpoint';
     case 'stale_test':
-      return `${provider} · last tested ${days_since_test ?? 0} days ago`;
+      return `last tested ${days_since_test ?? 0} days ago`;
   }
 }
 
@@ -173,8 +169,17 @@ export function InboxPage() {
                         {getTitle(item)}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-ink-quaternary truncate">
-                      {getContext(item)}
+                    <div className="mt-1 flex items-center gap-1 text-xs text-ink-quaternary truncate">
+                      {getProviderLogo(item.metadata.provider) && (
+                        <img
+                          src={getProviderLogo(item.metadata.provider)!}
+                          alt=""
+                          className="size-3 shrink-0"
+                        />
+                      )}
+                      <span className="truncate">
+                        {item.metadata.provider} · {getContextSuffix(item)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
