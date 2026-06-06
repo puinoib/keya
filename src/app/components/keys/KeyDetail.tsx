@@ -3,6 +3,7 @@ import { ApiTester } from '../../lib/api-tester';
 import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
 import type { ApiKey } from '../../../core/types';
+import { getProviderLogo } from '@/app/lib/provider-logo';
 import {
   getConnectionStatusLabel,
   getExpiryStatus,
@@ -137,8 +138,11 @@ export function KeyDetail() {
               <h2 className="text-base font-semibold text-ink-primary truncate">
                 {key.name}
               </h2>
-              <p className="mt-1 truncate text-xs text-ink-tertiary">
-                {key.provider}
+              <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-tertiary">
+                {getProviderLogo(key.provider) && (
+                  <img src={getProviderLogo(key.provider)!} alt="" className="size-3 shrink-0" />
+                )}
+                <span className="truncate">{key.provider}</span>
               </p>
               {testFail && key.connection_check.error_message && (
                 <p className="mt-1.5 text-xs text-danger/80 break-words">

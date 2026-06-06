@@ -4,19 +4,7 @@ import { ENDPOINT_DEFAULTS, PRESET_PROVIDERS } from '../../../core/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Plus, Trash, X } from '@phosphor-icons/react';
-
-import OpenAILogo from '@/assets/providers/openai.svg';
-import AnthropicLogo from '@/assets/providers/anthropic.svg';
-import GoogleLogo from '@/assets/providers/google.svg';
-import DeepSeekLogo from '@/assets/providers/deepseek.svg';
-import MoonshotLogo from '@/assets/providers/moonshot.svg';
-import ZhipuLogo from '@/assets/providers/zhipu.svg';
-import MistralLogo from '@/assets/providers/mistral.svg';
-import GrokLogo from '@/assets/providers/grok.svg';
-import QwenLogo from '@/assets/providers/qwen.svg';
-import BedrockLogo from '@/assets/providers/bedrock.svg';
-import MiniMaxLogo from '@/assets/providers/minimax.svg';
-import AzureLogo from '@/assets/providers/azureai.svg';
+import { getProviderLogo } from '@/app/lib/provider-logo';
 
 const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
   OpenAI: ENDPOINT_DEFAULTS.openai,
@@ -31,24 +19,7 @@ const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
   'Alibaba Cloud': ENDPOINT_DEFAULTS.alibaba,
   'Amazon Bedrock': ENDPOINT_DEFAULTS.amazon_bedrock,
   'Azure OpenAI': ENDPOINT_DEFAULTS.azure,
-};
-
-const LOGO_MAP: Partial<Record<(typeof PRESET_PROVIDERS)[number], string>> = {
-  OpenAI: OpenAILogo,
-  Anthropic: AnthropicLogo,
-  Google: GoogleLogo,
-  DeepSeek: DeepSeekLogo,
-  Moonshot: MoonshotLogo,
-  Zhipu: ZhipuLogo,
-  Mistral: MistralLogo,
-  xAI: GrokLogo,
-  MiniMax: MiniMaxLogo,
-  'Alibaba Cloud': QwenLogo,
-  'Amazon Bedrock': BedrockLogo,
-  'Azure OpenAI': AzureLogo,
-};
-
-function Toggle({
+};function Toggle({
   checked,
   onChange,
 }: {
@@ -92,7 +63,7 @@ export function ProvidersPage() {
   const providers = useMemo(() => {
     const presetItems = PRESET_PROVIDERS.map((name) => ({
       name,
-      logo: LOGO_MAP[name],
+      logo: getProviderLogo(name),
       endpoint: presetEndpoints[name],
       isCustom: false,
       isEnabled: !disabled.has(name),
@@ -157,7 +128,7 @@ export function ProvidersPage() {
           <div key={provider.name} className="flex items-center justify-between p-3">
             <div className="min-w-0 flex items-center gap-2.5">
               {provider.logo ? (
-                <img src={provider.logo} alt="" className="size-5 shrink-0" />
+                <img src={provider.logo} alt="" className="size-4 shrink-0" />
               ) : (
                 <div className="size-5 shrink-0 rounded bg-surface-3 flex items-center justify-center text-[10px] font-medium text-ink-quaternary">
                   {provider.name[0]}
