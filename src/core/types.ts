@@ -106,7 +106,6 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   minimax: 'https://api.minimax.chat/v1',
   alibaba: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   amazon_bedrock: 'https://bedrock-runtime.us-east-1.amazonaws.com',
-  siliconflow: 'https://api.siliconflow.cn/v1',
   azure: 'https://YOUR_RESOURCE.openai.azure.com',
 };
 
@@ -139,7 +138,6 @@ export const PRESET_PROVIDERS = [
   'MiniMax',
   'Alibaba Cloud',
   'Amazon Bedrock',
-  'SiliconFlow',
   'Azure OpenAI',
 ] as const;
 
