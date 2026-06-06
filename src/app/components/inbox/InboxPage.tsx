@@ -86,17 +86,9 @@ function getContext(item: InboxItem): string {
 }
 
 function getArchivedContext(item: InboxItem): string {
-  switch (item.type) {
-    case 'key_expiry_expired':
-    case 'key_expiry_upcoming':
-      return item.metadata.expires_at
-        ? `Expired ${formatInboxItemTime(item)}`
-        : '';
-    default:
-      return item.archive_reason === 'resolved'
-        ? 'Resolved automatically'
-        : 'Archived by you';
-  }
+  const label = TYPE_BADGE[item.type].label;
+  const reason = item.archive_reason === 'resolved' ? 'Resolved' : 'Archived';
+  return `${label} · ${reason}`;
 }
 
 export function InboxPage() {
