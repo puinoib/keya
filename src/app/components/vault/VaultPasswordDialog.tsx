@@ -1,5 +1,12 @@
 import { useState, useEffect, useDeferredValue } from 'react';
-import { Spinner, ArrowRight, Lock, Fingerprint } from '@phosphor-icons/react';
+import {
+  Spinner,
+  ArrowRight,
+  Lock,
+  Fingerprint,
+  Eye,
+  EyeSlash,
+} from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -44,6 +51,8 @@ export function VaultPasswordDialog({
   const [loading, setLoading] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
 
   const isCreate = mode === 'new';
@@ -125,19 +134,34 @@ export function VaultPasswordDialog({
 
       <div className="space-y-1.5">
         <Label className="text-xs text-ink-tertiary">Master Password</Label>
-        <Input
-          type="password"
-          name={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
-          autoComplete="off"
-          data-form-type="other"
-          data-lpignore="true"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={
-            isCreate ? 'Choose a strong password...' : 'Enter password...'
-          }
-          onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
-        />
+        <div className="relative">
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            name={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={
+              isCreate ? 'Choose a strong password...' : 'Enter password...'
+            }
+            className="pr-10"
+            onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? (
+              <EyeSlash className="size-3.5" />
+            ) : (
+              <Eye className="size-3.5" />
+            )}
+          </button>
+        </div>
         {isCreate && password && (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -185,20 +209,34 @@ export function VaultPasswordDialog({
       {isCreate && (
         <div className="space-y-1.5">
           <Label className="text-xs text-ink-tertiary">Confirm Password</Label>
-          <Input
-            type="password"
-            name="vault-confirm-secret"
-            autoComplete="off"
-            data-form-type="other"
-            data-lpignore="true"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            placeholder="Re-enter your password..."
-            className={
-              confirm && password !== confirm ? 'border-red-500/50' : ''
-            }
-            onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
-          />
+          <div className="relative">
+            <Input
+              type={showConfirmPassword ? 'text' : 'password'}
+              name="vault-confirm-secret"
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="Re-enter your password..."
+              className={`pr-10 ${
+                confirm && password !== confirm ? 'border-red-500/50' : ''
+              }`}
+              onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((visible) => !visible)}
+              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? (
+                <EyeSlash className="size-3.5" />
+              ) : (
+                <Eye className="size-3.5" />
+              )}
+            </button>
+          </div>
           {confirm && password !== confirm && (
             <p className="text-xs text-danger">Passwords don't match</p>
           )}

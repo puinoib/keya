@@ -3,6 +3,8 @@ import {
   Palette,
   Spinner,
   Shield,
+  Eye,
+  EyeSlash,
 } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
@@ -79,6 +81,9 @@ export function GeneralPage() {
   const [confirmPw, setConfirmPw] = useState('');
   const [pwError, setPwError] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
+  const [showOldPw, setShowOldPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -283,31 +288,59 @@ export function GeneralPage() {
               </div>
               {showPwForm && (
                 <div className="mt-3 space-y-2">
-                  <Input
-                    type="password"
-                    placeholder="Current password"
-                    value={oldPw}
-                    onChange={(e) => {
-                      setOldPw(e.target.value);
-                      setPwError('');
-                    }}
-                    className="h-7 text-xs"
-                    autoComplete="off"
-                    data-lpignore="true"
-                  />
-                  <div className="space-y-1">
+                  <div className="relative">
                     <Input
-                      type="password"
-                      placeholder="New password (min 8 chars)"
-                      value={newPw}
+                      type={showOldPw ? 'text' : 'password'}
+                      placeholder="Current password"
+                      value={oldPw}
                       onChange={(e) => {
-                        setNewPw(e.target.value);
+                        setOldPw(e.target.value);
                         setPwError('');
                       }}
-                      className="h-7 text-xs"
+                      className="h-7 pr-8 text-xs"
                       autoComplete="off"
                       data-lpignore="true"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPw((visible) => !visible)}
+                      className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+                      aria-label={showOldPw ? 'Hide password' : 'Show password'}
+                    >
+                      {showOldPw ? (
+                        <EyeSlash className="size-3.5" />
+                      ) : (
+                        <Eye className="size-3.5" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <Input
+                        type={showNewPw ? 'text' : 'password'}
+                        placeholder="New password (min 8 chars)"
+                        value={newPw}
+                        onChange={(e) => {
+                          setNewPw(e.target.value);
+                          setPwError('');
+                        }}
+                        className="h-7 pr-8 text-xs"
+                        autoComplete="off"
+                        data-lpignore="true"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPw((visible) => !visible)}
+                        className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+                        aria-label={showNewPw ? 'Hide password' : 'Show password'}
+                      >
+                        {showNewPw ? (
+                          <EyeSlash className="size-3.5" />
+                        ) : (
+                          <Eye className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
                     {newPw && (
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -339,18 +372,32 @@ export function GeneralPage() {
                       </div>
                     )}
                   </div>
-                  <Input
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPw}
-                    onChange={(e) => {
-                      setConfirmPw(e.target.value);
-                      setPwError('');
-                    }}
-                    className={`h-7 text-xs ${confirmPw && newPw !== confirmPw ? 'border-red-500/50' : ''}`}
-                    autoComplete="off"
-                    data-lpignore="true"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPw ? 'text' : 'password'}
+                      placeholder="Confirm new password"
+                      value={confirmPw}
+                      onChange={(e) => {
+                        setConfirmPw(e.target.value);
+                        setPwError('');
+                      }}
+                      className={`h-7 pr-8 text-xs ${confirmPw && newPw !== confirmPw ? 'border-red-500/50' : ''}`}
+                      autoComplete="off"
+                      data-lpignore="true"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw((visible) => !visible)}
+                      className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+                      aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPw ? (
+                        <EyeSlash className="size-3.5" />
+                      ) : (
+                        <Eye className="size-3.5" />
+                      )}
+                    </button>
+                  </div>
                   {confirmPw && newPw !== confirmPw && (
                     <p className="text-xs text-danger">Passwords don't match</p>
                   )}
