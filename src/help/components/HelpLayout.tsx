@@ -20,7 +20,7 @@ const themeOptions = [
 ];
 
 function getSlugFromPath(pathname: string): string | null {
-  const slug = pathname.replace('/help/', '').replace('/help', '');
+  const slug = pathname.replace('/docs/', '').replace('/docs', '');
   return slug || null;
 }
 
@@ -43,7 +43,7 @@ export function HelpLayout() {
   const handleNavigate = (slug: string | null) => {
     setCurrentSlug(slug);
     navigate({
-      to: slug ? '/help/$slug' : '/help',
+      to: slug ? '/docs/$slug' : '/docs',
       params: slug ? { slug } : undefined,
     });
   };

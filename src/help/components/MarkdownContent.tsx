@@ -19,12 +19,15 @@ function slugify(text: string): string {
 
 function addHeadingIds(html: string): { html: string; headings: Heading[] } {
   const headings: Heading[] = [];
-  const result = html.replace(/<h([2-3])([^>]*)>(.*?)<\/h[2-3]>/gi, (_match, level, attrs, inner) => {
-    const text = inner.replace(/<[^>]+>/g, '').trim();
-    const id = slugify(text);
-    headings.push({ id, text, level: Number(level) });
-    return `<h${level} id="${id}"${attrs}>${inner}</h${level}>`;
-  });
+  const result = html.replace(
+    /<h([2-3])([^>]*)>(.*?)<\/h[2-3]>/gi,
+    (_match, level, attrs, inner) => {
+      const text = inner.replace(/<[^>]+>/g, '').trim();
+      const id = slugify(text);
+      headings.push({ id, text, level: Number(level) });
+      return `<h${level} id="${id}"${attrs}>${inner}</h${level}>`;
+    }
+  );
   return { html: result, headings };
 }
 
@@ -56,9 +59,9 @@ export function MarkdownContent({
         e.preventDefault();
         const href = link.getAttribute('data-internal-link');
         if (href) {
-          if (href.startsWith('/help/')) {
-            const slug = href.replace('/help/', '');
-            navigate({ to: '/help/$slug', params: { slug } });
+          if (href.startsWith('/docs/')) {
+            const slug = href.replace('/docs/', '');
+            navigate({ to: '/docs/$slug', params: { slug } });
           } else {
             navigate({ to: href as any });
           }

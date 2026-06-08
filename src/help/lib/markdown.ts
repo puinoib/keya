@@ -5,7 +5,7 @@ marked.setOptions({
   breaks: true,
 });
 
-const internalLinkRegex = /href="\/help\/([^"]+)"/g;
+const internalLinkRegex = /href="\/docs\/([^"]+)"/g;
 
 export function parseMarkdown(content: string): string {
   return marked(content) as string;
@@ -18,7 +18,7 @@ export function convertInternalLinks(html: string): {
   const internalLinks = new Set<string>();
   const converted = html.replace(internalLinkRegex, (_match, slug) => {
     internalLinks.add(slug);
-    return `data-internal-link="/help/${slug}"`;
+    return `data-internal-link="/docs/${slug}"`;
   });
 
   return {

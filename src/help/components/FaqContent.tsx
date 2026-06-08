@@ -64,9 +64,9 @@ export function FaqContent({ content }: { content: string }) {
         e.preventDefault();
         const href = link.getAttribute('data-internal-link');
         if (href) {
-          if (href.startsWith('/help/')) {
-            const slug = href.replace('/help/', '');
-            navigate({ to: '/help/$slug', params: { slug } });
+          if (href.startsWith('/docs/')) {
+            const slug = href.replace('/docs/', '');
+            navigate({ to: '/docs/$slug', params: { slug } });
           } else {
             navigate({ to: href as never });
           }

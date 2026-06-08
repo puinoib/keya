@@ -10,9 +10,9 @@ describe('markdown', () => {
   });
 
   it('should convert internal links', () => {
-    const html = '<a href="/help/quick-start">快速开始</a>';
+    const html = '<a href="/docs/quick-start">快速开始</a>';
     const result = convertInternalLinks(html);
-    expect(result.html).toContain('data-internal-link="/help/quick-start"');
+    expect(result.html).toContain('data-internal-link="/docs/quick-start"');
     expect(result.internalLinks.has('quick-start')).toBe(true);
   });
 

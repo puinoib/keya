@@ -98,6 +98,6 @@ If the drill fails, fix the backup chain before something real breaks.
 
 ## Related
 
-- [Quick Start](/help/quick-start) — the workspace folder is set up here.
-- [Security](/help/security) — what encryption actually protects, and against what.
-- [FAQ](/help/faq) — see the "My browser can't pick a folder" entry for File System Access API requirements.
+- [Quick Start](/docs/quick-start) — the workspace folder is set up here.
+- [Security](/docs/security) — what encryption actually protects, and against what.
+- [FAQ](/docs/faq) — see the "My browser can't pick a folder" entry for File System Access API requirements.

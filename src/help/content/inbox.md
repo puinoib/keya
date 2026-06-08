@@ -55,4 +55,4 @@ When new reminders appear during unlock, Keya shows a toast notification in the 
 
 ## Related
 
-- [Quick Start](/help/quick-start) — setting expiry dates on keys.
+- [Quick Start](/docs/quick-start) — setting expiry dates on keys.

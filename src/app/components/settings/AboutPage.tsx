@@ -11,7 +11,7 @@ export function AboutPage() {
         <section>
           <div className="rounded-lg border border-line bg-surface-2">
             <a
-              href="/help"
+              href="/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors"
