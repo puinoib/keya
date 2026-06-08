@@ -1,17 +1,6 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useStore } from '@/app/store/useStore';
-import { hasSession } from '@/app/lib/session';
-import { WelcomePage } from '@/app/components/welcome/WelcomePage';
+import { createFileRoute } from '@tanstack/react-router';
+import { LandingPage } from '@/app/components/landing/LandingPage';
 
 export const Route = createFileRoute('/')({
-  beforeLoad: () => {
-    const hasSess = hasSession();
-    const workspaceState = useStore.getState().workspaceState;
-
-    // If there's a session (will be restored) or already unlocked, redirect to /keys
-    if (hasSess || workspaceState === 'unlocked') {
-      throw redirect({ to: '/keys' });
-    }
-  },
-  component: WelcomePage,
+  component: LandingPage,
 });

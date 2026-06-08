@@ -16,7 +16,7 @@ export const Route = createFileRoute('/_authenticated')({
     // Allow access if there's a session (will be restored by SessionRestore) or already unlocked
     // Only redirect if there's no session AND not unlocked
     if (!hasSess && workspaceState !== 'unlocked') {
-      throw redirect({ to: '/' });
+      throw redirect({ to: '/start' });
     }
   },
   component: AuthenticatedLayout,
@@ -30,7 +30,7 @@ function AuthenticatedLayout() {
     // After the vault is locked (manually, by auto-lock, or session restore failure),
     // redirect to home since beforeLoad only runs on navigation.
     if (workspaceState !== 'unlocked' && !hasSession()) {
-      navigate({ to: '/' });
+      navigate({ to: '/start' });
     }
   }, [workspaceState, navigate]);
 
