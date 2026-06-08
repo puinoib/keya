@@ -266,18 +266,15 @@ export function LandingPage() {
 
       <footer className="relative z-10 border-t border-line-subtle px-6 py-6 sm:px-10">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 sm:flex-row">
-          <div className="text-[11px] text-ink-quaternary">
+          <a
+            href="https://coryso.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-ink-quaternary transition-colors hover:text-ink-tertiary"
+          >
             Built by Coryso Studio
-          </div>
+          </a>
           <div className="flex items-center gap-4">
-            <a
-              href="https://coryso.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-ink-quaternary transition-colors hover:text-ink-tertiary"
-            >
-              Coryso Studio
-            </a>
             <a
               href="https://x.com/intent/follow?screen_name=puinoib_"
               target="_blank"
