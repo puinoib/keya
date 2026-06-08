@@ -132,6 +132,12 @@ export function LandingPage() {
 
           <div className="flex items-center gap-1.5">
             <a
+              href="/docs"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-ink-tertiary transition-colors hover:bg-surface-3 hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+            >
+              Docs
+            </a>
+            <a
               href="https://github.com/puinoib/keya"
               target="_blank"
               rel="noopener noreferrer"
@@ -193,12 +199,10 @@ export function LandingPage() {
               <ArrowRight className="size-3.5" />
             </button>
             <a
-              href="https://github.com/puinoib/keya"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="inline-flex h-10 items-center gap-1.5 rounded-md border border-line bg-surface-3 px-4 text-sm font-medium text-ink-secondary transition-colors hover:bg-surface-5 hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
             >
-              View on GitHub
+              Read the docs
             </a>
           </div>
         </section>
@@ -235,7 +239,9 @@ export function LandingPage() {
           </div>
 
           <div className="rounded-xl border border-line bg-surface-2/60 p-5 sm:p-6">
-            <div className="text-xs text-ink-quaternary">Why it feels different</div>
+            <div className="text-xs text-ink-quaternary">
+              Why it feels different
+            </div>
             <h2 className="mt-2 text-lg font-medium text-ink-primary">
               Not a SaaS dashboard. Not a generic password manager.
             </h2>
