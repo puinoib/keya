@@ -20,7 +20,7 @@ export function HelpIndex() {
         {documents.map((doc) => (
           <a
             key={doc.slug}
-            href={`/help/${doc.slug}`}
+            href={`/docs/${doc.slug}`}
             className={cn(
               'group block p-6 rounded-lg border border-line-subtle',
               'bg-surface-2 hover:bg-surface-4',

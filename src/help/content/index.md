@@ -19,23 +19,23 @@ Keya is a desktop-grade API key vault that lives entirely in your browser. There
 ## Where to go next
 
 <div class="grid grid-cols-2 gap-3 not-prose">
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/quick-start">
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/quick-start">
     <div class="text-sm font-semibold text-ink-primary">Quick Start</div>
     <div class="text-xs text-ink-quaternary mt-1">Set up a folder, create a vault, add your first key.</div>
   </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/inbox">
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/inbox">
     <div class="text-sm font-semibold text-ink-primary">Inbox</div>
     <div class="text-xs text-ink-quaternary mt-1">Expiry reminders that surface when keys need attention.</div>
   </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/faq">
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/faq">
     <div class="text-sm font-semibold text-ink-primary">FAQ</div>
     <div class="text-xs text-ink-quaternary mt-1">Common questions about cost, sync, and recovery.</div>
   </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/security">
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/security">
     <div class="text-sm font-semibold text-ink-primary">Security</div>
     <div class="text-xs text-ink-quaternary mt-1">How encryption works and what Keya does not do.</div>
   </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/help/backup">
+  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/backup">
     <div class="text-sm font-semibold text-ink-primary">Backup &amp; Restore</div>
     <div class="text-xs text-ink-quaternary mt-1">Back up vaults, restore on a new device, recover from sync conflicts.</div>
   </a>
@@ -43,4 +43,4 @@ Keya is a desktop-grade API key vault that lives entirely in your browser. There
 
 ## Jump in
 
-When you're ready, head to the [Quick Start](/help/quick-start) guide. The whole setup takes about a minute.
+When you're ready, head to the [Quick Start](/docs/quick-start) guide. The whole setup takes about a minute.

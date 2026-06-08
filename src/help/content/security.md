@@ -91,6 +91,6 @@ A few habits that meaningfully raise the bar:
 
 1. **Use a long, unique master password.** Generated and stored in your password manager.
 2. **Lock the app when stepping away.** `Cmd/Ctrl+Shift+L` is a habit worth building.
-3. **Back up the `.keya` file separately** from the device that creates it. See [Backup &amp; Restore](/help/backup).
+3. **Back up the `.keya` file separately** from the device that creates it. See [Backup &amp; Restore](/docs/backup).
 4. **Audit your browser extensions.** A password manager extension or a clipboard manager can read what you copy. Keya encrypts the file on disk; it cannot protect against a co-located attacker in the browser.
 5. **Keep the browser up to date.** Web platform security moves fast; the File System Access API and WebAuthn both rely on the browser's process isolation.

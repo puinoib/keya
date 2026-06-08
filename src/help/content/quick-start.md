@@ -9,7 +9,7 @@ This walkthrough takes you from a fresh install to a working vault with one API 
 
 ## 1. Before you start
 
-- Use a **Chromium-based browser** (Chrome, Edge, Arc, Brave). The folder picker relies on the File System Access API, which Firefox and Safari do not ship. If you're stuck on Firefox, see [the FAQ entry on unsupported browsers](/help/faq).
+- Use a **Chromium-based browser** (Chrome, Edge, Arc, Brave). The folder picker relies on the File System Access API, which Firefox and Safari do not ship. If you're stuck on Firefox, see [the FAQ entry on unsupported browsers](/docs/faq).
 - Pick a **synced folder** for your workspace — iCloud Drive, Dropbox, Nutstore, OneDrive, or a plain local folder. The folder holds your `.keya` files, and choosing a synced folder is what makes multi-device work later.
 
 ### Choose a workspace folder
@@ -73,7 +73,7 @@ Locking purges the in-memory key and the `sessionStorage` session. The vault fil
 - **Treat the master password like a root password.** If you lose it, the vault is gone. There is no reset email.
 - **Use the workspace folder in a synced cloud drive.** That's how you get free, end-to-end-encrypted multi-device access — Keya never talks to a server, but your cloud does.
 - **Test keys after rotating them.** The `Success` / `Failed` connection badges and expiry warnings are how you spot a key that quietly expired or got revoked.
-- **Check Inbox regularly.** Expired and expiring keys appear as reminders automatically. See [Inbox](/help/inbox).
+- **Check Inbox regularly.** Expired and expiring keys appear as reminders automatically. See [Inbox](/docs/inbox).
 
 ## Settings worth knowing
 
@@ -87,7 +87,7 @@ Keya has a few settings that change daily behavior. Find them under **Settings**
 
 ## What's next?
 
-- Read the [Security](/help/security) page to understand what's actually protecting your data.
-- Skim the [FAQ](/help/faq) for the questions people ask most.
-- Set up [Backup &amp; Restore](/help/backup) once you have more than a couple of keys.
-- Run a [Vault Health Audit](/help/inbox) to review expiring keys.
+- Read the [Security](/docs/security) page to understand what's actually protecting your data.
+- Skim the [FAQ](/docs/faq) for the questions people ask most.
+- Set up [Backup &amp; Restore](/docs/backup) once you have more than a couple of keys.
+- Run a [Vault Health Audit](/docs/inbox) to review expiring keys.
