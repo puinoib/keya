@@ -3,14 +3,16 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   ArrowRight,
   Check,
-  Cloud,
+  ClockCountdown,
+  FileLock,
+  FolderSimple,
   GithubLogo,
-  LockKey,
   Monitor,
   Moon,
   Pulse,
   ShieldCheck,
   Sun,
+  Tray,
 } from '@phosphor-icons/react';
 import {
   DropdownMenu,
@@ -28,25 +30,46 @@ const themeOptions = [
   { value: 'dark' as const, label: 'Dark', icon: Moon },
 ];
 
-const features = [
+const featureCards = [
   {
-    icon: LockKey,
-    title: 'Encrypted',
-    caption: 'Argon2id KDF and XChaCha20-Poly1305 keep every vault local and sealed.',
+    icon: FileLock,
+    title: 'Encrypted `.keya` vaults',
+    caption:
+      'Each vault is a local file protected with Argon2id and XChaCha20-Poly1305.',
+  },
+  {
+    icon: FolderSimple,
+    title: 'Multi-vault workspace',
+    caption:
+      'Separate work, personal, and client keys into independent vault files with their own passwords.',
   },
   {
     icon: Pulse,
-    title: 'Health-tested',
-    caption: 'Track endpoint reachability, latency, and key status without extra tooling.',
+    title: 'Provider-aware testing',
+    caption:
+      'Check endpoint reachability, latency, and key status without leaving the app.',
   },
   {
-    icon: Cloud,
-    title: 'Zero backend',
-    caption: 'Store `.keya` files in folders you already sync with iCloud, Dropbox, or Nutstore.',
+    icon: ClockCountdown,
+    title: 'Expiry reminders',
+    caption:
+      'Inbox surfaces expiring, expired, and stale keys before they break your workflow.',
   },
 ];
 
-const principles = ['Local-first', 'Open source', 'Multi-vault', 'Offline-capable'];
+const proofItems = [
+  'Local-first',
+  'Zero backend',
+  'Open source',
+  'Cloud sync ready',
+];
+
+const workflowItems = [
+  'Pick a workspace folder you already trust',
+  'Create separate vaults for each context',
+  'Add provider, endpoint, expiry, and notes',
+  'Test keys and keep an eye on reminders',
+];
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -80,16 +103,16 @@ export function LandingPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-y-auto bg-canvas-deepest text-ink-primary">
+    <div className="relative h-full overflow-y-auto bg-canvas-deepest text-ink-primary">
       <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle_at_50%_-10%,rgba(94,106,210,0.16),transparent_54%)]" />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,255,255,0.55) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.55) 1px, transparent 1px)',
           backgroundSize: '48px 48px',
           maskImage:
-            'radial-gradient(ellipse at center, black 32%, transparent 78%)',
+            'radial-gradient(ellipse at center, black 28%, transparent 78%)',
         }}
       />
 
@@ -102,7 +125,7 @@ export function LandingPage() {
                 Keya
               </div>
               <div className="text-[11px] text-ink-quaternary">
-                Local-first AI API key manager
+                Local-first AI API key vault
               </div>
             </div>
           </div>
@@ -143,23 +166,21 @@ export function LandingPage() {
       </header>
 
       <main className="relative z-10 px-6 sm:px-10">
-        <section className="mx-auto max-w-3xl pb-14 pt-18 text-center sm:pb-18 sm:pt-24">
+        <section className="mx-auto max-w-4xl pb-12 pt-18 text-center sm:pb-16 sm:pt-24">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2.5 py-1">
             <span className="size-1 rounded-full bg-success-bright" />
             <span className="text-[11px] tracking-wide text-ink-tertiary">
-              Open source · Zero backend
+              Open source · No account · No backend
             </span>
           </div>
 
           <h1 className="mt-6 text-5xl font-semibold tracking-display text-ink-primary sm:text-6xl">
-            Keya
+            API key management for AI developers who want to keep the file.
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-ink-secondary sm:text-lg">
-            A clean, local-first home for your AI API keys.
-            <br className="hidden sm:block" />
-            <span className="text-ink-tertiary">
-              Encrypted vaults, simple organization, and no service to trust.
-            </span>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-ink-secondary sm:text-lg">
+            Keya stores credentials in encrypted local vaults, keeps provider
+            details structured, and helps you catch broken or expiring keys
+            before they interrupt your work.
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
@@ -182,32 +203,63 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-4xl pb-12">
+        <section className="mx-auto max-w-5xl pb-10">
           <div className="rounded-xl border border-line bg-surface-1/80 p-3 sm:p-4">
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle sm:grid-cols-3">
-              {features.map((feature) => (
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle md:grid-cols-2">
+              {featureCards.map((feature) => (
                 <FeatureCard key={feature.title} {...feature} />
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-3xl pb-16 text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {principles.map((item) => (
-              <span
-                key={item}
-                className="rounded-md border border-line bg-surface-2 px-2.5 py-1 text-[11px] text-ink-tertiary"
-              >
-                {item}
-              </span>
-            ))}
+        <section className="mx-auto grid max-w-5xl gap-4 pb-14 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-xl border border-line bg-surface-2/60 p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-xs text-ink-quaternary">
+              <Tray className="size-3.5 text-accent-bright" />
+              Typical workflow
+            </div>
+            <div className="mt-4 grid gap-3">
+              {workflowItems.map((item, index) => (
+                <div
+                  key={item}
+                  className="flex items-start gap-3 rounded-lg border border-line-subtle bg-canvas-deepest/70 px-3 py-3"
+                >
+                  <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[11px] text-ink-tertiary">
+                    {index + 1}
+                  </div>
+                  <p className="text-sm leading-6 text-ink-secondary">{item}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-ink-quaternary">
-            <ShieldCheck className="size-3.5 text-accent-bright/80" />
-            <span className="text-xs">
-              End-to-end encrypted. Your keys never leave your device.
-            </span>
+
+          <div className="rounded-xl border border-line bg-surface-2/60 p-5 sm:p-6">
+            <div className="text-xs text-ink-quaternary">Why it feels different</div>
+            <h2 className="mt-2 text-lg font-medium text-ink-primary">
+              Not a SaaS dashboard. Not a generic password manager.
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-ink-secondary">
+              Keya is built around the way AI developers actually work with
+              credentials: provider by provider, environment by environment,
+              with local files they can back up and keep forever.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {proofItems.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-md border border-line bg-canvas-deepest px-2.5 py-1 text-[11px] text-ink-tertiary"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+            <div className="mt-5 flex items-center gap-1.5 text-ink-quaternary">
+              <ShieldCheck className="size-3.5 text-accent-bright/80" />
+              <span className="text-xs">
+                End-to-end encrypted. Your keys never leave your device.
+              </span>
+            </div>
           </div>
         </section>
       </main>
@@ -254,7 +306,7 @@ function FeatureCard({
   title,
   caption,
 }: {
-  icon: typeof LockKey;
+  icon: typeof FileLock;
   title: string;
   caption: string;
 }) {

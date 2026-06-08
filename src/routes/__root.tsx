@@ -16,7 +16,7 @@ function RootComponent() {
     <>
       <ThemeSync />
       <SessionRestore>
-        <div className="animate-in fade-in-0 duration-300">
+        <div className="h-full animate-in fade-in-0 duration-300">
           <TooltipProvider>
             <Outlet />
             <BiometricPromptLayer />
