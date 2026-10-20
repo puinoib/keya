@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   ArrowRight,
@@ -21,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { KeyaLogo } from '@/components/ui/keya-logo';
-import { FileStorage } from '@/app/lib/storage';
 import { useStore } from '@/app/store/useStore';
 
 const themeOptions = [
@@ -73,34 +71,9 @@ const workflowItems = [
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
   const { theme, setTheme } = useStore();
   const CurrentIcon =
     themeOptions.find((option) => option.value === theme)?.icon ?? Monitor;
-
-  // Redirect returning users before rendering the landing page.
-  useEffect(() => {
-    const check = async () => {
-      if (useStore.getState().workspaceState === 'unlocked') {
-        navigate({ to: '/keys', replace: true });
-        return;
-      }
-      const hasWorkspace = await FileStorage.hasWorkspace();
-      const metas = await FileStorage.getCachedVaultMetas();
-      if (hasWorkspace || metas.length > 0) {
-        navigate({ to: '/start', replace: true });
-        return;
-      }
-      setChecking(false);
-    };
-    check();
-  }, [navigate]);
-
-  if (checking) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-canvas-deepest" />
-    );
-  }
 
   return (
     <div className="relative h-full overflow-y-auto bg-canvas-deepest text-ink-primary">
