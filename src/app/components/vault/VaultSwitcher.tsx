@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '../../store/useStore';
+import { flushSave, useStore } from '../../store/useStore';
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { VaultPasswordDialog } from './VaultPasswordDialog';
 import {
@@ -56,12 +56,14 @@ export function VaultSwitcher() {
   const currentIcon = vaultData?.icon?.trim() || '';
 
   const handleSwitch = async (fileName: string, password: string) => {
+    await flushSave();
     const newDb = await FileStorage.openVault(fileName, password);
     await useStore.getState().unlock(newDb, password, fileName);
     setSwitchTarget(null);
   };
 
   const handleCreate = async (password: string) => {
+    await flushSave();
     const fileName = `vault-${Date.now()}.keya`;
     const newDb = await FileStorage.createVault(fileName, password);
     await useStore.getState().unlock(newDb, password, fileName);

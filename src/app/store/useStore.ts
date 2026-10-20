@@ -102,29 +102,51 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 const DAILY_AUTO_TEST_PREFIX = 'keya-daily-auto-test:';
 const DAILY_AUTO_TEST_CONCURRENCY = 3;
 
-function scheduleSave() {
+let dirty = false;
+let saveQueue: Promise<void> = Promise.resolve();
+
+function enqueueSave(task: () => Promise<void>): Promise<void> {
+  const next = saveQueue.then(task);
+  saveQueue = next.catch(() => {});
+  return next;
+}
+
+export function flushSave(): Promise<void> {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
+  saveTimer = null;
+  return enqueueSave(async () => {
+    if (!dirty) return;
     const { db, password, activeVaultFileName } = useStore.getState();
     if (!db || !password || !activeVaultFileName) return;
+    const snapshot = structuredClone(db.getData());
+    dirty = false;
     try {
       if ('showDirectoryPicker' in window) {
-        await FileStorage.saveVault(
-          activeVaultFileName,
-          db.getData(),
-          password
-        );
+        await FileStorage.saveVault(activeVaultFileName, snapshot, password);
       } else {
         await FileStorage.saveViaDownload(
-          db.getData(),
+          snapshot,
           password,
           activeVaultFileName
         );
       }
       await FileStorage.cacheVaultMeta(activeVaultFileName, db);
-    } catch (e) {
-      console.error('Auto-save failed:', e);
+    } catch (error) {
+      dirty = true;
+      throw error;
     }
+  });
+}
+
+function scheduleSave() {
+  dirty = true;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    void flushSave().catch(() => {
+      toast.error(
+        'Vault was not saved. Keep this page open and export your changes.'
+      );
+    });
   }, 500);
 }
 
@@ -183,7 +205,9 @@ function maybeRunDailyAutoTest(db: Database) {
   if (keys.length === 0) return;
 
   runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
+    if (useStore.getState().db !== db) return;
     const result = await ApiTester.testKey(key);
+    if (useStore.getState().db !== db) return;
     useStore.getState().updateKey(key.id, {
       connection_check: {
         status: result.success ? 'success' : 'failed',
@@ -237,7 +261,10 @@ export const useStore = create<AppState>((set, get) => {
     lastInboxSyncResult: null,
 
     setWorkspaceState: (state) => set({ workspaceState: state }),
-    setDb: (db) => set({ db }),
+    setDb: (db) => {
+      set({ db });
+      scheduleSave();
+    },
     setPassword: (pw) => set({ password: pw }),
     setTheme: (theme) => {
       localStorage.setItem('keya-theme', theme);
@@ -249,22 +276,38 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     lock: () => {
-      clearSession();
-      set({
-        workspaceState: 'welcome',
-        db: null,
-        password: null,
-        activeVaultFileName: null,
-        searchQuery: '',
-        showAddForm: false,
-        addKeyDraft: null,
-        clipboardCandidate: null,
-        ...FILTER_DEFAULTS,
-        selectedKeyId: null,
-      });
+      void (async () => {
+        try {
+          do {
+            await flushSave();
+          } while (dirty);
+        } catch {
+          toast.error(
+            'Cannot lock: unsaved changes. Export your vault or retry saving.'
+          );
+          return;
+        }
+        clearSession();
+        set({
+          workspaceState: 'welcome',
+          db: null,
+          password: null,
+          activeVaultFileName: null,
+          searchQuery: '',
+          showAddForm: false,
+          addKeyDraft: null,
+          clipboardCandidate: null,
+          ...FILTER_DEFAULTS,
+          selectedKeyId: null,
+          biometricPrompt: null,
+        });
+      })();
     },
 
     unlock: async (db, password, fileName) => {
+      do {
+        await flushSave();
+      } while (dirty);
       const vaultId = db.getData().vault_id;
       await saveSession(fileName, password, vaultId);
       const inboxSummary = runInboxChecksForDatabase(db);
@@ -418,18 +461,23 @@ export const useStore = create<AppState>((set, get) => {
         throw new Error('No vault open');
       if (oldPassword !== password)
         throw new Error('Current password is incorrect');
-      await FileStorage.backupVault(activeVaultFileName);
-      await FileStorage.saveVault(
-        activeVaultFileName,
-        db.getData(),
-        newPassword
-      );
-      set({ password: newPassword });
-      await saveSession(
-        activeVaultFileName,
-        newPassword,
-        db.getData().vault_id
-      );
+      await flushSave();
+      await enqueueSave(async () => {
+        if (get().db !== db)
+          throw new Error('Vault changed during password update.');
+        await FileStorage.backupVault(activeVaultFileName);
+        await FileStorage.saveVault(
+          activeVaultFileName,
+          db.getData(),
+          newPassword
+        );
+        set({ password: newPassword });
+        await saveSession(
+          activeVaultFileName,
+          newPassword,
+          db.getData().vault_id
+        );
+      });
     },
 
     runInboxChecks: () => {
