@@ -4,10 +4,15 @@ import {
   Check,
   ClockCountdown,
   Code,
+  Copy,
+  DotsThree,
   FileLock,
+  FolderOpen,
   FolderSimple,
   GithubLogo,
   Key,
+  List,
+  MagnifyingGlass,
   Monitor,
   Moon,
   Pulse,
@@ -201,64 +206,107 @@ export function LandingPage() {
                   encrypted
                 </span>
               </div>
-              <div className="grid min-h-[310px] grid-cols-[145px_1fr] sm:grid-cols-[175px_1fr]">
-                <div className="border-r border-line p-3">
-                  <div className="mb-4 flex items-center gap-2 text-[10px] text-ink-quaternary">
-                    <FolderSimple className="size-3.5" />
-                    VAULTS
+              <div className="grid min-h-[330px] grid-cols-[135px_1fr] sm:grid-cols-[165px_1fr]">
+                <div className="border-r border-line bg-canvas-deepest/30 p-2.5">
+                  <div className="mb-3 flex items-center gap-2 px-2 text-[9px] font-medium uppercase tracking-wider text-ink-quaternary">
+                    <FolderOpen className="size-3" />
+                    Groups
                   </div>
-                  {['Overview', 'All keys', 'Expiring soon'].map((item, i) => (
+                  <div className="mb-1 flex items-center gap-2 rounded-md bg-accent/20 px-2 py-1.5 text-[10px] text-accent-bright">
+                    <List className="size-3" />
+                    All Keys <span className="ml-auto text-[9px]">12</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[10px] text-ink-quaternary">
+                    <Tray className="size-3" />
+                    Inbox{' '}
+                    <span className="ml-auto rounded bg-yellow-400/15 px-1 text-[9px] text-yellow-400">
+                      2
+                    </span>
+                  </div>
+                  <div className="mt-4 border-t border-line pt-3 text-[9px] uppercase tracking-wider text-ink-quaternary">
+                    Groups
+                  </div>
+                  {['Ungrouped', 'Production', 'Personal'].map((item) => (
                     <div
                       key={item}
-                      className={`mb-1 rounded px-2.5 py-2 text-[11px] ${i === 1 ? 'bg-accent/15 text-accent-bright' : 'text-ink-quaternary'}`}
+                      className="mt-1 flex items-center gap-2 px-2 py-1 text-[10px] text-ink-tertiary"
                     >
+                      <span className="size-1.5 rounded-full bg-ink-quaternary/40" />
                       {item}
                     </div>
                   ))}
-                  <div className="mt-6 border-t border-line pt-4 text-[10px] text-ink-quaternary">
-                    WORKSPACE
+                  <div className="mt-5 border-t border-line pt-3 text-[9px] text-ink-quaternary">
+                    WORK.keya
                     <br />
-                    <span className="mt-1 inline-block text-ink-tertiary">
-                      4 providers · 12 keys
+                    <span className="text-ink-tertiary">
+                      12 keys · 4 groups
                     </span>
                   </div>
                 </div>
-                <div className="p-5">
+                <div className="min-w-0 p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] text-ink-quaternary">
-                        WORK VAULT
+                      <div className="flex items-center gap-2 text-[9px] uppercase tracking-wider text-ink-quaternary">
+                        <Key className="size-3" />
+                        Keys
                       </div>
-                      <div className="mt-1 text-lg font-medium">All keys</div>
+                      <div className="mt-1 text-base font-medium">
+                        All Keys{' '}
+                        <span className="text-xs font-normal text-ink-quaternary">
+                          12
+                        </span>
+                      </div>
                     </div>
-                    <div className="rounded border border-line bg-surface-3 p-2 text-accent-bright">
-                      <Key className="size-4" />
-                    </div>
+                    <button
+                      type="button"
+                      aria-label="Search keys"
+                      className="rounded border border-line bg-surface-3 p-1.5 text-ink-quaternary"
+                    >
+                      <MagnifyingGlass className="size-3.5" />
+                    </button>
                   </div>
-                  <div className="mt-6 space-y-2">
+                  <div className="mt-4 flex gap-1.5">
+                    <span className="rounded border border-line bg-surface-3 px-2 py-1 text-[9px] text-ink-tertiary">
+                      All Providers
+                    </span>
+                    <span className="rounded border border-line bg-surface-3 px-2 py-1 text-[9px] text-ink-tertiary">
+                      All Results
+                    </span>
+                    <span className="hidden rounded border border-line bg-surface-3 px-2 py-1 text-[9px] text-ink-tertiary sm:inline">
+                      All Expiry
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-1">
                     {[
-                      ['OpenAI', 'sk-prod••••••8F2A', 'Healthy'],
-                      ['GitHub', 'ghp_••••••••91C', 'Healthy'],
-                      ['Stripe', 'sk_live••••••3D7', 'Expires in 12d'],
+                      ['OpenAI', 'sk-prod••••••8F2A', 'success'],
+                      ['GitHub', 'ghp_••••••••91C', 'success'],
+                      ['Stripe', 'sk_live••••••3D7', 'expiring'],
                     ].map(([name, value, state]) => (
                       <div
                         key={name}
-                        className="flex items-center gap-3 rounded-lg border border-line-subtle bg-surface-2 px-3 py-3"
+                        className={`group flex items-center gap-2 rounded-lg border px-2.5 py-2.5 ${name === 'OpenAI' ? 'border-line-2 bg-surface-4' : 'border-transparent'}`}
                       >
-                        <div className="flex size-7 items-center justify-center rounded-md bg-surface-4 text-xs font-semibold text-ink-secondary">
-                          {name[0]}
-                        </div>
+                        <span
+                          className={`size-1.5 shrink-0 rounded-full ${state === 'success' ? 'bg-success-bright' : 'bg-yellow-400'}`}
+                        />
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs text-ink-primary">{name}</div>
-                          <div className="truncate font-mono text-[10px] text-ink-quaternary">
-                            {value}
+                          <div className="text-[11px] font-medium text-ink-primary">
+                            {name}
+                            <span className="ml-1.5 font-normal text-ink-quaternary">
+                              ·{' '}
+                              {name === 'Stripe' ? 'Expiring Soon' : 'Healthy'}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1 text-[9px] text-ink-quaternary">
+                            <span>{name}</span>
+                            <span>·</span>
+                            <span className="truncate font-mono">{value}</span>
                           </div>
                         </div>
-                        <span
-                          className={`text-[10px] ${state === 'Healthy' ? 'text-success-bright' : 'text-yellow-400'}`}
-                        >
-                          {state}
-                        </span>
+                        <div className="hidden items-center gap-1 text-ink-quaternary sm:flex">
+                          <Copy className="size-3" />
+                          <DotsThree className="size-3.5" />
+                        </div>
                       </div>
                     ))}
                   </div>
