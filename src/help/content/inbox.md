@@ -18,6 +18,8 @@ The Inbox collects local alerts about keys that may need attention. It does not 
 
 A key without an expiry date can still generate connection or endpoint alerts. A failed connection may reflect network, CORS, endpoint, or provider problems rather than an invalid credential.
 
+Keys whose provider cannot be verified from the browser stay silent here: Keya does not record a failure it cannot prove, so it creates neither a failed-connection nor a stale-test alert for them. Reachability checks only confirm that an endpoint responds and do not count as credential verification.
+
 ## When alerts update
 
 Keya checks alert rules on unlock and during key changes, including test-result updates. The rules use stored fields and test results; evaluating them does not itself call a provider API. Manual and enabled automatic tests are separate operations.
@@ -27,6 +29,8 @@ Keya checks alert rules on unlock and during key changes, including test-result 
 Open Inbox from the sidebar. Use **View key** to inspect, edit, or test the affected key. Archive an item to dismiss it. Archived entries remain available in the archive section.
 
 When an issue disappears, open alerts are automatically archived as resolved. For example, a successful test resolves a connection-failed alert, and removing a key resolves its outstanding alerts.
+
+Archiving a key closes its open alerts and stops new ones, because archived credentials are excluded from alert checks. Restoring a key clears its archived alerts and rebuilds the alerts that currently apply; this discards earlier dismissals for that key.
 
 **Current limitation:** archived items remain archived even if the same alert type recurs for the same key, including items automatically archived as resolved. An empty Inbox is therefore not proof that every key is healthy. Review current key details and test results as well.
 

@@ -1,5 +1,5 @@
 <!-- Mirrors icon.svg; the palette follows the OS color scheme. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="86" height="86" fill="none" viewBox="0 0 86 86">
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" fill="none" viewBox="6.25 6.75 74 74">
   <style>
     @media (prefers-color-scheme: dark) {
       #paint0_linear_2386_4701 stop:nth-of-type(1) { stop-color: #8A88F2; }

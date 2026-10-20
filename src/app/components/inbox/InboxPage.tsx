@@ -15,7 +15,8 @@ import type { InboxItem, InboxItemType } from '@/core/types';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
-import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
+import { toast } from 'sonner';
 
 type Severity = 'critical' | 'warning' | 'info';
 
@@ -98,8 +99,7 @@ export function InboxPage() {
   const inboxVersion = useStore((s) => s.inboxVersion);
   const archiveInboxItem = useStore((s) => s.archiveInboxItem);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
-  const clearFilters = useStore((s) => s.clearFilters);
-  const setSearchQuery = useStore((s) => s.setSearchQuery);
+  const setShowArchived = useStore((s) => s.setShowArchived);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
 
   const items = useMemo(
@@ -124,8 +124,12 @@ export function InboxPage() {
   );
 
   const handleViewKey = (entityId: string) => {
-    clearFilters();
-    setSearchQuery('');
+    const key = db?.getApiKey(entityId);
+    if (!key) {
+      toast('This credential no longer exists');
+      return;
+    }
+    setShowArchived(Boolean(key.archived_at));
     setSelectedKeyId(entityId);
     navigate({ to: '/keys' });
   };
@@ -178,13 +182,10 @@ export function InboxPage() {
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-ink-quaternary truncate">
-                      {getProviderLogo(item.metadata.provider) && (
-                        <img
-                          src={getProviderLogo(item.metadata.provider)!}
-                          alt=""
-                          className="size-3 shrink-0"
-                        />
-                      )}
+                      <ProviderLogo
+                        provider={item.metadata.provider}
+                        className="size-3"
+                      />
                       <span className="truncate">
                         {item.metadata.provider} · {getContextSuffix(item)}
                       </span>

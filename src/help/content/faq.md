@@ -9,9 +9,13 @@ order: 5
 
 Yes. Keya is MIT-licensed open source with no subscription. Your cloud storage and API provider may charge separately.
 
+## How do I get back to the homepage?
+
+The root URL opens the landing page only on a first visit; once Keya has stored a workspace or a vault summary, it sends you straight to the app. Open [/home](/home) at any time, or use **About Keya** in the welcome screen footer or **Settings → About → Product Homepage**.
+
 ## Does Keya send my keys anywhere?
 
-Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests use provider metadata endpoints where available and normally do not invoke a model. Custom or metered endpoints may incur charges. Amazon Bedrock cannot be tested from the browser because it requires AWS request signing.
+Keya has no application backend or analytics. Testing a preset provider sends the key to a metadata endpoint. Reading usage sends the key to that provider's own usage endpoint and nothing else. Usage figures are held in memory for the current session only: they are never written to the vault, so a quoted allowance cannot outlive the request that fetched it. A custom provider is only checked the way you configure it: reachability checks never send the key, while a configured credential check sends it to the check path you chose. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests normally do not invoke a model. Custom or metered endpoints may incur charges. Some providers cannot be tested from the browser: Amazon Bedrock requires AWS request signing, and NVIDIA NIM, Baseten, and Exa send no cross-origin headers. Keya reports those, and any request the browser blocks, as unverifiable rather than as an invalid key.
 
 ## Where is my data stored?
 
@@ -23,7 +27,7 @@ Keya no longer persists a recoverable master password for session restoration. R
 
 ## Why did biometric unlock stop working?
 
-Biometric unlock now requires WebAuthn PRF. Old records that stored an AES key alongside the encrypted password are removed. Use your master password and enroll again with a PRF-capable browser/authenticator. If storage upgrade is blocked, close other Keya tabs.
+Biometric unlock now requires WebAuthn PRF. A passkey may be created successfully but still lack PRF support; support depends on the browser, operating system, and passkey storage provider. In Chrome, if **Your Chrome profile** fails with a message about WebAuthn PRF, choose **Google Password Manager** or **iCloud Keychain** in the passkey picker and enroll again. Old records that stored an AES key alongside the encrypted password are removed. If storage upgrade is blocked, close other Keya tabs.
 
 Clearing site data also removes the enrollment record. Authenticator credential synchronization does not synchronize Keya's site records; keep your master password available.
 
@@ -50,6 +54,10 @@ Locking first saves pending changes. If saving fails, Keya keeps the vault unloc
 ## How do I change my master password?
 
 Settings → General → Master Password → **Change**. Supply the current password and a new password meeting the displayed requirements. If biometrics are enabled, the UI then requests re-enrollment. Canceling that step can leave the password changed but biometric unlock needing re-enrollment. Backups made before the change still use the old password.
+
+## Does archiving delete a key?
+
+No. Archiving moves a credential out of the main list while keeping it encrypted in the vault. Archived keys are excluded from tests and Inbox alerts and can be restored from the **Archived** view. Use **Delete** to remove a credential permanently. Keya has no recycle bin, so recover deleted credentials from a backup or your cloud file history.
 
 ## How do I share a key?
 

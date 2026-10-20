@@ -342,7 +342,7 @@ export class FileStorage {
       fileName,
       name: data.name || fileNameToStem(fileName),
       icon: data.icon,
-      keyCount: data.api_keys.length,
+      keyCount: data.api_keys.filter((key) => !key.archived_at).length,
       updatedAt: data.updated_at,
     });
   }

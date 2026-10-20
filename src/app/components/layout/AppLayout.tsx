@@ -73,7 +73,10 @@ export function AppLayout({
           <AlertDialogHeader>
             <AlertDialogTitle>Use clipboard key?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 text-sm text-ink-secondary">
-              <p>Detected a possible {clipboardCandidate?.provider} API key.</p>
+              <p>
+                Detected a possible {clipboardCandidate?.provider} API key or
+                token.
+              </p>
               {clipboardCandidate ? (
                 <p className="font-mono text-xs text-ink-quaternary">
                   {clipboardCandidate.masked}

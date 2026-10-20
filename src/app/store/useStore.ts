@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 import type { Database } from '../../core/database';
-import type { ApiKey, Group, InboxItem } from '../../core/types';
+import type { ApiKey, Group, InboxItem, NewApiKey } from '../../core/types';
 import { ApiTester } from '../lib/api-tester';
+import { toConnectionCheck } from '../lib/test-feedback';
 import {
   tryDetectClipboardKey,
   type AddKeyDraft,
   type ClipboardKeyCandidate,
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
+import { fetchUsage, type UsageEntry } from '../lib/usage';
 import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
@@ -37,9 +39,13 @@ interface AppState {
   filterProvider: string | null;
   filterTestStatus: string | null;
   filterExpiryStatus: string | null;
+  /** true shows archived keys instead of active ones. */
+  showArchived: boolean;
 
   // Selection
   selectedKeyId: string | null;
+  /** Allowance read from providers this session; never written to the vault. */
+  usage: Record<string, UsageEntry>;
   inboxVersion: number;
   lastInboxSyncAt: string | null;
   lastInboxSyncResult: {
@@ -62,11 +68,12 @@ interface AppState {
   updateKeyboardShortcuts: (shortcuts: Record<string, string>) => void;
 
   // Actions - Keys
-  addKey: (
-    key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>
-  ) => ApiKey | undefined;
+  addKey: (key: NewApiKey) => ApiKey | undefined;
   updateKey: (id: string, updates: Partial<ApiKey>) => void;
+  refreshUsage: (keyId: string) => Promise<void>;
   deleteKey: (id: string) => void;
+  archiveKey: (id: string) => void;
+  restoreKey: (id: string) => void;
 
   // Actions - UI
   setSearchQuery: (q: string) => void;
@@ -83,6 +90,7 @@ interface AppState {
   setFilterProvider: (p: string | null) => void;
   setFilterTestStatus: (s: string | null) => void;
   setFilterExpiryStatus: (s: string | null) => void;
+  setShowArchived: (show: boolean) => void;
   clearFilters: () => void;
   clearSmartFilters: () => void;
   setSelectedKeyId: (id: string | null) => void;
@@ -201,7 +209,7 @@ function inboxSummaryChanged(summary: {
 }
 
 function runInboxChecksForDatabase(db: Database) {
-  const alerts = collectAllAlerts(db.getApiKeys(), db.getData().vault_id);
+  const alerts = collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id);
   const summary = syncInboxWithAlerts(db.getData(), alerts);
 
   if (
@@ -251,20 +259,15 @@ function maybeRunDailyAutoTest(db: Database) {
 
   // Mark the attempt first so reloads do not repeatedly hit provider APIs.
   localStorage.setItem(storageKey, today);
-  const keys = [...db.getApiKeys()];
+  const keys = [...db.getActiveApiKeys()];
   if (keys.length === 0) return;
 
   runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
     if (useStore.getState().db !== db) return;
-    const result = await ApiTester.testKey(key);
+    const result = await ApiTester.testKey(key, settings);
     if (useStore.getState().db !== db) return;
     useStore.getState().updateKey(key.id, {
-      connection_check: {
-        status: result.success ? 'success' : 'failed',
-        checked_at: new Date().toISOString(),
-        latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : (result.error ?? null),
-      },
+      connection_check: toConnectionCheck(result),
     });
   }).catch((e) => {
     console.error('Daily auto-test failed:', e);
@@ -292,6 +295,7 @@ export const useStore = create<AppState>((set, get) => {
     showAddForm: false,
     addKeyDraft: null,
     clipboardCandidate: null,
+    usage: {},
     biometricPrompt: null,
     theme:
       (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
@@ -304,6 +308,7 @@ export const useStore = create<AppState>((set, get) => {
       }
     })(),
     ...FILTER_DEFAULTS,
+    showArchived: false,
     selectedKeyId: null,
     inboxVersion: 0,
     lastInboxSyncAt: null,
@@ -346,6 +351,7 @@ export const useStore = create<AppState>((set, get) => {
           addKeyDraft: null,
           clipboardCandidate: null,
           ...FILTER_DEFAULTS,
+          showArchived: false,
           selectedKeyId: null,
           biometricPrompt: null,
         });
@@ -362,6 +368,7 @@ export const useStore = create<AppState>((set, get) => {
         activeVaultFileName: fileName,
         storageMode,
         hasUnsavedChanges: false,
+        showArchived: false,
         inboxVersion: inboxSummaryChanged(inboxSummary)
           ? state.inboxVersion + 1
           : state.inboxVersion,
@@ -400,7 +407,65 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     updateKey: (id, updates) => {
-      get().db?.updateApiKey(id, updates);
+      const db = get().db;
+      if (!db) return;
+      // Archived keys are read-only; ignore late async results and edits.
+      if (db.getApiKey(id)?.archived_at) return;
+      db.updateApiKey(id, updates);
+      const summary = runInboxChecksForDatabase(db);
+      set((state) => ({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
+      scheduleSave();
+    },
+
+    refreshUsage: async (id) => {
+      const db = get().db;
+      if (!db) return;
+      const key = db.getApiKey(id);
+      if (!key) return;
+
+      const started = { vault_id: db.getData().vault_id };
+
+      set((state) => ({
+        usage: { ...state.usage, [id]: { ...started, state: 'loading' } },
+      }));
+
+      const result = await fetchUsage(key);
+
+      // A lock, a vault switch, a deleted key or an edited key must not inherit
+      // this reply.
+      const current = get();
+      if (current.db !== db) return;
+      if (current.db?.getApiKey(id)?.key !== key.key) return;
+
+      set((state) => ({
+        usage: {
+          ...state.usage,
+          [id]: result.ok
+            ? {
+                ...started,
+                state: 'ok',
+                snapshot: result.snapshot,
+                checked_at: result.snapshot.checked_at,
+              }
+            : {
+                ...started,
+                state: 'failed',
+                failure: result.failure,
+                checked_at: new Date().toISOString(),
+              },
+        },
+      }));
+    },
+
+    deleteKey: (id) => {
+      get().db?.deleteApiKey(id);
       const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
       set((state) => ({
         lastInboxSyncAt: new Date().toISOString(),
@@ -413,10 +478,33 @@ export const useStore = create<AppState>((set, get) => {
       scheduleSave();
     },
 
-    deleteKey: (id) => {
-      get().db?.deleteApiKey(id);
-      const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
+    archiveKey: (id) => {
+      const db = get().db;
+      if (!db) return;
+      db.archiveApiKey(id);
+      const summary = runInboxChecksForDatabase(db);
       set((state) => ({
+        selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
+      scheduleSave();
+    },
+
+    restoreKey: (id) => {
+      const db = get().db;
+      if (!db) return;
+      db.restoreApiKey(id);
+      // Drop alerts that were closed by archiving so the restored key gets an
+      // accurate current set instead of keeping stale archived items.
+      db.removeInboxItemsForEntity(id);
+      const summary = runInboxChecksForDatabase(db);
+      set((state) => ({
+        selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
         inboxVersion:
@@ -444,10 +532,10 @@ export const useStore = create<AppState>((set, get) => {
       if (
         candidate &&
         db
-          ?.getApiKeys()
+          ?.getActiveApiKeys()
           .some((existingKey) => existingKey.key === candidate.raw)
       ) {
-        toast('This API key is already saved');
+        toast('This credential is already saved');
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
         return;
       }
@@ -485,6 +573,13 @@ export const useStore = create<AppState>((set, get) => {
     setFilterProvider: (p) => set({ filterProvider: p }),
     setFilterTestStatus: (s) => set({ filterTestStatus: s }),
     setFilterExpiryStatus: (s) => set({ filterExpiryStatus: s }),
+    setShowArchived: (show) =>
+      set({
+        showArchived: show,
+        ...FILTER_DEFAULTS,
+        searchQuery: '',
+        selectedKeyId: null,
+      }),
     clearFilters: () => set(FILTER_DEFAULTS),
     clearSmartFilters: () =>
       set({

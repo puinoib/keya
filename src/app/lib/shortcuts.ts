@@ -41,7 +41,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: 'key.add',
     label: 'Add Key',
-    description: 'Open the add API key form',
+    description: 'Open the add credential form',
     scope: 'global',
     defaultKeys: 'n',
     customizable: true,
@@ -113,7 +113,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: 'key.copy',
     label: 'Copy Selected Key',
-    description: 'Copy the selected API key value',
+    description: 'Copy the selected API key or token value',
     scope: 'keys',
     defaultKeys: 'c',
     customizable: true,

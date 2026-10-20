@@ -1,12 +1,19 @@
 // Runtime validation for .keya file format
 import { z } from 'zod';
 
+export const ConnectionCheckKindSchema = z.enum([
+  'credential',
+  'reachability',
+  'unverifiable',
+]);
+
 export const ConnectionCheckSchema = z
   .object({
     status: z.enum(['success', 'failed', 'untested']).default('untested'),
     checked_at: z.string().nullable().default(null),
     latency_ms: z.number().nullable().default(null),
     error_message: z.string().nullable().default(null),
+    kind: ConnectionCheckKindSchema.optional(),
   })
   .passthrough();
 
@@ -20,6 +27,7 @@ export const ApiKeySchema = z
     key: z.string(),
     group_id: z.string().nullable().default(null),
     expires_at: z.string().nullable().default(null),
+    archived_at: z.string().nullable().default(null),
     connection_check: ConnectionCheckSchema.default({
       status: 'untested',
       checked_at: null,
@@ -40,15 +48,30 @@ export const GroupSchema = z
   })
   .passthrough();
 
+export const CustomProviderCheckSchema = z
+  .object({
+    path: z.string().optional(),
+    auth: z.enum(['bearer', 'x-api-key', 'header', 'query']),
+    header_name: z.string().optional(),
+    query_param: z.string().optional(),
+  })
+  .passthrough();
+
+export const CustomProviderSchema = z
+  .object({
+    name: z.string(),
+    endpoint: z.string(),
+    check: CustomProviderCheckSchema.optional(),
+  })
+  .passthrough();
+
 export const SettingsSchema = z
   .object({
     auto_lock_minutes: z.number().default(5),
     auto_test_on_save: z.boolean().default(false),
     auto_test_daily: z.boolean().default(false),
     clipboard_detection_on_add: z.boolean().default(true),
-    custom_providers: z
-      .array(z.object({ name: z.string(), endpoint: z.string() }).passthrough())
-      .default([]),
+    custom_providers: z.array(CustomProviderSchema).default([]),
     disabled_providers: z.array(z.string()).default([]),
   })
   .passthrough();

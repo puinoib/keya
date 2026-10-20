@@ -5,7 +5,7 @@
  * creating missing ones. Duplicate key values are skipped instead of aborting
  * the whole import. All input is normalized before anything is mutated.
  */
-import type { ApiKey, ConnectionCheck, Group } from '../../core/types';
+import type { ConnectionCheck, Group, NewApiKey } from '../../core/types';
 import type { Database } from '../../core/database';
 
 export interface ImportSource {
@@ -28,6 +28,7 @@ interface NormalizedImportKey {
   description: string;
   groupId: string | null;
   expiresAt: string | null;
+  archivedAt: string | null;
   connectionCheck: ConnectionCheck;
 }
 
@@ -97,6 +98,10 @@ function normalizeKeys(rawKeys: unknown): {
       description: asString(raw.description),
       groupId: typeof raw.group_id === 'string' ? raw.group_id : null,
       expiresAt: typeof raw.expires_at === 'string' ? raw.expires_at : null,
+      archivedAt:
+        typeof raw.archived_at === 'string' && raw.archived_at
+          ? raw.archived_at
+          : null,
       connectionCheck: normalizeConnectionCheck(raw.connection_check),
     });
   }
@@ -163,7 +168,9 @@ export function mergeImportedData(
     groupsToCreate.push(group);
   }
 
-  const existingKeyValues = new Set(currentData.api_keys.map((key) => key.key));
+  const existingKeyValues = new Set(
+    currentData.api_keys.filter((key) => !key.archived_at).map((key) => key.key)
+  );
   const keysToAdd: NormalizedImportKey[] = [];
   let skippedDuplicateKeys = 0;
 
@@ -199,7 +206,7 @@ export function mergeImportedData(
           ? (createdGroupIds.get(target.tempId) ?? null)
           : null;
 
-    const apiKey: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> = {
+    const apiKey: NewApiKey = {
       name: key.name,
       key: key.key,
       provider: key.provider,
@@ -207,6 +214,7 @@ export function mergeImportedData(
       description: key.description,
       group_id: groupId,
       expires_at: key.expiresAt,
+      archived_at: key.archivedAt,
       connection_check: key.connectionCheck,
     };
     current.addApiKey(apiKey);

@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Database } from '../../../core/database';
-import type { ApiKey } from '../../../core/types';
+import type { NewApiKey } from '../../../core/types';
 import { mergeImportedData } from '../import-merge';
 
-function makeKey(
-  value: string,
-  groupId: string | null = null
-): Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> {
+function makeKey(value: string, groupId: string | null = null): NewApiKey {
   return {
     name: `Key ${value}`,
     key: value,
@@ -64,6 +61,44 @@ describe('mergeImportedData', () => {
     );
     expect(keys.find((key) => key.key === 'sk-ungrouped')?.group_id).toBe(null);
     expect(keys.find((key) => key.key === 'sk-existing')?.id).toBe(existing.id);
+  });
+
+  it('preserves archived status when importing keys', () => {
+    const db = new Database();
+    const result = mergeImportedData(db, {
+      api_keys: [
+        {
+          ...makeKey('sk-imported-archived'),
+          archived_at: '2026-06-01T10:00:00.000Z',
+        },
+        makeKey('sk-imported-active'),
+      ],
+    });
+
+    expect(result.addedKeys).toBe(2);
+    expect(db.getActiveApiKeys().map((key) => key.key)).toEqual([
+      'sk-imported-active',
+    ]);
+    expect(db.getArchivedApiKeys().map((key) => key.key)).toEqual([
+      'sk-imported-archived',
+    ]);
+  });
+
+  it('allows importing a value that only exists in the archive', () => {
+    const db = new Database();
+    const archived = db.addApiKey(makeKey('sk-archive-only'));
+    db.archiveApiKey(archived.id);
+
+    const result = mergeImportedData(db, {
+      api_keys: [makeKey('sk-archive-only')],
+    });
+
+    expect(result.addedKeys).toBe(1);
+    expect(result.skippedDuplicateKeys).toBe(0);
+    expect(db.getActiveApiKeys().map((key) => key.key)).toEqual([
+      'sk-archive-only',
+    ]);
+    expect(db.getArchivedApiKeys()).toHaveLength(1);
   });
 
   it('does not mutate the vault when the payload has no keys array', () => {

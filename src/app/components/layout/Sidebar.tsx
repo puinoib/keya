@@ -1,4 +1,4 @@
-import { List, FolderOpen, Gear, Tray } from '@phosphor-icons/react';
+import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
@@ -64,36 +64,35 @@ export function Sidebar() {
     filterProvider,
     filterTestStatus,
     filterExpiryStatus,
+    showArchived,
+    setShowArchived,
     setFilterGroupId,
-    setFilterProvider,
-    setFilterTestStatus,
-    setFilterExpiryStatus,
-    setSearchQuery,
   } = useStore();
 
-  const keyCount = db?.getApiKeys().length ?? 0;
+  const keyCount = db?.getActiveApiKeys().length ?? 0;
+  const archivedCount = db?.getArchivedApiKeys().length ?? 0;
   const openInboxCount = db?.getOpenInboxItems().length ?? 0;
   const isInboxActive = pathname === '/inbox';
   const isAllKeysActive =
     pathname === '/keys' &&
+    !showArchived &&
     !filterGroupId &&
     !filterProvider &&
     !filterTestStatus &&
     !filterExpiryStatus;
+  const isArchiveActive = pathname === '/keys' && showArchived;
 
   const handleAllKeysClick = () => {
-    setFilterGroupId(null);
-    setFilterProvider(null);
-    setFilterTestStatus(null);
-    setFilterExpiryStatus(null);
-    setSearchQuery('');
+    setShowArchived(false);
     navigate({ to: '/keys' });
   };
 
   if (!db) return null;
 
   const groups = db.getGroups();
-  const ungroupedCount = db.getApiKeys().filter((k) => !k.group_id).length;
+  const ungroupedCount = db
+    .getActiveApiKeys()
+    .filter((k) => !k.group_id).length;
 
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
@@ -118,6 +117,16 @@ export function Sidebar() {
             isActive={isAllKeysActive}
             onClick={handleAllKeysClick}
           />
+          <SidebarFilterButton
+            icon={Archive}
+            label="Archived"
+            count={archivedCount}
+            isActive={isArchiveActive}
+            onClick={() => {
+              setShowArchived(true);
+              navigate({ to: '/keys' });
+            }}
+          />
         </nav>
 
         {/* Groups Section */}
@@ -140,6 +149,7 @@ export function Sidebar() {
             count={ungroupedCount}
             isActive={pathname === '/keys' && filterGroupId === '__ungrouped__'}
             onClick={() => {
+              if (showArchived) setShowArchived(false);
               setFilterGroupId(
                 filterGroupId === '__ungrouped__' ? null : '__ungrouped__'
               );
@@ -150,7 +160,7 @@ export function Sidebar() {
           {/* Groups */}
           {groups.map((group) => {
             const count = db
-              .getApiKeys()
+              .getActiveApiKeys()
               .filter((k) => k.group_id === group.id).length;
             return (
               <SidebarFilterButton
@@ -162,6 +172,7 @@ export function Sidebar() {
                 count={count}
                 isActive={pathname === '/keys' && filterGroupId === group.id}
                 onClick={() => {
+                  if (showArchived) setShowArchived(false);
                   setFilterGroupId(
                     filterGroupId === group.id ? null : group.id
                   );

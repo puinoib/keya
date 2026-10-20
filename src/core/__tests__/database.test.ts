@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Database, createEmptyDatabase } from '../database';
-import type { ApiKey, Group } from '../types';
+import type { Group, NewApiKey } from '../types';
 
 const sampleGroup: Omit<Group, 'id'> = {
   name: 'Production',
@@ -8,9 +8,7 @@ const sampleGroup: Omit<Group, 'id'> = {
   order: 1,
 };
 
-function makeKey(
-  overrides?: Partial<Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>>
-): Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> {
+function makeKey(overrides?: Partial<NewApiKey>): NewApiKey {
   return {
     name: 'Test Key',
     key: 'sk-test123',
@@ -140,6 +138,126 @@ describe('Database', () => {
   it('returns false on delete of non-existent key', () => {
     const db = new Database();
     expect(db.deleteApiKey('nope')).toBe(false);
+  });
+
+  it('defaults new keys to active', () => {
+    const db = new Database();
+    const key = db.addApiKey(makeKey());
+    expect(key.archived_at).toBeNull();
+  });
+
+  it('archives and restores a key', () => {
+    const db = new Database();
+    const created = db.addApiKey(makeKey({ name: 'Old Key' }));
+    const archivedAt = new Date('2026-06-01T10:00:00.000Z');
+
+    const archived = db.archiveApiKey(created.id, archivedAt);
+    expect(archived?.archived_at).toBe(archivedAt.toISOString());
+    expect(archived?.updated_at).toBe(archivedAt.toISOString());
+    expect(db.getActiveApiKeys()).toHaveLength(0);
+    expect(db.getArchivedApiKeys()).toHaveLength(1);
+
+    const restored = db.restoreApiKey(created.id);
+    expect(restored?.archived_at).toBeNull();
+    expect(db.getActiveApiKeys()).toHaveLength(1);
+    expect(db.getArchivedApiKeys()).toHaveLength(0);
+  });
+
+  it('archives idempotently and returns null for missing keys', () => {
+    const db = new Database();
+    const created = db.addApiKey(makeKey());
+    const first = db.archiveApiKey(
+      created.id,
+      new Date('2026-06-01T10:00:00.000Z')
+    );
+    const second = db.archiveApiKey(
+      created.id,
+      new Date('2026-06-02T10:00:00.000Z')
+    );
+    expect(second?.archived_at).toBe(first?.archived_at);
+    expect(db.archiveApiKey('missing')).toBeNull();
+    expect(db.restoreApiKey('missing')).toBeNull();
+  });
+
+  it('restores idempotently', () => {
+    const db = new Database();
+    const created = db.addApiKey(makeKey());
+    const restored = db.restoreApiKey(created.id);
+    expect(restored?.archived_at).toBeNull();
+    expect(restored?.id).toBe(created.id);
+  });
+
+  it('returns active and archived keys sorted by archive time', () => {
+    const db = new Database();
+    const earlier = db.addApiKey(makeKey({ key: 'sk-earlier' }));
+    const later = db.addApiKey(makeKey({ key: 'sk-later' }));
+    db.addApiKey(makeKey({ key: 'sk-active' }));
+    db.archiveApiKey(earlier.id, new Date('2026-06-01T10:00:00.000Z'));
+    db.archiveApiKey(later.id, new Date('2026-06-03T10:00:00.000Z'));
+
+    expect(db.getActiveApiKeys().map((key) => key.key)).toEqual(['sk-active']);
+    expect(db.getArchivedApiKeys().map((key) => key.key)).toEqual([
+      'sk-later',
+      'sk-earlier',
+    ]);
+  });
+
+  it('does not update archived keys', () => {
+    const db = new Database();
+    const created = db.addApiKey(makeKey({ name: 'Frozen' }));
+    db.archiveApiKey(created.id);
+
+    expect(db.updateApiKey(created.id, { name: 'Changed' })).toBeNull();
+    expect(db.getApiKey(created.id)?.name).toBe('Frozen');
+  });
+
+  it('ignores archived keys for duplicate detection', () => {
+    const db = new Database();
+    const archived = db.addApiKey(makeKey({ key: 'sk-reused' }));
+    db.archiveApiKey(archived.id);
+
+    expect(db.hasDuplicateApiKeyValue('sk-reused')).toBe(false);
+    const active = db.addApiKey(makeKey({ key: 'sk-reused' }));
+    expect(active.archived_at).toBeNull();
+
+    const other = db.addApiKey(makeKey({ key: 'sk-other' }));
+    expect(() => db.updateApiKey(other.id, { key: 'sk-reused' })).toThrow(
+      'DUPLICATE_API_KEY'
+    );
+  });
+
+  it('searches within a provided key subset', () => {
+    const db = new Database();
+    db.addApiKey(makeKey({ name: 'OpenAI Active', key: 'sk-a' }));
+    const archived = db.addApiKey(
+      makeKey({ name: 'OpenAI Archived', key: 'sk-b' })
+    );
+    db.archiveApiKey(archived.id);
+
+    expect(db.searchKeys('openai')).toHaveLength(2);
+    expect(db.searchKeys('openai', db.getActiveApiKeys())).toHaveLength(1);
+  });
+
+  it('removes inbox items for one entity only', () => {
+    const db = new Database();
+    const first = db.addApiKey(makeKey({ key: 'sk-inbox-a' }));
+    const second = db.addApiKey(makeKey({ key: 'sk-inbox-b' }));
+    const now = new Date().toISOString();
+    db.getData().inbox = [first, second].map((key) => ({
+      id: crypto.randomUUID(),
+      type: 'never_tested',
+      entity_id: key.id,
+      status: 'open',
+      archive_reason: null,
+      created_at: now,
+      updated_at: now,
+      archived_at: null,
+      metadata: { key_name: key.name, provider: key.provider },
+    }));
+
+    expect(db.removeInboxItemsForEntity(first.id)).toBe(1);
+    expect(db.getData().inbox).toHaveLength(1);
+    expect(db.getData().inbox[0].entity_id).toBe(second.id);
   });
 
   it('bumps updated_at on mutations', async () => {

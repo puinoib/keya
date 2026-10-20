@@ -70,6 +70,79 @@ MISTRAL_BASE_URL=https://api.mistral.ai/v1
     expect(candidate?.draft.key_value).toBe('plain-secret-1234567890');
   });
 
+  it('detects an Exa key from its env name', async () => {
+    mockClipboard('EXA_API_KEY="exa-secret-1234567890"');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Exa');
+    expect(candidate?.draft.key_value).toBe('exa-secret-1234567890');
+    expect(candidate?.draft.endpoint).toBe('https://api.exa.ai');
+  });
+
+  it('detects a Cerebras key from a generic endpoint hint', async () => {
+    mockClipboard(`
+API_KEY=cerebras-secret-1234567890
+BASE_URL=https://api.cerebras.ai/v1
+    `);
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Cerebras');
+    expect(candidate?.draft.endpoint).toBe('https://api.cerebras.ai/v1');
+  });
+
+  it('detects a Z.AI key without mistaking it for Zhipu', async () => {
+    mockClipboard(`
+ZAI_API_KEY=zai-secret-1234567890
+BASE_URL=https://api.z.ai/api/coding/paas/v4
+    `);
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Z.AI');
+    expect(candidate?.draft.endpoint).toBe(
+      'https://api.z.ai/api/coding/paas/v4'
+    );
+  });
+
+  it('detects a Hugging Face token from HF_TOKEN', async () => {
+    mockClipboard('HF_TOKEN=hf_secret1234567890abcdef');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Hugging Face');
+    expect(candidate?.draft.endpoint).toBe('https://router.huggingface.co/v1');
+  });
+
+  it('detects a GitHub token from its prefix', async () => {
+    mockClipboard('ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('GitHub');
+    expect(candidate?.draft.endpoint).toBe('https://api.github.com');
+  });
+
+  it('detects a Stripe secret key from its prefix', async () => {
+    // Assembled at runtime: a literal would read as a live credential to
+    // secret scanners, and a shortened one would stop matching the prefix.
+    mockClipboard(['sk_live', '51Nabcdefghijklmnopqrstuvwx'].join('_'));
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Stripe');
+    expect(candidate?.draft.endpoint).toBe('https://api.stripe.com');
+  });
+
+  it('detects Perplexity and DeepInfra keys by env name', async () => {
+    mockClipboard('PPLX_API_KEY="pplx-secret-1234567890"');
+    expect((await tryDetectClipboardKey())?.provider).toBe('Perplexity');
+
+    mockClipboard('DEEPINFRA_API_KEY="di-secret-1234567890"');
+    expect((await tryDetectClipboardKey())?.provider).toBe('DeepInfra');
+  });
+
   it('detects Azure OpenAI by env name', async () => {
     mockClipboard('AZURE_OPENAI_API_KEY="azure-secret-1234567890"');
 

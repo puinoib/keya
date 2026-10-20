@@ -54,7 +54,7 @@ function EmojiPickerPopover({
 export function GroupsPage() {
   const { db, addGroup, updateGroup, deleteGroup } = useStore();
   const groups = db?.getGroups() ?? [];
-  const keys = db?.getApiKeys() ?? [];
+  const keys = db?.getActiveApiKeys() ?? [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingIcon, setEditingIcon] = useState('');

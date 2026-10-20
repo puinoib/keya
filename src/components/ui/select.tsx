@@ -50,7 +50,7 @@ function SelectContent({
           )}
           {...props}
         >
-          <SelectPrimitive.List className="p-1">
+          <SelectPrimitive.List className="max-h-[min(60vh,22rem)] overflow-y-auto p-1">
             {children}
           </SelectPrimitive.List>
         </SelectPrimitive.Popup>

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   ENDPOINT_DEFAULTS,
   PRESET_PROVIDERS,
+  getCustomProvider,
   getDefaultEndpointForProvider,
+  isPresetProvider,
 } from '../types';
 
 describe('provider endpoint configuration', () => {
@@ -43,5 +45,94 @@ describe('provider endpoint configuration', () => {
         disabled_providers: [],
       })
     ).toBe('https://ai.example.com/v1');
+  });
+
+  it('keeps preset names unique and endpoints distinct', () => {
+    expect(new Set(PRESET_PROVIDERS).size).toBe(PRESET_PROVIDERS.length);
+
+    const endpoints = PRESET_PROVIDERS.map(
+      (provider) => getDefaultEndpointForProvider(provider, undefined) ?? ''
+    );
+    expect(new Set(endpoints).size).toBe(PRESET_PROVIDERS.length);
+
+    for (const endpoint of endpoints) {
+      expect(endpoint, endpoint).toMatch(/^https:\/\//);
+      expect(endpoint.endsWith('/'), endpoint).toBe(false);
+    }
+  });
+
+  it('has no unused ENDPOINT_DEFAULTS entries', () => {
+    const usedKeys = new Set(
+      PRESET_PROVIDERS.map((provider) =>
+        getDefaultEndpointForProvider(provider, undefined)
+      )
+    );
+
+    for (const value of Object.values(ENDPOINT_DEFAULTS)) {
+      expect(usedKeys.has(value), value).toBe(true);
+    }
+  });
+
+  it('resolves the newer OpenAI-compatible presets', () => {
+    const expected: Record<string, string> = {
+      'NVIDIA NIM': 'https://integrate.api.nvidia.com/v1',
+      Cerebras: 'https://api.cerebras.ai/v1',
+      Fireworks: 'https://api.fireworks.ai/inference/v1',
+      Baseten: 'https://inference.baseten.co/v1',
+      'Hugging Face': 'https://router.huggingface.co/v1',
+      'Xiaomi MiMo': 'https://api.xiaomimimo.com/v1',
+      'Z.AI': 'https://api.z.ai/api/coding/paas/v4',
+      'Z.AI Coding (China)': 'https://open.bigmodel.cn/api/coding/paas/v4',
+      'Moonshot AI (Global)': 'https://api.moonshot.ai/v1',
+      'Vercel AI Gateway': 'https://ai-gateway.vercel.sh/v1',
+      Perplexity: 'https://api.perplexity.ai/v1',
+      DeepInfra: 'https://api.deepinfra.com/v1/openai',
+      'Tencent Hunyuan': 'https://api.hunyuan.cloud.tencent.com/v1',
+      'Baidu Qianfan': 'https://qianfan.baidubce.com/v2',
+      'Z.AI (General)': 'https://api.z.ai/api/paas/v4',
+      'OpenCode Zen': 'https://opencode.ai/zen/v1',
+      'OpenCode Go': 'https://opencode.ai/zen/go/v1',
+      'Stability AI': 'https://api.stability.ai',
+      Exa: 'https://api.exa.ai',
+      GitHub: 'https://api.github.com',
+      Stripe: 'https://api.stripe.com',
+    };
+
+    for (const [provider, endpoint] of Object.entries(expected)) {
+      expect(getDefaultEndpointForProvider(provider, undefined), provider).toBe(
+        endpoint
+      );
+    }
+  });
+});
+
+describe('preset provider detection', () => {
+  it('matches presets regardless of case and surrounding spaces', () => {
+    expect(isPresetProvider('GitHub')).toBe(true);
+    expect(isPresetProvider('  github ')).toBe(true);
+    expect(isPresetProvider('Exa')).toBe(true);
+    expect(isPresetProvider('Acme Search')).toBe(false);
+  });
+
+  it('finds custom providers case-insensitively', () => {
+    const settings = {
+      auto_lock_minutes: 5,
+      auto_test_on_save: false,
+      auto_test_daily: false,
+      clipboard_detection_on_add: true,
+      custom_providers: [
+        {
+          name: 'Acme Search',
+          endpoint: 'https://api.acme-search.dev',
+          check: { auth: 'x-api-key' as const },
+        },
+      ],
+      disabled_providers: [],
+    };
+
+    expect(getCustomProvider(' acme search ', settings)?.endpoint).toBe(
+      'https://api.acme-search.dev'
+    );
+    expect(getCustomProvider('Missing', settings)).toBeUndefined();
   });
 });

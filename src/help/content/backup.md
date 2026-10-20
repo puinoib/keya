@@ -55,6 +55,7 @@ Permissions can also cause save failures. Restore access to the workspace, but p
 |---|---|
 | Forgotten password | There is no reset service. If enrolled biometric unlock still works, export accessibly while you can; otherwise recovery requires the password. |
 | Deleted or corrupted file | Restore a verified backup or a provider-retained version. Keya cannot reconstruct missing contents. |
+| Deleted a credential by mistake | Restore a backup or provider file version. Keya has no recycle bin; archiving is not deletion. |
 | Folder deletion synchronized | Check your provider's trash/version history; synchronization may propagate the deletion rather than restore it. |
 | Browser storage cleared | Existing vault files remain on disk. Choose the folder and unlock again with the password. |
 | Device stolen while unlocked | Decrypted data may be accessible. Disk encryption in Keya does not protect an already unlocked app. |

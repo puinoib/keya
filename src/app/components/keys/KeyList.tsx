@@ -5,12 +5,19 @@ import { GroupSelect } from './GroupSelect';
 import { useStore } from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester } from '../../lib/api-tester';
+import type { TestResult } from '../../lib/api-tester';
+import {
+  describeTestResult,
+  getTestActionHint,
+  getTestActionLabel,
+  toConnectionCheck,
+} from '../../lib/test-feedback';
 import type { ApiKey } from '../../../core/types';
 import {
   getDefaultEndpointForProvider,
-  getProvidersForDropdown,
+  getProviderSections,
 } from '../../../core/types';
-import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import {
   getExpiryStatus,
   getExpiryStatusLabel,
@@ -28,16 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialogRoot as AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Input } from '@/components/ui/input';
@@ -45,10 +42,13 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
 } from '@/components/ui/select';
 import {
+  Archive,
   Copy,
   DotsThree,
   FloppyDisk,
@@ -67,20 +67,24 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
+import { DeleteKeyDialog } from './DeleteKeyDialog';
 
 export function KeyList() {
   const db = useStore((s) => s.db);
+  const settings = db?.getSettings();
   const {
     searchQuery,
     filterGroupId,
     filterProvider,
     filterTestStatus,
     filterExpiryStatus,
+    showArchived,
     selectedKeyId,
     setSelectedKeyId,
     beginAddKeyFlow,
     updateKey,
-    deleteKey,
+    archiveKey,
+    restoreKey,
   } = useStore();
   const [testing, setTesting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -89,8 +93,11 @@ export function KeyList() {
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
   const keyItemRefs = useRef(new Map<string, HTMLDivElement>());
 
-  let keys = db?.getApiKeys() ?? [];
-  if (searchQuery && db) keys = db.searchKeys(searchQuery);
+  const baseKeys = showArchived
+    ? (db?.getArchivedApiKeys() ?? [])
+    : (db?.getActiveApiKeys() ?? []);
+  let keys = baseKeys;
+  if (searchQuery && db) keys = db.searchKeys(searchQuery, baseKeys);
   if (filterGroupId) {
     keys =
       filterGroupId === '__ungrouped__'
@@ -122,30 +129,34 @@ export function KeyList() {
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
   const handleTest = async (key: ApiKey) => {
+    if (key.archived_at) return;
     const activeDb = useStore.getState().db;
     setTesting(key.id);
-    const result = await ApiTester.testKey(key);
+    const result = await ApiTester.testKey(key, settings);
     if (useStore.getState().db !== activeDb) {
       setTesting(null);
       return;
     }
     updateKey(key.id, {
-      connection_check: {
-        status: result.success ? 'success' : 'failed',
-        checked_at: new Date().toISOString(),
-        latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : (result.error ?? null),
-      },
+      connection_check: toConnectionCheck(result),
     });
     setTesting(null);
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${key.name} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
-    );
+    const feedback = describeTestResult(result, key.name);
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
+  };
+
+  const handleArchive = (key: ApiKey) => {
+    archiveKey(key.id);
+    toast.success(`Archived "${key.name}"`, {
+      action: { label: 'Undo', onClick: () => restoreKey(key.id) },
+    });
+  };
+
+  const handleRestore = (key: ApiKey) => {
+    restoreKey(key.id);
+    toast.success(`Restored "${key.name}"`);
   };
 
   const handleCopy = async (keyValue: string, keyId: string) => {
@@ -222,16 +233,20 @@ export function KeyList() {
   useAppHotkey(
     'key.edit',
     () => {
-      if (selectedKey) setEditingKey(selectedKey);
+      if (selectedKey && !selectedKey.archived_at) setEditingKey(selectedKey);
     },
-    { enabled: keyShortcutsEnabled && !!selectedKey }
+    {
+      enabled: keyShortcutsEnabled && !!selectedKey && !selectedKey.archived_at,
+    }
   );
   useAppHotkey(
     'key.test',
     () => {
-      if (selectedKey) handleTest(selectedKey);
+      if (selectedKey && !selectedKey.archived_at) handleTest(selectedKey);
     },
-    { enabled: keyShortcutsEnabled && !!selectedKey }
+    {
+      enabled: keyShortcutsEnabled && !!selectedKey && !selectedKey.archived_at,
+    }
   );
   useAppHotkey(
     'key.delete',
@@ -246,17 +261,37 @@ export function KeyList() {
 
   if (!db) return null;
 
+  if (showArchived && keys.length === 0 && !hasFilters) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="flex items-center justify-center size-14 rounded-2xl bg-surface-3 text-ink-quaternary mb-5">
+          <Archive className="size-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
+          Nothing archived
+        </h3>
+        <p className="text-xs text-ink-quaternary max-w-[240px]">
+          Archive credentials you no longer use to keep them out of the main
+          list without deleting them.
+        </p>
+      </div>
+    );
+  }
+
   if (keys.length === 0 && !hasFilters) {
+    const archivedCount = db.getArchivedApiKeys().length;
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="flex items-center justify-center size-14 rounded-2xl bg-accent/10 text-accent-bright mb-5">
           <Key className="size-6" />
         </div>
         <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
-          No API Keys yet
+          {archivedCount > 0 ? 'No active credentials' : 'No credentials yet'}
         </h3>
-        <p className="text-xs text-ink-quaternary mb-6 max-w-[200px]">
-          Securely store and manage your API keys in one place
+        <p className="text-xs text-ink-quaternary mb-6 max-w-[220px]">
+          {archivedCount > 0
+            ? 'Every credential is archived. Restore one or add a new key.'
+            : 'Store the API keys and tokens your projects depend on'}
         </p>
         <button
           onClick={() => void beginAddKeyFlow()}
@@ -265,6 +300,14 @@ export function KeyList() {
           <Plus className="size-3.5" />
           Add your first key
         </button>
+        {archivedCount > 0 && (
+          <button
+            onClick={() => useStore.getState().setShowArchived(true)}
+            className="mt-3 text-xs text-ink-quaternary hover:text-ink-secondary transition-colors"
+          >
+            View archive ({archivedCount})
+          </button>
+        )}
       </div>
     );
   }
@@ -337,13 +380,23 @@ export function KeyList() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
+                  {key.archived_at ? (
+                    <Archive className="size-3 shrink-0 text-ink-quaternary" />
+                  ) : (
+                    <span
+                      className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
+                    />
+                  )}
                   <span
-                    className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
-                  />
-                  <span className="truncate text-sm font-medium text-ink-primary">
+                    className={`truncate text-sm font-medium ${
+                      key.archived_at
+                        ? 'text-ink-secondary'
+                        : 'text-ink-primary'
+                    }`}
+                  >
                     {key.name}
                   </span>
-                  {expiryLabel && (
+                  {expiryLabel && !key.archived_at && (
                     <>
                       <span className="hidden text-divider sm:inline">·</span>
                       <span
@@ -353,15 +406,14 @@ export function KeyList() {
                       </span>
                     </>
                   )}
+                  {key.archived_at && (
+                    <span className="hidden shrink-0 text-xs text-ink-quaternary sm:inline">
+                      · Archived {format(new Date(key.archived_at), 'MMM d')}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
-                  {getProviderLogo(key.provider) && (
-                    <img
-                      src={getProviderLogo(key.provider)!}
-                      alt=""
-                      className="size-3 shrink-0"
-                    />
-                  )}
+                  <ProviderLogo provider={key.provider} className="size-3" />
                   <span className="shrink-0">{key.provider}</span>
                   {key.description && (
                     <>
@@ -381,19 +433,33 @@ export function KeyList() {
                            sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100
                            ${hoveredKeyId === key.id ? 'opacity-100' : ''}`}
               >
-                <button
-                  onClick={() => handleTest(key)}
-                  disabled={isTesting}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
-                  title={isTesting ? 'Testing...' : 'Test key'}
-                  aria-label={isTesting ? 'Testing key' : 'Test key'}
-                >
-                  {isTesting ? (
-                    <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Flask className="size-4" />
-                  )}
-                </button>
+                {!key.archived_at && (
+                  <button
+                    onClick={() => handleTest(key)}
+                    disabled={isTesting}
+                    className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
+                    title={
+                      isTesting
+                        ? 'Testing...'
+                        : getTestActionLabel(
+                            ApiTester.checkKindFor(key.provider, settings)
+                          )
+                    }
+                    aria-label={
+                      isTesting
+                        ? 'Testing key'
+                        : getTestActionLabel(
+                            ApiTester.checkKindFor(key.provider, settings)
+                          )
+                    }
+                  >
+                    {isTesting ? (
+                      <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Flask className="size-4" />
+                    )}
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleCopy(key.key, key.id)}
@@ -420,9 +486,20 @@ export function KeyList() {
                     <DotsThree className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-44">
-                    <DropdownMenuItem onClick={() => setEditingKey(key)}>
-                      <PencilSimple className="size-3.5" /> Edit
-                    </DropdownMenuItem>
+                    {key.archived_at ? (
+                      <DropdownMenuItem onClick={() => handleRestore(key)}>
+                        <ArrowCounterClockwise className="size-3.5" /> Restore
+                      </DropdownMenuItem>
+                    ) : (
+                      <>
+                        <DropdownMenuItem onClick={() => setEditingKey(key)}>
+                          <PencilSimple className="size-3.5" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchive(key)}>
+                          <Archive className="size-3.5" /> Archive
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeletingKey(key)}
@@ -449,37 +526,10 @@ export function KeyList() {
         }}
       />
 
-      {/* Delete Confirmation */}
-      <AlertDialog
-        open={!!deletingKey}
-        onOpenChange={(open) => {
-          if (!open) setDeletingKey(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Key</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingKey?.name}"? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingKey) {
-                  deleteKey(deletingKey.id);
-                  toast.success(`Deleted "${deletingKey.name}"`);
-                }
-              }}
-              className="bg-danger text-white hover:bg-danger/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteKeyDialog
+        deletingKey={deletingKey}
+        onClose={() => setDeletingKey(null)}
+      />
     </>
   );
 }
@@ -527,14 +577,15 @@ export function EditKeyDialog({
   });
   const [testState, setTestState] = useState<{
     testing: boolean;
-    result: { success: boolean; latency_ms: number; error?: string } | null;
+    result: TestResult | null;
   }>({
     testing: false,
     result: null,
   });
 
   const settings = db?.getSettings();
-  const providers = getProvidersForDropdown(settings);
+  const checkKind = ApiTester.checkKindFor(form.provider, settings);
+  const providerSections = getProviderSections(settings);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
     settings
@@ -566,23 +617,23 @@ export function EditKeyDialog({
     const result = await ApiTester.testRaw(
       form.provider,
       form.endpoint,
-      form.key
+      form.key,
+      settings
     );
     setTestState({ testing: false, result });
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${form.name.trim() || form.provider} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
+    const feedback = describeTestResult(
+      result,
+      form.name.trim() || form.provider
     );
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
     if (db?.hasDuplicateApiKeyValue(form.key.trim(), editingKey.id)) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -598,14 +649,7 @@ export function EditKeyDialog({
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
       ...(testState.result && {
-        connection_check: {
-          status: testState.result.success ? 'success' : 'failed',
-          checked_at: new Date().toISOString(),
-          latency_ms: testState.result.latency_ms ?? null,
-          error_message: testState.result.success
-            ? null
-            : (testState.result.error ?? null),
-        },
+        connection_check: toConnectionCheck(testState.result),
       }),
     });
 
@@ -614,17 +658,14 @@ export function EditKeyDialog({
       const { provider, endpoint, key: keyValue } = form;
       const keyId = editingKey.id;
       const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
-        if (useStore.getState().db !== activeDb) return;
-        useStore.getState().updateKey(keyId, {
-          connection_check: {
-            status: result.success ? 'success' : 'failed',
-            checked_at: new Date().toISOString(),
-            latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : (result.error ?? null),
-          },
-        });
-      });
+      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
+        (result) => {
+          if (useStore.getState().db !== activeDb) return;
+          useStore.getState().updateKey(keyId, {
+            connection_check: toConnectionCheck(result),
+          });
+        }
+      );
     }
   };
 
@@ -637,7 +678,7 @@ export function EditKeyDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit API Key</DialogTitle>
+          <DialogTitle>Edit API Key or Token</DialogTitle>
         </DialogHeader>
 
         <form
@@ -660,7 +701,7 @@ export function EditKeyDialog({
 
           {/* Key Value */}
           <div className="space-y-1.5">
-            <Label className="text-xs">API Key</Label>
+            <Label className="text-xs">API Key or Token</Label>
             <div className="relative">
               <AutoResizeTextarea
                 value={form.key}
@@ -668,7 +709,7 @@ export function EditKeyDialog({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, key: e.target.value }))
                 }
-                placeholder="sk-..."
+                placeholder="sk-... or your API token"
                 className="pr-9 font-mono text-sm break-all"
                 autoComplete="off"
                 spellCheck={false}
@@ -690,7 +731,7 @@ export function EditKeyDialog({
 
           {/* Provider */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Provider</Label>
+            <Label className="text-xs">Service / Provider</Label>
             <Select
               value={form.provider}
               onValueChange={(v) => {
@@ -702,30 +743,23 @@ export function EditKeyDialog({
             >
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
-                  {form.provider && getProviderLogo(form.provider) && (
-                    <img
-                      src={getProviderLogo(form.provider)!}
-                      alt=""
-                      className="size-3.5 shrink-0"
-                    />
-                  )}
+                  <ProviderLogo provider={form.provider} className="size-3.5" />
                   {form.provider}
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {providers.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <div className="flex items-center gap-2">
-                      {getProviderLogo(p) && (
-                        <img
-                          src={getProviderLogo(p)!}
-                          alt=""
-                          className="size-3.5 shrink-0"
-                        />
-                      )}
-                      <span>{p}</span>
-                    </div>
-                  </SelectItem>
+                {providerSections.map((section) => (
+                  <SelectGroup key={section.id}>
+                    <SelectLabel>{section.label}</SelectLabel>
+                    {section.providers.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <ProviderLogo provider={p} className="size-3.5" />
+                          <span>{p}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
@@ -822,7 +856,7 @@ export function EditKeyDialog({
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
               }
-              placeholder="What's this key for?"
+              placeholder="What is this credential used for?"
             />
           </div>
 
@@ -838,19 +872,26 @@ export function EditKeyDialog({
               size="sm"
               onClick={handleTest}
               disabled={!form.key || testState.testing}
+              title={getTestActionHint(checkKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              Test
+              {getTestActionLabel(checkKind)}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               <X className="size-3.5" />
               Cancel
             </Button>
           </div>
+
+          {checkKind !== 'credential' && (
+            <p className="text-[11px] leading-relaxed text-ink-quaternary">
+              {getTestActionHint(checkKind)}
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

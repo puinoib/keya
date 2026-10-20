@@ -4,12 +4,19 @@ import { format } from 'date-fns';
 import { useStore } from '../../store/useStore';
 import {
   getDefaultEndpointForProvider,
-  getProvidersForDropdown,
+  getProviderSections,
   type Settings,
 } from '../../../core/types';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
-import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester } from '../../lib/api-tester';
+import type { TestResult } from '../../lib/api-tester';
+import {
+  describeTestResult,
+  getTestActionHint,
+  getTestActionLabel,
+  toConnectionCheck,
+} from '../../lib/test-feedback';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
 import {
@@ -25,7 +32,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
 } from '@/components/ui/select';
 import {
@@ -52,7 +61,7 @@ interface FormData {
 
 interface TestState {
   testing: boolean;
-  result: { success: boolean; latency_ms: number; error?: string } | null;
+  result: TestResult | null;
 }
 
 const empty: FormData = {
@@ -111,11 +120,12 @@ export function KeyForm({
   }, [showCalendar]);
 
   const settings = db?.getSettings();
-  const providers = getProvidersForDropdown(settings);
+  const providerSections = getProviderSections(settings);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
     settings
   );
+  const checkKind = ApiTester.checkKindFor(form.provider, settings);
 
   useEffect(() => {
     if (!open || !defaultEndpoint) return;
@@ -161,24 +171,21 @@ export function KeyForm({
     const result = await ApiTester.testRaw(
       form.provider,
       form.endpoint,
-      form.key_value
+      form.key_value,
+      settings
     );
     setTestState({ testing: false, result });
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${form.name || form.provider} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
-    );
+    const feedback = describeTestResult(result, form.name || form.provider);
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.key_value) return;
     if (db?.hasDuplicateApiKeyValue(form.key_value)) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -192,22 +199,18 @@ export function KeyForm({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      connection_check: {
-        status: testState.result?.success
-          ? 'success'
-          : testState.result
-            ? 'failed'
-            : 'untested',
-        checked_at: testState.result ? new Date().toISOString() : null,
-        latency_ms: testState.result?.latency_ms ?? null,
-        error_message: testState.result?.success
-          ? null
-          : (testState.result?.error ?? null),
-      },
+      connection_check: testState.result
+        ? toConnectionCheck(testState.result)
+        : {
+            status: 'untested',
+            checked_at: null,
+            latency_ms: null,
+            error_message: null,
+          },
     });
 
     if (!created) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -229,17 +232,14 @@ export function KeyForm({
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {
       const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
-        if (useStore.getState().db !== activeDb) return;
-        updateKey(created.id, {
-          connection_check: {
-            status: result.success ? 'success' : 'failed',
-            checked_at: new Date().toISOString(),
-            latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : (result.error ?? null),
-          },
-        });
-      });
+      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
+        (result) => {
+          if (useStore.getState().db !== activeDb) return;
+          updateKey(created.id, {
+            connection_check: toConnectionCheck(result),
+          });
+        }
+      );
     }
   };
 
@@ -259,7 +259,7 @@ export function KeyForm({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New API Key</DialogTitle>
+          <DialogTitle>New API Key or Token</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
@@ -272,7 +272,7 @@ export function KeyForm({
               id="name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Production OpenAI"
+              placeholder="e.g. Production Firecrawl"
               required
             />
           </div>
@@ -280,7 +280,7 @@ export function KeyForm({
           {/* Key Value */}
           <div className="space-y-1.5">
             <Label htmlFor="key_value" className="text-xs">
-              API Key <span className="text-red-500">*</span>
+              API Key or Token <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
               <AutoResizeTextarea
@@ -296,7 +296,7 @@ export function KeyForm({
                   setForm((f) => ({ ...f, key_value: e.target.value }));
                   setTestState({ testing: false, result: null });
                 }}
-                placeholder="sk-..."
+                placeholder="sk-... or your API token"
                 className="pr-9 font-mono text-sm break-all"
                 required
               />
@@ -318,35 +318,33 @@ export function KeyForm({
           {/* Provider */}
           <div className="space-y-1.5">
             <Label htmlFor="provider" className="text-xs">
-              Provider
+              Service / Provider
             </Label>
             <Select value={form.provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
-                  {form.provider && getProviderLogo(form.provider) && (
-                    <img
-                      src={getProviderLogo(form.provider)!}
-                      alt=""
-                      className="size-3.5 shrink-0"
+                  {form.provider && (
+                    <ProviderLogo
+                      provider={form.provider}
+                      className="size-3.5"
                     />
                   )}
                   {form.provider}
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {providers.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <div className="flex items-center gap-2">
-                      {getProviderLogo(p) && (
-                        <img
-                          src={getProviderLogo(p)!}
-                          alt=""
-                          className="size-3.5 shrink-0"
-                        />
-                      )}
-                      <span>{p}</span>
-                    </div>
-                  </SelectItem>
+                {providerSections.map((section) => (
+                  <SelectGroup key={section.id}>
+                    <SelectLabel>{section.label}</SelectLabel>
+                    {section.providers.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <ProviderLogo provider={p} className="size-3.5" />
+                          <span>{p}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
@@ -450,7 +448,7 @@ export function KeyForm({
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
               }
-              placeholder="What's this key for?"
+              placeholder="What is this credential used for?"
             />
           </div>
 
@@ -466,13 +464,14 @@ export function KeyForm({
               size="sm"
               onClick={handleTest}
               disabled={!form.key_value || testState.testing}
+              title={getTestActionHint(checkKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              Test
+              {getTestActionLabel(checkKind)}
             </Button>
             <Button
               type="button"
@@ -484,6 +483,12 @@ export function KeyForm({
               Cancel
             </Button>
           </div>
+
+          {checkKind !== 'credential' && (
+            <p className="text-[11px] leading-relaxed text-ink-quaternary">
+              {getTestActionHint(checkKind)}
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

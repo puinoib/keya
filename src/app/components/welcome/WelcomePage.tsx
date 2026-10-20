@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
@@ -248,12 +248,12 @@ export function WelcomePage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <KeyaLogo className="size-14 mb-4" />
+            <KeyaLogo className="size-14" />
             <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">
               Keya
             </h1>
             <p className="text-xs text-ink-quaternary mt-1.5">
-              Local-first AI API key manager
+              Local-first developer API credential vault
             </p>
           </div>
 
@@ -483,6 +483,12 @@ export function WelcomePage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              to="/home"
+              className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors"
+            >
+              About Keya
+            </Link>
             <a
               href="https://coryso.com"
               target="_blank"

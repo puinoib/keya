@@ -9,7 +9,7 @@ Keya encrypts vault contents on disk. It does not protect an unlocked vault agai
 
 ## What is encrypted
 
-The payload contains API keys, groups, settings, inbox items, and vault metadata. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
+The payload contains API keys, groups, settings, inbox items, and vault metadata, including archived credentials. Archiving keeps the secret in the vault; only permanent deletion removes it from the current payload. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
 
 IndexedDB separately stores the workspace directory handle and cached vault summaries, including names, icons, and key counts. These summaries are not encrypted. PRF biometric enrollment also stores a credential ID, PRF salt, nonce, and encrypted master password; the PRF-derived encryption key is not stored.
 
@@ -43,7 +43,7 @@ Locking first attempts to save pending changes. On success it clears the active 
 
 Biometric unlock requires a WebAuthn authenticator supporting the **PRF extension**. Keya derives an AES-GCM key from PRF output using HKDF, and uses it to encrypt or decrypt the stored master password. Authenticator credentials are managed by the browser/authenticator, not stored as private keys in Keya's IndexedDB.
 
-If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
+If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. A passkey can be created successfully while still not supporting PRF: support depends on the browser, operating system, and passkey storage provider. In Chrome, **Your Chrome profile** may not return PRF even when Google Password Manager or iCloud Keychain does. If enrollment fails after choosing where to save the passkey, choose Google Password Manager or iCloud Keychain and try again. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
 
 An enrolled credential and its Keya site record are needed for biometric unlock. Do not rely on them as your only recovery method. Clearing site data requires password unlock and re-enrollment. Credential availability or synchronization depends on the authenticator and browser; Keya does not synchronize its enrollment records.
 
@@ -55,8 +55,8 @@ These checks do not lock cloud clients or other devices, merge conflicting edits
 
 ## Network requests and clipboard
 
-Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. Amazon Bedrock is not testable from the browser because it requires AWS request signing.
+Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. Amazon Bedrock is not testable from the browser because it requires AWS request signing; NVIDIA NIM and Baseten are not testable because they send no cross-origin headers.
 
 Copied keys leave the app's encrypted storage boundary. The key detail copy action attempts to clear the clipboard after 15 seconds, but browser permissions, page closure, and clipboard history can prevent effective removal. Do not rely on clipboard clearing for secrecy.
 
-JSON exports contain plaintext keys. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.
+JSON exports contain plaintext keys, including archived ones. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.

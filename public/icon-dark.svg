@@ -1,5 +1,5 @@
 <!-- Dark-theme variant of icon.svg; keep paths and gradient directions in sync. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="86" height="86" fill="none" viewBox="0 0 86 86">
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" fill="none" viewBox="6.25 6.75 74 74">
   <defs>
     <linearGradient id="paint0_linear_2386_4701" x1="69.28" x2="69.28" y1="27.14" y2="60.48" gradientUnits="userSpaceOnUse">
       <stop stop-color="#8A88F2" offset="0" />
