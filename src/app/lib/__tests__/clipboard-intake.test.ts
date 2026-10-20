@@ -125,6 +125,8 @@ BASE_URL=https://api.z.ai/api/coding/paas/v4
   });
 
   it('detects a Stripe secret key from its prefix', async () => {
+    // Assembled at runtime: a literal would read as a live credential to
+    // secret scanners, and a shortened one would stop matching the prefix.
     mockClipboard(['sk_live', '51Nabcdefghijklmnopqrstuvwx'].join('_'));
 
     const candidate = await tryDetectClipboardKey();
