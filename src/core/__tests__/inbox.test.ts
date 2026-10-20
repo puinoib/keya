@@ -545,3 +545,62 @@ describe('check kind awareness', () => {
     expect(alerts.map((alert) => alert.type)).toContain('connection_failed');
   });
 });
+
+describe('archived keys', () => {
+  it('closes open alerts and ignores the key while archived', () => {
+    const db = new Database();
+    const key = db.addApiKey(makeKey({ name: 'Retiring Key' }));
+
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id, NOW),
+      NOW
+    );
+    expect(
+      db.getOpenInboxItems().filter((item) => item.entity_id === key.id)
+    ).toHaveLength(1);
+
+    db.archiveApiKey(key.id, NOW);
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id, NOW),
+      NOW
+    );
+
+    expect(
+      db.getOpenInboxItems().filter((item) => item.entity_id === key.id)
+    ).toHaveLength(0);
+    expect(
+      db.getInboxItems().find((item) => item.entity_id === key.id)?.status
+    ).toBe('archived');
+  });
+
+  it('rebuilds current alerts after restore', () => {
+    const db = new Database();
+    const key = db.addApiKey(makeKey({ name: 'Restored Key' }));
+
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id, NOW),
+      NOW
+    );
+    db.archiveApiKey(key.id, NOW);
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id, NOW),
+      NOW
+    );
+
+    db.restoreApiKey(key.id);
+    db.removeInboxItemsForEntity(key.id);
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id, NOW),
+      NOW
+    );
+
+    expect(
+      db.getOpenInboxItems().filter((item) => item.entity_id === key.id)
+    ).toHaveLength(1);
+  });
+});
