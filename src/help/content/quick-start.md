@@ -34,7 +34,9 @@ If clipboard detection is enabled, adding a key may offer a candidate from your 
 
 ## 4. Find and manage keys
 
-Use search and the sidebar filters to narrow the list by group, provider, connection status, or expiry. Select a key to view details, reveal or copy its value, test it, edit it, or delete it.
+Use search and the sidebar filters to narrow the list by group, provider, connection status, or expiry. Select a key to view details, reveal or copy its value, test it, edit it, archive it, or delete it.
+
+**Archive** a credential you no longer use to move it out of the main list without deleting it. Archived keys stay encrypted in the vault, are excluded from tests and Inbox alerts, and can be restored from the **Archived** view. Deleting is permanent; Keya has no recycle bin, so keep backups if you may need to recover a deleted credential.
 
 Clipboard clearing is best-effort; copied secrets can remain in clipboard history. JSON exports are plaintext. For backups, prefer encrypted `.keya` exports.
 

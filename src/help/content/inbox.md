@@ -30,6 +30,8 @@ Open Inbox from the sidebar. Use **View key** to inspect, edit, or test the affe
 
 When an issue disappears, open alerts are automatically archived as resolved. For example, a successful test resolves a connection-failed alert, and removing a key resolves its outstanding alerts.
 
+Archiving a key closes its open alerts and stops new ones, because archived credentials are excluded from alert checks. Restoring a key clears its archived alerts and rebuilds the alerts that currently apply; this discards earlier dismissals for that key.
+
 **Current limitation:** archived items remain archived even if the same alert type recurs for the same key, including items automatically archived as resolved. An empty Inbox is therefore not proof that every key is healthy. Review current key details and test results as well.
 
 ## A useful routine

@@ -9,7 +9,7 @@ Keya encrypts vault contents on disk. It does not protect an unlocked vault agai
 
 ## What is encrypted
 
-The payload contains API keys, groups, settings, inbox items, and vault metadata. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
+The payload contains API keys, groups, settings, inbox items, and vault metadata, including archived credentials. Archiving keeps the secret in the vault; only permanent deletion removes it from the current payload. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
 
 IndexedDB separately stores the workspace directory handle and cached vault summaries, including names, icons, and key counts. These summaries are not encrypted. PRF biometric enrollment also stores a credential ID, PRF salt, nonce, and encrypted master password; the PRF-derived encryption key is not stored.
 
@@ -59,4 +59,4 @@ Keya has no application backend or analytics. Loading the app still retrieves it
 
 Copied keys leave the app's encrypted storage boundary. The key detail copy action attempts to clear the clipboard after 15 seconds, but browser permissions, page closure, and clipboard history can prevent effective removal. Do not rely on clipboard clearing for secrecy.
 
-JSON exports contain plaintext keys. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.
+JSON exports contain plaintext keys, including archived ones. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.
