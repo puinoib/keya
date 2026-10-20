@@ -105,6 +105,32 @@ BASE_URL=https://api.z.ai/api/coding/paas/v4
     expect(candidate?.draft.endpoint).toBe('https://router.huggingface.co/v1');
   });
 
+  it('detects a GitHub token from its prefix', async () => {
+    mockClipboard('ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('GitHub');
+    expect(candidate?.draft.endpoint).toBe('https://api.github.com');
+  });
+
+  it('detects a Stripe secret key from its prefix', async () => {
+    mockClipboard(['sk_live', '51Nabcdefghijklmnopqrstuvwx'].join('_'));
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Stripe');
+    expect(candidate?.draft.endpoint).toBe('https://api.stripe.com');
+  });
+
+  it('detects Perplexity and DeepInfra keys by env name', async () => {
+    mockClipboard('PPLX_API_KEY="pplx-secret-1234567890"');
+    expect((await tryDetectClipboardKey())?.provider).toBe('Perplexity');
+
+    mockClipboard('DEEPINFRA_API_KEY="di-secret-1234567890"');
+    expect((await tryDetectClipboardKey())?.provider).toBe('DeepInfra');
+  });
+
   it('detects Azure OpenAI by env name', async () => {
     mockClipboard('AZURE_OPENAI_API_KEY="azure-secret-1234567890"');
 

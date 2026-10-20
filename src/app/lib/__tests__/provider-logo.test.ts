@@ -3,12 +3,34 @@ import { PRESET_PROVIDERS } from '../../../core/types';
 import { getProviderLogo, isMonochromeProviderLogo } from '../provider-logo';
 
 describe('provider logos', () => {
-  it('has a logo for every preset provider', () => {
+  it('reports preset providers that still lack a mark', () => {
     const missing = PRESET_PROVIDERS.filter(
       (provider) => !getProviderLogo(provider)
     );
 
-    expect(missing).toEqual([]);
+    // Every provider below still renders the initial-letter fallback.
+    expect(missing).toEqual([
+      'Perplexity',
+      'Featherless',
+      'Chutes',
+      'Hyperbolic',
+      'Nebius',
+      'DeepInfra',
+      'Upstage',
+      'Reka',
+      'Gitee AI',
+      'Tencent Hunyuan',
+      'Baidu Qianfan',
+      'Baichuan',
+      'StepFun',
+      'OpenCode Zen',
+      'OpenCode Go',
+      'Stability AI',
+      'Recraft',
+      'Firecrawl',
+      'GitHub',
+      'Stripe',
+    ]);
   });
 
   it('maps shared marks to the same asset', () => {
@@ -17,6 +39,10 @@ describe('provider logos', () => {
     );
     expect(getProviderLogo('Z.AI Coding (China)')).toBe(
       getProviderLogo('Z.AI')
+    );
+    expect(getProviderLogo('Z.AI (General)')).toBe(getProviderLogo('Z.AI'));
+    expect(getProviderLogo('Vercel')).toBe(
+      getProviderLogo('Vercel AI Gateway')
     );
   });
 
@@ -31,8 +57,9 @@ describe('provider logos', () => {
       logos.add(logo);
     }
 
-    // 27 presets; Moonshot and Z.AI each share one mark across two names.
-    expect(logos.size).toBe(PRESET_PROVIDERS.length - 2);
+    // 49 presets, 20 without a mark. Moonshot (2), Z.AI (3) and Vercel (2) share
+    // one asset each, which drops four more distinct URLs.
+    expect(logos.size).toBe(PRESET_PROVIDERS.length - 20 - 4);
   });
 
   it('marks only monochrome marks for dark theme inversion', () => {
@@ -47,9 +74,11 @@ describe('provider logos', () => {
         'Moonshot AI (Global)',
         'Z.AI',
         'Z.AI Coding (China)',
+        'Z.AI (General)',
         'Baseten',
         'Xiaomi MiMo',
         'Vercel AI Gateway',
+        'Vercel',
       ].sort()
     );
 

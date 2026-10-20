@@ -34,6 +34,7 @@ const LOGO_MAP: Record<string, string> = {
   Zhipu: ZhipuLogo,
   'Z.AI': ZaiLogo,
   'Z.AI Coding (China)': ZaiLogo,
+  'Z.AI (General)': ZaiLogo,
   Mistral: MistralLogo,
   xAI: GrokLogo,
   MiniMax: MiniMaxLogo,
@@ -52,6 +53,7 @@ const LOGO_MAP: Record<string, string> = {
   'Hugging Face': HuggingFaceLogo,
   'Xiaomi MiMo': XiaomiLogo,
   'Vercel AI Gateway': VercelLogo,
+  Vercel: VercelLogo,
 };
 
 /**
@@ -67,9 +69,11 @@ const MONOCHROME_PROVIDERS = new Set([
   'Moonshot AI (Global)',
   'Z.AI',
   'Z.AI Coding (China)',
+  'Z.AI (General)',
   'Baseten',
   'Xiaomi MiMo',
   'Vercel AI Gateway',
+  'Vercel',
 ]);
 
 export function getProviderLogo(provider: string): string | undefined {
