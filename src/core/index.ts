@@ -3,6 +3,7 @@
 export type {
   KeyaDatabase,
   ApiKey,
+  NewApiKey,
   Group,
   Settings,
   InboxItem,

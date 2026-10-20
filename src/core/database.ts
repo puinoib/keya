@@ -1,4 +1,10 @@
-import type { KeyaDatabase, ApiKey, Group, InboxItem } from './types';
+import type {
+  KeyaDatabase,
+  ApiKey,
+  Group,
+  InboxItem,
+  NewApiKey,
+} from './types';
 import { DEFAULT_GROUPS, DEFAULT_SETTINGS } from './types';
 
 export function createEmptyDatabase(
@@ -43,17 +49,35 @@ export class Database {
     return this.data.api_keys;
   }
 
+  getActiveApiKeys(): ApiKey[] {
+    return this.data.api_keys.filter((key) => !key.archived_at);
+  }
+
+  getArchivedApiKeys(): ApiKey[] {
+    return this.data.api_keys
+      .filter((key) => Boolean(key.archived_at))
+      .sort((a, b) => {
+        const archivedDelta =
+          new Date(b.archived_at ?? 0).getTime() -
+          new Date(a.archived_at ?? 0).getTime();
+        if (archivedDelta !== 0) return archivedDelta;
+        return (
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+      });
+  }
+
   getApiKey(id: string): ApiKey | undefined {
     return this.data.api_keys.find((k) => k.id === id);
   }
 
   hasDuplicateApiKeyValue(keyValue: string, excludeId?: string): boolean {
     return this.data.api_keys.some(
-      (key) => key.key === keyValue && key.id !== excludeId
+      (key) => !key.archived_at && key.key === keyValue && key.id !== excludeId
     );
   }
 
-  addApiKey(key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>): ApiKey {
+  addApiKey(key: NewApiKey): ApiKey {
     if (this.hasDuplicateApiKeyValue(key.key)) {
       throw new Error('DUPLICATE_API_KEY');
     }
@@ -61,6 +85,7 @@ export class Database {
     const newKey: ApiKey = {
       ...key,
       id: crypto.randomUUID(),
+      archived_at: key.archived_at ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -72,18 +97,44 @@ export class Database {
   updateApiKey(id: string, updates: Partial<ApiKey>): ApiKey | null {
     const idx = this.data.api_keys.findIndex((k) => k.id === id);
     if (idx === -1) return null;
+    // Archived keys are read-only; lifecycle changes use archive/restore.
+    if (this.data.api_keys[idx].archived_at) return null;
     const nextKeyValue = updates.key ?? this.data.api_keys[idx].key;
     if (this.hasDuplicateApiKeyValue(nextKeyValue, id)) {
       throw new Error('DUPLICATE_API_KEY');
     }
+    const sanitized = { ...updates };
+    delete sanitized.archived_at;
+    delete sanitized.id;
     this.data.api_keys[idx] = {
       ...this.data.api_keys[idx],
-      ...updates,
+      ...sanitized,
       id,
       updated_at: new Date().toISOString(),
     };
     this.touch();
     return this.data.api_keys[idx];
+  }
+
+  archiveApiKey(id: string, at: Date = new Date()): ApiKey | null {
+    const key = this.data.api_keys.find((k) => k.id === id);
+    if (!key) return null;
+    if (key.archived_at) return key;
+    const nowIso = at.toISOString();
+    key.archived_at = nowIso;
+    key.updated_at = nowIso;
+    this.touch();
+    return key;
+  }
+
+  restoreApiKey(id: string): ApiKey | null {
+    const key = this.data.api_keys.find((k) => k.id === id);
+    if (!key) return null;
+    if (!key.archived_at) return key;
+    key.archived_at = null;
+    key.updated_at = new Date().toISOString();
+    this.touch();
+    return key;
   }
 
   deleteApiKey(id: string): boolean {
@@ -94,9 +145,9 @@ export class Database {
     return true;
   }
 
-  searchKeys(query: string): ApiKey[] {
+  searchKeys(query: string, keys: ApiKey[] = this.data.api_keys): ApiKey[] {
     const q = query.toLowerCase();
-    return this.data.api_keys.filter(
+    return keys.filter(
       (k) =>
         k.name.toLowerCase().includes(q) ||
         k.description.toLowerCase().includes(q) ||
@@ -167,6 +218,17 @@ export class Database {
     item.updated_at = item.archived_at;
     this.touch();
     return item;
+  }
+
+  /** Remove all inbox items for a key, used when its lifecycle state changes. */
+  removeInboxItemsForEntity(entityId: string): number {
+    const before = this.data.inbox.length;
+    this.data.inbox = this.data.inbox.filter(
+      (item) => item.entity_id !== entityId
+    );
+    const removed = before - this.data.inbox.length;
+    if (removed > 0) this.touch();
+    return removed;
   }
 
   /* ──── Vault Meta ──── */

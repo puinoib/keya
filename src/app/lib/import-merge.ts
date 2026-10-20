@@ -5,7 +5,7 @@
  * creating missing ones. Duplicate key values are skipped instead of aborting
  * the whole import. All input is normalized before anything is mutated.
  */
-import type { ApiKey, ConnectionCheck, Group } from '../../core/types';
+import type { ConnectionCheck, Group, NewApiKey } from '../../core/types';
 import type { Database } from '../../core/database';
 
 export interface ImportSource {
@@ -199,7 +199,7 @@ export function mergeImportedData(
           ? (createdGroupIds.get(target.tempId) ?? null)
           : null;
 
-    const apiKey: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> = {
+    const apiKey: NewApiKey = {
       name: key.name,
       key: key.key,
       provider: key.provider,

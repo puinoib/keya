@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Database } from '../../core/database';
-import type { ApiKey, Group, InboxItem } from '../../core/types';
+import type { ApiKey, Group, InboxItem, NewApiKey } from '../../core/types';
 import { ApiTester } from '../lib/api-tester';
 import { toConnectionCheck } from '../lib/test-feedback';
 import {
@@ -63,9 +63,7 @@ interface AppState {
   updateKeyboardShortcuts: (shortcuts: Record<string, string>) => void;
 
   // Actions - Keys
-  addKey: (
-    key: Omit<ApiKey, 'id' | 'created_at' | 'updated_at'>
-  ) => ApiKey | undefined;
+  addKey: (key: NewApiKey) => ApiKey | undefined;
   updateKey: (id: string, updates: Partial<ApiKey>) => void;
   deleteKey: (id: string) => void;
 

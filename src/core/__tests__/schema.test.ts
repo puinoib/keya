@@ -8,6 +8,7 @@ import {
 } from '../schema';
 import type { KeyaDatabase } from '../types';
 import { createEmptyDatabase, Database } from '../database';
+import { validateDatabase } from '../validators';
 
 describe('schema (.keya file format)', () => {
   const password = 'vault-master-password';
@@ -64,6 +65,47 @@ describe('schema (.keya file format)', () => {
     expect(restored.api_keys[1].key).toBe(db.api_keys[1].key);
     expect(restored.groups).toHaveLength(db.groups.length);
     expect(restored.updated_at).toBe(db.updated_at);
+  });
+
+  it('round-trips archived keys', async () => {
+    const db = makeTestDb();
+    db.api_keys[0].archived_at = '2026-06-01T10:00:00.000Z';
+    const bytes = await serializeToFile(db, password);
+    const restored = await deserializeFromFile(bytes, password);
+
+    expect(restored.api_keys[0].archived_at).toBe('2026-06-01T10:00:00.000Z');
+    expect(restored.api_keys[1].archived_at).toBeNull();
+  });
+
+  it('defaults archived_at for records written before the field existed', () => {
+    const { api_keys, ...rest } = createEmptyDatabase();
+    const legacy = {
+      ...rest,
+      api_keys: [
+        {
+          id: 'legacy-key',
+          name: 'Legacy',
+          description: '',
+          provider: 'OpenAI',
+          endpoint: 'https://api.openai.com/v1',
+          key: 'sk-legacy',
+          group_id: null,
+          expires_at: null,
+          connection_check: {
+            status: 'untested',
+            checked_at: null,
+            latency_ms: null,
+            error_message: null,
+          },
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const validated = validateDatabase(legacy);
+    expect(validated.api_keys[0].archived_at).toBeNull();
+    expect(api_keys).toHaveLength(0);
   });
 
   it('throws on wrong password', async () => {

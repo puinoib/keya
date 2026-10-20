@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Database } from '../../../core/database';
-import type { ApiKey } from '../../../core/types';
+import type { NewApiKey } from '../../../core/types';
 import { mergeImportedData } from '../import-merge';
 
-function makeKey(
-  value: string,
-  groupId: string | null = null
-): Omit<ApiKey, 'id' | 'created_at' | 'updated_at'> {
+function makeKey(value: string, groupId: string | null = null): NewApiKey {
   return {
     name: `Key ${value}`,
     key: value,

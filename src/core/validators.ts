@@ -27,6 +27,7 @@ export const ApiKeySchema = z
     key: z.string(),
     group_id: z.string().nullable().default(null),
     expires_at: z.string().nullable().default(null),
+    archived_at: z.string().nullable().default(null),
     connection_check: ConnectionCheckSchema.default({
       status: 'untested',
       checked_at: null,
