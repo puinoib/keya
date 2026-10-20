@@ -4,9 +4,24 @@
 /* ── Class-based dark mode ── */
 @custom-variant dark (&.dark);
 
-/* ── SVG icon theme sync ── */
-:root:not(.light) .icon-theme {
-  filter: brightness(0) invert(1);
+/* ── Brand mark theme sync ── */
+.keya-logo-light,
+.keya-logo-dark {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.keya-logo-dark {
+  display: none;
+}
+
+:root:not(.light) .keya-logo-light {
+  display: none;
+}
+
+:root:not(.light) .keya-logo-dark {
+  display: block;
 }
 
 /* ── Emoji picker in node_modules ── */

@@ -4,6 +4,7 @@ import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
+import { KeyaLogo } from '@/components/ui/keya-logo';
 import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
@@ -247,11 +248,7 @@ export function WelcomePage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <img
-              src="/icon.svg"
-              alt="Keya"
-              className="icon-theme size-14 mb-4"
-            />
+            <KeyaLogo className="size-14 mb-4" />
             <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">
               Keya
             </h1>
