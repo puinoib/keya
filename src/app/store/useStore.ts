@@ -38,6 +38,8 @@ interface AppState {
   filterProvider: string | null;
   filterTestStatus: string | null;
   filterExpiryStatus: string | null;
+  /** true shows archived keys instead of active ones. */
+  showArchived: boolean;
 
   // Selection
   selectedKeyId: string | null;
@@ -66,6 +68,8 @@ interface AppState {
   addKey: (key: NewApiKey) => ApiKey | undefined;
   updateKey: (id: string, updates: Partial<ApiKey>) => void;
   deleteKey: (id: string) => void;
+  archiveKey: (id: string) => void;
+  restoreKey: (id: string) => void;
 
   // Actions - UI
   setSearchQuery: (q: string) => void;
@@ -82,6 +86,7 @@ interface AppState {
   setFilterProvider: (p: string | null) => void;
   setFilterTestStatus: (s: string | null) => void;
   setFilterExpiryStatus: (s: string | null) => void;
+  setShowArchived: (show: boolean) => void;
   clearFilters: () => void;
   clearSmartFilters: () => void;
   setSelectedKeyId: (id: string | null) => void;
@@ -200,7 +205,7 @@ function inboxSummaryChanged(summary: {
 }
 
 function runInboxChecksForDatabase(db: Database) {
-  const alerts = collectAllAlerts(db.getApiKeys(), db.getData().vault_id);
+  const alerts = collectAllAlerts(db.getActiveApiKeys(), db.getData().vault_id);
   const summary = syncInboxWithAlerts(db.getData(), alerts);
 
   if (
@@ -250,7 +255,7 @@ function maybeRunDailyAutoTest(db: Database) {
 
   // Mark the attempt first so reloads do not repeatedly hit provider APIs.
   localStorage.setItem(storageKey, today);
-  const keys = [...db.getApiKeys()];
+  const keys = [...db.getActiveApiKeys()];
   if (keys.length === 0) return;
 
   runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
@@ -298,6 +303,7 @@ export const useStore = create<AppState>((set, get) => {
       }
     })(),
     ...FILTER_DEFAULTS,
+    showArchived: false,
     selectedKeyId: null,
     inboxVersion: 0,
     lastInboxSyncAt: null,
@@ -340,6 +346,7 @@ export const useStore = create<AppState>((set, get) => {
           addKeyDraft: null,
           clipboardCandidate: null,
           ...FILTER_DEFAULTS,
+          showArchived: false,
           selectedKeyId: null,
           biometricPrompt: null,
         });
@@ -356,6 +363,7 @@ export const useStore = create<AppState>((set, get) => {
         activeVaultFileName: fileName,
         storageMode,
         hasUnsavedChanges: false,
+        showArchived: false,
         inboxVersion: inboxSummaryChanged(inboxSummary)
           ? state.inboxVersion + 1
           : state.inboxVersion,
@@ -394,8 +402,12 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     updateKey: (id, updates) => {
-      get().db?.updateApiKey(id, updates);
-      const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
+      const db = get().db;
+      if (!db) return;
+      // Archived keys are read-only; ignore late async results and edits.
+      if (db.getApiKey(id)?.archived_at) return;
+      db.updateApiKey(id, updates);
+      const summary = runInboxChecksForDatabase(db);
       set((state) => ({
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
@@ -411,6 +423,43 @@ export const useStore = create<AppState>((set, get) => {
       get().db?.deleteApiKey(id);
       const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
       set((state) => ({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
+      scheduleSave();
+    },
+
+    archiveKey: (id) => {
+      const db = get().db;
+      if (!db) return;
+      db.archiveApiKey(id);
+      const summary = runInboxChecksForDatabase(db);
+      set((state) => ({
+        selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: null,
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
+      scheduleSave();
+    },
+
+    restoreKey: (id) => {
+      const db = get().db;
+      if (!db) return;
+      db.restoreApiKey(id);
+      // Drop alerts that were closed by archiving so the restored key gets an
+      // accurate current set instead of keeping stale archived items.
+      db.removeInboxItemsForEntity(id);
+      const summary = runInboxChecksForDatabase(db);
+      set((state) => ({
+        selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
         inboxVersion:
@@ -438,7 +487,7 @@ export const useStore = create<AppState>((set, get) => {
       if (
         candidate &&
         db
-          ?.getApiKeys()
+          ?.getActiveApiKeys()
           .some((existingKey) => existingKey.key === candidate.raw)
       ) {
         toast('This credential is already saved');
@@ -479,6 +528,13 @@ export const useStore = create<AppState>((set, get) => {
     setFilterProvider: (p) => set({ filterProvider: p }),
     setFilterTestStatus: (s) => set({ filterTestStatus: s }),
     setFilterExpiryStatus: (s) => set({ filterExpiryStatus: s }),
+    setShowArchived: (show) =>
+      set({
+        showArchived: show,
+        ...FILTER_DEFAULTS,
+        searchQuery: '',
+        selectedKeyId: null,
+      }),
     clearFilters: () => set(FILTER_DEFAULTS),
     clearSmartFilters: () =>
       set({
