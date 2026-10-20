@@ -38,6 +38,7 @@ import {
 } from '@phosphor-icons/react';
 import { useState, useEffect } from 'react';
 import { EditKeyDialog } from './KeyList';
+import { UsageCard } from './UsageCard';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 
@@ -49,6 +50,8 @@ export function KeyDetail() {
     updateKey,
     archiveKey,
     restoreKey,
+    refreshUsage,
+    usage,
   } = useStore();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -259,6 +262,12 @@ export function KeyDetail() {
               )}
             </>
           )}
+
+          <UsageCard
+            provider={key.provider}
+            entry={usage[key.id]}
+            onRefresh={() => void refreshUsage(key.id)}
+          />
 
           {/* Key Value */}
           <div

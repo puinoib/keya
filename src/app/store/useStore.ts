@@ -9,6 +9,7 @@ import {
   type ClipboardKeyCandidate,
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
+import { fetchUsage, type UsageEntry } from '../lib/usage';
 import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
@@ -43,6 +44,8 @@ interface AppState {
 
   // Selection
   selectedKeyId: string | null;
+  /** Allowance read from providers this session; never written to the vault. */
+  usage: Record<string, UsageEntry>;
   inboxVersion: number;
   lastInboxSyncAt: string | null;
   lastInboxSyncResult: {
@@ -67,6 +70,7 @@ interface AppState {
   // Actions - Keys
   addKey: (key: NewApiKey) => ApiKey | undefined;
   updateKey: (id: string, updates: Partial<ApiKey>) => void;
+  refreshUsage: (keyId: string) => Promise<void>;
   deleteKey: (id: string) => void;
   archiveKey: (id: string) => void;
   restoreKey: (id: string) => void;
@@ -291,6 +295,7 @@ export const useStore = create<AppState>((set, get) => {
     showAddForm: false,
     addKeyDraft: null,
     clipboardCandidate: null,
+    usage: {},
     biometricPrompt: null,
     theme:
       (localStorage.getItem('keya-theme') as 'dark' | 'light' | 'system') ||
@@ -417,6 +422,46 @@ export const useStore = create<AppState>((set, get) => {
             : state.inboxVersion,
       }));
       scheduleSave();
+    },
+
+    refreshUsage: async (id) => {
+      const db = get().db;
+      if (!db) return;
+      const key = db.getApiKey(id);
+      if (!key) return;
+
+      const started = { vault_id: db.getData().vault_id };
+
+      set((state) => ({
+        usage: { ...state.usage, [id]: { ...started, state: 'loading' } },
+      }));
+
+      const result = await fetchUsage(key);
+
+      // A lock, a vault switch, a deleted key or an edited key must not inherit
+      // this reply.
+      const current = get();
+      if (current.db !== db) return;
+      if (current.db?.getApiKey(id)?.key !== key.key) return;
+
+      set((state) => ({
+        usage: {
+          ...state.usage,
+          [id]: result.ok
+            ? {
+                ...started,
+                state: 'ok',
+                snapshot: result.snapshot,
+                checked_at: result.snapshot.checked_at,
+              }
+            : {
+                ...started,
+                state: 'failed',
+                failure: result.failure,
+                checked_at: new Date().toISOString(),
+              },
+        },
+      }));
     },
 
     deleteKey: (id) => {
