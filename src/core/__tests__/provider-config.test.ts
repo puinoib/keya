@@ -93,6 +93,7 @@ describe('provider endpoint configuration', () => {
       'OpenCode Zen': 'https://opencode.ai/zen/v1',
       'OpenCode Go': 'https://opencode.ai/zen/go/v1',
       'Stability AI': 'https://api.stability.ai',
+      Exa: 'https://api.exa.ai',
       GitHub: 'https://api.github.com',
       Stripe: 'https://api.stripe.com',
     };
@@ -109,7 +110,8 @@ describe('preset provider detection', () => {
   it('matches presets regardless of case and surrounding spaces', () => {
     expect(isPresetProvider('GitHub')).toBe(true);
     expect(isPresetProvider('  github ')).toBe(true);
-    expect(isPresetProvider('Exa')).toBe(false);
+    expect(isPresetProvider('Exa')).toBe(true);
+    expect(isPresetProvider('Acme Search')).toBe(false);
   });
 
   it('finds custom providers case-insensitively', () => {
@@ -120,16 +122,16 @@ describe('preset provider detection', () => {
       clipboard_detection_on_add: true,
       custom_providers: [
         {
-          name: 'Exa',
-          endpoint: 'https://api.exa.ai',
+          name: 'Acme Search',
+          endpoint: 'https://api.acme-search.dev',
           check: { auth: 'x-api-key' as const },
         },
       ],
       disabled_providers: [],
     };
 
-    expect(getCustomProvider(' exa ', settings)?.endpoint).toBe(
-      'https://api.exa.ai'
+    expect(getCustomProvider(' acme search ', settings)?.endpoint).toBe(
+      'https://api.acme-search.dev'
     );
     expect(getCustomProvider('Missing', settings)).toBeUndefined();
   });

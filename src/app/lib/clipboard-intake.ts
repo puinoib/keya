@@ -313,6 +313,13 @@ const DETECTION_RULES: DetectionRule[] = [
     endpointHints: [/external\.api\.recraft\.ai/i],
   },
   {
+    provider: 'Exa',
+    explicitEnvNames: ['EXA_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/api\.exa\.ai/i],
+  },
+  {
     provider: 'Firecrawl',
     explicitEnvNames: ['FIRECRAWL_API_KEY'],
     fallbackEnvNames: [],
