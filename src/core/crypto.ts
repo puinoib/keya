@@ -1,39 +1,53 @@
 /**
  * Encryption module using libsodium (Argon2id + XChaCha20-Poly1305)
+ *
+ * libsodium carries a WebAssembly payload that only matters once a vault is
+ * opened or created, so it is imported lazily instead of at module load. Every
+ * entry point awaits `initCrypto()`; the synchronous helpers below refuse to
+ * run before it resolves.
  */
-import sodium from 'libsodium-wrappers-sumo';
 
-let initialized = false;
+type SodiumModule = typeof import('libsodium-wrappers-sumo').default;
 
-export async function initCrypto(): Promise<void> {
-  if (!initialized) {
-    await sodium.ready;
-    initialized = true;
-  }
+let sodium: SodiumModule | null = null;
+let loading: Promise<void> | null = null;
+
+export function initCrypto(): Promise<void> {
+  loading ??= (async () => {
+    const module = await import('libsodium-wrappers-sumo');
+    await module.default.ready;
+    sodium = module.default;
+  })();
+  return loading;
 }
 
-function ensureInit(): void {
-  if (!initialized) {
+/**
+ * The loaded libsodium module. Every crypto helper goes through this so a late
+ * import cannot leave a call site holding an undefined module.
+ */
+export function requireSodium(): SodiumModule {
+  if (!sodium) {
     throw new Error('Crypto not initialized. Call initCrypto() first.');
   }
+  return sodium;
 }
 
 /** Generate 16-byte random salt (libsodium crypto_pwhash requirement) */
 export function generateSalt(): Uint8Array {
-  ensureInit();
-  return sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+  const s = requireSodium();
+  return s.randombytes_buf(s.crypto_pwhash_SALTBYTES);
 }
 
 /** Generate 24-byte random nonce */
 export function generateNonce(): Uint8Array {
-  ensureInit();
-  return sodium.randombytes_buf(24);
+  const s = requireSodium();
+  return s.randombytes_buf(24);
 }
 
 /** Pre-hash password for KDF input (enables future keyfile support) */
 export function preHashPassword(password: string): Uint8Array {
-  ensureInit();
-  return sodium.crypto_hash_sha256(sodium.from_string(password));
+  const s = requireSodium();
+  return s.crypto_hash_sha256(s.from_string(password));
 }
 
 /** Derive 256-bit key from password using Argon2id */
@@ -43,9 +57,9 @@ export function deriveKey(
   ops: number = 10,
   mem: number = 67108864
 ): Uint8Array {
-  ensureInit();
-  const algo: number = sodium.crypto_pwhash_ALG_ARGON2ID13 ?? 2;
-  return sodium.crypto_pwhash(32, password, salt, ops, mem, algo);
+  const s = requireSodium();
+  const algo: number = s.crypto_pwhash_ALG_ARGON2ID13 ?? 2;
+  return s.crypto_pwhash(32, password, salt, ops, mem, algo);
 }
 
 /** Combine derived key with master seed to produce final encryption key */
@@ -53,11 +67,11 @@ export function finalizeKey(
   derivedKey: Uint8Array,
   masterSeed: Uint8Array
 ): Uint8Array {
-  ensureInit();
+  const s = requireSodium();
   const combined = new Uint8Array(masterSeed.length + derivedKey.length);
   combined.set(masterSeed, 0);
   combined.set(derivedKey, masterSeed.length);
-  return sodium.crypto_hash_sha256(combined);
+  return s.crypto_hash_sha256(combined);
 }
 
 /** Encrypt plaintext with key using XChaCha20-Poly1305 */
@@ -66,8 +80,8 @@ export function encrypt(
   key: Uint8Array,
   nonce: Uint8Array
 ): Uint8Array {
-  ensureInit();
-  return sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+  const s = requireSodium();
+  return s.crypto_aead_xchacha20poly1305_ietf_encrypt(
     plaintext,
     null,
     null,
@@ -83,8 +97,8 @@ export function decrypt(
   nonce: Uint8Array,
   key: Uint8Array
 ): Uint8Array {
-  ensureInit();
-  const result = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+  const s = requireSodium();
+  const result = s.crypto_aead_xchacha20poly1305_ietf_decrypt(
     null,
     ciphertext,
     null,
