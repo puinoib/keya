@@ -29,7 +29,7 @@ pnpm dev
 
 Open the URL printed by Vite. From the landing page, start the app, choose a dedicated workspace folder, and create a vault with a strong, unique master password.
 
-Chrome or Edge is recommended for folder-based use. Browsers without the directory picker have a limited manual file-open/download fallback, not the full workspace workflow. File writing requires Web Locks support. WebAuthn PRF availability depends on both the browser and authenticator. Browser security APIs require a secure context such as HTTPS or localhost.
+Chrome or Edge is recommended for folder-based use. Browsers without the directory picker have a limited manual `.keya` open/export fallback, not the full workspace workflow; edits are not auto-downloaded. File writing requires Web Locks support. WebAuthn PRF availability depends on both the browser and authenticator. Browser security APIs require a secure context such as HTTPS or localhost.
 
 ## Security and persistence
 
@@ -38,7 +38,7 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 - Biometric enrollment requires PRF; there is no stored-key fallback for unsupported authenticators.
 - Edits are auto-saved after a debounce. Locking and switching flush pending changes. If saving fails, locking is refused to preserve unsaved data; **the vault remains unlocked** until the problem is resolved.
 - Writes are coordinated between same-origin tabs and checked for external file changes. Cloud clients and other devices do not share that lock. Use one device at a time per vault, and keep independent backups.
-- API tests send the key to its configured endpoint. Automatic testing is optional and disabled by default. Provider requests may incur charges; an endpoint's response is not a universal proof of key validity.
+- API tests send the key to its configured endpoint. Automatic testing is optional and disabled by default. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.
@@ -70,7 +70,55 @@ pnpm preview      # Preview production build
 
 See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, inspect existing serialization tests and plan compatibility before modifying the format.
 
-`wrangler.toml` configures Cloudflare static assets from `dist/` with SPA fallback. Service Worker/offline support is not currently implemented.
+## Deployment
+
+Production is `https://keya.one`, served by a Cloudflare Worker configured in `wrangler.toml` from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets and no application server.
+
+`worker/index.ts` is the only server-side code. It forwards every request to the static assets binding and adds response headers the assets layer cannot express: a content security policy, clickjacking and MIME-sniffing protection, HSTS, a permissions policy, and long-lived caching for the content-hashed files under `/assets/`. `run_worker_first = true` is what makes those headers apply to static files as well; without it Cloudflare serves matching assets before the Worker runs.
+
+| Branch | Purpose |
+|---|---|
+| `dev` | Integration branch. Push here for CI checks; nothing is deployed. |
+| `main` | Production. Every push verifies, then deploys. |
+
+Promote work with a `dev` → `main` pull request using **Create a merge commit**, or merge locally:
+
+```bash
+git checkout main
+git merge --no-ff dev
+git push origin main
+```
+
+Do not squash. `dev` must stay an ancestor of `main`, otherwise every later promotion re-introduces changes that already landed.
+
+`.github/workflows/ci.yml` runs `typecheck` → `test` → `build` on `dev` pushes and on pull requests to `main`. `src/routeTree.gen.ts` is committed, so typechecking before the build means a stale route tree fails CI instead of being regenerated silently, and the build step then fails if regenerating it would change the committed copy. `.github/workflows/deploy.yml` calls that same verification, downloads the artifact it produced, and deploys that exact build.
+
+Secrets required by the deploy job:
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token from the "Edit Cloudflare Workers" template, scoped to the account and zone that host `keya.one` |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the same account |
+
+The Worker, the `keya.one` zone, and its custom domain must all be in one Cloudflare account; Cloudflare rejects cross-account custom domains.
+
+Local checks before pushing:
+
+```bash
+pnpm cf:deploy:dry   # build, then validate the Wrangler config without uploading
+pnpm cf:deploy       # build and deploy from your machine, using your own Wrangler login
+```
+
+Use the `cf:` prefix rather than a bare `deploy` script name: `pnpm deploy` resolves to pnpm's own built-in command, not a script.
+
+### Deployment constraints
+
+- **The content security policy is not cosmetic.** `script-src` must keep `'wasm-unsafe-eval'`: libsodium-wrappers-sumo compiles WebAssembly at runtime, so removing it breaks unlocking and encryption. `connect-src` cannot be narrowed to known hosts because provider connectivity tests call endpoints the user supplies. `permissions-policy` must keep the `publickey-credentials-*` and `clipboard-*` entries for biometric unlock and key copying.
+- **`keya.one` is permanent.** Biometric unlock uses WebAuthn with `rpId = location.hostname`, so every registered credential is bound to the exact hostname. Serving production from another hostname invalidates all of them.
+- **No second origin.** `workers_dev = false` keeps the app off `*.workers.dev`. IndexedDB (which holds the vault directory handle), sessionStorage and WebAuthn credentials are all per-origin.
+- **Rollback.** Cloudflare keeps previous Worker versions for an immediate rollback, but Git still holds the bad commit, so the next `main` push would ship it again. Follow an emergency rollback with `git revert` and a normal promotion.
+- **Zone settings still live outside the repository.** Always Use HTTPS and the DNS/certificate binding for the custom domain are Cloudflare dashboard state. Recreating the zone means setting them again.
+- Service Worker/offline support is not currently implemented.
 
 ## User guides
 

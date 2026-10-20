@@ -7,6 +7,31 @@ export interface TestResult {
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
+const AZURE_API_VERSION = '2024-10-21';
+
+type ProviderKind =
+  | 'openai'
+  | 'anthropic'
+  | 'azure'
+  | 'google'
+  | 'generic'
+  | 'unsupported';
+
+// Providers that expose an OpenAI-compatible /models endpoint.
+const OPENAI_COMPATIBLE_PROVIDERS = new Set([
+  'openai',
+  'deepseek',
+  'moonshot',
+  'zhipu',
+  'mistral',
+  'siliconflow',
+  'xai',
+  'minimax',
+  'alibaba cloud',
+  'groq',
+  'openrouter',
+  'together',
+]);
 
 async function fetchWithTimeout(
   url: string,
@@ -36,6 +61,64 @@ async function extractError(res: Response): Promise<string> {
   }
 }
 
+function describeError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return 'Request timed out';
+  }
+  if (error instanceof Error) {
+    if (/failed to fetch|load failed|networkerror/i.test(error.message)) {
+      return 'Network or CORS error. The provider may not allow browser requests.';
+    }
+    return error.message;
+  }
+  return 'Unknown error';
+}
+
+/** Return a normalized absolute HTTP(S) endpoint, or null when invalid. */
+function normalizeEndpoint(endpoint: string): string | null {
+  const trimmed = endpoint.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  } catch {
+    return null;
+  }
+
+  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+}
+
+function getProviderKind(provider: string): ProviderKind {
+  const normalized = provider.trim().toLowerCase();
+
+  if (normalized === 'anthropic') return 'anthropic';
+  if (normalized === 'google' || normalized === 'gemini') return 'google';
+  if (normalized === 'azure openai') return 'azure';
+  if (normalized === 'amazon bedrock' || normalized === 'bedrock')
+    return 'unsupported';
+  if (OPENAI_COMPATIBLE_PROVIDERS.has(normalized)) return 'openai';
+  return 'generic';
+}
+
+/** A successful HTTP status is not enough: SPA fallbacks often return HTML. */
+async function verifyReachable(
+  res: Response,
+  providerLabel: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!res.ok) return { success: false, error: await extractError(res) };
+
+  const contentType = res.headers.get('content-type') ?? '';
+  if (/text\/html/i.test(contentType)) {
+    return {
+      success: false,
+      error: `${providerLabel} returned an HTML page. Check the endpoint URL.`,
+    };
+  }
+
+  return { success: true };
+}
+
 export class ApiTester {
   static async testKey(key: ApiKey): Promise<TestResult> {
     return ApiTester.testRaw(key.provider, key.endpoint, key.key);
@@ -47,52 +130,53 @@ export class ApiTester {
     key: string
   ): Promise<TestResult> {
     const start = performance.now();
+    const normalizedEndpoint = normalizeEndpoint(endpoint);
+
+    if (!normalizedEndpoint) {
+      return {
+        success: false,
+        latency_ms: Math.round(performance.now() - start),
+        error: endpoint.trim()
+          ? 'Endpoint must be an absolute http(s) URL'
+          : 'Endpoint is required before testing',
+      };
+    }
 
     try {
       const result = await ApiTester.testByProvider(
-        provider.toLowerCase(),
-        endpoint,
+        getProviderKind(provider),
+        normalizedEndpoint,
         key
       );
-      const latency = Math.round(performance.now() - start);
-      return { ...result, latency_ms: latency };
-    } catch (err) {
-      const latency = Math.round(performance.now() - start);
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return {
-          success: false,
-          latency_ms: latency,
-          error: 'Request timed out',
-        };
-      }
+      return {
+        ...result,
+        latency_ms: Math.round(performance.now() - start),
+      };
+    } catch (error) {
       return {
         success: false,
-        latency_ms: latency,
-        error: err instanceof Error ? err.message : 'Unknown error',
+        latency_ms: Math.round(performance.now() - start),
+        error: describeError(error),
       };
     }
   }
 
   private static async testByProvider(
-    provider: string,
+    kind: ProviderKind,
     endpoint: string,
     key: string
   ): Promise<{ success: boolean; error?: string }> {
-    const openaiCompatible = [
-      'openai',
-      'deepseek',
-      'moonshot',
-      'zhipu',
-      'mistral',
-      'siliconflow',
-      'xai',
-      'minimax',
-    ];
-    if (openaiCompatible.includes(provider))
-      return ApiTester.testOpenAI(endpoint, key);
-    if (provider === 'anthropic') return ApiTester.testAnthropic(endpoint, key);
-    if (provider === 'google') return ApiTester.testGoogle(endpoint, key);
-    if (provider === 'azure') return ApiTester.testOpenAI(endpoint, key);
+    if (kind === 'openai') return ApiTester.testOpenAI(endpoint, key);
+    if (kind === 'anthropic') return ApiTester.testAnthropic(endpoint, key);
+    if (kind === 'azure') return ApiTester.testAzure(endpoint, key);
+    if (kind === 'google') return ApiTester.testGoogle(endpoint, key);
+    if (kind === 'unsupported') {
+      return {
+        success: false,
+        error:
+          'Amazon Bedrock uses AWS request signing and cannot be tested from the browser.',
+      };
+    }
     return ApiTester.testGeneric(endpoint, key);
   }
 
@@ -104,47 +188,62 @@ export class ApiTester {
       const res = await fetchWithTimeout(url, {
         headers: { Authorization: `Bearer ${key}` },
       });
-      if (res.ok) return { success: true };
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
+      return verifyReachable(res, 'OpenAI-compatible endpoint');
+    } catch (error) {
+      return { success: false, error: describeError(error) };
     }
   }
 
   private static async testAnthropic(endpoint: string, key: string) {
     try {
-      const url = endpoint.endsWith('/messages')
-        ? endpoint
-        : `${endpoint}/messages`;
+      // Metadata endpoint, so testing does not invoke a billable model.
+      const base = endpoint.replace(/\/messages\/?$/i, '');
+      const url = base.endsWith('/models') ? base : `${base}/models`;
       const res = await fetchWithTimeout(url, {
-        method: 'POST',
         headers: {
           'x-api-key': key,
           'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
+          // Required for browser CORS requests.
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
-        body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'Hi' }],
-        }),
       });
-      if (res.ok) return { success: true };
-      // 400 = valid key, just bad params — key itself is fine
-      if (res.status === 400) return { success: true };
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
+      return verifyReachable(res, 'Anthropic');
+    } catch (error) {
+      return { success: false, error: describeError(error) };
+    }
+  }
+
+  private static async testAzure(endpoint: string, key: string) {
+    try {
+      let url: string;
+      if (/\/openai\/models(?:\?|$)/i.test(endpoint)) {
+        url = endpoint.includes('?')
+          ? endpoint
+          : `${endpoint}?api-version=${AZURE_API_VERSION}`;
+      } else if (/\/openai$/i.test(endpoint)) {
+        url = `${endpoint}/models?api-version=${AZURE_API_VERSION}`;
+      } else {
+        url = `${endpoint}/openai/models?api-version=${AZURE_API_VERSION}`;
+      }
+
+      const res = await fetchWithTimeout(url, {
+        headers: { 'api-key': key },
+      });
+      return verifyReachable(res, 'Azure OpenAI');
+    } catch (error) {
+      return { success: false, error: describeError(error) };
     }
   }
 
   private static async testGoogle(endpoint: string, key: string) {
     try {
-      const res = await fetchWithTimeout(`${endpoint}/models?key=${key}`);
-      if (res.ok) return { success: true };
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
+      const url = endpoint.endsWith('/models')
+        ? `${endpoint}?key=${encodeURIComponent(key)}`
+        : `${endpoint}/models?key=${encodeURIComponent(key)}`;
+      const res = await fetchWithTimeout(url);
+      return verifyReachable(res, 'Google Gemini');
+    } catch (error) {
+      return { success: false, error: describeError(error) };
     }
   }
 
@@ -154,13 +253,12 @@ export class ApiTester {
         method: 'GET',
         headers: { Authorization: `Bearer ${key}` },
       });
-      if (res.ok) return { success: true };
       if (res.status === 401 || res.status === 403) {
         return { success: false, error: 'Invalid API key' };
       }
-      return { success: false, error: await extractError(res) };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
+      return verifyReachable(res, 'Endpoint');
+    } catch (error) {
+      return { success: false, error: describeError(error) };
     }
   }
 }

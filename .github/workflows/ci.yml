@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # src/routeTree.gen.ts is committed, so typecheck runs against the tree
+      # in Git rather than a freshly generated one.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # The build regenerates the route tree. Fail when the result differs from
+      # the committed copy, which means a route change was not committed with it.
+      - name: Check committed route tree
+        run: |
+          git diff --exit-code -- src/routeTree.gen.ts \
+            || { echo '::error::src/routeTree.gen.ts is stale. Run pnpm build and commit the result.'; exit 1; }
+
+      # Deploy consumes exactly these bytes, so what ships is what was verified.
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+          if-no-files-found: error

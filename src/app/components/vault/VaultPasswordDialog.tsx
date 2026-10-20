@@ -56,7 +56,8 @@ export function VaultPasswordDialog({
   const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
 
   const isCreate = mode === 'new';
-  const scoreOk = !isCreate || (zxcvbnResult != null && zxcvbnResult.score >= 2);
+  const scoreOk =
+    !isCreate || (zxcvbnResult != null && zxcvbnResult.score >= 2);
   const canSubmit = isCreate
     ? password.length >= 8 && password === confirm && scoreOk
     : password.length > 0;
@@ -222,13 +223,17 @@ export function VaultPasswordDialog({
               className={`pr-10 ${
                 confirm && password !== confirm ? 'border-red-500/50' : ''
               }`}
-              onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+              onKeyDown={(e) =>
+                e.key === 'Enter' && canSubmit && handleSubmit()
+              }
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((visible) => !visible)}
               className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showConfirmPassword ? 'Hide password' : 'Show password'
+              }
             >
               {showConfirmPassword ? (
                 <EyeSlash className="size-3.5" />

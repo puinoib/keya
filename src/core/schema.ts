@@ -39,6 +39,13 @@ const MASTER_SEED_SIZE = 32;
 
 const DEFAULT_OPS = 10;
 const DEFAULT_MEM = 67108864;
+const SALT_SIZE = 16;
+const NONCE_SIZE = 24;
+const MIN_OPS = 1;
+const MAX_OPS = 32;
+const MIN_MEM = 8 * 1024 * 1024;
+const MAX_MEM = 256 * 1024 * 1024;
+const MAX_FILE_SIZE = 256 * 1024 * 1024;
 
 // ── Header ──
 
@@ -106,9 +113,7 @@ export function parseHeader(buf: Uint8Array): HeaderMeta {
   const version = dv.getUint16(off, true);
   off += 2;
   if (version !== 1) {
-    throw new Error(
-      `Unsupported .keya file version: ${version} (expected 1)`
-    );
+    throw new Error(`Unsupported .keya file version: ${version} (expected 1)`);
   }
   off += 2; // flags (reserved)
 
@@ -203,14 +208,26 @@ export function parseEncParams(buf: Uint8Array): EncParams {
   off += 4;
   const mem = dv.getUint32(off, true);
   off += 4;
+  if (ops < MIN_OPS || ops > MAX_OPS) {
+    throw new Error(`Invalid Argon2id operations limit: ${ops}`);
+  }
+  if (mem < MIN_MEM || mem > MAX_MEM) {
+    throw new Error(`Invalid Argon2id memory limit: ${mem}`);
+  }
 
   const saltLen = dv.getUint16(off, true);
   off += 2;
+  if (saltLen !== SALT_SIZE) {
+    throw new Error(`Invalid salt length: ${saltLen}`);
+  }
   const salt = buf.slice(off, off + saltLen);
   off += saltLen;
 
   const nonceLen = dv.getUint16(off, true);
   off += 2;
+  if (nonceLen !== NONCE_SIZE) {
+    throw new Error(`Invalid nonce length: ${nonceLen}`);
+  }
   const nonce = buf.slice(off, off + nonceLen);
   off += nonceLen;
 
@@ -296,8 +313,19 @@ export async function deserializeFromFile(
 ): Promise<KeyaDatabase> {
   await initCrypto();
 
+  if (fileBytes.length < HEADER_SIZE) {
+    throw new Error('Invalid .keya file: file is truncated');
+  }
+  if (fileBytes.length > MAX_FILE_SIZE) {
+    throw new Error('Invalid .keya file: file is too large');
+  }
+
   // Parse and verify header
   const headerMeta = parseHeader(fileBytes.slice(0, HEADER_SIZE));
+
+  if (fileBytes.length < PREAMBLE_SIZE + 4) {
+    throw new Error('Invalid .keya file: file is truncated');
+  }
 
   // Verify header + encParams + payloadLen integrity
   const storedHash = fileBytes.slice(
@@ -311,11 +339,12 @@ export async function deserializeFromFile(
     4
   ).getUint32(0, true);
   const payloadLenBytes = fileBytes.slice(PREAMBLE_SIZE, PREAMBLE_SIZE + 4);
+  if (payloadLen > fileBytes.length - (PREAMBLE_SIZE + 4)) {
+    throw new Error('Invalid .keya file: payload length exceeds file size');
+  }
 
   // Hash covers: header(128B) + encParams(96B) + payloadLen(4B)
-  const signedData = new Uint8Array(
-    HEADER_SIZE + ENC_PARAMS_SIZE + 4
-  );
+  const signedData = new Uint8Array(HEADER_SIZE + ENC_PARAMS_SIZE + 4);
   signedData.set(fileBytes.slice(0, HEADER_SIZE), 0);
   signedData.set(
     fileBytes.slice(ENC_PARAMS_OFFSET, ENC_PARAMS_OFFSET + ENC_PARAMS_SIZE),
@@ -347,11 +376,11 @@ export async function deserializeFromFile(
   const plaintext = decrypt(encrypted, params.nonce, finalKey);
   const json = sodium.to_string(plaintext).trim();
   const parsed: unknown = JSON.parse(json);
-  validateDatabase(parsed);
+  const database = validateDatabase(parsed);
 
-  if (parsed.vault_id !== headerMeta.fileId) {
+  if (database.vault_id !== headerMeta.fileId) {
     throw new Error('Vault ID mismatch: file contents may have been swapped');
   }
 
-  return parsed;
+  return database;
 }

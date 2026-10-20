@@ -10,18 +10,20 @@ import {
 // Fixed clock so staleness rules stay deterministic.
 const NOW = new Date('2026-06-05T09:00:00.000Z');
 
-function makeKey(overrides: Partial<{
-  name: string;
-  provider: string;
-  endpoint: string;
-  expires_at: string | null;
-  connection_check: {
-    status: 'success' | 'failed' | 'untested';
-    checked_at: string | null;
-    latency_ms: number | null;
-    error_message: string | null;
-  };
-}> = {}) {
+function makeKey(
+  overrides: Partial<{
+    name: string;
+    provider: string;
+    endpoint: string;
+    expires_at: string | null;
+    connection_check: {
+      status: 'success' | 'failed' | 'untested';
+      checked_at: string | null;
+      latency_ms: number | null;
+      error_message: string | null;
+    };
+  }> = {}
+) {
   return {
     name: overrides.name ?? 'Test Key',
     key: `sk-${Math.random().toString(36).slice(2, 8)}`,
@@ -42,10 +44,12 @@ function makeKey(overrides: Partial<{
 describe('expiry alerts', () => {
   it('creates one upcoming reminder per expiring key', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      name: 'OpenAI Prod',
-      expires_at: '2026-06-10T00:00:00.000Z',
-    }));
+    db.addApiKey(
+      makeKey({
+        name: 'OpenAI Prod',
+        expires_at: '2026-06-10T00:00:00.000Z',
+      })
+    );
 
     const alerts = collectExpiryAlerts(
       db.getApiKeys(),
@@ -60,9 +64,11 @@ describe('expiry alerts', () => {
 
   it('creates expired reminder for past-due keys', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      expires_at: '2026-06-01T00:00:00.000Z',
-    }));
+    db.addApiKey(
+      makeKey({
+        expires_at: '2026-06-01T00:00:00.000Z',
+      })
+    );
 
     const alerts = collectExpiryAlerts(
       db.getApiKeys(),
@@ -78,14 +84,16 @@ describe('expiry alerts', () => {
 describe('connection alerts', () => {
   it('creates alert for failed connection', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'failed',
-        checked_at: '2026-06-05T09:00:00.000Z',
-        latency_ms: null,
-        error_message: 'Invalid API key',
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'failed',
+          checked_at: '2026-06-05T09:00:00.000Z',
+          latency_ms: null,
+          error_message: 'Invalid API key',
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
@@ -96,14 +104,16 @@ describe('connection alerts', () => {
 
   it('creates alert for never-tested keys', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'untested',
-        checked_at: null,
-        latency_ms: null,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'untested',
+          checked_at: null,
+          latency_ms: null,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
@@ -113,15 +123,17 @@ describe('connection alerts', () => {
 
   it('creates alert for insecure http:// endpoint', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      endpoint: 'http://insecure.example.com/v1',
-      connection_check: {
-        status: 'success',
-        checked_at: '2026-06-05T09:00:00.000Z',
-        latency_ms: 120,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        endpoint: 'http://insecure.example.com/v1',
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-06-05T09:00:00.000Z',
+          latency_ms: 120,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
@@ -132,14 +144,16 @@ describe('connection alerts', () => {
 
   it('creates alert for stale test (30+ days)', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'success',
-        checked_at: '2026-04-01T09:00:00.000Z',
-        latency_ms: 100,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-04-01T09:00:00.000Z',
+          latency_ms: 100,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(
       db.getApiKeys(),
@@ -153,14 +167,16 @@ describe('connection alerts', () => {
 
   it('does not create stale alert for recent test', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'success',
-        checked_at: '2026-06-01T09:00:00.000Z',
-        latency_ms: 100,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-06-01T09:00:00.000Z',
+          latency_ms: 100,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(
       db.getApiKeys(),
@@ -172,14 +188,16 @@ describe('connection alerts', () => {
 
   it('does not create connection_failed or stale_test for untested keys', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'untested',
-        checked_at: null,
-        latency_ms: null,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'untested',
+          checked_at: null,
+          latency_ms: null,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
@@ -189,14 +207,16 @@ describe('connection alerts', () => {
 
   it('skips alerts for healthy keys', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      connection_check: {
-        status: 'success',
-        checked_at: '2026-06-04T09:00:00.000Z',
-        latency_ms: 100,
-        error_message: null,
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-06-04T09:00:00.000Z',
+          latency_ms: 100,
+          error_message: null,
+        },
+      })
+    );
 
     const alerts = collectConnectionAlerts(
       db.getApiKeys(),
@@ -210,15 +230,17 @@ describe('connection alerts', () => {
 describe('collectAllAlerts', () => {
   it('combines expiry and connection alerts', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      expires_at: '2026-06-01T00:00:00.000Z',
-      connection_check: {
-        status: 'failed',
-        checked_at: '2026-06-05T09:00:00.000Z',
-        latency_ms: null,
-        error_message: 'Unauthorized',
-      },
-    }));
+    db.addApiKey(
+      makeKey({
+        expires_at: '2026-06-01T00:00:00.000Z',
+        connection_check: {
+          status: 'failed',
+          checked_at: '2026-06-05T09:00:00.000Z',
+          latency_ms: null,
+          error_message: 'Unauthorized',
+        },
+      })
+    );
 
     const alerts = collectAllAlerts(
       db.getApiKeys(),
@@ -235,10 +257,12 @@ describe('collectAllAlerts', () => {
 describe('sync', () => {
   it('does not duplicate reminders across repeated checks', () => {
     const db = new Database();
-    db.addApiKey(makeKey({
-      name: 'Anthropic Prod',
-      expires_at: '2026-06-09T00:00:00.000Z',
-    }));
+    db.addApiKey(
+      makeKey({
+        name: 'Anthropic Prod',
+        expires_at: '2026-06-09T00:00:00.000Z',
+      })
+    );
 
     const now = new Date('2026-06-04T09:00:00.000Z');
     const first = syncInboxWithAlerts(
@@ -258,9 +282,11 @@ describe('sync', () => {
 
   it('archives expiry reminder when issue is resolved', () => {
     const db = new Database();
-    const key = db.addApiKey(makeKey({
-      expires_at: '2026-06-06T00:00:00.000Z',
-    }));
+    const key = db.addApiKey(
+      makeKey({
+        expires_at: '2026-06-06T00:00:00.000Z',
+      })
+    );
     const now = new Date('2026-06-04T09:00:00.000Z');
 
     syncInboxWithAlerts(
@@ -278,19 +304,26 @@ describe('sync', () => {
     );
 
     expect(resolved.archived.length).toBeGreaterThanOrEqual(1);
-    expect(db.getInboxItems().find((i) => i.entity_id === key.id && i.type === 'key_expiry_upcoming')?.archive_reason).toBe('resolved');
+    expect(
+      db
+        .getInboxItems()
+        .find((i) => i.entity_id === key.id && i.type === 'key_expiry_upcoming')
+        ?.archive_reason
+    ).toBe('resolved');
   });
 
   it('archives connection_failed when key passes test', () => {
     const db = new Database();
-    const key = db.addApiKey(makeKey({
-      connection_check: {
-        status: 'failed',
-        checked_at: '2026-06-05T09:00:00.000Z',
-        latency_ms: null,
-        error_message: 'Unauthorized',
-      },
-    }));
+    const key = db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'failed',
+          checked_at: '2026-06-05T09:00:00.000Z',
+          latency_ms: null,
+          error_message: 'Unauthorized',
+        },
+      })
+    );
 
     const now = new Date('2026-06-05T09:00:00.000Z');
     syncInboxWithAlerts(
@@ -316,21 +349,25 @@ describe('sync', () => {
     );
 
     expect(resolved.archived.length).toBeGreaterThanOrEqual(1);
-    const item = db.getInboxItems().find((i) => i.entity_id === key.id && i.type === 'connection_failed');
+    const item = db
+      .getInboxItems()
+      .find((i) => i.entity_id === key.id && i.type === 'connection_failed');
     expect(item?.archive_reason).toBe('resolved');
   });
 
   it('archives insecure_endpoint when endpoint is fixed', () => {
     const db = new Database();
-    const key = db.addApiKey(makeKey({
-      endpoint: 'http://insecure.example.com/v1',
-      connection_check: {
-        status: 'success',
-        checked_at: '2026-06-05T09:00:00.000Z',
-        latency_ms: 100,
-        error_message: null,
-      },
-    }));
+    const key = db.addApiKey(
+      makeKey({
+        endpoint: 'http://insecure.example.com/v1',
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-06-05T09:00:00.000Z',
+          latency_ms: 100,
+          error_message: null,
+        },
+      })
+    );
 
     const now = new Date('2026-06-05T09:00:00.000Z');
     syncInboxWithAlerts(
@@ -347,20 +384,24 @@ describe('sync', () => {
       now
     );
 
-    const item = db.getInboxItems().find((i) => i.entity_id === key.id && i.type === 'insecure_endpoint');
+    const item = db
+      .getInboxItems()
+      .find((i) => i.entity_id === key.id && i.type === 'insecure_endpoint');
     expect(item?.archive_reason).toBe('resolved');
   });
 
   it('archives never_tested when key gets tested', () => {
     const db = new Database();
-    const key = db.addApiKey(makeKey({
-      connection_check: {
-        status: 'untested',
-        checked_at: null,
-        latency_ms: null,
-        error_message: null,
-      },
-    }));
+    const key = db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'untested',
+          checked_at: null,
+          latency_ms: null,
+          error_message: null,
+        },
+      })
+    );
 
     const now = new Date('2026-06-05T09:00:00.000Z');
     syncInboxWithAlerts(
@@ -384,7 +425,42 @@ describe('sync', () => {
       now
     );
 
-    const item = db.getInboxItems().find((i) => i.entity_id === key.id && i.type === 'never_tested');
+    const item = db
+      .getInboxItems()
+      .find((i) => i.entity_id === key.id && i.type === 'never_tested');
     expect(item?.archive_reason).toBe('resolved');
+  });
+});
+
+describe('inbox timestamps', () => {
+  it('does not bump updated_at when alert metadata is unchanged', () => {
+    const db = new Database();
+    const key = db.addApiKey(makeKey());
+    const firstNow = new Date('2026-06-05T09:00:00.000Z');
+    const laterNow = new Date('2026-06-05T10:00:00.000Z');
+
+    syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getApiKeys(), db.getData().vault_id, firstNow),
+      firstNow
+    );
+    const item = db
+      .getInboxItems()
+      .find(
+        (entry) => entry.entity_id === key.id && entry.type === 'never_tested'
+      )!;
+    const originalUpdatedAt = item.updated_at;
+
+    const summary = syncInboxWithAlerts(
+      db.getData(),
+      collectAllAlerts(db.getApiKeys(), db.getData().vault_id, laterNow),
+      laterNow
+    );
+
+    expect(summary.updated).toHaveLength(0);
+    const unchangedItem = db
+      .getInboxItems()
+      .find((entry) => entry.id === item.id)!;
+    expect(unchangedItem.updated_at).toBe(originalUpdatedAt);
   });
 });

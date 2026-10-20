@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
 import { useStore } from '../../store/useStore';
+import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester } from '../../lib/api-tester';
 import type { ApiKey } from '../../../core/types';
 import {
@@ -121,8 +122,13 @@ export function KeyList() {
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
   const handleTest = async (key: ApiKey) => {
+    const activeDb = useStore.getState().db;
     setTesting(key.id);
     const result = await ApiTester.testKey(key);
+    if (useStore.getState().db !== activeDb) {
+      setTesting(null);
+      return;
+    }
     updateKey(key.id, {
       connection_check: {
         status: result.success ? 'success' : 'failed',
@@ -147,7 +153,7 @@ export function KeyList() {
       await navigator.clipboard.writeText(keyValue);
       setCopiedId(keyId);
       setTimeout(() => setCopiedId(null), 2000);
-      setTimeout(() => navigator.clipboard.writeText(''), 15000);
+      scheduleClipboardClear(keyValue);
       toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
@@ -350,7 +356,11 @@ export function KeyList() {
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
                   {getProviderLogo(key.provider) && (
-                    <img src={getProviderLogo(key.provider)!} alt="" className="size-3 shrink-0" />
+                    <img
+                      src={getProviderLogo(key.provider)!}
+                      alt=""
+                      className="size-3 shrink-0"
+                    />
                   )}
                   <span className="shrink-0">{key.provider}</span>
                   {key.description && (
@@ -603,7 +613,9 @@ export function EditKeyDialog({
     if (settings?.auto_test_on_save) {
       const { provider, endpoint, key: keyValue } = form;
       const keyId = editingKey.id;
+      const activeDb = useStore.getState().db;
       ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
+        if (useStore.getState().db !== activeDb) return;
         useStore.getState().updateKey(keyId, {
           connection_check: {
             status: result.success ? 'success' : 'failed',
@@ -691,7 +703,11 @@ export function EditKeyDialog({
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
                   {form.provider && getProviderLogo(form.provider) && (
-                    <img src={getProviderLogo(form.provider)!} alt="" className="size-3.5 shrink-0" />
+                    <img
+                      src={getProviderLogo(form.provider)!}
+                      alt=""
+                      className="size-3.5 shrink-0"
+                    />
                   )}
                   {form.provider}
                 </span>
@@ -701,7 +717,11 @@ export function EditKeyDialog({
                   <SelectItem key={p} value={p}>
                     <div className="flex items-center gap-2">
                       {getProviderLogo(p) && (
-                        <img src={getProviderLogo(p)!} alt="" className="size-3.5 shrink-0" />
+                        <img
+                          src={getProviderLogo(p)!}
+                          alt=""
+                          className="size-3.5 shrink-0"
+                        />
                       )}
                       <span>{p}</span>
                     </div>

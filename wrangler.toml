@@ -1,6 +1,23 @@
 name = "keya"
 compatibility_date = "2025-04-01"
+main = "worker/index.ts"
+
+# Serve the app from the custom domain only. A second reachable origin would
+# split IndexedDB, sessionStorage and WebAuthn credentials, which are all bound
+# to the page origin.
+workers_dev = false
+
+# The zone must live in the same Cloudflare account as this Worker; cross-account
+# custom domains are rejected by Cloudflare (error 1014).
+# `keya.one` is the permanent production hostname. Changing it invalidates every
+# WebAuthn credential users have registered (rpId is location.hostname).
+routes = [{ pattern = "keya.one", custom_domain = true }]
 
 [assets]
 directory = "./dist"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
+
+# Send every request through the Worker so the security headers also apply to
+# static assets. Without this, matching files are served before the Worker runs.
+run_worker_first = true

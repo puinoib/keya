@@ -228,7 +228,9 @@ export function KeyForm({
 
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {
+      const activeDb = useStore.getState().db;
       ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
+        if (useStore.getState().db !== activeDb) return;
         updateKey(created.id, {
           connection_check: {
             status: result.success ? 'success' : 'failed',
@@ -322,7 +324,11 @@ export function KeyForm({
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
                   {form.provider && getProviderLogo(form.provider) && (
-                    <img src={getProviderLogo(form.provider)!} alt="" className="size-3.5 shrink-0" />
+                    <img
+                      src={getProviderLogo(form.provider)!}
+                      alt=""
+                      className="size-3.5 shrink-0"
+                    />
                   )}
                   {form.provider}
                 </span>
@@ -332,7 +338,11 @@ export function KeyForm({
                   <SelectItem key={p} value={p}>
                     <div className="flex items-center gap-2">
                       {getProviderLogo(p) && (
-                        <img src={getProviderLogo(p)!} alt="" className="size-3.5 shrink-0" />
+                        <img
+                          src={getProviderLogo(p)!}
+                          alt=""
+                          className="size-3.5 shrink-0"
+                        />
                       )}
                       <span>{p}</span>
                     </div>
