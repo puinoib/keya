@@ -8,9 +8,9 @@ import { ApiTester } from '../../lib/api-tester';
 import type { ApiKey } from '../../../core/types';
 import {
   getDefaultEndpointForProvider,
-  getProvidersForDropdown,
+  getProviderSections,
 } from '../../../core/types';
-import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import {
   getExpiryStatus,
   getExpiryStatusLabel,
@@ -45,7 +45,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
 } from '@/components/ui/select';
 import {
@@ -355,13 +357,7 @@ export function KeyList() {
                   )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
-                  {getProviderLogo(key.provider) && (
-                    <img
-                      src={getProviderLogo(key.provider)!}
-                      alt=""
-                      className="size-3 shrink-0"
-                    />
-                  )}
+                  <ProviderLogo provider={key.provider} className="size-3" />
                   <span className="shrink-0">{key.provider}</span>
                   {key.description && (
                     <>
@@ -534,7 +530,7 @@ export function EditKeyDialog({
   });
 
   const settings = db?.getSettings();
-  const providers = getProvidersForDropdown(settings);
+  const providerSections = getProviderSections(settings);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
     settings
@@ -702,30 +698,23 @@ export function EditKeyDialog({
             >
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
-                  {form.provider && getProviderLogo(form.provider) && (
-                    <img
-                      src={getProviderLogo(form.provider)!}
-                      alt=""
-                      className="size-3.5 shrink-0"
-                    />
-                  )}
+                  <ProviderLogo provider={form.provider} className="size-3.5" />
                   {form.provider}
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {providers.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <div className="flex items-center gap-2">
-                      {getProviderLogo(p) && (
-                        <img
-                          src={getProviderLogo(p)!}
-                          alt=""
-                          className="size-3.5 shrink-0"
-                        />
-                      )}
-                      <span>{p}</span>
-                    </div>
-                  </SelectItem>
+                {providerSections.map((section) => (
+                  <SelectGroup key={section.id}>
+                    <SelectLabel>{section.label}</SelectLabel>
+                    {section.providers.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <ProviderLogo provider={p} className="size-3.5" />
+                          <span>{p}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

@@ -3,11 +3,21 @@
 export type ConnectionStatus = 'success' | 'failed' | 'untested';
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
 
+/**
+ * What the last check established. Absent on records written before this field
+ * existed; treat those as credential checks.
+ */
+export type ConnectionCheckKind =
+  | 'credential'
+  | 'reachability'
+  | 'unverifiable';
+
 export interface ConnectionCheck {
   status: ConnectionStatus;
   checked_at: string | null;
   latency_ms: number | null;
   error_message: string | null;
+  kind?: ConnectionCheckKind;
 }
 
 export interface ApiKey {
@@ -31,9 +41,21 @@ export interface Group {
   order: number;
 }
 
+export interface CustomProviderCheck {
+  /** Optional path appended to the provider endpoint, or an absolute URL. */
+  path?: string;
+  auth: 'bearer' | 'x-api-key' | 'header' | 'query';
+  /** Header name when auth is "header". */
+  header_name?: string;
+  /** Query parameter name when auth is "query". */
+  query_param?: string;
+}
+
 export interface CustomProvider {
   name: string;
   endpoint: string;
+  /** Optional credential check. Without it, Keya only probes reachability. */
+  check?: CustomProviderCheck;
 }
 
 export interface Settings {
@@ -294,10 +316,91 @@ export const PRESET_PROVIDERS = [
 export function getProvidersForDropdown(
   settings: Settings | undefined
 ): string[] {
+  return getProviderSections(settings).flatMap((section) => section.providers);
+}
+
+/** True when the provider is one of Keya's built-in presets. */
+export function isPresetProvider(provider: string): boolean {
+  const normalized = provider.trim().toLowerCase();
+  return PRESET_PROVIDERS.some((preset) => preset.toLowerCase() === normalized);
+}
+
+/** Look up a user-defined provider by name, ignoring case and outer spaces. */
+export function getCustomProvider(
+  provider: string,
+  settings: Settings | undefined
+): CustomProvider | undefined {
+  const normalized = provider.trim().toLowerCase();
+  return settings?.custom_providers?.find(
+    (cp) => cp.name.trim().toLowerCase() === normalized
+  );
+}
+
+/**
+ * Groups presets so pickers stay navigable as the list grows. Providers that
+ * are not models still live in the same preset list; only presentation differs.
+ */
+export type ProviderCategory = 'model' | 'media' | 'platform';
+export interface ProviderSection {
+  id: ProviderCategory | 'custom';
+  label: string;
+  providers: string[];
+}
+
+export const PROVIDER_CATEGORY_LABELS: Record<ProviderCategory, string> = {
+  model: 'Models & inference',
+  media: 'Image generation',
+  platform: 'Developer platforms',
+};
+
+const PROVIDER_CATEGORY_ORDER: ProviderCategory[] = [
+  'model',
+  'media',
+  'platform',
+];
+/** Presets that are not model providers, keyed by lowercased display name. */
+const PROVIDER_CATEGORY_BY_NAME: Record<string, ProviderCategory> = {
+  'stability ai': 'media',
+  recraft: 'media',
+  firecrawl: 'platform',
+  github: 'platform',
+  vercel: 'platform',
+  stripe: 'platform',
+};
+
+export function getProviderCategory(provider: string): ProviderCategory {
+  return PROVIDER_CATEGORY_BY_NAME[provider.trim().toLowerCase()] ?? 'model';
+}
+
+/** Group any provider names by category, keeping their existing order. */
+export function groupProvidersByCategory(
+  providers: readonly string[]
+): ProviderSection[] {
+  return PROVIDER_CATEGORY_ORDER.map((category) => ({
+    id: category,
+    label: PROVIDER_CATEGORY_LABELS[category],
+    providers: providers.filter(
+      (provider) => getProviderCategory(provider) === category
+    ),
+  })).filter((section) => section.providers.length > 0);
+}
+
+/** Enabled presets grouped by category, followed by custom providers. */
+export function getProviderSections(
+  settings: Settings | undefined
+): ProviderSection[] {
   const disabled = new Set(settings?.disabled_providers ?? []);
   const enabled = PRESET_PROVIDERS.filter((p) => !disabled.has(p));
   const customs = (settings?.custom_providers ?? [])
     .filter((cp) => !disabled.has(cp.name))
     .map((cp) => cp.name);
-  return [...enabled, ...customs, 'Custom'];
+
+  return [
+    ...groupProvidersByCategory(enabled),
+    {
+      id: 'custom',
+      label: 'Custom providers',
+      providers: [...customs, 'Custom'],
+    },
+  ];
 }
