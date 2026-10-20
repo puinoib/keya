@@ -17,8 +17,7 @@ import {
   registerBiometric,
   removeBiometric,
 } from '@/app/lib/biometric';
-import '@/app/lib/zxcvbn';
-import { zxcvbnAsync } from '@zxcvbn-ts/core';
+import { loadZxcvbn } from '@/app/lib/zxcvbn';
 import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 
 function Toggle({
@@ -93,7 +92,15 @@ export function GeneralPage() {
       setZxcvbnResult(null);
       return;
     }
-    zxcvbnAsync(deferredNewPw).then(setZxcvbnResult);
+    let cancelled = false;
+    loadZxcvbn()
+      .then((estimate) => estimate(deferredNewPw))
+      .then((result) => {
+        if (!cancelled) setZxcvbnResult(result);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [deferredNewPw, showPwForm]);
 
   const scoreOk = zxcvbnResult != null && zxcvbnResult.score >= 2;
