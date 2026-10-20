@@ -208,7 +208,9 @@ export function KeyDetail() {
             style={{ animationDelay: '160ms' }}
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-ink-quaternary">API Key</span>
+              <span className="text-xs text-ink-quaternary">
+                API Key or Token
+              </span>
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setShowKey(!showKey)}

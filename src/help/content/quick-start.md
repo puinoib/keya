@@ -19,12 +19,14 @@ On the workspace screen, choose **New Vault**, enter a name, and set and confirm
 
 The vault is saved as a `.keya` file. An existing filename is rejected rather than overwritten. Once a vault is open, the sidebar vault switcher lets you create or open another vault.
 
-## 3. Add a key
+## 3. Add a credential
 
 1. Click **Add Key**.
-2. Enter a name and API key, select the provider, and review the endpoint. You may also add a description, group, and expiry date.
+2. Enter a name and the API key or token, select the service, and review the endpoint. You may also add a description, group, and expiry date.
 3. Optionally test connectivity. This sends the key to the configured endpoint. Tests use metadata endpoints where available; custom or metered endpoints may incur charges.
 4. Click **Save Key**. Changes are auto-saved after a short delay in folder mode.
+
+For a service that is not in the preset list, add it under Settings → Providers → **Add Custom Provider**, or choose **Custom** and enter its endpoint directly. Search APIs, scraping tools, email services, payment APIs, and internal endpoints all work this way.
 
 If clipboard detection is enabled, adding a key may offer a candidate from your clipboard. Verify it before accepting. Custom endpoints receive your key, so use only endpoints you trust.
 
@@ -45,7 +47,7 @@ After locking or refreshing, unlock with your master password or an enrolled PRF
 ## Settings
 
 - **General:** vault name and icon, PRF biometric enrollment, inactivity interval, and master password changes.
-- **Providers:** preset visibility and custom providers/endpoints.
+- **Providers:** preset visibility and custom providers/endpoints for any API service.
 - **Groups:** create, rename, or delete groups. Removing a group does not delete its keys.
 - **Keys:** optional tests after saving or on first daily unlock, plus clipboard detection. Automatic tests are disabled by default.
 - **Shortcuts:** inspect or customize keyboard shortcuts.

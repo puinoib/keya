@@ -447,7 +447,7 @@ export const useStore = create<AppState>((set, get) => {
           ?.getApiKeys()
           .some((existingKey) => existingKey.key === candidate.raw)
       ) {
-        toast('This API key is already saved');
+        toast('This credential is already saved');
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
         return;
       }

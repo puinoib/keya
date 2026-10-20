@@ -12,7 +12,7 @@ export function HelpIndex() {
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-ink-primary">Welcome to Keya</h1>
         <p className="text-ink-secondary text-lg">
-          Secure and simple API key manager
+          A local vault for developer API keys and tokens
         </p>
       </div>
 

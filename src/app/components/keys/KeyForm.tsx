@@ -178,7 +178,7 @@ export function KeyForm({
     e.preventDefault();
     if (!form.name || !form.key_value) return;
     if (db?.hasDuplicateApiKeyValue(form.key_value)) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -207,7 +207,7 @@ export function KeyForm({
     });
 
     if (!created) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -259,7 +259,7 @@ export function KeyForm({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New API Key</DialogTitle>
+          <DialogTitle>New API Key or Token</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
@@ -272,7 +272,7 @@ export function KeyForm({
               id="name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Production OpenAI"
+              placeholder="e.g. Production Firecrawl"
               required
             />
           </div>
@@ -280,7 +280,7 @@ export function KeyForm({
           {/* Key Value */}
           <div className="space-y-1.5">
             <Label htmlFor="key_value" className="text-xs">
-              API Key <span className="text-red-500">*</span>
+              API Key or Token <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
               <AutoResizeTextarea
@@ -296,7 +296,7 @@ export function KeyForm({
                   setForm((f) => ({ ...f, key_value: e.target.value }));
                   setTestState({ testing: false, result: null });
                 }}
-                placeholder="sk-..."
+                placeholder="sk-... or your API token"
                 className="pr-9 font-mono text-sm break-all"
                 required
               />
@@ -318,7 +318,7 @@ export function KeyForm({
           {/* Provider */}
           <div className="space-y-1.5">
             <Label htmlFor="provider" className="text-xs">
-              Provider
+              Service / Provider
             </Label>
             <Select value={form.provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
@@ -443,7 +443,7 @@ export function KeyForm({
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
               }
-              placeholder="What's this key for?"
+              placeholder="What is this credential used for?"
             />
           </div>
 
