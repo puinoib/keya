@@ -27,7 +27,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
-    "gray-matter": "^4.0.3",
     "libsodium-wrappers-sumo": "^0.8.4",
     "marked": "^18.0.4",
     "react": "^19.2.6",

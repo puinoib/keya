@@ -8,11 +8,10 @@ import {
   type ClipboardKeyCandidate,
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
-import { saveSession, clearSession, hasSession } from '../lib/session';
 import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
-type WorkspaceState = 'welcome' | 'locked' | 'unlocked';
+type WorkspaceState = 'welcome' | 'unlocked';
 
 interface AppState {
   // Workspace
@@ -47,9 +46,7 @@ interface AppState {
   } | null;
 
   // Actions - Workspace
-  setWorkspaceState: (state: WorkspaceState) => void;
   setDb: (db: Database) => void;
-  setPassword: (pw: string) => void;
   lock: () => void;
   unlock: (db: Database, password: string, fileName: string) => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
@@ -231,11 +228,8 @@ const FILTER_DEFAULTS = {
 };
 
 export const useStore = create<AppState>((set, get) => {
-  // Check for existing session on initialization
-  const initialWorkspaceState = hasSession() ? 'locked' : 'welcome';
-
   return {
-    workspaceState: initialWorkspaceState,
+    workspaceState: 'welcome',
     db: null,
     password: null,
     activeVaultFileName: null,
@@ -260,12 +254,10 @@ export const useStore = create<AppState>((set, get) => {
     lastInboxSyncAt: null,
     lastInboxSyncResult: null,
 
-    setWorkspaceState: (state) => set({ workspaceState: state }),
     setDb: (db) => {
       set({ db });
       scheduleSave();
     },
-    setPassword: (pw) => set({ password: pw }),
     setTheme: (theme) => {
       localStorage.setItem('keya-theme', theme);
       set({ theme });
@@ -287,7 +279,6 @@ export const useStore = create<AppState>((set, get) => {
           );
           return;
         }
-        clearSession();
         set({
           workspaceState: 'welcome',
           db: null,
@@ -308,8 +299,6 @@ export const useStore = create<AppState>((set, get) => {
       do {
         await flushSave();
       } while (dirty);
-      const vaultId = db.getData().vault_id;
-      await saveSession(fileName, password, vaultId);
       const inboxSummary = runInboxChecksForDatabase(db);
       set({
         workspaceState: 'unlocked',
@@ -472,11 +461,6 @@ export const useStore = create<AppState>((set, get) => {
           newPassword
         );
         set({ password: newPassword });
-        await saveSession(
-          activeVaultFileName,
-          newPassword,
-          db.getData().vault_id
-        );
       });
     },
 

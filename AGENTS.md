@@ -25,7 +25,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 |---|---|
 | Encryption or `.keya` format | `src/core/crypto.ts`, `src/core/schema.ts`, `src/core/validators.ts` and core tests |
 | Save, lock, switch, import, or password change | `src/app/store/useStore.ts`, `src/app/lib/storage.ts`, `src/app/components/layout/TopBar.tsx` |
-| Authentication or refresh behavior | `src/app/lib/session.ts`, `src/app/lib/biometric.ts`, `src/app/components/SessionRestore.tsx`, `src/routes/_authenticated.tsx` |
+| Authentication or refresh behavior | `src/app/lib/session.ts`, `src/app/lib/biometric.ts`, `src/main.tsx`, `src/app/hooks/useAutoLock.ts`, `src/routes/_authenticated.tsx` |
 | Inbox rules | `src/core/inbox.ts`, `src/core/key-status.ts` and their tests |
 | Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |

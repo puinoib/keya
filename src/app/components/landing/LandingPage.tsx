@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { FileStorage } from '@/app/lib/storage';
-import { hasSession } from '@/app/lib/session';
 import { useStore } from '@/app/store/useStore';
 
 const themeOptions = [
@@ -81,7 +80,7 @@ export function LandingPage() {
   // Redirect returning users before rendering the landing page.
   useEffect(() => {
     const check = async () => {
-      if (hasSession()) {
+      if (useStore.getState().workspaceState === 'unlocked') {
         navigate({ to: '/keys', replace: true });
         return;
       }
