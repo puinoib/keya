@@ -19,13 +19,13 @@ export function NotFoundPage() {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-canvas-base px-6 text-center">
+    <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-canvas-base px-6 text-center">
       <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle_at_50%_0%,rgba(94,106,210,0.10),transparent_58%)]" />
 
       <div className="relative flex flex-col items-center">
-        <KeyaLogo className="size-7" />
+        <KeyaLogo className="size-12" />
 
-        <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.32em] text-ink-quaternary">
+        <p className="mt-5 font-mono text-xl uppercase tracking-[0.28em] text-ink-quaternary">
           404
         </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-heading text-ink-primary">
