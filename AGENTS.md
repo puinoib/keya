@@ -30,6 +30,14 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
 
+## Branches and deployment
+
+- `dev` is the integration branch: pushing there runs verification and deploys nothing. `main` deploys to production (`https://keya.one`) on every push, after the same verification, so treat any commit on `main` as shipped.
+- Promote with a `dev` → `main` pull request using a merge commit, or `git merge --no-ff dev` locally. Squash and rebase merges are disabled. `dev` must stay an ancestor of `main`.
+- Run `pnpm build` before `pnpm typecheck`: the TanStack Router plugin generates the gitignored `src/routeTree.gen.ts` during the build, and typechecking a clean checkout fails without it.
+- `wrangler.toml` owns deployment: `dist/` static assets, SPA fallback, `workers_dev = false`, and the `keya.one` custom domain. The Worker, the zone, and the custom domain must live in one Cloudflare account.
+- `keya.one` is a permanent hostname. Biometric unlock uses WebAuthn with `rpId = location.hostname`, so changing it invalidates every credential users registered. Treat that like a `.keya` format change: a compatibility decision, not a configuration tweak.
+
 ## Security and data safety
 
 - Never persist plaintext passwords or encryption keys alongside the secrets they decrypt. Session storage does not restore an unlocked session; refresh requires authentication.
