@@ -41,6 +41,15 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The deployed CSP uses `font-src 'self'`, so a font inlined as a data: URI
+      # is blocked in production. vite.config.ts keeps fonts as separate assets.
+      - name: Check fonts are not inlined
+        run: |
+          if grep -rl "data:font" dist; then
+            echo "::error::A font was inlined as a data: URI. Keep fonts as separate assets so font-src 'self' can load them."
+            exit 1
+          fi
+
       # The build regenerates the route tree. Fail when the result differs from
       # the committed copy, which means a route change was not committed with it.
       - name: Check committed route tree
