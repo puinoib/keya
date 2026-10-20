@@ -74,9 +74,6 @@ export function LandingPage() {
 
   return (
     <div className="relative h-full overflow-y-auto bg-canvas-deepest text-ink-primary">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-20%,rgba(94,106,210,0.22),transparent_58%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.8)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)]" />
-
       <header className="relative z-10 px-5 py-5 sm:px-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <a
@@ -142,8 +139,8 @@ export function LandingPage() {
       <main className="relative z-10 px-5 sm:px-10">
         <section className="mx-auto grid max-w-6xl items-center gap-12 pb-20 pt-16 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:pb-28 lg:pt-24">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 text-[11px] text-ink-tertiary">
-              <span className="size-1.5 rounded-full bg-success-bright shadow-[0_0_10px_rgba(16,185,129,.7)]" />
+            <div className="flex items-center gap-2 text-xs text-ink-tertiary">
+              <span className="size-1.5 rounded-full bg-success-bright" />
               Open source · local-first · no account
             </div>
             <h1 className="mt-7 max-w-2xl text-5xl font-semibold leading-[1.06] tracking-display text-ink-primary sm:text-6xl lg:text-[4.25rem]">
@@ -162,7 +159,7 @@ export function LandingPage() {
               <button
                 type="button"
                 onClick={() => navigate({ to: '/start' })}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-white shadow-[0_8px_28px_rgba(94,106,210,.25)] transition-colors hover:bg-accent-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-white transition-colors hover:bg-accent-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               >
                 Create your first vault <ArrowRight className="size-4" />
               </button>
@@ -190,8 +187,8 @@ export function LandingPage() {
           </div>
 
           <div className="relative mx-auto w-full max-w-xl lg:mt-4">
-            <div className="absolute -inset-8 rounded-full bg-accent/10 blur-3xl" />
-            <div className="relative overflow-hidden rounded-xl border border-line bg-canvas-panel shadow-[0_24px_80px_rgba(0,0,0,.35)]">
+            <div className="hidden" />
+            <div className="relative overflow-hidden rounded-xl border border-line bg-canvas-panel">
               <div className="flex items-center gap-2 border-b border-line px-4 py-3">
                 <div className="flex gap-1.5">
                   <span className="size-2 rounded-full bg-danger/70" />
@@ -223,7 +220,7 @@ export function LandingPage() {
                       2
                     </span>
                   </div>
-                  <div className="mt-4 border-t border-line pt-3 text-[9px] uppercase tracking-wider text-ink-quaternary">
+                  <div className="mt-4 pt-3 text-[9px] text-ink-quaternary">
                     Groups
                   </div>
                   {['Ungrouped', 'Production', 'Personal'].map((item) => (
@@ -235,7 +232,7 @@ export function LandingPage() {
                       {item}
                     </div>
                   ))}
-                  <div className="mt-5 border-t border-line pt-3 text-[9px] text-ink-quaternary">
+                  <div className="mt-5 pt-3 text-[9px] text-ink-quaternary">
                     WORK.keya
                     <br />
                     <span className="text-ink-tertiary">
@@ -316,14 +313,8 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section
-          id="why-keya"
-          className="mx-auto max-w-6xl border-t border-line-subtle py-16 sm:py-20"
-        >
+        <section id="why-keya" className="mx-auto max-w-6xl py-16 sm:py-20">
           <div className="mb-9 max-w-xl">
-            <p className="text-xs font-medium uppercase tracking-[.18em] text-accent-bright">
-              Built for real workflows
-            </p>
             <h2 className="mt-3 text-2xl font-medium tracking-heading sm:text-3xl">
               Less hunting. More shipping.
             </h2>
@@ -340,7 +331,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-6xl gap-5 border-t border-line-subtle py-16 sm:py-20 lg:grid-cols-[.9fr_1.1fr]">
+        <section className="mx-auto grid max-w-6xl gap-5 py-16 sm:py-20 lg:grid-cols-[.9fr_1.1fr]">
           <div className="rounded-xl border border-line bg-surface-2 p-6 sm:p-8">
             <Tray className="size-5 text-accent-bright" />
             <h2 className="mt-5 text-2xl font-medium tracking-heading">
@@ -374,7 +365,7 @@ export function LandingPage() {
         </section>
 
         <section className="mx-auto max-w-6xl pb-20 text-center sm:pb-28">
-          <div className="rounded-xl border border-accent/20 bg-accent/5 px-6 py-12 sm:px-10">
+          <div className="border-y border-line-subtle px-6 py-12 sm:px-10">
             <Code className="mx-auto size-6 text-accent-bright" />
             <h2 className="mt-4 text-2xl font-medium tracking-heading sm:text-3xl">
               Make credentials boring again.
