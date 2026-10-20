@@ -9,6 +9,10 @@ order: 5
 
 Yes. Keya is MIT-licensed open source with no subscription. Your cloud storage and API provider may charge separately.
 
+## How do I get back to the homepage?
+
+The root URL opens the landing page only on a first visit; once Keya has stored a workspace or a vault summary, it sends you straight to the app. Open [/home](/home) at any time, or use **About Keya** in the welcome screen footer or **Settings → About → Product Homepage**.
+
 ## Does Keya send my keys anywhere?
 
 Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests use provider metadata endpoints where available and normally do not invoke a model. Custom or metered endpoints may incur charges. Amazon Bedrock cannot be tested from the browser because it requires AWS request signing.

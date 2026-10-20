@@ -9,7 +9,7 @@ export function AboutPage() {
 
       <div className="space-y-6">
         <section>
-          <div className="rounded-lg border border-line bg-surface-2">
+          <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
             <a
               href="/docs"
               target="_blank"
@@ -22,6 +22,22 @@ export function AboutPage() {
                 </p>
                 <p className="text-xs text-ink-quaternary mt-0.5">
                   Quick start, FAQ, and security
+                </p>
+              </div>
+              <CaretRight className="size-3.5 text-ink-quaternary" />
+            </a>
+            <a
+              href="/home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-3 w-full text-left hover:bg-surface-3 transition-colors"
+            >
+              <div>
+                <p className="text-xs font-medium text-ink-primary">
+                  Product Homepage
+                </p>
+                <p className="text-xs text-ink-quaternary mt-0.5">
+                  What Keya does, and how it stores your keys
                 </p>
               </div>
               <CaretRight className="size-3.5 text-ink-quaternary" />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
@@ -483,6 +483,12 @@ export function WelcomePage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              to="/home"
+              className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors"
+            >
+              About Keya
+            </Link>
             <a
               href="https://coryso.com"
               target="_blank"

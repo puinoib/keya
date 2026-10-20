@@ -36,7 +36,10 @@ export function NotFoundPage() {
         </p>
 
         <div className="mt-8 flex items-center gap-2">
-          <Link to="/" className={cn(buttonVariants({ size: 'sm' }), 'px-4')}>
+          <Link
+            to="/home"
+            className={cn(buttonVariants({ size: 'sm' }), 'px-4')}
+          >
             Back to home
           </Link>
           <Link
