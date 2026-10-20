@@ -27,6 +27,7 @@ describe('provider categories', () => {
     expect(getProviderCategory('Stability AI')).toBe('media');
     expect(getProviderCategory('recraft')).toBe('media');
     expect(getProviderCategory('Firecrawl')).toBe('platform');
+    expect(getProviderCategory('exa')).toBe('platform');
     expect(getProviderCategory('GitHub')).toBe('platform');
     expect(getProviderCategory('vercel')).toBe('platform');
     expect(getProviderCategory('Stripe')).toBe('platform');

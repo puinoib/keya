@@ -103,6 +103,7 @@ const UNSUPPORTED_PROVIDERS: Record<string, string> = {
     'NVIDIA NIM lists models without authentication and sends no CORS headers, so a key cannot be verified from the browser.',
   baseten:
     'Baseten sends no CORS headers, so the browser blocks the request before the key is checked.',
+  exa: 'Exa sends no CORS headers, so the browser cannot read the response. The key is not verified, and this is not proof that it is invalid.',
 };
 
 async function fetchWithTimeout(

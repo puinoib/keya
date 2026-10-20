@@ -196,6 +196,13 @@ describe('ApiTester provider routing', () => {
     expect(baseten.success).toBe(false);
     expect(baseten.error).toMatch(/no CORS headers/i);
 
+    // Exa blocks cross-origin reads, so the key is never sent from the browser.
+    const exa = await ApiTester.testRaw('Exa', 'https://api.exa.ai', 'exa-key');
+    expect(exa.success).toBe(false);
+    expect(exa.kind).toBe('unverifiable');
+    expect(exa.error).toMatch(/no CORS headers/i);
+    expect(exa.error).toMatch(/not proof that it is invalid/i);
+
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -285,30 +292,34 @@ describe('ApiTester check kinds', () => {
   it('reports presets that a browser cannot verify', () => {
     expect(ApiTester.checkKindFor('NVIDIA NIM')).toBe('unverifiable');
     expect(ApiTester.checkKindFor('Amazon Bedrock')).toBe('unverifiable');
+    // Exa blocks cross-origin reads, so no browser check can verify a key.
+    expect(ApiTester.checkKindFor('Exa')).toBe('unverifiable');
   });
 
   it('uses reachability for custom providers without a configured check', () => {
     const settings = settingsWith([
-      { name: 'Exa', endpoint: 'https://api.exa.ai' },
+      { name: 'Acme Search', endpoint: 'https://api.acme-search.dev' },
     ]);
-    expect(ApiTester.checkKindFor('Exa', settings)).toBe('reachability');
+    expect(ApiTester.checkKindFor('Acme Search', settings)).toBe(
+      'reachability'
+    );
   });
 
   it('uses a credential check when the custom provider configures one', () => {
     const settings = settingsWith([
       {
-        name: 'Exa',
-        endpoint: 'https://api.exa.ai',
+        name: 'Acme Search',
+        endpoint: 'https://api.acme-search.dev',
         check: { auth: 'x-api-key', path: '/v1/models' },
       },
     ]);
-    expect(ApiTester.checkKindFor('exa', settings)).toBe('credential');
+    expect(ApiTester.checkKindFor('acme search', settings)).toBe('credential');
   });
 });
 
 describe('reachability checks', () => {
   const settings = settingsWith([
-    { name: 'Exa', endpoint: 'https://api.exa.ai' },
+    { name: 'Acme Search', endpoint: 'https://api.acme-search.dev' },
   ]);
 
   it('never sends the key and avoids CORS preflight', async () => {
@@ -316,9 +327,9 @@ describe('reachability checks', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await ApiTester.testRaw(
-      'Exa',
-      'https://api.exa.ai',
-      'exa-key',
+      'Acme Search',
+      'https://api.acme-search.dev',
+      'acme-key',
       settings
     );
 
@@ -329,7 +340,7 @@ describe('reachability checks', () => {
       string,
       RequestInit,
     ];
-    expect(url).toBe('https://api.exa.ai');
+    expect(url).toBe('https://api.acme-search.dev');
     expect(init.method).toBe('GET');
     expect(init.mode).toBe('no-cors');
     expect(init.headers).toBeUndefined();
@@ -344,9 +355,9 @@ describe('reachability checks', () => {
     );
 
     const result = await ApiTester.testRaw(
-      'Exa',
-      'https://api.exa.ai',
-      'exa-key',
+      'Acme Search',
+      'https://api.acme-search.dev',
+      'acme-key',
       settings
     );
 
@@ -363,16 +374,16 @@ describe('configured custom checks', () => {
     vi.stubGlobal('fetch', fetchMock);
     const settings = settingsWith([
       {
-        name: 'Exa',
-        endpoint: 'https://api.exa.ai',
+        name: 'Acme Search',
+        endpoint: 'https://api.acme-search.dev',
         check: { auth: 'x-api-key', path: '/v1/models' },
       },
     ]);
 
     const result = await ApiTester.testRaw(
-      'Exa',
-      'https://api.exa.ai',
-      'exa-key',
+      'Acme Search',
+      'https://api.acme-search.dev',
+      'acme-key',
       settings
     );
 
@@ -383,10 +394,10 @@ describe('configured custom checks', () => {
       string,
       RequestInit,
     ];
-    expect(url).toBe('https://api.exa.ai/v1/models');
+    expect(url).toBe('https://api.acme-search.dev/v1/models');
     expect(init.method).toBe('GET');
     expect((init.headers as Record<string, string>)['x-api-key']).toBe(
-      'exa-key'
+      'acme-key'
     );
   });
 
@@ -397,16 +408,16 @@ describe('configured custom checks', () => {
     );
     const settings = settingsWith([
       {
-        name: 'Exa',
-        endpoint: 'https://api.exa.ai',
+        name: 'Acme Search',
+        endpoint: 'https://api.acme-search.dev',
         check: { auth: 'bearer' },
       },
     ]);
 
     const result = await ApiTester.testRaw(
-      'Exa',
-      'https://api.exa.ai',
-      'exa-key',
+      'Acme Search',
+      'https://api.acme-search.dev',
+      'acme-key',
       settings
     );
 
@@ -426,16 +437,16 @@ describe('configured custom checks', () => {
     );
     const settings = settingsWith([
       {
-        name: 'Exa',
-        endpoint: 'https://api.exa.ai',
+        name: 'Acme Search',
+        endpoint: 'https://api.acme-search.dev',
         check: { auth: 'bearer' },
       },
     ]);
 
     const result = await ApiTester.testRaw(
-      'Exa',
-      'https://api.exa.ai',
-      'exa-key',
+      'Acme Search',
+      'https://api.acme-search.dev',
+      'acme-key',
       settings
     );
 

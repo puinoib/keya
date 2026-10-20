@@ -183,6 +183,7 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   // Bases for providers whose key is verified on a different metadata path.
   stability: 'https://api.stability.ai',
   recraft: 'https://external.api.recraft.ai',
+  exa: 'https://api.exa.ai',
   firecrawl: 'https://api.firecrawl.dev',
   github: 'https://api.github.com',
   vercel: 'https://api.vercel.com',
@@ -239,6 +240,7 @@ const PROVIDER_ENDPOINT_KEYS: Record<string, string> = {
   'z.ai (general)': 'zai_general',
   'stability ai': 'stability',
   recraft: 'recraft',
+  exa: 'exa',
   firecrawl: 'firecrawl',
   github: 'github',
   vercel: 'vercel',
@@ -307,6 +309,7 @@ export const PRESET_PROVIDERS = [
   'Z.AI (General)',
   'Stability AI',
   'Recraft',
+  'Exa',
   'Firecrawl',
   'GitHub',
   'Vercel',
@@ -362,6 +365,7 @@ const PROVIDER_CATEGORY_ORDER: ProviderCategory[] = [
 const PROVIDER_CATEGORY_BY_NAME: Record<string, ProviderCategory> = {
   'stability ai': 'media',
   recraft: 'media',
+  exa: 'platform',
   firecrawl: 'platform',
   github: 'platform',
   vercel: 'platform',

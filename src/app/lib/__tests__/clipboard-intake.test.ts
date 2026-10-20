@@ -70,6 +70,16 @@ MISTRAL_BASE_URL=https://api.mistral.ai/v1
     expect(candidate?.draft.key_value).toBe('plain-secret-1234567890');
   });
 
+  it('detects an Exa key from its env name', async () => {
+    mockClipboard('EXA_API_KEY="exa-secret-1234567890"');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Exa');
+    expect(candidate?.draft.key_value).toBe('exa-secret-1234567890');
+    expect(candidate?.draft.endpoint).toBe('https://api.exa.ai');
+  });
+
   it('detects a Cerebras key from a generic endpoint hint', async () => {
     mockClipboard(`
 API_KEY=cerebras-secret-1234567890

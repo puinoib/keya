@@ -10,7 +10,7 @@ Keya is a static web application with no application backend or account system. 
 
 - Multiple password-protected vaults in a workspace folder
 - Key search, groups, provider filters, and expiry tracking
-- Preset AI providers plus custom providers for any API service, with optional credential checks
+- Preset AI providers plus platform presets (Exa, Firecrawl, GitHub, Vercel, Stripe), and custom providers for any API service, with optional credential checks
 - Manual and optional automatic API connectivity tests
 - Inbox alerts for expiry, connection failures, insecure endpoints, and missing or stale tests
 - Optional clipboard detection when adding keys

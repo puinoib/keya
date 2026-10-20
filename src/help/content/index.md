@@ -13,7 +13,7 @@ AI providers are the default focus, but Keya is not limited to AI. Search, scrap
 
 - Create separate vaults for different projects.
 - Organize keys with groups, search, and filters.
-- Add preset AI providers or any custom API service.
+- Add preset AI and platform providers, or any custom API service.
 - Test connectivity manually or enable optional automatic tests.
 - Review expiry, connection, and endpoint alerts in Inbox.
 - Unlock with a master password or enrolled PRF-supported biometric authentication.
