@@ -28,6 +28,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Authentication or refresh behavior | `src/app/lib/session.ts`, `src/app/lib/biometric.ts`, `src/main.tsx`, `src/app/hooks/useAutoLock.ts`, `src/routes/_authenticated.tsx` |
 | Inbox rules | `src/core/inbox.ts`, `src/core/key-status.ts` and their tests |
 | Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity |
+| Deployed response headers or caching | `worker/index.ts`, `wrangler.toml`; the CSP keeps `'wasm-unsafe-eval'` for libsodium and allows user-supplied endpoints in `connect-src` |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
 
 ## Branches and deployment
@@ -36,6 +37,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 - Promote with a `dev` → `main` pull request using a merge commit, or `git merge --no-ff dev` locally. Squash and rebase merges are disabled. `dev` must stay an ancestor of `main`.
 - Run `pnpm build` before `pnpm typecheck`: the TanStack Router plugin generates the gitignored `src/routeTree.gen.ts` during the build, and typechecking a clean checkout fails without it.
 - `wrangler.toml` owns deployment: `dist/` static assets, SPA fallback, `workers_dev = false`, and the `keya.one` custom domain. The Worker, the zone, and the custom domain must live in one Cloudflare account.
+- `worker/index.ts` is the only server-side code. It exists to attach security and caching headers that the assets layer cannot set, and `run_worker_first = true` sends static files through it. Keep the comments there accurate when changing the policy: the CSP needs `'wasm-unsafe-eval'` for libsodium, and the permissions policy needs WebAuthn and clipboard entries.
 - `keya.one` is a permanent hostname. Biometric unlock uses WebAuthn with `rpId = location.hostname`, so changing it invalidates every credential users registered. Treat that like a `.keya` format change: a compatibility decision, not a configuration tweak.
 
 ## Security and data safety

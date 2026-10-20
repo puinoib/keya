@@ -72,7 +72,9 @@ See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, 
 
 ## Deployment
 
-Production is `https://keya.one`, served by a Cloudflare Worker configured in `wrangler.toml` from the static build in `dist/`. There is no server-side code and no runtime secret; the build needs only Node and pnpm.
+Production is `https://keya.one`, served by a Cloudflare Worker configured in `wrangler.toml` from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets and no application server.
+
+`worker/index.ts` is the only server-side code. It forwards every request to the static assets binding and adds response headers the assets layer cannot express: a content security policy, clickjacking and MIME-sniffing protection, HSTS, a permissions policy, and long-lived caching for the content-hashed files under `/assets/`. `run_worker_first = true` is what makes those headers apply to static files as well; without it Cloudflare serves matching assets before the Worker runs.
 
 | Branch | Purpose |
 |---|---|
@@ -111,9 +113,11 @@ Use the `cf:` prefix rather than a bare `deploy` script name: `pnpm deploy` reso
 
 ### Deployment constraints
 
+- **The content security policy is not cosmetic.** `script-src` must keep `'wasm-unsafe-eval'`: libsodium-wrappers-sumo compiles WebAssembly at runtime, so removing it breaks unlocking and encryption. `connect-src` cannot be narrowed to known hosts because provider connectivity tests call endpoints the user supplies. `permissions-policy` must keep the `publickey-credentials-*` and `clipboard-*` entries for biometric unlock and key copying.
 - **`keya.one` is permanent.** Biometric unlock uses WebAuthn with `rpId = location.hostname`, so every registered credential is bound to the exact hostname. Serving production from another hostname invalidates all of them.
 - **No second origin.** `workers_dev = false` keeps the app off `*.workers.dev`. IndexedDB (which holds the vault directory handle), sessionStorage and WebAuthn credentials are all per-origin.
 - **Rollback.** Cloudflare keeps previous Worker versions for an immediate rollback, but Git still holds the bad commit, so the next `main` push would ship it again. Follow an emergency rollback with `git revert` and a normal promotion.
+- **Zone settings still live outside the repository.** Always Use HTTPS and the DNS/certificate binding for the custom domain are Cloudflare dashboard state. Recreating the zone means setting them again.
 - Service Worker/offline support is not currently implemented.
 
 ## User guides
