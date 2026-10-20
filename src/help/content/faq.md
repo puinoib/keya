@@ -15,7 +15,7 @@ The root URL opens the landing page only on a first visit; once Keya has stored 
 
 ## Does Keya send my keys anywhere?
 
-Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests use provider metadata endpoints where available and normally do not invoke a model. Custom or metered endpoints may incur charges. Amazon Bedrock cannot be tested from the browser because it requires AWS request signing.
+Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests use provider metadata endpoints where available and normally do not invoke a model. Custom or metered endpoints may incur charges. Some providers cannot be tested from the browser: Amazon Bedrock requires AWS request signing, and NVIDIA NIM and Baseten send no cross-origin headers, so Keya reports that instead of a misleading network error.
 
 ## Where is my data stored?
 

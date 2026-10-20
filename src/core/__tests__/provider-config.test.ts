@@ -83,6 +83,16 @@ describe('provider endpoint configuration', () => {
       'Z.AI Coding (China)': 'https://open.bigmodel.cn/api/coding/paas/v4',
       'Moonshot AI (Global)': 'https://api.moonshot.ai/v1',
       'Vercel AI Gateway': 'https://ai-gateway.vercel.sh/v1',
+      Perplexity: 'https://api.perplexity.ai/v1',
+      DeepInfra: 'https://api.deepinfra.com/v1/openai',
+      'Tencent Hunyuan': 'https://api.hunyuan.cloud.tencent.com/v1',
+      'Baidu Qianfan': 'https://qianfan.baidubce.com/v2',
+      'Z.AI (General)': 'https://api.z.ai/api/paas/v4',
+      'OpenCode Zen': 'https://opencode.ai/zen/v1',
+      'OpenCode Go': 'https://opencode.ai/zen/go/v1',
+      'Stability AI': 'https://api.stability.ai',
+      GitHub: 'https://api.github.com',
+      Stripe: 'https://api.stripe.com',
     };
 
     for (const [provider, endpoint] of Object.entries(expected)) {

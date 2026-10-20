@@ -29,19 +29,63 @@ const OPENAI_COMPATIBLE_PROVIDERS = new Set([
   'minimax',
   'alibaba cloud',
   'groq',
-  'openrouter',
   'together',
-  'nvidia nim',
   'cerebras',
   'fireworks',
-  'baseten',
-  'hugging face',
   'xiaomi mimo',
   'z.ai',
   'z.ai coding (china)',
   'moonshot ai (global)',
   'vercel ai gateway',
+  'perplexity',
+  'featherless',
+  'chutes',
+  'hyperbolic',
+  'nebius',
+  'deepinfra',
+  'upstage',
+  'reka',
+  'gitee ai',
+  'tencent hunyuan',
+  'baidu qianfan',
+  'baichuan',
+  'stepfun',
+  'opencode zen',
+  'opencode go',
+  'z.ai (general)',
 ]);
+
+/**
+ * Metadata endpoints that differ from the provider's API base. A value starting
+ * with `/` is appended to the configured endpoint; an absolute URL replaces it
+ * because the check lives on another host.
+ */
+const TEST_ENDPOINTS: Record<string, string> = {
+  // The model list is public, so only these authenticated endpoints can verify
+  // a token.
+  openrouter: '/key',
+  'hugging face': 'https://huggingface.co/api/whoami-v2',
+  cohere: '/v1/models',
+  'stability ai': '/v1/user/account',
+  recraft: '/v1/users/me',
+  firecrawl: '/v1/team/credit-usage',
+  github: '/user',
+  vercel: '/v2/user',
+  stripe: '/v1/balance',
+};
+
+/**
+ * Providers whose keys cannot be verified from a browser. Reported instead of
+ * letting the request fail as a misleading network or CORS error.
+ */
+const UNSUPPORTED_PROVIDERS: Record<string, string> = {
+  'amazon bedrock':
+    'Amazon Bedrock uses AWS request signing and cannot be tested from the browser.',
+  'nvidia nim':
+    'NVIDIA NIM lists models without authentication and sends no CORS headers, so a key cannot be verified from the browser.',
+  baseten:
+    'Baseten sends no CORS headers, so the browser blocks the request before the key is checked.',
+};
 
 async function fetchWithTimeout(
   url: string,
@@ -105,10 +149,30 @@ function getProviderKind(provider: string): ProviderKind {
   if (normalized === 'anthropic') return 'anthropic';
   if (normalized === 'google' || normalized === 'gemini') return 'google';
   if (normalized === 'azure openai') return 'azure';
-  if (normalized === 'amazon bedrock' || normalized === 'bedrock')
+  if (normalized === 'bedrock' || isUnsupportedProvider(normalized))
     return 'unsupported';
   if (OPENAI_COMPATIBLE_PROVIDERS.has(normalized)) return 'openai';
   return 'generic';
+}
+
+function isUnsupportedProvider(normalized: string): boolean {
+  return normalized in UNSUPPORTED_PROVIDERS;
+}
+
+function getUnsupportedReason(provider: string): string {
+  const normalized = provider.trim().toLowerCase();
+  return (
+    UNSUPPORTED_PROVIDERS[normalized] ??
+    'This provider cannot be tested from the browser.'
+  );
+}
+
+/** Resolve the URL a connectivity test calls, honouring per-provider overrides. */
+function getTestUrl(provider: string, endpoint: string): string {
+  const override = TEST_ENDPOINTS[provider.trim().toLowerCase()];
+  if (!override) return endpoint;
+  if (/^https?:\/\//i.test(override)) return override;
+  return `${endpoint}${override}`;
 }
 
 /** A successful HTTP status is not enough: SPA fallbacks often return HTML. */
@@ -155,6 +219,7 @@ export class ApiTester {
     try {
       const result = await ApiTester.testByProvider(
         getProviderKind(provider),
+        provider,
         normalizedEndpoint,
         key
       );
@@ -173,21 +238,18 @@ export class ApiTester {
 
   private static async testByProvider(
     kind: ProviderKind,
+    provider: string,
     endpoint: string,
     key: string
   ): Promise<{ success: boolean; error?: string }> {
+    if (kind === 'unsupported') {
+      return { success: false, error: getUnsupportedReason(provider) };
+    }
     if (kind === 'openai') return ApiTester.testOpenAI(endpoint, key);
     if (kind === 'anthropic') return ApiTester.testAnthropic(endpoint, key);
     if (kind === 'azure') return ApiTester.testAzure(endpoint, key);
     if (kind === 'google') return ApiTester.testGoogle(endpoint, key);
-    if (kind === 'unsupported') {
-      return {
-        success: false,
-        error:
-          'Amazon Bedrock uses AWS request signing and cannot be tested from the browser.',
-      };
-    }
-    return ApiTester.testGeneric(endpoint, key);
+    return ApiTester.testGeneric(getTestUrl(provider, endpoint), key);
   }
 
   private static async testOpenAI(endpoint: string, key: string) {

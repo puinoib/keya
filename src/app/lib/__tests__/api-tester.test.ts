@@ -95,11 +95,6 @@ describe('ApiTester endpoint validation', () => {
         'https://api.fireworks.ai/inference/v1/models',
       ],
       [
-        'Hugging Face',
-        'https://router.huggingface.co/v1',
-        'https://router.huggingface.co/v1/models',
-      ],
-      [
         'Vercel AI Gateway',
         'https://ai-gateway.vercel.sh/v1',
         'https://ai-gateway.vercel.sh/v1/models',
@@ -178,6 +173,76 @@ describe('ApiTester provider routing', () => {
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/AWS request signing/);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('explains providers that cannot be tested from a browser', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const nvidia = await ApiTester.testRaw(
+      'NVIDIA NIM',
+      'https://integrate.api.nvidia.com/v1',
+      'nvapi-key'
+    );
+    expect(nvidia.success).toBe(false);
+    expect(nvidia.error).toMatch(/no CORS headers/i);
+
+    const baseten = await ApiTester.testRaw(
+      'Baseten',
+      'https://inference.baseten.co/v1',
+      'baseten-key'
+    );
+    expect(baseten.success).toBe(false);
+    expect(baseten.error).toMatch(/no CORS headers/i);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses the authenticated metadata endpoint where the model list is public', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse());
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cases: [string, string, string][] = [
+      [
+        'OpenRouter',
+        'https://openrouter.ai/api/v1',
+        'https://openrouter.ai/api/v1/key',
+      ],
+      [
+        'Hugging Face',
+        'https://router.huggingface.co/v1',
+        'https://huggingface.co/api/whoami-v2',
+      ],
+      ['GitHub', 'https://api.github.com', 'https://api.github.com/user'],
+      ['Vercel', 'https://api.vercel.com', 'https://api.vercel.com/v2/user'],
+      ['Stripe', 'https://api.stripe.com', 'https://api.stripe.com/v1/balance'],
+      ['Cohere', 'https://api.cohere.com', 'https://api.cohere.com/v1/models'],
+      [
+        'Stability AI',
+        'https://api.stability.ai',
+        'https://api.stability.ai/v1/user/account',
+      ],
+      [
+        'Firecrawl',
+        'https://api.firecrawl.dev',
+        'https://api.firecrawl.dev/v1/team/credit-usage',
+      ],
+    ];
+
+    for (const [provider, endpoint, expectedUrl] of cases) {
+      fetchMock.mockClear();
+      const result = await ApiTester.testRaw(provider, endpoint, 'probe-key');
+
+      expect(result.success, provider).toBe(true);
+      const [url, init] = fetchMock.mock.calls[0] as unknown as [
+        string,
+        RequestInit,
+      ];
+      expect(url, provider).toBe(expectedUrl);
+      expect((init.headers as Record<string, string>).Authorization).toBe(
+        'Bearer probe-key'
+      );
+    }
   });
 
   it('reports HTTP failures', async () => {
