@@ -70,6 +70,41 @@ MISTRAL_BASE_URL=https://api.mistral.ai/v1
     expect(candidate?.draft.key_value).toBe('plain-secret-1234567890');
   });
 
+  it('detects a Cerebras key from a generic endpoint hint', async () => {
+    mockClipboard(`
+API_KEY=cerebras-secret-1234567890
+BASE_URL=https://api.cerebras.ai/v1
+    `);
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Cerebras');
+    expect(candidate?.draft.endpoint).toBe('https://api.cerebras.ai/v1');
+  });
+
+  it('detects a Z.AI key without mistaking it for Zhipu', async () => {
+    mockClipboard(`
+ZAI_API_KEY=zai-secret-1234567890
+BASE_URL=https://api.z.ai/api/coding/paas/v4
+    `);
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Z.AI');
+    expect(candidate?.draft.endpoint).toBe(
+      'https://api.z.ai/api/coding/paas/v4'
+    );
+  });
+
+  it('detects a Hugging Face token from HF_TOKEN', async () => {
+    mockClipboard('HF_TOKEN=hf_secret1234567890abcdef');
+
+    const candidate = await tryDetectClipboardKey();
+
+    expect(candidate?.provider).toBe('Hugging Face');
+    expect(candidate?.draft.endpoint).toBe('https://router.huggingface.co/v1');
+  });
+
   it('detects Azure OpenAI by env name', async () => {
     mockClipboard('AZURE_OPENAI_API_KEY="azure-secret-1234567890"');
 

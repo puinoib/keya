@@ -128,6 +128,18 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   together: 'https://api.together.xyz/v1',
   cohere: 'https://api.cohere.com',
   siliconflow: 'https://api.siliconflow.cn/v1',
+  // OpenAI-compatible bases, chosen so `/models` resolves for connection tests.
+  nvidia: 'https://integrate.api.nvidia.com/v1',
+  cerebras: 'https://api.cerebras.ai/v1',
+  fireworks: 'https://api.fireworks.ai/inference/v1',
+  baseten: 'https://inference.baseten.co/v1',
+  huggingface: 'https://router.huggingface.co/v1',
+  xiaomi: 'https://api.xiaomimimo.com/v1',
+  // Z.AI coding plans are keyed separately from the general Zhipu endpoint.
+  zai: 'https://api.z.ai/api/coding/paas/v4',
+  zai_coding_cn: 'https://open.bigmodel.cn/api/coding/paas/v4',
+  moonshot_global: 'https://api.moonshot.ai/v1',
+  vercel_ai_gateway: 'https://ai-gateway.vercel.sh/v1',
 };
 
 /**
@@ -152,6 +164,16 @@ const PROVIDER_ENDPOINT_KEYS: Record<string, string> = {
   together: 'together',
   cohere: 'cohere',
   siliconflow: 'siliconflow',
+  'nvidia nim': 'nvidia',
+  cerebras: 'cerebras',
+  fireworks: 'fireworks',
+  baseten: 'baseten',
+  'hugging face': 'huggingface',
+  'xiaomi mimo': 'xiaomi',
+  'z.ai': 'zai',
+  'z.ai coding (china)': 'zai_coding_cn',
+  'moonshot ai (global)': 'moonshot_global',
+  'vercel ai gateway': 'vercel_ai_gateway',
 };
 
 export function getDefaultEndpointForProvider(
@@ -188,6 +210,16 @@ export const PRESET_PROVIDERS = [
   'Together',
   'Cohere',
   'SiliconFlow',
+  'NVIDIA NIM',
+  'Cerebras',
+  'Fireworks',
+  'Baseten',
+  'Hugging Face',
+  'Xiaomi MiMo',
+  'Z.AI',
+  'Z.AI Coding (China)',
+  'Moonshot AI (Global)',
+  'Vercel AI Gateway',
 ] as const;
 
 export function getProvidersForDropdown(

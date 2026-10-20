@@ -140,6 +140,66 @@ const DETECTION_RULES: DetectionRule[] = [
     tokenPatterns: [],
     endpointHints: [/api\.siliconflow\.cn/i, /siliconflow\.cn/i],
   },
+  {
+    provider: 'NVIDIA NIM',
+    explicitEnvNames: ['NVIDIA_API_KEY', 'NVIDIA_NIM_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/integrate\.api\.nvidia\.com/i],
+  },
+  {
+    provider: 'Cerebras',
+    explicitEnvNames: ['CEREBRAS_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/api\.cerebras\.ai/i],
+  },
+  {
+    provider: 'Fireworks',
+    explicitEnvNames: ['FIREWORKS_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/api\.fireworks\.ai/i],
+  },
+  {
+    provider: 'Baseten',
+    explicitEnvNames: ['BASETEN_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/inference\.baseten\.co/i],
+  },
+  {
+    provider: 'Hugging Face',
+    explicitEnvNames: [
+      'HF_TOKEN',
+      'HUGGING_FACE_HUB_TOKEN',
+      'HUGGINGFACE_API_KEY',
+    ],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/router\.huggingface\.co/i, /huggingface\.co/i],
+  },
+  {
+    provider: 'Xiaomi MiMo',
+    explicitEnvNames: ['XIAOMI_API_KEY', 'XIAOMI_MIMO_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/api\.xiaomimimo\.com/i],
+  },
+  {
+    provider: 'Z.AI',
+    explicitEnvNames: ['ZAI_API_KEY', 'Z_AI_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/api\.z\.ai/i],
+  },
+  {
+    provider: 'Vercel AI Gateway',
+    explicitEnvNames: ['AI_GATEWAY_API_KEY', 'VERCEL_AI_GATEWAY_API_KEY'],
+    fallbackEnvNames: [],
+    tokenPatterns: [],
+    endpointHints: [/ai-gateway\.vercel\.sh/i],
+  },
 ];
 
 function unwrapClipboardValue(value: string): string {
