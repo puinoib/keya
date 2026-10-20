@@ -1,67 +1,60 @@
 ---
 title: FAQ
-description: Common questions about cost, sync, recovery, and behavior.
-updated: 2026-06-05
+description: Common questions about authentication, synchronization, and recovery.
+updated: 2026-10-20
 order: 5
 ---
 
 ## Is Keya free?
 
-Yes. MIT-licensed open source. No subscription, no pro tier.
+Yes. Keya is MIT-licensed open source with no subscription. Your cloud storage and API provider may charge separately.
 
 ## Does Keya send my keys anywhere?
 
-No. Keya is a static web app with no backend, no analytics. The only outbound traffic is the **Test Key** button, which sends a request to the provider you configured.
+Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Some test requests invoke a model and can incur charges.
 
 ## Where is my data stored?
 
-Two places, both on your machine:
+Encrypted vault contents live in `.keya` files in your chosen folder, or in files you manually download in fallback mode. IndexedDB stores the folder handle, cached vault summaries, and PRF biometric enrollment records. It is not a backup of the vault. See [Security](/docs/security).
 
-1. **Vault files (`*.keya`)** in the workspace folder you picked.
-2. **IndexedDB cache** (`keya-meta`) — stores workspace handle, vault summaries (name, icon, key count), and biometric credentials. Not a copy of your keys.
+## Why do I need to unlock after refreshing?
 
-Deleting one does not delete the other.
+Keya no longer persists a recoverable master password for session restoration. Refreshing clears the in-memory session. Unlock with your password or an enrolled PRF-supported authenticator.
 
-## I forgot my master password. Can you reset it?
+## Why did biometric unlock stop working?
 
-No. Without the password, the `.keya` file is useless ciphertext. **Store the master password in a password manager.**
+Biometric unlock now requires WebAuthn PRF. Old records that stored an AES key alongside the encrypted password are removed. Use your master password and enroll again with a PRF-capable browser/authenticator. If storage upgrade is blocked, close other Keya tabs.
+
+Clearing site data also removes the enrollment record. Authenticator credential synchronization does not synchronize Keya's site records; keep your master password available.
+
+## I forgot my password. Can you reset it?
+
+No. If enrolled biometric unlock still works, you may still access and export your data, but it is not a guaranteed recovery method. A `.keya` file alone cannot be recovered without its password. Keep passwords in a password manager.
 
 ## How do I use multiple vaults?
 
-Open the vault switcher (top-left sidebar). All `.keya` files in your workspace folder appear there. Each vault has its own password, keys, and settings.
+Choose another `.keya` file from the sidebar vault switcher and authenticate. Pending changes are saved before switching. Each vault has its own keys, groups, settings, and password. Creating a file with an existing name is rejected.
 
-## My browser can't pick a folder. What now?
+## My browser cannot pick a folder. What now?
 
-Keya needs the **File System Access API**, available in Chrome, Edge, Arc, Brave, and other Chromium browsers. Firefox and Safari don't support it.
+Use a current Chrome or Edge browser for full workspace support. Without the directory picker, Keya offers a limited manual `.keya` file-open/download fallback. This does not provide full folder management or automatic in-place saving. File writes in folder mode also require Web Locks support.
 
-Switch to a Chromium browser for setup, or use the file picker fallback to upload/download the vault file manually.
+## Can I edit the same vault on multiple devices?
 
-## Will my cloud drive conflict with itself?
+Use one device at a time and let cloud synchronization finish before moving to another. Keya coordinates same-origin tab writes and rejects detected external changes, but it does not provide distributed locking or merge edits. See [Backup & Restore](/docs/backup).
 
-Probably not, if you use Keya on **one device at a time per vault**. Cloud drives use last-write-wins — simultaneous edits on two devices can lose data.
+## Why will the vault not lock?
 
-## How does biometric unlock work?
-
-It's a convenience, not a replacement for the master password. Keya stores a WebAuthn passkey in IndexedDB, scoped to the vault and device. It doesn't sync across devices. Clearing browser data removes it — re-enroll with the master password.
-
-## How do I move Keya to a new computer?
-
-1. Ensure the workspace folder syncs through your cloud drive.
-2. Open Keya in a Chromium browser on the new machine.
-3. Pick the same workspace folder, unlock each vault with the master password.
-
-## Can I export a key to share with a teammate?
-
-Not directly — Keya operates on whole vaults. Either create a separate vault and share the `.keya` file + password through different channels, or copy the key value into your team's secret manager.
-
-## How do I report a bug?
-
-Open an issue on GitHub. Include the browser version, expected vs actual behavior, and a scrubbed `.keya` file if data-related.
-
-## Where's the source code?
-
-See the GitHub link in the app footer. Everything is in one repository under MIT.
+Locking first saves pending changes. If saving fails, Keya keeps the vault unlocked to avoid discarding your edits. Keep the page open, export an encrypted copy, and resolve the permission or conflict error. Protect access to your device while the vault remains unlocked.
 
 ## How do I change my master password?
 
-Settings → General → Master Password → **Change**. Enter your current password, then the new one (min 8 chars). If biometric unlock is active, it re-registers automatically.
+Settings → General → Master Password → **Change**. Supply the current password and a new password meeting the displayed requirements. If biometrics are enabled, the UI then requests re-enrollment. Canceling that step can leave the password changed but biometric unlock needing re-enrollment. Backups made before the change still use the old password.
+
+## How do I share a key?
+
+Copy the key into an appropriate secret-sharing tool, or create a separate vault and share its encrypted file and password through separate channels. JSON exports contain plaintext keys; do not share them unintentionally.
+
+## How do I report a bug?
+
+Open an issue at [puinoib/keya](https://github.com/puinoib/keya). Include your browser version, reproduction steps, and expected versus actual behavior. Use synthetic test data; never attach real API keys, passwords, plaintext exports, or production vaults.

@@ -1,103 +1,66 @@
 ---
 title: Backup & Restore
-description: How to back up, restore, and migrate your Keya vaults.
-updated: 2026-06-05
+description: Preserve encrypted vaults and recover without overwriting unsaved changes.
+updated: 2026-10-20
 order: 7
 ---
 
-Keya stores your data in `.keya` files inside the workspace folder you picked on first launch. The file is the backup. If you have the file and the master password, you have everything.
-
 ## What to back up
 
-Just the workspace folder. Every `.keya` file in that folder is an independent, fully self-contained vault. The folder also includes any future vault files you create — they will all be backed up the same way.
+Back up your `.keya` files and retain their master passwords separately in a password manager. Each file contains a vault's keys, groups, settings, and inbox. Prefer encrypted `.keya` exports; JSON exports expose keys in plaintext.
 
-You do **not** need to back up IndexedDB. The IndexedDB cache only stores metadata (vault names, icons, key counts) and biometric credentials. If you wipe it, Keya rebuilds the metadata the next time you open each vault, and you just re-enroll biometrics per device.
+IndexedDB is not a backup of your vault contents. It holds the workspace handle, cached summaries, and biometric enrollment records. After clearing site data, choose your folder again, unlock with the password, and re-enroll biometrics if needed.
 
-## Pick a synced folder for the workspace
+## Sync is not a backup
 
-The simplest and most reliable backup is to make the workspace folder live inside a cloud-synced directory from day one. Common choices:
+A cloud-synced workspace is convenient for moving between devices, but deletion, corruption, and unwanted edits can synchronize too. Maintain an independent, preferably versioned copy of the workspace.
 
-- **iCloud Drive** — `~/Library/Mobile Documents/iCloud~Drive/Keya` on macOS, or the iCloud Drive folder in Finder.
-- **Dropbox** — `~/Dropbox/Keya`.
-- **Nutstore** — `~/Nutstore/Keya` (popular in China).
-- **OneDrive** — `~/OneDrive/Keya`.
+Version history and retention vary by cloud provider, plan, and file type. Verify your provider's recovery options rather than assuming older versions are available.
 
-Pick **one** synced location per workspace. Pointing Keya at a folder that lives in two different sync services will produce conflicts, not safety.
+Before switching devices:
 
-The rest of this guide assumes your workspace is in a synced folder. If it isn't, you can still back up by copying the folder manually — see the offline section below.
+1. Complete your changes and ensure no save error is showing. Locking successfully flushes pending changes.
+2. Wait for the cloud client to finish uploading.
+3. Wait for the other device to download the latest files before opening a vault.
 
-## Routine backup
+Use one device at a time per vault. Keya does not merge concurrent edits.
 
-Once the workspace is in a synced folder, your cloud drive client is your backup. There is nothing to schedule, no export button to click, no third-party backup software to configure. Every save writes the new vault content to the same file, and your cloud client uploads it.
+## Restore or move to another device
 
-Two things worth knowing:
+1. Copy or synchronize your backed-up `.keya` files to a dedicated folder. Preserve existing files under different names before replacing anything.
+2. Open Keya in a browser supporting the folder workflow.
+3. Choose **Choose Sync Folder** and select that folder.
+4. Open the vault and enter the password that protected that version.
+5. Check its contents and optionally enroll PRF biometric unlock again.
 
-- **Most cloud clients upload on a short delay**, usually a few seconds. If you save a key, switch off your laptop immediately, and your house burns down, you may lose the last save. Unlikely, but real.
-- **Some cloud clients keep a version history.** iCloud Drive, Dropbox, and OneDrive all retain prior versions of a file for 30 days or more. If you accidentally save a corrupted vault, you can usually roll back from the cloud client's web UI. Keya does not provide a UI for this; it's a feature of the cloud.
+A backup created before a password change still requires the old password. Password changes also create a `.keya.bak` copy of the previous file; this is not a versioned backup strategy, and later password changes can replace it. Restore a copy under a `.keya` filename to open it.
 
-## Restore on the same device
+## Save errors and conflicts
 
-If Keya loses its connection to the workspace — say you cleared browser data, or you switched browsers — the `.keya` files are still on disk. To restore:
+Keya coordinates same-origin tab writes and checks for file changes since opening or saving. A detected external change stops the write instead of overwriting it. This does not prevent all races with a cloud client or another application.
 
-1. Open Keya in a Chromium-based browser.
-2. Click **Open Folder** and pick the same workspace folder.
-3. The vault switcher will list every `.keya` in the folder. Open one and enter the master password.
+If saving fails or a conflict is reported:
 
-That's it. The IndexedDB cache rebuilds itself as you open each vault.
+1. **Keep the page open.** Current edits may exist only in memory. A failed save also prevents locking, so protect access to the device.
+2. Export the current vault as an encrypted `.keya` file to a separate location. Do not replace the conflicting original.
+3. Back up the disk version and any cloud conflict copies separately.
+4. Reopen the versions and compare the keys you need. Reconcile into a separate vault or carefully chosen copy.
+5. Delete redundant copies only after verifying the result and its backup.
 
-## Move to a new device
+Permissions can also cause save failures. Restore access to the workspace, but preserve an export before reloading. Browsers without folder support use manual downloads; keep track of which downloaded file is current.
 
-1. **Make sure the cloud sync has finished** on the old device. Open the cloud client's UI and confirm the workspace folder is up to date.
-2. **Sign in to the same cloud service** on the new device and wait for the workspace folder to sync down.
-3. **Open Keya** in a Chromium-based browser on the new device.
-4. **Pick the workspace folder** when prompted.
-5. **Open each vault** with its master password. Re-enroll biometrics on the new device if you want them.
+## Recovery limits
 
-If the new device is offline for a while, you can pre-stage the `.keya` files by copying them over with a USB stick and pointing Keya at a local copy. They'll still sync up once the cloud catches up.
-
-## Offline backup (no cloud drive)
-
-If you'd rather not use a cloud drive, the workflow is:
-
-1. Periodically copy the workspace folder to another location — an external drive, a USB stick, a NAS, an S3 bucket, an encrypted DMG.
-2. The copy is encrypted at rest by virtue of being a `.keya` file. You can leave it in a "less trusted" location without the master password being exposed.
-3. To restore, copy the folder back to a location accessible to your browser and pick it as the workspace.
-
-A reasonable cadence is weekly for light users, daily for heavy users. Automate it with `rsync`, Time Machine, or whatever you're already using for other files.
-
-## Sync conflicts
-
-Cloud drives resolve simultaneous edits to the same file with last-write-wins. If you open the same vault on two devices at once, the second save overwrites the first.
-
-The honest mitigation: **don't use the same vault on two devices at the same time.** Switch devices, let the cloud sync, then continue.
-
-If you do get a conflict — usually visible as a `personal (Conflict 2026-06-04).keya` file alongside the original — both files are still valid vaults. Open both, copy the keys you care about into a fresh vault, and delete the loser.
-
-## Disaster scenarios
-
-| Scenario | Outcome |
+| Situation | What to do |
 |---|---|
-| Forgot master password | **Unrecoverable.** The `.keya` file is encrypted with that exact password. No backdoor. |
-| `.keya` file deleted from cloud, no local copy | **Lost.** Re-create the vault. |
-| `.keya` file corrupted (partial write, disk failure) | **Lost unless you have a previous version.** Cloud clients usually keep 30 days of version history — check the web UI. |
-| Workspace folder deleted from one device, but the cloud still has it | Recovered automatically. The cloud client will re-download on the affected device. |
-| Browser data cleared | **No data loss.** The `.keya` files are on disk. Re-open the workspace folder, unlock each vault with the master password. |
-| Device stolen while vault is unlocked | **Uncertain.** The session lives in `sessionStorage` and is cleared on tab close, but a thief with the unlocked browser and no lock screen may have access. Always lock the vault before walking away. |
+| Forgotten password | There is no reset service. If enrolled biometric unlock still works, export accessibly while you can; otherwise recovery requires the password. |
+| Deleted or corrupted file | Restore a verified backup or a provider-retained version. Keya cannot reconstruct missing contents. |
+| Folder deletion synchronized | Check your provider's trash/version history; synchronization may propagate the deletion rather than restore it. |
+| Browser storage cleared | Existing vault files remain on disk. Choose the folder and unlock again with the password. |
+| Device stolen while unlocked | Decrypted data may be accessible. Disk encryption in Keya does not protect an already unlocked app. |
 
-## A quarterly drill
+## Test your backup
 
-Most people discover their backup is broken the day they need it. Save yourself the surprise:
+Periodically copy a backup to a separate folder, open it with the appropriate password, and verify the expected keys. Never test recovery by overwriting your only working copy.
 
-1. Once a quarter, copy a `.keya` file to a fresh folder.
-2. Open Keya in a different browser (or a private window).
-3. Pick the copy's folder.
-4. Confirm you can unlock with the master password and see all your keys.
-5. Delete the test copy.
-
-If the drill fails, fix the backup chain before something real breaks.
-
-## Related
-
-- [Quick Start](/docs/quick-start) — the workspace folder is set up here.
-- [Security](/docs/security) — what encryption actually protects, and against what.
-- [FAQ](/docs/faq) — see the "My browser can't pick a folder" entry for File System Access API requirements.
+See [Security](/docs/security) for the storage threat model and [Quick Start](/docs/quick-start) for workspace setup.

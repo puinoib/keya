@@ -1,96 +1,62 @@
 ---
 title: Security
-description: How Keya encrypts your data and what it does — and does not — protect.
-updated: 2026-06-05
+description: Encryption, authentication, and the limits of local protection.
+updated: 2026-10-20
 order: 6
 ---
 
-This page describes the actual cryptography in use and the threat model it covers. It is intentionally specific: you should be able to read the code and verify every claim.
+Keya encrypts vault contents on disk. It does not protect an unlocked vault against compromised application code, browser extensions, or the operating system. This is not a claim of an independent security audit.
 
 ## What is encrypted
 
-Everything inside a `.keya` file is encrypted. The plaintext is a JSON document with your keys, groups, settings, and metadata. The ciphertext, plus a small unencrypted header, is what gets written to disk.
+The payload contains API keys, groups, settings, inbox items, and vault metadata. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
 
-What is **not** encrypted:
+IndexedDB separately stores the workspace directory handle and cached vault summaries, including names, icons, and key counts. These summaries are not encrypted. PRF biometric enrollment also stores a credential ID, PRF salt, nonce, and encrypted master password; the PRF-derived encryption key is not stored.
 
-- The file name (e.g. `personal.keya`).
-- File timestamps visible in your file system.
-- The fact that you have a `.keya` file at all.
+## Current file format
 
-If you need to hide the existence of a vault, use a hidden folder or a VeraCrypt container — Keya only protects the contents.
-
-## Cipher suite
-
-| Layer | Algorithm | Parameters |
-|---|---|---|
-| Key derivation | **Argon2id** (ALG_ARGON2ID13) | ops=3, mem=64 MB, 32-byte output |
-| Authenticated encryption | **XChaCha20-Poly1305** (libsodium `crypto_secretbox`) | 24-byte nonce per file |
-| Integrity | **HMAC-SHA256** | 32-byte tag, covers the full pre-tag content |
-
-Argon2id gives you memory-hard password stretching — brute force against a strong master password is bounded by both CPU time and RAM. XChaCha20-Poly1305 is the same AEAD used by WireGuard, with a 192-bit nonce that makes random reuse practically impossible. HMAC-SHA256 is computed over the header, the encryption parameters, and the ciphertext, and is verified before decryption. A tampered file fails closed: it does not decrypt and does not corrupt the rest of your data.
-
-## The `.keya` file format
-
-```
-┌──────────────┬──────────────┬─────────────┬──────────┬──────────┐
-│ Header (128B) │ EncParams    │ PayloadLen  │ Payload  │ HMAC     │
-│               │ (96B)        │ (4B)        │ (N)      │ (32B)    │
-└──────────────┴──────────────┴─────────────┴──────────┴──────────┘
+```text
+Header (128B) | HeaderHash (32B) | EncParams (96B) | PayloadLen (4B) | Payload (N)
 ```
 
-- **Header (128B)** — magic bytes `KEYA`, format version, vault UUID, creation and update timestamps.
-- **EncParams (96B)** — Argon2id settings, the per-vault salt, the XChaCha nonce.
-- **PayloadLen (4B)** — big-endian length of the ciphertext.
-- **Payload (N)** — XChaCha20-Poly1305 ciphertext of the UTF-8 JSON.
-- **HMAC (32B)** — HMAC-SHA256 over everything before it.
+- **Header:** magic `KEYA`, version 1, flags, vault UUID, timestamps, random master seed, and reserved bytes.
+- **HeaderHash:** unkeyed SHA-256 over the header, encryption parameters, and payload length. This detects accidental corruption; it is not an HMAC or authentication of the header against a malicious editor.
+- **EncParams:** Argon2id algorithm and resource settings, salt, and encryption nonce.
+- **PayloadLen:** unsigned 32-bit little-endian ciphertext length.
+- **Payload:** XChaCha20-Poly1305 authenticated ciphertext of JSON padded with spaces to a 4096-byte boundary.
 
-The salt and nonce are fresh for every save. That means re-saving a vault with no changes still produces a different file — there is no deterministic leak.
+Current saves pre-hash the password with SHA-256, run Argon2id with `ops=10` and `mem=67108864` bytes (64 MiB), then hash the master seed together with the derived key to obtain the encryption key. Each save generates a fresh master seed, 16-byte salt, and 24-byte nonce.
 
-## Where the master password fits
+Payload authentication uses libsodium's XChaCha20-Poly1305 AEAD API. The header is not passed as AEAD additional authenticated data. After decryption, Keya validates the database shape and checks that the payload vault ID matches the header. The source of truth is `src/core/schema.ts` and `src/core/crypto.ts`.
 
-The master password is the only secret that opens a vault. It never leaves the browser. It is fed into Argon2id to derive the 32-byte symmetric key for that vault, and the symmetric key is held in memory only while the vault is unlocked.
+## Passwords and sessions
 
-Three consequences follow:
+The unlocked app holds the password and decrypted data in memory so it can display and save the vault. It does not persist the password in sessionStorage or localStorage for restoration. Old recoverable session records are discarded.
 
-1. **No password reset.** We can't reset it because we don't have it. We also can't decrypt anything without it.
-2. **No server-side validation.** Keya has no server, so there is nothing to attack on the server side.
-3. **Weak passwords are the weakest link.** Argon2id slows down guessing, but it doesn't make `password123` safe. Use a 16+ character password or four random words.
+**Reloading requires authentication again.** There is no warm session restoration or shared unlocked state across tabs. Keep your master password in a password manager; Keya has no password-reset service.
 
-## What biometric unlock does — and doesn't
+Locking first attempts to save pending changes. On success it clears the active vault and password from application state. This is not a guarantee of secure erasure of all copies from JavaScript memory.
 
-Biometric unlock (Touch ID, Windows Hello, Android fingerprint, etc.) is implemented as a **WebAuthn passkey** stored in IndexedDB and scoped to the specific vault's UUID. The passkey signs a challenge from Keya, and on success Keya fills in the master password from its in-memory copy.
+**If saving fails, locking is refused and the vault remains unlocked.** Keep the page open, export an encrypted copy, and resolve the error before leaving the device. The default inactivity timeout is five minutes; choose an available interval in Settings → General.
 
-The master password is still required. Biometric is a convenience for unlocking a vault you could already unlock with the password. The passkey is bound to the device and browser that enrolled it — it is not synced.
+## Biometric unlock
 
-If you wipe the device or clear site data, you must unlock with the master password and re-enroll biometrics.
+Biometric unlock requires a WebAuthn authenticator supporting the **PRF extension**. Keya derives an AES-GCM key from PRF output using HKDF, and uses it to encrypt or decrypt the stored master password. Authenticator credentials are managed by the browser/authenticator, not stored as private keys in Keya's IndexedDB.
 
-## Session behavior
+If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
 
-When you unlock a vault, Keya stores the master password in `sessionStorage` under the key `keya-session`. This is what lets the app survive a page reload without prompting you again.
+An enrolled credential and its Keya site record are needed for biometric unlock. Do not rely on them as your only recovery method. Clearing site data requires password unlock and re-enrollment. Credential availability or synchronization depends on the authenticator and browser; Keya does not synchronize its enrollment records.
 
-- The session is per-tab. Closing the tab clears it.
-- The session is per-origin. A different domain cannot read it.
-- The session is **not** `localStorage`. It does not survive browser restart.
-- Locking the vault (`Lock` button, vault switcher, or auto-lock timer) purges the session immediately.
+## Saving and synchronization
 
-The `auto_lock_minutes` setting in **Settings** controls inactivity-based locking. The default is 5 minutes. Setting it to 0 disables auto-lock, but every reload still requires unlock.
+Same-origin tabs coordinate file writes using Web Locks. Keya compares the current file against the revision it opened or last saved, and rejects detected external modifications. Creating a vault with an existing filename is rejected.
 
-## What Keya does not do
+These checks do not lock cloud clients or other devices, merge conflicting edits, or eliminate every race with external writers. Use one device at a time per vault and keep versioned backups. See [Backup & Restore](/docs/backup).
 
-It is worth being explicit:
+## Network requests and clipboard
 
-- **No network calls except your explicit Test Key requests.** No telemetry, no update checks, no error reporting.
-- **No clipboard persistence.** The clipboard is cleared 15 seconds after you copy a key. This is best-effort — if another app is holding the clipboard at that moment, the clear is a no-op.
-- **No key recovery.** We can't help you past a forgotten password.
-- **No multi-user access control.** A vault is a single file with a single password. Sharing a vault means sharing the file and the password, full stop.
-- **No protection against a compromised device.** If your machine has a keylogger, a screen capture, or a malicious browser extension, Keya's encryption does not save you. The threat model assumes your OS, browser, and clipboard are trustworthy.
+Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Some tests invoke a model and may incur provider charges.
 
-## Recommendations
+Copied keys leave the app's encrypted storage boundary. The key detail copy action attempts to clear the clipboard after 15 seconds, but browser permissions, page closure, and clipboard history can prevent effective removal. Do not rely on clipboard clearing for secrecy.
 
-A few habits that meaningfully raise the bar:
-
-1. **Use a long, unique master password.** Generated and stored in your password manager.
-2. **Lock the app when stepping away.** `Cmd/Ctrl+Shift+L` is a habit worth building.
-3. **Back up the `.keya` file separately** from the device that creates it. See [Backup &amp; Restore](/docs/backup).
-4. **Audit your browser extensions.** A password manager extension or a clipboard manager can read what you copy. Keya encrypts the file on disk; it cannot protect against a co-located attacker in the browser.
-5. **Keep the browser up to date.** Web platform security moves fast; the File System Access API and WebAuthn both rely on the browser's process isolation.
+JSON exports contain plaintext keys. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.
