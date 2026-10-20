@@ -13,10 +13,9 @@ const CONTENT_SECURITY_POLICY = [
   // is the Web Analytics beacon that Cloudflare injects into HTML responses at the
   // edge, kept on purpose; removing it only makes browsers log a CSP violation.
   "script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
-  // React and third-party components set inline style attributes, and the
-  // webfont stylesheet comes from Google Fonts.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  // React and third-party components set inline style attributes.
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: https:",
   // Provider connectivity tests issue requests to endpoints the user supplies,
   // so this origin list cannot be narrowed to known hosts. cloudflareinsights.com
