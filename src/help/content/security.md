@@ -43,7 +43,7 @@ Locking first attempts to save pending changes. On success it clears the active 
 
 Biometric unlock requires a WebAuthn authenticator supporting the **PRF extension**. Keya derives an AES-GCM key from PRF output using HKDF, and uses it to encrypt or decrypt the stored master password. Authenticator credentials are managed by the browser/authenticator, not stored as private keys in Keya's IndexedDB.
 
-If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
+If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. A passkey can be created successfully while still not supporting PRF: support depends on the browser, operating system, and passkey storage provider. In Chrome, **Your Chrome profile** may not return PRF even when Google Password Manager or iCloud Keychain does. If enrollment fails after choosing where to save the passkey, choose Google Password Manager or iCloud Keychain and try again. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
 
 An enrolled credential and its Keya site record are needed for biometric unlock. Do not rely on them as your only recovery method. Clearing site data requires password unlock and re-enrollment. Credential availability or synchronization depends on the authenticator and browser; Keya does not synchronize its enrollment records.
 
