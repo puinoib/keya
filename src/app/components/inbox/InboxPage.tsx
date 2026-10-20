@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
+import { toast } from 'sonner';
 
 type Severity = 'critical' | 'warning' | 'info';
 
@@ -98,8 +99,7 @@ export function InboxPage() {
   const inboxVersion = useStore((s) => s.inboxVersion);
   const archiveInboxItem = useStore((s) => s.archiveInboxItem);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
-  const clearFilters = useStore((s) => s.clearFilters);
-  const setSearchQuery = useStore((s) => s.setSearchQuery);
+  const setShowArchived = useStore((s) => s.setShowArchived);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
 
   const items = useMemo(
@@ -124,8 +124,12 @@ export function InboxPage() {
   );
 
   const handleViewKey = (entityId: string) => {
-    clearFilters();
-    setSearchQuery('');
+    const key = db?.getApiKey(entityId);
+    if (!key) {
+      toast('This credential no longer exists');
+      return;
+    }
+    setShowArchived(Boolean(key.archived_at));
     setSelectedKeyId(entityId);
     navigate({ to: '/keys' });
   };

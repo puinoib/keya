@@ -32,6 +32,7 @@ export function KeysPage() {
     filterProvider,
     filterTestStatus,
     filterExpiryStatus,
+    showArchived,
     setSearchQuery,
     setFilterGroupId,
     setFilterProvider,
@@ -42,9 +43,10 @@ export function KeysPage() {
   } = useStore();
 
   const groups = db?.getGroups() ?? [];
-  const providers = db
-    ? [...new Set(db.getApiKeys().map((k) => k.provider))].sort()
-    : [];
+  const viewKeys = showArchived
+    ? (db?.getArchivedApiKeys() ?? [])
+    : (db?.getActiveApiKeys() ?? []);
+  const providers = [...new Set(viewKeys.map((k) => k.provider))].sort();
   const hasSmartFilters =
     filterProvider || filterTestStatus || filterExpiryStatus;
 
@@ -70,9 +72,9 @@ export function KeysPage() {
     <div className="flex flex-1 min-h-0">
       <div className="flex-1 min-w-0 px-6 py-6 overflow-y-auto scrollbar-hidden">
         <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
-          Keys
+          {showArchived ? 'Archived' : 'Keys'}
           <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
-            {db?.getApiKeys().length ?? 0}
+            {viewKeys.length}
           </span>
         </h1>
 
