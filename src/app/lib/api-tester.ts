@@ -1,10 +1,28 @@
-import type { ApiKey } from '../../core/types';
+import type { ApiKey, CustomProvider, Settings } from '../../core/types';
+import { getCustomProvider, isPresetProvider } from '../../core/types';
+import { buildCustomCheckRequest } from './custom-check';
+
+/**
+ * What a check established:
+ * - `credential`: the request carried the key and the provider answered.
+ * - `reachability`: the endpoint responded but the key was not sent.
+ * - `unverifiable`: the browser or the provider prevents verification, so no
+ *   conclusion about the credential can be recorded.
+ */
+export type TestKind = 'credential' | 'reachability' | 'unverifiable';
 
 export interface TestResult {
   success: boolean;
   latency_ms: number;
   error?: string;
+  kind: TestKind;
 }
+
+type CheckOutcome = {
+  success: boolean;
+  error?: string;
+  kind?: TestKind;
+};
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const AZURE_API_VERSION = '2024-10-21';
@@ -101,30 +119,33 @@ async function fetchWithTimeout(
   }
 }
 
-async function extractError(res: Response): Promise<string> {
+/** Provider-supplied explanation, if the body has one. */
+async function extractBodyMessage(res: Response): Promise<string | null> {
   try {
     const body = await res.json();
-    return (
-      body?.error?.message ||
-      body?.error?.type ||
-      body?.message ||
-      `HTTP ${res.status}`
-    );
+    const message = body?.error?.message || body?.error?.type || body?.message;
+    return typeof message === 'string' && message.trim() ? message : null;
   } catch {
-    return `HTTP ${res.status}`;
+    return null;
   }
 }
 
+function isTimeout(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/**
+ * A rejected fetch covers CORS, DNS, TLS, offline, and browser blocking. None
+ * of them justify calling the credential invalid.
+ */
+function isBrowserBlocked(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /failed to fetch|load failed|networkerror|cors/i.test(error.message);
+}
+
 function describeError(error: unknown): string {
-  if (error instanceof DOMException && error.name === 'AbortError') {
-    return 'Request timed out';
-  }
-  if (error instanceof Error) {
-    if (/failed to fetch|load failed|networkerror/i.test(error.message)) {
-      return 'Network or CORS error. The provider may not allow browser requests.';
-    }
-    return error.message;
-  }
+  if (isTimeout(error)) return 'Request timed out';
+  if (error instanceof Error) return error.message;
   return 'Unknown error';
 }
 
@@ -176,64 +197,169 @@ function getTestUrl(provider: string, endpoint: string): string {
 }
 
 /** A successful HTTP status is not enough: SPA fallbacks often return HTML. */
-async function verifyReachable(
+async function verifyCredentialResponse(
   res: Response,
   providerLabel: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!res.ok) return { success: false, error: await extractError(res) };
+): Promise<CheckOutcome> {
+  if (!res.ok) {
+    const bodyMessage = await extractBodyMessage(res);
+    if (bodyMessage) return { success: false, error: bodyMessage };
+
+    if (res.status === 401) {
+      return {
+        success: false,
+        error: 'The provider rejected the credential (HTTP 401).',
+      };
+    }
+    if (res.status === 403) {
+      return {
+        success: false,
+        error:
+          'The provider refused the request (HTTP 403). The key may lack permission, or the request was rate limited.',
+      };
+    }
+    return { success: false, error: `HTTP ${res.status}` };
+  }
 
   const contentType = res.headers.get('content-type') ?? '';
   if (/text\/html/i.test(contentType)) {
     return {
       success: false,
-      error: `${providerLabel} returned an HTML page. Check the endpoint URL.`,
+      error: `${providerLabel} returned an HTML page instead of an API response. Check the endpoint path.`,
     };
   }
 
   return { success: true };
 }
 
+/**
+ * Reachability probe. It never sends the key and uses a CORS-free request, so a
+ * missing Access-Control-Allow-Origin header cannot be mistaken for downtime.
+ */
+async function probeReachability(endpoint: string): Promise<CheckOutcome> {
+  try {
+    await fetchWithTimeout(endpoint, {
+      method: 'GET',
+      mode: 'no-cors',
+      redirect: 'follow',
+    });
+    return { success: true };
+  } catch (error) {
+    if (isTimeout(error)) {
+      return {
+        success: false,
+        error: 'The endpoint did not respond in time. The key was not sent.',
+      };
+    }
+    // A CORS-free request cannot fail because of a missing ACAO header, so any
+    // other rejection means the host itself could not be reached.
+    return {
+      success: false,
+      error: 'The endpoint could not be reached. The key was not sent.',
+    };
+  }
+}
+
 export class ApiTester {
-  static async testKey(key: ApiKey): Promise<TestResult> {
-    return ApiTester.testRaw(key.provider, key.endpoint, key.key);
+  /** Which kind of check Keya can perform for this provider. */
+  static checkKindFor(provider: string, settings?: Settings): TestKind {
+    if (isUnsupportedProvider(provider.trim().toLowerCase()))
+      return 'unverifiable';
+    if (isPresetProvider(provider)) return 'credential';
+    if (getCustomProvider(provider, settings)?.check) return 'credential';
+    return 'reachability';
+  }
+
+  /** Human-readable reason for a provider that cannot be verified. */
+  static unverifiableReason(provider: string): string {
+    return getUnsupportedReason(provider);
+  }
+
+  static async testKey(key: ApiKey, settings?: Settings): Promise<TestResult> {
+    return ApiTester.testRaw(key.provider, key.endpoint, key.key, settings);
   }
 
   static async testRaw(
     provider: string,
     endpoint: string,
-    key: string
+    key: string,
+    settings?: Settings
   ): Promise<TestResult> {
     const start = performance.now();
-    const normalizedEndpoint = normalizeEndpoint(endpoint);
+    const kind = ApiTester.checkKindFor(provider, settings);
+    const finish = (outcome: CheckOutcome): TestResult => ({
+      ...outcome,
+      kind: outcome.kind ?? kind,
+      latency_ms: Math.round(performance.now() - start),
+    });
 
+    const normalizedEndpoint = normalizeEndpoint(endpoint);
     if (!normalizedEndpoint) {
-      return {
+      return finish({
         success: false,
-        latency_ms: Math.round(performance.now() - start),
         error: endpoint.trim()
           ? 'Endpoint must be an absolute http(s) URL'
           : 'Endpoint is required before testing',
-      };
+      });
+    }
+
+    if (kind === 'unverifiable') {
+      return finish({
+        success: false,
+        kind: 'unverifiable',
+        error: getUnsupportedReason(provider),
+      });
     }
 
     try {
-      const result = await ApiTester.testByProvider(
-        getProviderKind(provider),
-        provider,
-        normalizedEndpoint,
-        key
+      if (kind === 'reachability') {
+        return finish(await probeReachability(normalizedEndpoint));
+      }
+
+      const custom = getCustomProvider(provider, settings);
+      if (custom?.check) {
+        return finish(
+          await ApiTester.testCustomCheck(custom, normalizedEndpoint, key)
+        );
+      }
+
+      return finish(
+        await ApiTester.testByProvider(
+          getProviderKind(provider),
+          provider,
+          normalizedEndpoint,
+          key
+        )
       );
-      return {
-        ...result,
-        latency_ms: Math.round(performance.now() - start),
-      };
     } catch (error) {
-      return {
-        success: false,
-        latency_ms: Math.round(performance.now() - start),
-        error: describeError(error),
-      };
+      if (isTimeout(error)) {
+        return finish({ success: false, error: 'Request timed out' });
+      }
+      if (isBrowserBlocked(error)) {
+        return finish({
+          success: false,
+          kind: 'unverifiable',
+          error:
+            'The browser blocked the response, most likely due to CORS. The key could not be verified, and this is not proof that it is invalid.',
+        });
+      }
+      return finish({ success: false, error: describeError(error) });
     }
+  }
+
+  private static async testCustomCheck(
+    custom: CustomProvider,
+    endpoint: string,
+    key: string
+  ): Promise<CheckOutcome> {
+    if (!custom.check) return { success: true };
+    const { url, headers } = buildCustomCheckRequest(
+      custom.check,
+      endpoint,
+      key
+    );
+    const res = await fetchWithTimeout(url, { method: 'GET', headers });
+    return verifyCredentialResponse(res, custom.name);
   }
 
   private static async testByProvider(
@@ -241,9 +367,13 @@ export class ApiTester {
     provider: string,
     endpoint: string,
     key: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<CheckOutcome> {
     if (kind === 'unsupported') {
-      return { success: false, error: getUnsupportedReason(provider) };
+      return {
+        success: false,
+        kind: 'unverifiable',
+        error: getUnsupportedReason(provider),
+      };
     }
     if (kind === 'openai') return ApiTester.testOpenAI(endpoint, key);
     if (kind === 'anthropic') return ApiTester.testAnthropic(endpoint, key);
@@ -253,84 +383,59 @@ export class ApiTester {
   }
 
   private static async testOpenAI(endpoint: string, key: string) {
-    try {
-      const url = endpoint.endsWith('/models')
-        ? endpoint
-        : `${endpoint}/models`;
-      const res = await fetchWithTimeout(url, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      return verifyReachable(res, 'OpenAI-compatible endpoint');
-    } catch (error) {
-      return { success: false, error: describeError(error) };
-    }
+    const url = endpoint.endsWith('/models') ? endpoint : `${endpoint}/models`;
+    const res = await fetchWithTimeout(url, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return verifyCredentialResponse(res, 'OpenAI-compatible endpoint');
   }
 
   private static async testAnthropic(endpoint: string, key: string) {
-    try {
-      // Metadata endpoint, so testing does not invoke a billable model.
-      const base = endpoint.replace(/\/messages\/?$/i, '');
-      const url = base.endsWith('/models') ? base : `${base}/models`;
-      const res = await fetchWithTimeout(url, {
-        headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          // Required for browser CORS requests.
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-      });
-      return verifyReachable(res, 'Anthropic');
-    } catch (error) {
-      return { success: false, error: describeError(error) };
-    }
+    // Metadata endpoint, so testing does not invoke a billable model.
+    const base = endpoint.replace(/\/messages\/?$/i, '');
+    const url = base.endsWith('/models') ? base : `${base}/models`;
+    const res = await fetchWithTimeout(url, {
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        // Required for browser CORS requests.
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+    });
+    return verifyCredentialResponse(res, 'Anthropic');
   }
 
   private static async testAzure(endpoint: string, key: string) {
-    try {
-      let url: string;
-      if (/\/openai\/models(?:\?|$)/i.test(endpoint)) {
-        url = endpoint.includes('?')
-          ? endpoint
-          : `${endpoint}?api-version=${AZURE_API_VERSION}`;
-      } else if (/\/openai$/i.test(endpoint)) {
-        url = `${endpoint}/models?api-version=${AZURE_API_VERSION}`;
-      } else {
-        url = `${endpoint}/openai/models?api-version=${AZURE_API_VERSION}`;
-      }
-
-      const res = await fetchWithTimeout(url, {
-        headers: { 'api-key': key },
-      });
-      return verifyReachable(res, 'Azure OpenAI');
-    } catch (error) {
-      return { success: false, error: describeError(error) };
+    let url: string;
+    if (/\/openai\/models(?:\?|$)/i.test(endpoint)) {
+      url = endpoint.includes('?')
+        ? endpoint
+        : `${endpoint}?api-version=${AZURE_API_VERSION}`;
+    } else if (/\/openai$/i.test(endpoint)) {
+      url = `${endpoint}/models?api-version=${AZURE_API_VERSION}`;
+    } else {
+      url = `${endpoint}/openai/models?api-version=${AZURE_API_VERSION}`;
     }
+
+    const res = await fetchWithTimeout(url, {
+      headers: { 'api-key': key },
+    });
+    return verifyCredentialResponse(res, 'Azure OpenAI');
   }
 
   private static async testGoogle(endpoint: string, key: string) {
-    try {
-      const url = endpoint.endsWith('/models')
-        ? `${endpoint}?key=${encodeURIComponent(key)}`
-        : `${endpoint}/models?key=${encodeURIComponent(key)}`;
-      const res = await fetchWithTimeout(url);
-      return verifyReachable(res, 'Google Gemini');
-    } catch (error) {
-      return { success: false, error: describeError(error) };
-    }
+    const url = endpoint.endsWith('/models')
+      ? `${endpoint}?key=${encodeURIComponent(key)}`
+      : `${endpoint}/models?key=${encodeURIComponent(key)}`;
+    const res = await fetchWithTimeout(url);
+    return verifyCredentialResponse(res, 'Google Gemini');
   }
 
   private static async testGeneric(endpoint: string, key: string) {
-    try {
-      const res = await fetchWithTimeout(endpoint, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (res.status === 401 || res.status === 403) {
-        return { success: false, error: 'Invalid API key' };
-      }
-      return verifyReachable(res, 'Endpoint');
-    } catch (error) {
-      return { success: false, error: describeError(error) };
-    }
+    const res = await fetchWithTimeout(endpoint, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return verifyCredentialResponse(res, 'Endpoint');
   }
 }

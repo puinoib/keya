@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   ENDPOINT_DEFAULTS,
   PRESET_PROVIDERS,
+  getCustomProvider,
   getDefaultEndpointForProvider,
+  isPresetProvider,
 } from '../types';
 
 describe('provider endpoint configuration', () => {
@@ -100,5 +102,35 @@ describe('provider endpoint configuration', () => {
         endpoint
       );
     }
+  });
+});
+
+describe('preset provider detection', () => {
+  it('matches presets regardless of case and surrounding spaces', () => {
+    expect(isPresetProvider('GitHub')).toBe(true);
+    expect(isPresetProvider('  github ')).toBe(true);
+    expect(isPresetProvider('Exa')).toBe(false);
+  });
+
+  it('finds custom providers case-insensitively', () => {
+    const settings = {
+      auto_lock_minutes: 5,
+      auto_test_on_save: false,
+      auto_test_daily: false,
+      clipboard_detection_on_add: true,
+      custom_providers: [
+        {
+          name: 'Exa',
+          endpoint: 'https://api.exa.ai',
+          check: { auth: 'x-api-key' as const },
+        },
+      ],
+      disabled_providers: [],
+    };
+
+    expect(getCustomProvider(' exa ', settings)?.endpoint).toBe(
+      'https://api.exa.ai'
+    );
+    expect(getCustomProvider('Missing', settings)).toBeUndefined();
   });
 });

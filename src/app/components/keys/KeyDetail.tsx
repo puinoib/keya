@@ -1,5 +1,12 @@
 import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
+import {
+  describeTestResult,
+  getStoredCheckKind,
+  getTestActionHint,
+  getTestActionLabel,
+  toConnectionCheck,
+} from '../../lib/test-feedback';
 import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
 import { scheduleClipboardClear } from '../../lib/clipboard';
@@ -57,8 +64,10 @@ export function KeyDetail() {
     ? db.getGroups().find((g) => g.id === key.group_id)
     : null;
   const connectionStatus = key.connection_check.status;
+  const checkKind = getStoredCheckKind(key.connection_check);
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
+  const plannedKind = ApiTester.checkKindFor(key.provider, db.getSettings());
 
   const handleCopy = async () => {
     try {
@@ -81,22 +90,13 @@ export function KeyDetail() {
       return;
     }
     updateKey(key.id, {
-      connection_check: {
-        status: result.success ? 'success' : 'failed',
-        checked_at: new Date().toISOString(),
-        latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : (result.error ?? null),
-      },
+      connection_check: toConnectionCheck(result),
     });
     setTesting(false);
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
-    );
+    const feedback = describeTestResult(result);
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleDelete = () => {
@@ -176,7 +176,9 @@ export function KeyDetail() {
             {testOk && (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
                 <CheckCircle className="size-3" />
-                {getConnectionStatusLabel(connectionStatus)}
+                {checkKind === 'reachability'
+                  ? 'Reachable'
+                  : getConnectionStatusLabel(connectionStatus)}
               </span>
             )}
             {testFail && (
@@ -184,11 +186,21 @@ export function KeyDetail() {
                 <XCircle className="size-3" /> Failed
               </span>
             )}
-            {connectionStatus === 'untested' && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
-                <MinusCircle className="size-3" /> Untested
-              </span>
-            )}
+            {connectionStatus === 'untested' &&
+              checkKind === 'unverifiable' && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary"
+                  title={key.connection_check.error_message ?? undefined}
+                >
+                  <MinusCircle className="size-3" /> Cannot verify
+                </span>
+              )}
+            {connectionStatus === 'untested' &&
+              checkKind !== 'unverifiable' && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                  <MinusCircle className="size-3" /> Untested
+                </span>
+              )}
             {expiryLabel && (
               <span
                 className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -201,6 +213,20 @@ export function KeyDetail() {
               </span>
             )}
           </div>
+
+          {checkKind === 'reachability' && (
+            <p className="mb-4 text-[11px] leading-relaxed text-ink-quaternary">
+              Endpoint checks confirm the host responds. The key is not sent, so
+              the credential stays unverified.
+            </p>
+          )}
+
+          {checkKind === 'unverifiable' && (
+            <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
+              {key.connection_check.error_message ??
+                ApiTester.unverifiableReason(key.provider)}
+            </p>
+          )}
 
           {/* Key Value */}
           <div
@@ -317,6 +343,7 @@ export function KeyDetail() {
           <button
             onClick={handleTest}
             disabled={testing}
+            title={getTestActionHint(plannedKind)}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-ink-tertiary hover:text-ink-primary hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
           >
             {testing ? (
@@ -324,7 +351,7 @@ export function KeyDetail() {
             ) : (
               <Flask className="size-3.5" />
             )}
-            {testing ? 'Testing...' : 'Test Key'}
+            {testing ? 'Testing...' : getTestActionLabel(plannedKind)}
           </button>
           <button
             onClick={() => setEditingKey(key)}

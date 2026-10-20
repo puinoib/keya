@@ -2,6 +2,11 @@
 
 Keya is a local-first API key manager: a React web app storing encrypted `.keya` files in a user-selected folder. Cloud synchronization belongs to the user's storage provider, not Keya.
 
+## Positioning
+
+- Keya stores API keys and tokens for developers. AI providers are the default focus, not the product boundary: search, scraping, email, payments, cloud, and internal API credentials belong here too.
+- Keep copy, presets, and docs consistent with that. Do not describe Keya as AI-only, and do not widen it into a general password manager.
+
 ## Conventions
 
 - Respond in Chinese; write code comments in English.
@@ -27,7 +32,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Save, lock, switch, import, or password change | `src/app/store/useStore.ts`, `src/app/lib/storage.ts`, `src/app/components/layout/TopBar.tsx` |
 | Authentication or refresh behavior | `src/app/lib/session.ts`, `src/app/lib/biometric.ts`, `src/main.tsx`, `src/app/hooks/useAutoLock.ts`, `src/routes/_authenticated.tsx` |
 | Inbox rules | `src/core/inbox.ts`, `src/core/key-status.ts` and their tests |
-| Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity |
+| Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity. Custom providers only run the check configured in Settings, and an unverifiable provider must never be stored as a failure |
 | Deployed response headers or caching | `worker/index.ts`, `wrangler.toml`; the CSP keeps `'wasm-unsafe-eval'` for libsodium and allows user-supplied endpoints in `connect-src` |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
 

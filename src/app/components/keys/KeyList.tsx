@@ -5,6 +5,13 @@ import { GroupSelect } from './GroupSelect';
 import { useStore } from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester } from '../../lib/api-tester';
+import type { TestResult } from '../../lib/api-tester';
+import {
+  describeTestResult,
+  getTestActionHint,
+  getTestActionLabel,
+  toConnectionCheck,
+} from '../../lib/test-feedback';
 import type { ApiKey } from '../../../core/types';
 import {
   getDefaultEndpointForProvider,
@@ -72,6 +79,7 @@ import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 
 export function KeyList() {
   const db = useStore((s) => s.db);
+  const settings = db?.getSettings();
   const {
     searchQuery,
     filterGroupId,
@@ -126,28 +134,19 @@ export function KeyList() {
   const handleTest = async (key: ApiKey) => {
     const activeDb = useStore.getState().db;
     setTesting(key.id);
-    const result = await ApiTester.testKey(key);
+    const result = await ApiTester.testKey(key, settings);
     if (useStore.getState().db !== activeDb) {
       setTesting(null);
       return;
     }
     updateKey(key.id, {
-      connection_check: {
-        status: result.success ? 'success' : 'failed',
-        checked_at: new Date().toISOString(),
-        latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : (result.error ?? null),
-      },
+      connection_check: toConnectionCheck(result),
     });
     setTesting(null);
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${key.name} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
-    );
+    const feedback = describeTestResult(result, key.name);
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleCopy = async (keyValue: string, keyId: string) => {
@@ -381,8 +380,20 @@ export function KeyList() {
                   onClick={() => handleTest(key)}
                   disabled={isTesting}
                   className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
-                  title={isTesting ? 'Testing...' : 'Test key'}
-                  aria-label={isTesting ? 'Testing key' : 'Test key'}
+                  title={
+                    isTesting
+                      ? 'Testing...'
+                      : getTestActionLabel(
+                          ApiTester.checkKindFor(key.provider, settings)
+                        )
+                  }
+                  aria-label={
+                    isTesting
+                      ? 'Testing key'
+                      : getTestActionLabel(
+                          ApiTester.checkKindFor(key.provider, settings)
+                        )
+                  }
                 >
                   {isTesting ? (
                     <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
@@ -523,13 +534,14 @@ export function EditKeyDialog({
   });
   const [testState, setTestState] = useState<{
     testing: boolean;
-    result: { success: boolean; latency_ms: number; error?: string } | null;
+    result: TestResult | null;
   }>({
     testing: false,
     result: null,
   });
 
   const settings = db?.getSettings();
+  const checkKind = ApiTester.checkKindFor(form.provider, settings);
   const providerSections = getProviderSections(settings);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
@@ -562,17 +574,17 @@ export function EditKeyDialog({
     const result = await ApiTester.testRaw(
       form.provider,
       form.endpoint,
-      form.key
+      form.key,
+      settings
     );
     setTestState({ testing: false, result });
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${form.name.trim() || form.provider} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
+    const feedback = describeTestResult(
+      result,
+      form.name.trim() || form.provider
     );
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleSave = () => {
@@ -594,14 +606,7 @@ export function EditKeyDialog({
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
       ...(testState.result && {
-        connection_check: {
-          status: testState.result.success ? 'success' : 'failed',
-          checked_at: new Date().toISOString(),
-          latency_ms: testState.result.latency_ms ?? null,
-          error_message: testState.result.success
-            ? null
-            : (testState.result.error ?? null),
-        },
+        connection_check: toConnectionCheck(testState.result),
       }),
     });
 
@@ -610,17 +615,14 @@ export function EditKeyDialog({
       const { provider, endpoint, key: keyValue } = form;
       const keyId = editingKey.id;
       const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
-        if (useStore.getState().db !== activeDb) return;
-        useStore.getState().updateKey(keyId, {
-          connection_check: {
-            status: result.success ? 'success' : 'failed',
-            checked_at: new Date().toISOString(),
-            latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : (result.error ?? null),
-          },
-        });
-      });
+      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
+        (result) => {
+          if (useStore.getState().db !== activeDb) return;
+          useStore.getState().updateKey(keyId, {
+            connection_check: toConnectionCheck(result),
+          });
+        }
+      );
     }
   };
 
@@ -827,19 +829,26 @@ export function EditKeyDialog({
               size="sm"
               onClick={handleTest}
               disabled={!form.key || testState.testing}
+              title={getTestActionHint(checkKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              Test
+              {getTestActionLabel(checkKind)}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               <X className="size-3.5" />
               Cancel
             </Button>
           </div>
+
+          {checkKind !== 'credential' && (
+            <p className="text-[11px] leading-relaxed text-ink-quaternary">
+              {getTestActionHint(checkKind)}
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

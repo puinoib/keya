@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Database } from '../../core/database';
 import type { ApiKey, Group, InboxItem } from '../../core/types';
 import { ApiTester } from '../lib/api-tester';
+import { toConnectionCheck } from '../lib/test-feedback';
 import {
   tryDetectClipboardKey,
   type AddKeyDraft,
@@ -256,15 +257,10 @@ function maybeRunDailyAutoTest(db: Database) {
 
   runWithConcurrency(keys, DAILY_AUTO_TEST_CONCURRENCY, async (key) => {
     if (useStore.getState().db !== db) return;
-    const result = await ApiTester.testKey(key);
+    const result = await ApiTester.testKey(key, settings);
     if (useStore.getState().db !== db) return;
     useStore.getState().updateKey(key.id, {
-      connection_check: {
-        status: result.success ? 'success' : 'failed',
-        checked_at: new Date().toISOString(),
-        latency_ms: result.latency_ms ?? null,
-        error_message: result.success ? null : (result.error ?? null),
-      },
+      connection_check: toConnectionCheck(result),
     });
   }).catch((e) => {
     console.error('Daily auto-test failed:', e);

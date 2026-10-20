@@ -18,6 +18,8 @@ The Inbox collects local alerts about keys that may need attention. It does not 
 
 A key without an expiry date can still generate connection or endpoint alerts. A failed connection may reflect network, CORS, endpoint, or provider problems rather than an invalid credential.
 
+Keys whose provider cannot be verified from the browser stay silent here: Keya does not record a failure it cannot prove, so it creates neither a failed-connection nor a stale-test alert for them. Reachability checks only confirm that an endpoint responds and do not count as credential verification.
+
 ## When alerts update
 
 Keya checks alert rules on unlock and during key changes, including test-result updates. The rules use stored fields and test results; evaluating them does not itself call a provider API. Manual and enabled automatic tests are separate operations.
