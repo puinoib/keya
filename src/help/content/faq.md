@@ -55,6 +55,10 @@ Locking first saves pending changes. If saving fails, Keya keeps the vault unloc
 
 Settings → General → Master Password → **Change**. Supply the current password and a new password meeting the displayed requirements. If biometrics are enabled, the UI then requests re-enrollment. Canceling that step can leave the password changed but biometric unlock needing re-enrollment. Backups made before the change still use the old password.
 
+## Does archiving delete a key?
+
+No. Archiving moves a credential out of the main list while keeping it encrypted in the vault. Archived keys are excluded from tests and Inbox alerts and can be restored from the **Archived** view. Use **Delete** to remove a credential permanently. Keya has no recycle bin, so recover deleted credentials from a backup or your cloud file history.
+
 ## How do I share a key?
 
 Copy the key into an appropriate secret-sharing tool, or create a separate vault and share its encrypted file and password through separate channels. JSON exports contain plaintext keys; do not share them unintentionally.
