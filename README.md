@@ -72,53 +72,9 @@ See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, 
 
 ## Deployment
 
-Production is `https://keya.one`, served by a Cloudflare Worker configured in `wrangler.toml` from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets and no application server.
+Production is `https://keya.one`, served by a Cloudflare Worker from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets. `main` deploys, `dev` is where work lands first, and `worker/index.ts` adds response headers and asset caching around the static assets.
 
-`worker/index.ts` is the only server-side code. It forwards every request to the static assets binding and adds response headers the assets layer cannot express: a content security policy, clickjacking and MIME-sniffing protection, HSTS, a permissions policy, and long-lived caching for the content-hashed files under `/assets/`. `run_worker_first = true` is what makes those headers apply to static files as well; without it Cloudflare serves matching assets before the Worker runs.
-
-| Branch | Purpose |
-|---|---|
-| `dev` | Integration branch. Push here for CI checks; nothing is deployed. |
-| `main` | Production. Every push verifies, then deploys. |
-
-Promote work with a `dev` → `main` pull request using **Create a merge commit**, or merge locally:
-
-```bash
-git checkout main
-git merge --no-ff dev
-git push origin main
-```
-
-Do not squash. `dev` must stay an ancestor of `main`, otherwise every later promotion re-introduces changes that already landed.
-
-`.github/workflows/ci.yml` runs `typecheck` → `test` → `build` on `dev` pushes and on pull requests to `main`. `src/routeTree.gen.ts` is committed, so typechecking before the build means a stale route tree fails CI instead of being regenerated silently, and the build step then fails if regenerating it would change the committed copy. `.github/workflows/deploy.yml` calls that same verification, downloads the artifact it produced, and deploys that exact build.
-
-Secrets required by the deploy job:
-
-| Secret | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | Token from the "Edit Cloudflare Workers" template, scoped to the account and zone that host `keya.one` |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the same account |
-
-The Worker, the `keya.one` zone, and its custom domain must all be in one Cloudflare account; Cloudflare rejects cross-account custom domains.
-
-Local checks before pushing:
-
-```bash
-pnpm cf:deploy:dry   # build, then validate the Wrangler config without uploading
-pnpm cf:deploy       # build and deploy from your machine, using your own Wrangler login
-```
-
-Use the `cf:` prefix rather than a bare `deploy` script name: `pnpm deploy` resolves to pnpm's own built-in command, not a script.
-
-### Deployment constraints
-
-- **The content security policy is not cosmetic.** `script-src` must keep `'wasm-unsafe-eval'`: libsodium-wrappers-sumo compiles WebAssembly at runtime, so removing it breaks unlocking and encryption. `connect-src` cannot be narrowed to known hosts because provider connectivity tests call endpoints the user supplies. `permissions-policy` must keep the `publickey-credentials-*` and `clipboard-*` entries for biometric unlock and key copying. The two `cloudflareinsights.com` entries allow the Web Analytics beacon that Cloudflare injects at the edge; drop them only if Web Analytics is disabled for the zone.
-- **`keya.one` is permanent.** Biometric unlock uses WebAuthn with `rpId = location.hostname`, so every registered credential is bound to the exact hostname. Serving production from another hostname invalidates all of them.
-- **No second origin.** `workers_dev = false` keeps the app off `*.workers.dev`. IndexedDB (which holds the vault directory handle), sessionStorage and WebAuthn credentials are all per-origin.
-- **Rollback.** Cloudflare keeps previous Worker versions for an immediate rollback, but Git still holds the bad commit, so the next `main` push would ship it again. Follow an emergency rollback with `git revert` and a normal promotion.
-- **Zone settings still live outside the repository.** Always Use HTTPS and the DNS/certificate binding for the custom domain are Cloudflare dashboard state. Recreating the zone means setting them again.
-- Service Worker/offline support is not currently implemented.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the pipeline, the required secrets, the branch rules, and the constraints the deployed configuration depends on.
 
 ## User guides
 

@@ -33,12 +33,10 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 
 ## Branches and deployment
 
-- `dev` is the integration branch: pushing there runs verification and deploys nothing. `main` deploys to production (`https://keya.one`) on every push, after the same verification, so treat any commit on `main` as shipped.
-- Promote with a `dev` → `main` pull request using a merge commit, or `git merge --no-ff dev` locally. Squash and rebase merges are disabled. `dev` must stay an ancestor of `main`.
-- `src/routeTree.gen.ts` is committed. CI typechecks before building so a stale route tree fails instead of being regenerated silently, and then fails if the build would change the committed file. Commit the regenerated file whenever routes change.
-- `wrangler.toml` owns deployment: `dist/` static assets, SPA fallback, `workers_dev = false`, and the `keya.one` custom domain. The Worker, the zone, and the custom domain must live in one Cloudflare account.
-- `worker/index.ts` is the only server-side code. It exists to attach security and caching headers that the assets layer cannot set, and `run_worker_first = true` sends static files through it. Keep the comments there accurate when changing the policy: the CSP needs `'wasm-unsafe-eval'` for libsodium, and the permissions policy needs WebAuthn and clipboard entries.
-- `keya.one` is a permanent hostname. Biometric unlock uses WebAuthn with `rpId = location.hostname`, so changing it invalidates every credential users registered. Treat that like a `.keya` format change: a compatibility decision, not a configuration tweak.
+- `dev` is the integration branch: pushing there runs verification and deploys nothing. `main` deploys to production on every push, after the same verification, so treat any commit on `main` as shipped.
+- Promote with a `dev` -> `main` pull request using a merge commit, or `git merge --no-ff dev` locally. Never squash: `dev` must stay an ancestor of `main`.
+- `src/routeTree.gen.ts` is committed. CI typechecks before building and fails when the build would change the committed tree, so commit the regenerated file whenever routes change.
+- `wrangler.toml` and `worker/index.ts` own the deployed configuration. Read [DEPLOYMENT.md](DEPLOYMENT.md) before changing either: the content security policy and the permissions policy contain entries whose removal breaks unlocking, provider tests, biometrics or clipboard access, and the production hostname is fixed.
 
 ## Security and data safety
 
