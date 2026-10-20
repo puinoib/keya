@@ -29,10 +29,20 @@ export interface ApiKey {
   key: string;
   group_id: string | null;
   expires_at: string | null;
+  /** ISO timestamp when the credential was archived; null means active. */
+  archived_at: string | null;
   connection_check: ConnectionCheck;
   created_at: string;
   updated_at: string;
 }
+
+/** Input shape for creating a key; lifecycle fields are assigned by Database. */
+export type NewApiKey = Omit<
+  ApiKey,
+  'id' | 'created_at' | 'updated_at' | 'archived_at'
+> & {
+  archived_at?: string | null;
+};
 
 export interface Group {
   id: string;
