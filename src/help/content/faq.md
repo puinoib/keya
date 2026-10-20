@@ -23,7 +23,7 @@ Keya no longer persists a recoverable master password for session restoration. R
 
 ## Why did biometric unlock stop working?
 
-Biometric unlock now requires WebAuthn PRF. Old records that stored an AES key alongside the encrypted password are removed. Use your master password and enroll again with a PRF-capable browser/authenticator. If storage upgrade is blocked, close other Keya tabs.
+Biometric unlock now requires WebAuthn PRF. A passkey may be created successfully but still lack PRF support; support depends on the browser, operating system, and passkey storage provider. In Chrome, if **Your Chrome profile** fails with a message about WebAuthn PRF, choose **Google Password Manager** or **iCloud Keychain** in the passkey picker and enroll again. Old records that stored an AES key alongside the encrypted password are removed. If storage upgrade is blocked, close other Keya tabs.
 
 Clearing site data also removes the enrollment record. Authenticator credential synchronization does not synchronize Keya's site records; keep your master password available.
 

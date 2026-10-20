@@ -45,7 +45,7 @@ it('rejects non-PRF registration without persisting a secret', async () => {
     },
   });
   await expect(registerBiometric('vault', 'test-password')).rejects.toThrow(
-    'requires WebAuthn PRF'
+    'passkey storage location does not support the WebAuthn PRF'
   );
   expect(state.writes).toBe(0);
 });

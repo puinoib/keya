@@ -254,7 +254,7 @@ export async function registerBiometric(
   }
 
   throw new Error(
-    'Secure biometric unlock requires WebAuthn PRF. Use your master password instead.'
+    'This passkey storage location does not support the WebAuthn PRF required for secure biometric unlock. Choose Google Password Manager or iCloud Keychain, then try again. You can also use your master password.'
   );
 }
 
