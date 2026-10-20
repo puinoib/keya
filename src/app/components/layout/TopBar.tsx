@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useStore } from '../../store/useStore';
+import { flushSave, useStore } from '../../store/useStore';
 import {
   MagnifyingGlass,
   Plus,
@@ -21,7 +21,7 @@ import {
   serializeToFile,
   type KeyaDatabase,
 } from '../../../core';
-import { FileStorage } from '../../lib/storage';
+
 import { Database } from '../../../core/database';
 import { toast } from 'sonner';
 
@@ -108,14 +108,12 @@ export function TopBar() {
     try {
       const buffer = await file.arrayBuffer();
       const imported = await deserializeFromFile(new Uint8Array(buffer), pw);
+      if (useStore.getState().db !== db)
+        throw new Error('Vault changed during import.');
       mergeIntoDb(db, imported);
 
       setDb(new Database(db.getData()));
-      await FileStorage.saveVault(
-        useStore.getState().activeVaultFileName || `vault-${Date.now()}.keya`,
-        db.getData(),
-        password || ''
-      );
+      await flushSave();
       toast.success('Imported .keya file', {
         description: `${imported.api_keys.length} keys imported`,
       });
@@ -142,6 +140,8 @@ export function TopBar() {
     try {
       const text = await file.text();
       const imported = JSON.parse(text);
+      if (useStore.getState().db !== db)
+        throw new Error('Vault changed during import.');
       if (!imported.api_keys || !Array.isArray(imported.api_keys)) {
         toast.error('Import failed', {
           description: 'Invalid Keya export format',
@@ -151,11 +151,7 @@ export function TopBar() {
       mergeIntoDb(db, imported as KeyaDatabase);
 
       setDb(new Database(db.getData()));
-      await FileStorage.saveVault(
-        useStore.getState().activeVaultFileName || `vault-${Date.now()}.keya`,
-        db.getData(),
-        password || ''
-      );
+      await flushSave();
       toast.success('Imported JSON file', {
         description: `${imported.api_keys.length} keys imported`,
       });

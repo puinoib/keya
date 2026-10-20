@@ -2,8 +2,8 @@
  * Biometric unlock via WebAuthn platform authenticator.
  *
  * When the PRF extension is supported, the encryption key is derived from the
- * biometric credential itself (never stored in any database). Falls back to
- * storing a random AES key in IndexedDB when PRF is unavailable.
+ * biometric credential itself (never stored in any database). PRF is required;
+ * legacy records containing encryption keys are removed.
  */
 
 import { openMetaDB, BIOMETRIC_STORE } from './storage';
@@ -163,7 +163,10 @@ async function evalPrf(
         extensions: { prf: { eval: { first: toBuffer(prfSalt) } } },
       },
     })) as PublicKeyCredential;
-    return (assertion?.getClientExtensionResults().prf?.results?.first as ArrayBuffer) ?? null;
+    return (
+      (assertion?.getClientExtensionResults().prf?.results
+        ?.first as ArrayBuffer) ?? null
+    );
   } catch {
     return null;
   }
@@ -181,12 +184,16 @@ export function isBiometricSupported(): boolean {
 
 export async function isBiometricRegistered(vaultId: string): Promise<boolean> {
   const record = await getRecord(vaultId);
-  return record !== null && (!!record.aesKey || !!record.prfSalt);
+  if (record?.aesKey) {
+    await deleteRecord(vaultId);
+    return false;
+  }
+  return !!record?.prfSalt;
 }
 
 /**
  * Register biometric credential and store encrypted password.
- * Uses PRF when available (key never stored), falls back to random AES key.
+ * Requires PRF; never falls back to storing an encryption key.
  */
 export async function registerBiometric(
   vaultId: string,
@@ -246,17 +253,9 @@ export async function registerBiometric(
     return;
   }
 
-  // Step 3: Legacy fallback — random AES key stored in IndexedDB
-  const aesKey = crypto.getRandomValues(new Uint8Array(32));
-  const encryptedPassword = await aesEncrypt(password, aesKey, iv);
-  await putRecord({
-    vault_id: vaultId,
-    credentialId: new Uint8Array(credential.rawId),
-    encryptedPassword,
-    aesKey: toBase64(aesKey),
-    iv: toBase64(iv),
-    createdAt: new Date().toISOString(),
-  });
+  throw new Error(
+    'Secure biometric unlock requires WebAuthn PRF. Use your master password instead.'
+  );
 }
 
 /**
@@ -265,8 +264,7 @@ export async function registerBiometric(
  */
 export async function unlockWithBiometric(vaultId: string): Promise<string> {
   const record = await getRecord(vaultId);
-  if (!record)
-    throw new Error('No biometric credential found for this vault.');
+  if (!record) throw new Error('No biometric credential found for this vault.');
 
   if (record.prfSalt) {
     // PRF mode: derive key from biometric + credential
@@ -286,31 +284,17 @@ export async function unlockWithBiometric(vaultId: string): Promise<string> {
 
     if (!assertion) throw new Error('Biometric authentication cancelled.');
 
-    const prfOutput = assertion.getClientExtensionResults().prf?.results?.first as ArrayBuffer | undefined;
+    const prfOutput = assertion.getClientExtensionResults().prf?.results
+      ?.first as ArrayBuffer | undefined;
     if (!prfOutput) throw new Error('PRF evaluation failed.');
 
     const aesKey = await deriveKeyFromPrf(prfOutput);
     return aesDecrypt(record.encryptedPassword, aesKey, fromBase64(record.iv));
   }
 
-  // Legacy mode: AES key from IndexedDB
-  const assertion = (await navigator.credentials.get({
-    publicKey: {
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rpId: rpId(),
-      allowCredentials: [
-        { id: toBuffer(record.credentialId), type: 'public-key' },
-      ],
-      userVerification: 'required',
-    },
-  })) as PublicKeyCredential;
-
-  if (!assertion) throw new Error('Biometric authentication cancelled.');
-
-  return aesDecrypt(
-    record.encryptedPassword,
-    fromBase64(record.aesKey!),
-    fromBase64(record.iv)
+  await deleteRecord(vaultId);
+  throw new Error(
+    'Legacy biometric credentials were removed. Unlock with your master password.'
   );
 }
 

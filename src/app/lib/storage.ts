@@ -13,7 +13,7 @@ import {
 } from '../../core';
 
 const DB_NAME = 'keya-meta';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const WORKSPACE_STORE = 'workspace';
 const VAULT_META_STORE = 'vault-meta';
 const BIOMETRIC_STORE = 'biometric';
@@ -41,11 +41,28 @@ function openMetaDB(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      db.createObjectStore(WORKSPACE_STORE, { keyPath: 'id' });
-      db.createObjectStore(VAULT_META_STORE, { keyPath: 'vault_id' });
-      db.createObjectStore(BIOMETRIC_STORE, { keyPath: 'vault_id' });
+      for (const [name, keyPath] of [
+        [WORKSPACE_STORE, 'id'],
+        [VAULT_META_STORE, 'vault_id'],
+        [BIOMETRIC_STORE, 'vault_id'],
+      ]) {
+        if (!db.objectStoreNames.contains(name))
+          db.createObjectStore(name, { keyPath });
+      }
+      const cursor = req.transaction!.objectStore(BIOMETRIC_STORE).openCursor();
+      cursor.onsuccess = () => {
+        const row = cursor.result;
+        if (!row) return;
+        if (row.value.aesKey || !row.value.prfSalt) row.delete();
+        row.continue();
+      };
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      req.result.onversionchange = () => req.result.close();
+      resolve(req.result);
+    };
+    req.onblocked = () =>
+      reject(new Error('Close other Keya tabs to upgrade secure storage.'));
     req.onerror = () => reject(req.error);
   });
 }
@@ -118,6 +135,21 @@ function fileNameToStem(fileName: string): string {
 // ── FileStorage ──
 
 export class FileStorage {
+  private static revisions = new Map<string, string>();
+
+  private static async digest(bytes: ArrayBuffer): Promise<string> {
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(hash), (b) =>
+      b.toString(16).padStart(2, '0')
+    ).join('');
+  }
+
+  private static async withWriteLock<T>(task: () => Promise<T>): Promise<T> {
+    if (!navigator.locks)
+      throw new Error('Safe file writes require Web Locks support.');
+    return navigator.locks.request('keya-vault-writes', task);
+  }
+
   /**
    * Pick a sync folder and save workspace reference.
    */
@@ -128,6 +160,7 @@ export class FileStorage {
       mode: 'readwrite',
       startIn: 'documents',
     });
+    FileStorage.revisions.clear();
     await saveWorkspace({ id: 'main', directoryHandle: dirHandle });
     return dirHandle;
   }
@@ -170,6 +203,7 @@ export class FileStorage {
     const buffer = await file.arrayBuffer();
     const data = await deserializeFromFile(new Uint8Array(buffer), password);
     const db = new Database(data);
+    FileStorage.revisions.set(fileName, await FileStorage.digest(buffer));
 
     await FileStorage.cacheVaultMeta(fileName, db);
     return db;
@@ -189,7 +223,24 @@ export class FileStorage {
     const displayName = meta?.name || fileNameToStem(fileName);
     const db = new Database(undefined, { name: displayName, icon: meta?.icon });
 
-    await FileStorage.saveVault(fileName, db.getData(), password);
+    await FileStorage.withWriteLock(async () => {
+      try {
+        await ws.directoryHandle.getFileHandle(fileName);
+        throw new Error(
+          'A vault with this filename already exists. Choose another name.'
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException) || error.name !== 'NotFoundError')
+          throw error;
+      }
+      FileStorage.revisions.delete(fileName);
+      await FileStorage.writeVault(
+        ws.directoryHandle,
+        fileName,
+        db.getData(),
+        password
+      );
+    });
     await FileStorage.cacheVaultMeta(fileName, db);
     return db;
   }
@@ -223,17 +274,63 @@ export class FileStorage {
     db: KeyaDatabase,
     password: string
   ): Promise<void> {
-    const ws = await getWorkspace();
-    if (!ws) throw new Error('No workspace configured');
+    const snapshot = structuredClone(db);
+    await FileStorage.withWriteLock(async () => {
+      const ws = await getWorkspace();
+      if (!ws) throw new Error('No workspace configured');
+      const expected = FileStorage.revisions.get(fileName);
+      if (!expected) throw new Error('Reopen this vault before saving.');
+      const handle = await ws.directoryHandle.getFileHandle(fileName);
+      const current = await (await handle.getFile()).arrayBuffer();
+      if ((await FileStorage.digest(current)) !== expected) {
+        throw new Error(
+          'Vault changed outside this session. Export your changes and reopen it before saving.'
+        );
+      }
+      await FileStorage.writeVault(
+        ws.directoryHandle,
+        fileName,
+        snapshot,
+        password
+      );
+    });
+  }
 
-    await ensurePermission(ws.directoryHandle);
+  private static async writeVault(
+    directory: FileSystemDirectoryHandle,
+    fileName: string,
+    db: KeyaDatabase,
+    password: string
+  ): Promise<void> {
+    if (!(await ensurePermission(directory)))
+      throw new Error('Write permission denied.');
     const bytes = await serializeToFile(db, password);
-    const fileHandle = await ws.directoryHandle.getFileHandle(fileName, {
+    const fileHandle = await directory.getFileHandle(fileName, {
       create: true,
     });
+    const expected = FileStorage.revisions.get(fileName);
+    if (
+      expected &&
+      (await FileStorage.digest(
+        await (await fileHandle.getFile()).arrayBuffer()
+      )) !== expected
+    ) {
+      throw new Error(
+        'Vault changed outside this session. Export your changes before reopening.'
+      );
+    }
     const writable = await fileHandle.createWritable();
-    await writable.write(new Blob([new Uint8Array(bytes)]));
-    await writable.close();
+    try {
+      await writable.write(new Blob([new Uint8Array(bytes)]));
+      await writable.close();
+    } catch (error) {
+      await writable.abort().catch(() => {});
+      throw error;
+    }
+    FileStorage.revisions.set(
+      fileName,
+      await FileStorage.digest(new Uint8Array(bytes).buffer)
+    );
   }
 
   /**
