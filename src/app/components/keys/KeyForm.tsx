@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { useStore } from '../../store/useStore';
 import {
   getDefaultEndpointForProvider,
-  getProvidersForDropdown,
+  getProviderSections,
   type Settings,
 } from '../../../core/types';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
@@ -25,7 +25,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
 } from '@/components/ui/select';
 import {
@@ -111,7 +113,7 @@ export function KeyForm({
   }, [showCalendar]);
 
   const settings = db?.getSettings();
-  const providers = getProvidersForDropdown(settings);
+  const providerSections = getProviderSections(settings);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
     settings
@@ -333,13 +335,18 @@ export function KeyForm({
                 </span>
               </SelectTrigger>
               <SelectContent>
-                {providers.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    <div className="flex items-center gap-2">
-                      <ProviderLogo provider={p} className="size-3.5" />
-                      <span>{p}</span>
-                    </div>
-                  </SelectItem>
+                {providerSections.map((section) => (
+                  <SelectGroup key={section.id}>
+                    <SelectLabel>{section.label}</SelectLabel>
+                    {section.providers.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <ProviderLogo provider={p} className="size-3.5" />
+                          <span>{p}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
