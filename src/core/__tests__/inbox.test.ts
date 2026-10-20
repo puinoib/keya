@@ -7,6 +7,9 @@ import {
   syncInboxWithAlerts,
 } from '../inbox';
 
+// Fixed clock so staleness rules stay deterministic.
+const NOW = new Date('2026-06-05T09:00:00.000Z');
+
 function makeKey(overrides: Partial<{
   name: string;
   provider: string;
@@ -84,7 +87,7 @@ describe('connection alerts', () => {
       },
     }));
 
-    const alerts = collectConnectionAlerts(db.getApiKeys());
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
     expect(alerts).toHaveLength(1);
     expect(alerts[0]?.type).toBe('connection_failed');
@@ -102,7 +105,7 @@ describe('connection alerts', () => {
       },
     }));
 
-    const alerts = collectConnectionAlerts(db.getApiKeys());
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
     expect(alerts).toHaveLength(1);
     expect(alerts[0]?.type).toBe('never_tested');
@@ -120,7 +123,7 @@ describe('connection alerts', () => {
       },
     }));
 
-    const alerts = collectConnectionAlerts(db.getApiKeys());
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
     const insecure = alerts.find((a) => a.type === 'insecure_endpoint');
     expect(insecure).toBeDefined();
@@ -178,7 +181,7 @@ describe('connection alerts', () => {
       },
     }));
 
-    const alerts = collectConnectionAlerts(db.getApiKeys());
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
 
     expect(alerts).toHaveLength(1);
     expect(alerts[0]?.type).toBe('never_tested');
