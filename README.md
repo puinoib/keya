@@ -70,7 +70,7 @@ pnpm preview      # Preview production build
 
 See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, inspect existing serialization tests and plan compatibility before modifying the format.
 
-`wrangler.toml` configures Cloudflare static assets from `dist/` with SPA fallback. Service Worker/offline support is not currently implemented; a manifest alone does not guarantee offline operation.
+`wrangler.toml` configures Cloudflare static assets from `dist/` with SPA fallback. Service Worker/offline support is not currently implemented.
 
 ## User guides
 

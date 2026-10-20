@@ -5,19 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import pkg from './package.json';
 
-// TODO: add vite-plugin-pwa for offline support
-// import { VitePWA } from 'vite-plugin-pwa'
-
 export default defineConfig({
-  plugins: [
-    tanstackRouter({ target: 'react' }),
-    react(),
-    tailwindcss(),
-    // VitePWA({
-    //   registerType: 'autoUpdate',
-    //   manifest: false, // uses public/manifest.json
-    // }),
-  ],
+  plugins: [tanstackRouter({ target: 'react' }), react(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

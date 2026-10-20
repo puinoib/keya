@@ -107,16 +107,6 @@ async function putCachedMeta(meta: CachedVaultMeta): Promise<void> {
   });
 }
 
-async function deleteCachedMeta(vaultId: string): Promise<void> {
-  const db = await openMetaDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(VAULT_META_STORE, 'readwrite');
-    tx.objectStore(VAULT_META_STORE).delete(vaultId);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
 // ── Helpers ──
 
 async function ensurePermission(
@@ -353,13 +343,6 @@ export class FileStorage {
    */
   static async getCachedVaultMetas(): Promise<CachedVaultMeta[]> {
     return getAllCachedMetas();
-  }
-
-  /**
-   * Remove cached metadata for a vault.
-   */
-  static async deleteVaultMeta(vaultId: string): Promise<void> {
-    await deleteCachedMeta(vaultId);
   }
 
   /**

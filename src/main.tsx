@@ -3,6 +3,9 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import ReactDOM from 'react-dom/client';
 import { routeTree } from './routeTree.gen';
 import './index.css';
+import { clearLegacySession } from './app/lib/session';
+
+clearLegacySession();
 
 const router = createRouter({
   routeTree,
