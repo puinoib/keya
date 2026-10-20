@@ -91,7 +91,7 @@ git push origin main
 
 Do not squash. `dev` must stay an ancestor of `main`, otherwise every later promotion re-introduces changes that already landed.
 
-`.github/workflows/ci.yml` runs `build` → `typecheck` → `test` on `dev` pushes and on pull requests to `main`. The build runs first because the TanStack Router plugin generates the gitignored `src/routeTree.gen.ts`, and `typecheck` fails on a clean checkout without it. `.github/workflows/deploy.yml` calls that same verification, downloads the artifact it produced, and deploys that exact build.
+`.github/workflows/ci.yml` runs `typecheck` → `test` → `build` on `dev` pushes and on pull requests to `main`. `src/routeTree.gen.ts` is committed, so typechecking before the build means a stale route tree fails CI instead of being regenerated silently, and the build step then fails if regenerating it would change the committed copy. `.github/workflows/deploy.yml` calls that same verification, downloads the artifact it produced, and deploys that exact build.
 
 Secrets required by the deploy job:
 

@@ -30,17 +30,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Build first: the TanStack Router plugin generates src/routeTree.gen.ts
-      # during the build, and that file is gitignored. Running `typecheck`
-      # before a build fails on a clean checkout.
-      - name: Build
-        run: pnpm build
-
+      # src/routeTree.gen.ts is committed, so typecheck runs against the tree
+      # in Git rather than a freshly generated one.
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # The build regenerates the route tree. Fail when the result differs from
+      # the committed copy, which means a route change was not committed with it.
+      - name: Check committed route tree
+        run: |
+          git diff --exit-code -- src/routeTree.gen.ts \
+            || { echo '::error::src/routeTree.gen.ts is stale. Run pnpm build and commit the result.'; exit 1; }
 
       # Deploy consumes exactly these bytes, so what ships is what was verified.
       - name: Upload build output
