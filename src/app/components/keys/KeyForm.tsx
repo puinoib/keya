@@ -8,7 +8,7 @@ import {
   type Settings,
 } from '../../../core/types';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
-import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester } from '../../lib/api-tester';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
@@ -323,11 +323,10 @@ export function KeyForm({
             <Select value={form.provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
                 <span className="inline-flex items-center gap-1.5 truncate">
-                  {form.provider && getProviderLogo(form.provider) && (
-                    <img
-                      src={getProviderLogo(form.provider)!}
-                      alt=""
-                      className="size-3.5 shrink-0"
+                  {form.provider && (
+                    <ProviderLogo
+                      provider={form.provider}
+                      className="size-3.5"
                     />
                   )}
                   {form.provider}
@@ -337,13 +336,7 @@ export function KeyForm({
                 {providers.map((p) => (
                   <SelectItem key={p} value={p}>
                     <div className="flex items-center gap-2">
-                      {getProviderLogo(p) && (
-                        <img
-                          src={getProviderLogo(p)!}
-                          alt=""
-                          className="size-3.5 shrink-0"
-                        />
-                      )}
+                      <ProviderLogo provider={p} className="size-3.5" />
                       <span>{p}</span>
                     </div>
                   </SelectItem>

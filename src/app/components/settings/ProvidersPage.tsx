@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 import { getProviderLogo } from '@/app/lib/provider-logo';
+import { ProviderLogo } from '@/app/components/ui/provider-logo';
 
 const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> =
   Object.fromEntries(
@@ -129,7 +130,7 @@ export function ProvidersPage() {
           >
             <div className="min-w-0 flex items-center gap-2.5">
               {provider.logo ? (
-                <img src={provider.logo} alt="" className="size-4 shrink-0" />
+                <ProviderLogo provider={provider.name} className="size-4" />
               ) : (
                 <div className="size-5 shrink-0 rounded bg-surface-3 flex items-center justify-center text-[10px] font-medium text-ink-quaternary">
                   {provider.name[0]}

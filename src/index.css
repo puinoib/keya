@@ -24,6 +24,14 @@
   display: block;
 }
 
+/* ── Provider marks ── */
+/* Monochrome provider SVGs are drawn with fill="currentColor", which resolves
+   to black inside an <img>. Invert them on the default dark theme so the mark
+   stays visible; brand-coloured marks are left untouched. */
+:root:not(.light) .provider-logo-mono {
+  filter: invert(1);
+}
+
 /* ── Emoji picker in node_modules ── */
 @source "../node_modules/@ferrucc-io/emoji-picker/dist/**/*.{js,jsx,ts,tsx}";
 
