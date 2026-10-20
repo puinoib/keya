@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { Settings } from '../../../core/types';
 import { ApiTester } from '../api-tester';
 
 function jsonResponse(body: unknown = {}, status = 200): Response {
@@ -261,5 +262,221 @@ describe('ApiTester provider routing', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Unauthorized');
+  });
+});
+
+function settingsWith(customProviders: Settings['custom_providers']): Settings {
+  return {
+    auto_lock_minutes: 5,
+    auto_test_on_save: false,
+    auto_test_daily: false,
+    clipboard_detection_on_add: true,
+    custom_providers: customProviders,
+    disabled_providers: [],
+  };
+}
+
+describe('ApiTester check kinds', () => {
+  it('treats preset providers as credential checks', () => {
+    expect(ApiTester.checkKindFor('GitHub')).toBe('credential');
+    expect(ApiTester.checkKindFor('OpenAI')).toBe('credential');
+  });
+
+  it('reports presets that a browser cannot verify', () => {
+    expect(ApiTester.checkKindFor('NVIDIA NIM')).toBe('unverifiable');
+    expect(ApiTester.checkKindFor('Amazon Bedrock')).toBe('unverifiable');
+  });
+
+  it('uses reachability for custom providers without a configured check', () => {
+    const settings = settingsWith([
+      { name: 'Exa', endpoint: 'https://api.exa.ai' },
+    ]);
+    expect(ApiTester.checkKindFor('Exa', settings)).toBe('reachability');
+  });
+
+  it('uses a credential check when the custom provider configures one', () => {
+    const settings = settingsWith([
+      {
+        name: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        check: { auth: 'x-api-key', path: '/v1/models' },
+      },
+    ]);
+    expect(ApiTester.checkKindFor('exa', settings)).toBe('credential');
+  });
+});
+
+describe('reachability checks', () => {
+  const settings = settingsWith([
+    { name: 'Exa', endpoint: 'https://api.exa.ai' },
+  ]);
+
+  it('never sends the key and avoids CORS preflight', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await ApiTester.testRaw(
+      'Exa',
+      'https://api.exa.ai',
+      'exa-key',
+      settings
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.kind).toBe('reachability');
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe('https://api.exa.ai');
+    expect(init.method).toBe('GET');
+    expect(init.mode).toBe('no-cors');
+    expect(init.headers).toBeUndefined();
+  });
+
+  it('does not blame the credential when the host is unreachable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+
+    const result = await ApiTester.testRaw(
+      'Exa',
+      'https://api.exa.ai',
+      'exa-key',
+      settings
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('reachability');
+    expect(result.error).toMatch(/key was not sent/i);
+    expect(result.error).not.toMatch(/invalid api key/i);
+  });
+});
+
+describe('configured custom checks', () => {
+  it('sends the key with the configured header and path', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    const settings = settingsWith([
+      {
+        name: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        check: { auth: 'x-api-key', path: '/v1/models' },
+      },
+    ]);
+
+    const result = await ApiTester.testRaw(
+      'Exa',
+      'https://api.exa.ai',
+      'exa-key',
+      settings
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.kind).toBe('credential');
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe('https://api.exa.ai/v1/models');
+    expect(init.method).toBe('GET');
+    expect((init.headers as Record<string, string>)['x-api-key']).toBe(
+      'exa-key'
+    );
+  });
+
+  it('reports a rejected credential without inventing a verdict', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 401 }))
+    );
+    const settings = settingsWith([
+      {
+        name: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        check: { auth: 'bearer' },
+      },
+    ]);
+
+    const result = await ApiTester.testRaw(
+      'Exa',
+      'https://api.exa.ai',
+      'exa-key',
+      settings
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('credential');
+    expect(result.error).toBe(
+      'The provider rejected the credential (HTTP 401).'
+    );
+  });
+
+  it('treats a browser-blocked response as unverifiable, not invalid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+    const settings = settingsWith([
+      {
+        name: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        check: { auth: 'bearer' },
+      },
+    ]);
+
+    const result = await ApiTester.testRaw(
+      'Exa',
+      'https://api.exa.ai',
+      'exa-key',
+      settings
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('unverifiable');
+    expect(result.error).toMatch(/CORS/);
+    expect(result.error).toMatch(/not proof that it is invalid/);
+  });
+});
+
+describe('preset error copy', () => {
+  it('explains a 403 without claiming the key is invalid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 403 }))
+    );
+
+    const result = await ApiTester.testRaw(
+      'GitHub',
+      'https://api.github.com',
+      'gh-token'
+    );
+
+    expect(result.kind).toBe('credential');
+    expect(result.error).toMatch(/HTTP 403/);
+    expect(result.error).toMatch(/lack permission|rate limited/);
+    expect(result.error).not.toMatch(/invalid api key/i);
+  });
+
+  it('never reports an unverifiable preset as a failed credential', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await ApiTester.testRaw(
+      'NVIDIA NIM',
+      'https://integrate.api.nvidia.com/v1',
+      'nvapi-key'
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('unverifiable');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

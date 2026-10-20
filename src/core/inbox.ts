@@ -122,9 +122,12 @@ export function collectConnectionAlerts(
     }
 
     const check = key.connection_check;
+    const checkKind = check.kind ?? 'credential';
 
-    // Never tested
+    // Never tested. Unverifiable providers stay silent: Keya cannot conclude
+    // anything about them, so an alert would only nag.
     if (!check.checked_at || check.status === 'untested') {
+      if (checkKind === 'unverifiable') continue;
       alerts.push({
         type: 'never_tested',
         entityId: key.id,
@@ -152,6 +155,7 @@ export function collectConnectionAlerts(
 
     // Stale test (30+ days)
     if (
+      checkKind !== 'unverifiable' &&
       check.checked_at &&
       daysBetween(check.checked_at, now) >= STALE_TEST_DAYS
     ) {

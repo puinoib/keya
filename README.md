@@ -10,7 +10,7 @@ Keya is a static web application with no application backend or account system. 
 
 - Multiple password-protected vaults in a workspace folder
 - Key search, groups, provider filters, and expiry tracking
-- Preset AI providers plus custom providers for any API service
+- Preset AI providers plus custom providers for any API service, with optional credential checks
 - Manual and optional automatic API connectivity tests
 - Inbox alerts for expiry, connection failures, insecure endpoints, and missing or stale tests
 - Optional clipboard detection when adding keys
@@ -41,7 +41,7 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 - Biometric enrollment requires PRF; there is no stored-key fallback for unsupported authenticators.
 - Edits are auto-saved after a debounce. Locking and switching flush pending changes. If saving fails, locking is refused to preserve unsaved data; **the vault remains unlocked** until the problem is resolved.
 - Writes are coordinated between same-origin tabs and checked for external file changes. Cloud clients and other devices do not share that lock. Use one device at a time per vault, and keep independent backups.
-- API tests send the key to its configured endpoint. Automatic testing is optional and disabled by default. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
+- Preset provider tests send the key to a metadata endpoint. A custom provider uses the check you configure in Settings → Providers; without one, Keya only probes whether the endpoint responds and **does not send the key**. Providers that block browser requests are reported as unverifiable instead of failed. Automatic testing is optional and disabled by default. Custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.

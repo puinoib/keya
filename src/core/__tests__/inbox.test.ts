@@ -21,6 +21,7 @@ function makeKey(
       checked_at: string | null;
       latency_ms: number | null;
       error_message: string | null;
+      kind?: 'credential' | 'reachability' | 'unverifiable';
     };
   }> = {}
 ) {
@@ -462,5 +463,85 @@ describe('inbox timestamps', () => {
       .getInboxItems()
       .find((entry) => entry.id === item.id)!;
     expect(unchangedItem.updated_at).toBe(originalUpdatedAt);
+  });
+});
+
+describe('check kind awareness', () => {
+  it('stays quiet for providers a browser cannot verify', () => {
+    const db = new Database();
+    db.addApiKey(
+      makeKey({
+        provider: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        connection_check: {
+          status: 'untested',
+          checked_at: '2026-06-01T09:00:00.000Z',
+          latency_ms: 120,
+          error_message: 'The browser blocked the response.',
+          kind: 'unverifiable',
+        },
+      })
+    );
+
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
+    expect(alerts).toHaveLength(0);
+  });
+
+  it('does not nag about stale checks that can never be completed', () => {
+    const db = new Database();
+    db.addApiKey(
+      makeKey({
+        provider: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        connection_check: {
+          status: 'untested',
+          checked_at: '2026-01-01T09:00:00.000Z',
+          latency_ms: 80,
+          error_message: null,
+          kind: 'unverifiable',
+        },
+      })
+    );
+
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
+    expect(alerts.some((alert) => alert.type === 'stale_test')).toBe(false);
+  });
+
+  it('still reports a successful reachability check as resolved', () => {
+    const db = new Database();
+    db.addApiKey(
+      makeKey({
+        provider: 'Exa',
+        endpoint: 'https://api.exa.ai',
+        connection_check: {
+          status: 'success',
+          checked_at: '2026-06-04T09:00:00.000Z',
+          latency_ms: 90,
+          error_message: null,
+          kind: 'reachability',
+        },
+      })
+    );
+
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
+    expect(alerts).toHaveLength(0);
+  });
+
+  it('keeps credential failures reported', () => {
+    const db = new Database();
+    db.addApiKey(
+      makeKey({
+        connection_check: {
+          status: 'failed',
+          checked_at: '2026-06-04T09:00:00.000Z',
+          latency_ms: 200,
+          error_message: 'The provider rejected the credential (HTTP 401).',
+          kind: 'credential',
+        },
+      })
+    );
+
+    const alerts = collectConnectionAlerts(db.getApiKeys(), NOW);
+    expect(alerts.map((alert) => alert.type)).toContain('connection_failed');
   });
 });

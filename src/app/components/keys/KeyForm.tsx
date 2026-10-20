@@ -10,6 +10,13 @@ import {
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester } from '../../lib/api-tester';
+import type { TestResult } from '../../lib/api-tester';
+import {
+  describeTestResult,
+  getTestActionHint,
+  getTestActionLabel,
+  toConnectionCheck,
+} from '../../lib/test-feedback';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
 import {
@@ -54,7 +61,7 @@ interface FormData {
 
 interface TestState {
   testing: boolean;
-  result: { success: boolean; latency_ms: number; error?: string } | null;
+  result: TestResult | null;
 }
 
 const empty: FormData = {
@@ -118,6 +125,7 @@ export function KeyForm({
     form.provider,
     settings
   );
+  const checkKind = ApiTester.checkKindFor(form.provider, settings);
 
   useEffect(() => {
     if (!open || !defaultEndpoint) return;
@@ -163,17 +171,14 @@ export function KeyForm({
     const result = await ApiTester.testRaw(
       form.provider,
       form.endpoint,
-      form.key_value
+      form.key_value,
+      settings
     );
     setTestState({ testing: false, result });
-    toast[result.success ? 'success' : 'error'](
-      result.success ? 'Connection test succeeded' : 'Connection test failed',
-      {
-        description: result.success
-          ? `${form.name || form.provider} — ${result.latency_ms}ms`
-          : result.error || 'Connection failed',
-      }
-    );
+    const feedback = describeTestResult(result, form.name || form.provider);
+    toast[result.success ? 'success' : 'error'](feedback.title, {
+      description: feedback.description,
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -194,18 +199,14 @@ export function KeyForm({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      connection_check: {
-        status: testState.result?.success
-          ? 'success'
-          : testState.result
-            ? 'failed'
-            : 'untested',
-        checked_at: testState.result ? new Date().toISOString() : null,
-        latency_ms: testState.result?.latency_ms ?? null,
-        error_message: testState.result?.success
-          ? null
-          : (testState.result?.error ?? null),
-      },
+      connection_check: testState.result
+        ? toConnectionCheck(testState.result)
+        : {
+            status: 'untested',
+            checked_at: null,
+            latency_ms: null,
+            error_message: null,
+          },
     });
 
     if (!created) {
@@ -231,17 +232,14 @@ export function KeyForm({
     // Auto-test on save
     if (settings?.auto_test_on_save && created) {
       const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue).then((result) => {
-        if (useStore.getState().db !== activeDb) return;
-        updateKey(created.id, {
-          connection_check: {
-            status: result.success ? 'success' : 'failed',
-            checked_at: new Date().toISOString(),
-            latency_ms: result.latency_ms ?? null,
-            error_message: result.success ? null : (result.error ?? null),
-          },
-        });
-      });
+      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
+        (result) => {
+          if (useStore.getState().db !== activeDb) return;
+          updateKey(created.id, {
+            connection_check: toConnectionCheck(result),
+          });
+        }
+      );
     }
   };
 
@@ -466,13 +464,14 @@ export function KeyForm({
               size="sm"
               onClick={handleTest}
               disabled={!form.key_value || testState.testing}
+              title={getTestActionHint(checkKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              Test
+              {getTestActionLabel(checkKind)}
             </Button>
             <Button
               type="button"
@@ -484,6 +483,12 @@ export function KeyForm({
               Cancel
             </Button>
           </div>
+
+          {checkKind !== 'credential' && (
+            <p className="text-[11px] leading-relaxed text-ink-quaternary">
+              {getTestActionHint(checkKind)}
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

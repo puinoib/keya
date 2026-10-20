@@ -23,10 +23,12 @@ The vault is saved as a `.keya` file. An existing filename is rejected rather th
 
 1. Click **Add Key**.
 2. Enter a name and the API key or token, select the service, and review the endpoint. You may also add a description, group, and expiry date.
-3. Optionally test connectivity. This sends the key to the configured endpoint. Tests use metadata endpoints where available; custom or metered endpoints may incur charges.
+3. Optionally check connectivity. Preset providers receive the key on a metadata endpoint. A custom provider uses the check configured in Settings → Providers; without one, Keya only probes whether the endpoint responds and never sends the key. Custom or metered endpoints may incur charges.
 4. Click **Save Key**. Changes are auto-saved after a short delay in folder mode.
 
 For a service that is not in the preset list, add it under Settings → Providers → **Add Custom Provider**, or choose **Custom** and enter its endpoint directly. Search APIs, scraping tools, email services, payment APIs, and internal endpoints all work this way.
+
+A custom provider starts with a reachability check: Keya confirms the endpoint responds and does not send the key. To verify a credential, configure a check for that provider with the credential location (Bearer token, `x-api-key`, a custom header, or a query parameter) and an optional check path. Use a cheap metadata endpoint when the service offers one. Some services do not allow browser cross-origin requests at all; Keya then reports the credential as unverifiable instead of failed.
 
 If clipboard detection is enabled, adding a key may offer a candidate from your clipboard. Verify it before accepting. Custom endpoints receive your key, so use only endpoints you trust.
 
