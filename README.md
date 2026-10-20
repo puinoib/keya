@@ -70,7 +70,51 @@ pnpm preview      # Preview production build
 
 See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, inspect existing serialization tests and plan compatibility before modifying the format.
 
-`wrangler.toml` configures Cloudflare static assets from `dist/` with SPA fallback. Service Worker/offline support is not currently implemented.
+## Deployment
+
+Production is `https://keya.one`, served by a Cloudflare Worker configured in `wrangler.toml` from the static build in `dist/`. There is no server-side code and no runtime secret; the build needs only Node and pnpm.
+
+| Branch | Purpose |
+|---|---|
+| `dev` | Integration branch. Push here for CI checks; nothing is deployed. |
+| `main` | Production. Every push verifies, then deploys. |
+
+Promote work with a `dev` → `main` pull request using **Create a merge commit**, or merge locally:
+
+```bash
+git checkout main
+git merge --no-ff dev
+git push origin main
+```
+
+Do not squash. `dev` must stay an ancestor of `main`, otherwise every later promotion re-introduces changes that already landed.
+
+`.github/workflows/ci.yml` runs `build` → `typecheck` → `test` on `dev` pushes and on pull requests to `main`. The build runs first because the TanStack Router plugin generates the gitignored `src/routeTree.gen.ts`, and `typecheck` fails on a clean checkout without it. `.github/workflows/deploy.yml` calls that same verification, downloads the artifact it produced, and deploys that exact build.
+
+Secrets required by the deploy job:
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token from the "Edit Cloudflare Workers" template, scoped to the account and zone that host `keya.one` |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the same account |
+
+The Worker, the `keya.one` zone, and its custom domain must all be in one Cloudflare account; Cloudflare rejects cross-account custom domains.
+
+Local checks before pushing:
+
+```bash
+pnpm cf:deploy:dry   # build, then validate the Wrangler config without uploading
+pnpm cf:deploy       # build and deploy from your machine, using your own Wrangler login
+```
+
+Use the `cf:` prefix rather than a bare `deploy` script name: `pnpm deploy` resolves to pnpm's own built-in command, not a script.
+
+### Deployment constraints
+
+- **`keya.one` is permanent.** Biometric unlock uses WebAuthn with `rpId = location.hostname`, so every registered credential is bound to the exact hostname. Serving production from another hostname invalidates all of them.
+- **No second origin.** `workers_dev = false` keeps the app off `*.workers.dev`. IndexedDB (which holds the vault directory handle), sessionStorage and WebAuthn credentials are all per-origin.
+- **Rollback.** Cloudflare keeps previous Worker versions for an immediate rollback, but Git still holds the bad commit, so the next `main` push would ship it again. Follow an emergency rollback with `git revert` and a normal promotion.
+- Service Worker/offline support is not currently implemented.
 
 ## User guides
 
