@@ -45,7 +45,7 @@ const featureCards = [
     icon: Pulse,
     title: 'Provider-aware testing',
     caption:
-      'Check endpoint reachability, latency, and key status without leaving the app.',
+      'Check endpoint reachability, latency, and key status for preset and custom APIs.',
   },
   {
     icon: ClockCountdown,
@@ -65,7 +65,7 @@ const proofItems = [
 const workflowItems = [
   'Pick a workspace folder you already trust',
   'Create separate vaults for each context',
-  'Add provider, endpoint, expiry, and notes',
+  'Add service, endpoint, expiry, and notes',
   'Test keys and keep an eye on reminders',
 ];
 
@@ -98,7 +98,7 @@ export function LandingPage() {
                 Keya
               </div>
               <div className="text-[11px] text-ink-quaternary">
-                Local-first AI API key vault
+                Local-first developer API credential vault
               </div>
             </div>
           </div>
@@ -154,12 +154,12 @@ export function LandingPage() {
           </div>
 
           <h1 className="mt-6 text-5xl font-semibold tracking-display text-ink-primary sm:text-6xl">
-            API key management for AI developers who want to keep the file.
+            Keep your API keys and tokens in an encrypted local vault.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-ink-secondary sm:text-lg">
-            Keya stores credentials in encrypted local vaults, keeps provider
-            details structured, and helps you catch broken or expiring keys
-            before they interrupt your work.
+            Keya stores developer credentials in vault files you control. AI,
+            search, scraping, email, payments, and internal APIs all fit the
+            same structure, with provider details and endpoint checks.
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
@@ -219,9 +219,9 @@ export function LandingPage() {
               Not a SaaS dashboard. Not a generic password manager.
             </h2>
             <p className="mt-3 text-sm leading-7 text-ink-secondary">
-              Keya is built around the way AI developers actually work with
-              credentials: provider by provider, environment by environment,
-              with local files they can back up and keep forever.
+              Keya is built around the way developers actually work with
+              credentials: service by service, environment by environment, with
+              local files they can back up and keep forever.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {proofItems.map((item) => (

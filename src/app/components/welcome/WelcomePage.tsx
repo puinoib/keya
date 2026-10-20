@@ -253,7 +253,7 @@ export function WelcomePage() {
               Keya
             </h1>
             <p className="text-xs text-ink-quaternary mt-1.5">
-              Local-first AI API key manager
+              Local-first developer API credential vault
             </p>
           </div>
 

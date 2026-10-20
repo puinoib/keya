@@ -84,7 +84,7 @@ export function KeysPage() {
               Clipboard Detection
             </p>
             <p className="text-xs text-ink-quaternary mt-0.5">
-              Auto-detect API key from clipboard when adding
+              Auto-detect API keys and tokens from clipboard when adding
             </p>
           </div>
           <Toggle

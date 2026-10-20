@@ -253,10 +253,10 @@ export function KeyList() {
           <Key className="size-6" />
         </div>
         <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
-          No API Keys yet
+          No credentials yet
         </h3>
-        <p className="text-xs text-ink-quaternary mb-6 max-w-[200px]">
-          Securely store and manage your API keys in one place
+        <p className="text-xs text-ink-quaternary mb-6 max-w-[220px]">
+          Store the API keys and tokens your projects depend on
         </p>
         <button
           onClick={() => void beginAddKeyFlow()}
@@ -582,7 +582,7 @@ export function EditKeyDialog({
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
     if (db?.hasDuplicateApiKeyValue(form.key.trim(), editingKey.id)) {
-      toast.error('API Key already exists', {
+      toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
       return;
@@ -637,7 +637,7 @@ export function EditKeyDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit API Key</DialogTitle>
+          <DialogTitle>Edit API Key or Token</DialogTitle>
         </DialogHeader>
 
         <form
@@ -660,7 +660,7 @@ export function EditKeyDialog({
 
           {/* Key Value */}
           <div className="space-y-1.5">
-            <Label className="text-xs">API Key</Label>
+            <Label className="text-xs">API Key or Token</Label>
             <div className="relative">
               <AutoResizeTextarea
                 value={form.key}
@@ -668,7 +668,7 @@ export function EditKeyDialog({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, key: e.target.value }))
                 }
-                placeholder="sk-..."
+                placeholder="sk-... or your API token"
                 className="pr-9 font-mono text-sm break-all"
                 autoComplete="off"
                 spellCheck={false}
@@ -690,7 +690,7 @@ export function EditKeyDialog({
 
           {/* Provider */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Provider</Label>
+            <Label className="text-xs">Service / Provider</Label>
             <Select
               value={form.provider}
               onValueChange={(v) => {
@@ -822,7 +822,7 @@ export function EditKeyDialog({
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
               }
-              placeholder="What's this key for?"
+              placeholder="What is this credential used for?"
             />
           </div>
 

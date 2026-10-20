@@ -118,9 +118,15 @@ export function ProvidersPage() {
 
   return (
     <>
-      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
+      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-2">
         Providers
       </h1>
+
+      <p className="mb-6 text-xs leading-relaxed text-ink-quaternary">
+        Preset providers cover common AI services. Add a custom provider for any
+        other API, including search, scraping, email, payments, and internal
+        endpoints.
+      </p>
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
         {providers.map((provider) => (
@@ -178,7 +184,7 @@ export function ProvidersPage() {
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Provider name"
+              placeholder="Service name"
               className="h-7 text-xs"
               autoFocus
             />

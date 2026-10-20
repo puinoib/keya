@@ -37,7 +37,7 @@ export function AboutPage() {
                   Product Homepage
                 </p>
                 <p className="text-xs text-ink-quaternary mt-0.5">
-                  What Keya does, and how it stores your keys
+                  Secure local storage for developer API keys and tokens
                 </p>
               </div>
               <CaretRight className="size-3.5 text-ink-quaternary" />

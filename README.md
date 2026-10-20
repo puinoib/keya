@@ -1,6 +1,8 @@
 # Keya
 
-A local-first API key manager for AI developers. Keep keys in encrypted `.keya` files, organize them into vaults and groups, and test connectivity to your configured providers.
+A local-first API credential manager for developers. Keep API keys and tokens in encrypted `.keya` files, organize them into vaults and groups, and test connectivity to your configured providers.
+
+AI providers are the default focus, but Keya is not limited to AI. Search, scraping, email, payments, cloud, and internal API credentials fit the same model. Any service can be added as a custom provider.
 
 Keya is a static web application with no application backend or account system. You choose where vault files live; synchronization is handled by your own cloud drive.
 
@@ -8,6 +10,7 @@ Keya is a static web application with no application backend or account system. 
 
 - Multiple password-protected vaults in a workspace folder
 - Key search, groups, provider filters, and expiry tracking
+- Preset AI providers plus custom providers for any API service
 - Manual and optional automatic API connectivity tests
 - Inbox alerts for expiry, connection failures, insecure endpoints, and missing or stale tests
 - Optional clipboard detection when adding keys
