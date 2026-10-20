@@ -9,16 +9,19 @@
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   // libsodium-wrappers-sumo compiles WebAssembly at runtime; without
-  // 'wasm-unsafe-eval' unlocking and encryption fail.
-  "script-src 'self' 'wasm-unsafe-eval'",
+  // 'wasm-unsafe-eval' unlocking and encryption fail. static.cloudflareinsights.com
+  // is the Web Analytics beacon that Cloudflare injects into HTML responses at the
+  // edge, kept on purpose; removing it only makes browsers log a CSP violation.
+  "script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
   // React and third-party components set inline style attributes, and the
   // webfont stylesheet comes from Google Fonts.
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https:",
   // Provider connectivity tests issue requests to endpoints the user supplies,
-  // so this origin list cannot be narrowed to known hosts.
-  "connect-src 'self' https: http: ws: wss:",
+  // so this origin list cannot be narrowed to known hosts. cloudflareinsights.com
+  // receives the Web Analytics beacon payload.
+  "connect-src 'self' https: http: ws: wss: https://cloudflareinsights.com",
   "frame-ancestors 'none'",
   "base-uri 'none'",
   "form-action 'none'",
