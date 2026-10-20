@@ -248,7 +248,7 @@ export function WelcomePage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <KeyaLogo className="size-14 mb-4" />
+            <KeyaLogo className="size-14" />
             <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">
               Keya
             </h1>
