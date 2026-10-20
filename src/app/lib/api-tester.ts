@@ -31,6 +31,16 @@ const OPENAI_COMPATIBLE_PROVIDERS = new Set([
   'groq',
   'openrouter',
   'together',
+  'nvidia nim',
+  'cerebras',
+  'fireworks',
+  'baseten',
+  'hugging face',
+  'xiaomi mimo',
+  'z.ai',
+  'z.ai coding (china)',
+  'moonshot ai (global)',
+  'vercel ai gateway',
 ]);
 
 async function fetchWithTimeout(

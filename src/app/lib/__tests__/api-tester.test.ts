@@ -78,6 +78,43 @@ describe('ApiTester endpoint validation', () => {
       'Bearer sk-test'
     );
   });
+
+  it('routes newer presets to their OpenAI-compatible models endpoint', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse());
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cases: [string, string, string][] = [
+      [
+        'Cerebras',
+        'https://api.cerebras.ai/v1',
+        'https://api.cerebras.ai/v1/models',
+      ],
+      [
+        'Fireworks',
+        'https://api.fireworks.ai/inference/v1',
+        'https://api.fireworks.ai/inference/v1/models',
+      ],
+      [
+        'Hugging Face',
+        'https://router.huggingface.co/v1',
+        'https://router.huggingface.co/v1/models',
+      ],
+      [
+        'Vercel AI Gateway',
+        'https://ai-gateway.vercel.sh/v1',
+        'https://ai-gateway.vercel.sh/v1/models',
+      ],
+    ];
+
+    for (const [provider, endpoint, expectedUrl] of cases) {
+      fetchMock.mockClear();
+      const result = await ApiTester.testRaw(provider, endpoint, 'sk-test');
+
+      expect(result.success, provider).toBe(true);
+      const [url] = fetchMock.mock.calls[0] as unknown as [string];
+      expect(url, provider).toBe(expectedUrl);
+    }
+  });
 });
 
 describe('ApiTester provider routing', () => {

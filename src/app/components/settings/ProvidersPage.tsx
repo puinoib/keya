@@ -1,30 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { ENDPOINT_DEFAULTS, PRESET_PROVIDERS } from '../../../core/types';
+import {
+  PRESET_PROVIDERS,
+  getDefaultEndpointForProvider,
+} from '../../../core/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 
-const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
-  OpenAI: ENDPOINT_DEFAULTS.openai,
-  Anthropic: ENDPOINT_DEFAULTS.anthropic,
-  Google: ENDPOINT_DEFAULTS.google,
-  DeepSeek: ENDPOINT_DEFAULTS.deepseek,
-  Moonshot: ENDPOINT_DEFAULTS.moonshot,
-  Zhipu: ENDPOINT_DEFAULTS.zhipu,
-  Mistral: ENDPOINT_DEFAULTS.mistral,
-  xAI: ENDPOINT_DEFAULTS.xai,
-  MiniMax: ENDPOINT_DEFAULTS.minimax,
-  'Alibaba Cloud': ENDPOINT_DEFAULTS.alibaba,
-  'Amazon Bedrock': ENDPOINT_DEFAULTS.amazon_bedrock,
-  'Azure OpenAI': ENDPOINT_DEFAULTS.azure,
-  Groq: ENDPOINT_DEFAULTS.groq,
-  OpenRouter: ENDPOINT_DEFAULTS.openrouter,
-  Together: ENDPOINT_DEFAULTS.together,
-  Cohere: ENDPOINT_DEFAULTS.cohere,
-  SiliconFlow: ENDPOINT_DEFAULTS.siliconflow,
-};
+const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> =
+  Object.fromEntries(
+    PRESET_PROVIDERS.map((name) => [
+      name,
+      getDefaultEndpointForProvider(name, undefined) ?? '',
+    ])
+  ) as Record<(typeof PRESET_PROVIDERS)[number], string>;
 
 function Toggle({
   checked,
