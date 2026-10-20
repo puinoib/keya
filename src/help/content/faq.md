@@ -11,11 +11,11 @@ Yes. Keya is MIT-licensed open source with no subscription. Your cloud storage a
 
 ## Does Keya send my keys anywhere?
 
-Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Some test requests invoke a model and can incur charges.
+Keya has no application backend or analytics. API testing sends your key to the configured endpoint, including custom endpoints. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests use provider metadata endpoints where available and normally do not invoke a model. Custom or metered endpoints may incur charges. Amazon Bedrock cannot be tested from the browser because it requires AWS request signing.
 
 ## Where is my data stored?
 
-Encrypted vault contents live in `.keya` files in your chosen folder, or in files you manually download in fallback mode. IndexedDB stores the folder handle, cached vault summaries, and PRF biometric enrollment records. It is not a backup of the vault. See [Security](/docs/security).
+Encrypted vault contents live in `.keya` files in your chosen folder, or in files you explicitly export in fallback mode. IndexedDB stores the folder handle, cached vault summaries, and PRF biometric enrollment records. It is not a backup of the vault. See [Security](/docs/security).
 
 ## Why do I need to unlock after refreshing?
 
@@ -37,7 +37,7 @@ Choose another `.keya` file from the sidebar vault switcher and authenticate. Pe
 
 ## My browser cannot pick a folder. What now?
 
-Use a current Chrome or Edge browser for full workspace support. Without the directory picker, Keya offers a limited manual `.keya` file-open/download fallback. This does not provide full folder management or automatic in-place saving. File writes in folder mode also require Web Locks support.
+Use a current Chrome or Edge browser for full workspace support. Without the directory picker, Keya offers a limited manual `.keya` file-open/export fallback. This does not provide full folder management or automatic in-place saving. Edits stay in memory until you use Export .keya; locking or switching is refused while unsaved changes exist. File writes in folder mode also require Web Locks support.
 
 ## Can I edit the same vault on multiple devices?
 

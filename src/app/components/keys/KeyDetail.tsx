@@ -2,6 +2,7 @@ import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
 import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
+import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { ApiKey } from '../../../core/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import {
@@ -64,7 +65,7 @@ export function KeyDetail() {
       await navigator.clipboard.writeText(key.key);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      setTimeout(() => navigator.clipboard.writeText(''), 15000);
+      scheduleClipboardClear(key.key);
       toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
@@ -72,8 +73,13 @@ export function KeyDetail() {
   };
 
   const handleTest = async () => {
+    const activeDb = useStore.getState().db;
     setTesting(true);
     const result = await ApiTester.testKey(key);
+    if (useStore.getState().db !== activeDb) {
+      setTesting(false);
+      return;
+    }
     updateKey(key.id, {
       connection_check: {
         status: result.success ? 'success' : 'failed',
@@ -140,7 +146,11 @@ export function KeyDetail() {
               </h2>
               <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-tertiary">
                 {getProviderLogo(key.provider) && (
-                  <img src={getProviderLogo(key.provider)!} alt="" className="size-3 shrink-0" />
+                  <img
+                    src={getProviderLogo(key.provider)!}
+                    alt=""
+                    className="size-3 shrink-0"
+                  />
                 )}
                 <span className="truncate">{key.provider}</span>
               </p>

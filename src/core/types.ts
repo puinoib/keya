@@ -123,18 +123,46 @@ export const ENDPOINT_DEFAULTS: Record<string, string> = {
   alibaba: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   amazon_bedrock: 'https://bedrock-runtime.us-east-1.amazonaws.com',
   azure: 'https://YOUR_RESOURCE.openai.azure.com',
+  groq: 'https://api.groq.com/openai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+  together: 'https://api.together.xyz/v1',
+  cohere: 'https://api.cohere.com',
+  siliconflow: 'https://api.siliconflow.cn/v1',
+};
+
+/**
+ * Maps the display name used in the UI to the ENDPOINT_DEFAULTS key.
+ * Keep this list in sync with PRESET_PROVIDERS.
+ */
+const PROVIDER_ENDPOINT_KEYS: Record<string, string> = {
+  openai: 'openai',
+  anthropic: 'anthropic',
+  google: 'google',
+  deepseek: 'deepseek',
+  moonshot: 'moonshot',
+  zhipu: 'zhipu',
+  mistral: 'mistral',
+  xai: 'xai',
+  minimax: 'minimax',
+  'alibaba cloud': 'alibaba',
+  'amazon bedrock': 'amazon_bedrock',
+  'azure openai': 'azure',
+  groq: 'groq',
+  openrouter: 'openrouter',
+  together: 'together',
+  cohere: 'cohere',
+  siliconflow: 'siliconflow',
 };
 
 export function getDefaultEndpointForProvider(
   provider: string,
   settings: Settings | undefined
 ): string | undefined {
-  const normalizedProvider = provider.toLowerCase();
-  const presetEndpoint =
-    ENDPOINT_DEFAULTS[normalizedProvider] ??
-    (normalizedProvider === 'azure openai'
-      ? ENDPOINT_DEFAULTS.azure
-      : undefined);
+  const normalizedProvider = provider.trim().toLowerCase();
+  const endpointKey = PROVIDER_ENDPOINT_KEYS[normalizedProvider];
+  const presetEndpoint = endpointKey
+    ? ENDPOINT_DEFAULTS[endpointKey]
+    : undefined;
 
   return (
     presetEndpoint ??
@@ -155,6 +183,11 @@ export const PRESET_PROVIDERS = [
   'Alibaba Cloud',
   'Amazon Bedrock',
   'Azure OpenAI',
+  'Groq',
+  'OpenRouter',
+  'Together',
+  'Cohere',
+  'SiliconFlow',
 ] as const;
 
 export function getProvidersForDropdown(

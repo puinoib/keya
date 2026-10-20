@@ -33,6 +33,5 @@ pnpm-debug.log*
 # Claude Code
 .claude/
 
-# TanStack Router (generated)
+# TanStack Router scratch data (routeTree.gen.ts is committed)
 .tanstack/
-src/routeTree.gen.ts

@@ -1,4 +1,9 @@
-import type { ApiKey, InboxItem, InboxItemMetadata, KeyaDatabase } from './types';
+import type {
+  ApiKey,
+  InboxItem,
+  InboxItemMetadata,
+  KeyaDatabase,
+} from './types';
 import { EXPIRY_REMINDER_DAYS } from './types';
 
 export interface Alert {
@@ -146,7 +151,10 @@ export function collectConnectionAlerts(
     }
 
     // Stale test (30+ days)
-    if (check.checked_at && daysBetween(check.checked_at, now) >= STALE_TEST_DAYS) {
+    if (
+      check.checked_at &&
+      daysBetween(check.checked_at, now) >= STALE_TEST_DAYS
+    ) {
       alerts.push({
         type: 'stale_test',
         entityId: key.id,
@@ -237,14 +245,15 @@ export function syncInboxWithAlerts(
     }
 
     const changed =
-      JSON.stringify(item.metadata) !==
-      JSON.stringify(matchingAlert.metadata);
+      JSON.stringify(item.metadata) !== JSON.stringify(matchingAlert.metadata);
 
-    item.updated_at = nowIso;
-    item.metadata = matchingAlert.metadata;
-
-    if (changed) summary.updated.push(item);
-    else summary.unchanged.push(item);
+    if (changed) {
+      item.updated_at = nowIso;
+      item.metadata = matchingAlert.metadata;
+      summary.updated.push(item);
+    } else {
+      summary.unchanged.push(item);
+    }
   }
 
   for (const alert of alertsByKey.values()) {

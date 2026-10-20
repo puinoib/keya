@@ -213,7 +213,7 @@ export function WelcomePage() {
     const buffer = await file.arrayBuffer();
     const data = await deserializeFromFile(new Uint8Array(buffer), password);
     const db = new Database(data);
-    await useStore.getState().unlock(db, password, file.name);
+    await useStore.getState().unlock(db, password, file.name, 'download');
   };
 
   // ── Render ──

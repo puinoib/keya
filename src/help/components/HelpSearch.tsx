@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import type { HelpDocument, SearchResult } from '../types';
 import { searchDocuments, buildSearchIndex } from '../lib/search';
@@ -14,17 +14,17 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  const searchIndex = buildSearchIndex(documents);
+  const searchIndex = useMemo(() => buildSearchIndex(documents), [documents]);
 
   useEffect(() => {
     if (query.trim()) {
-      const searchResults = searchDocuments(searchIndex, query);
-      setResults(searchResults);
+      setResults(searchDocuments(searchIndex, query));
       setIsOpen(true);
-    } else {
-      setResults([]);
-      setIsOpen(false);
+      return;
     }
+
+    setResults((current) => (current.length === 0 ? current : []));
+    setIsOpen(false);
   }, [query, searchIndex]);
 
   const handleSelectResult = (slug: string) => {

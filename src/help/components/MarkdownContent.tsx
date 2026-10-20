@@ -63,7 +63,7 @@ export function MarkdownContent({
             const slug = href.replace('/docs/', '');
             navigate({ to: '/docs/$slug', params: { slug } });
           } else {
-            navigate({ to: href as any });
+            navigate({ to: href as never });
           }
         }
       }

@@ -35,6 +35,6 @@ When an issue disappears, open alerts are automatically archived as resolved. Fo
 1. Rotate or update expired keys and check expiry dates after rotation.
 2. Investigate failed tests before treating the key as invalid.
 3. Replace insecure endpoints with a trusted HTTPS endpoint where supported.
-4. Retest stale results when appropriate; provider tests may incur charges.
+4. Retest stale results when appropriate. Provider tests may be rate-limited, and custom metered endpoints may incur charges.
 
 See [Quick Start](/docs/quick-start) for key management and [Security](/docs/security) for API-testing limits.

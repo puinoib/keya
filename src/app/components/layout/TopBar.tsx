@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { flushSave, useStore } from '../../store/useStore';
 import {
   MagnifyingGlass,
@@ -16,13 +16,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  deserializeFromFile,
-  serializeToFile,
-  type KeyaDatabase,
-} from '../../../core';
-
+import { deserializeFromFile, serializeToFile } from '../../../core';
 import { Database } from '../../../core/database';
+import {
+  mergeImportedData,
+  type ImportMergeResult,
+  type ImportSource,
+} from '../../lib/import-merge';
+import { VaultPasswordDialog } from '../vault/VaultPasswordDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 function downloadBytes(data: Uint8Array, filename: string) {
@@ -53,40 +61,84 @@ function downloadJSON(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Merge imported database into current DB — creates a fresh Database to trigger re-render */
-function mergeIntoDb(current: Database, imported: KeyaDatabase): void {
-  for (const key of imported.api_keys) {
-    current.addApiKey({
-      name: key.name || 'Imported Key',
-      key: key.key || '',
-      description: key.description || '',
-      provider: key.provider || 'Custom',
-      endpoint: key.endpoint || '',
-      group_id: key.group_id || current.getData().groups[0]?.id || null,
-      expires_at: key.expires_at ?? null,
-      connection_check: key.connection_check ?? {
-        status: 'untested',
-        checked_at: null,
-        latency_ms: null,
-        error_message: null,
-      },
-    });
-  }
+function importSummary(result: ImportMergeResult): string {
+  const parts = [`${result.addedKeys} keys imported`];
+  if (result.createdGroups > 0)
+    parts.push(`${result.createdGroups} groups created`);
+  if (result.skippedDuplicateKeys > 0)
+    parts.push(`${result.skippedDuplicateKeys} duplicates skipped`);
+  if (result.invalidKeys > 0)
+    parts.push(`${result.invalidKeys} invalid entries skipped`);
+  return parts.join(' · ');
 }
 
 export function TopBar() {
-  const { searchQuery, setSearchQuery, beginAddKeyFlow, db, password, setDb } =
-    useStore();
+  const {
+    searchQuery,
+    setSearchQuery,
+    beginAddKeyFlow,
+    db,
+    password,
+    setDb,
+    storageMode,
+    hasUnsavedChanges,
+    markExported,
+  } = useStore();
   const importKeyaRef = useRef<HTMLInputElement>(null);
   const importJsonRef = useRef<HTMLInputElement>(null);
+  const pendingImportDbRef = useRef<Database | null>(null);
+  const [pendingKeyaFile, setPendingKeyaFile] = useState<File | null>(null);
+
+  const applyImport = async (
+    source: ImportSource,
+    expectedDb: Database,
+    label: string
+  ): Promise<void> => {
+    if (useStore.getState().db !== expectedDb) {
+      throw new Error('Vault changed during import.');
+    }
+
+    const result = mergeImportedData(expectedDb, source);
+    setDb(new Database(expectedDb.getData()));
+    useStore.getState().runInboxChecks();
+
+    try {
+      await flushSave();
+      toast.success(`Imported ${label}`, {
+        description: importSummary(result),
+      });
+    } catch (error) {
+      toast.error('Imported, but the vault was not saved', {
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Export a .keya file to keep these changes.',
+      });
+    }
+  };
 
   /* ──── Export .keya ──── */
   const handleExportKeya = async () => {
     if (!db || !password) return;
     try {
-      const bytes = await serializeToFile(db.getData(), password);
+      const snapshot = structuredClone(db.getData());
+      const bytes = await serializeToFile(snapshot, password);
       const date = new Date().toISOString().slice(0, 10);
       downloadBytes(bytes, `keya-${date}.keya`);
+
+      if (storageMode === 'download') {
+        const stillCurrent =
+          useStore.getState().db === db &&
+          JSON.stringify(db.getData()) === JSON.stringify(snapshot);
+        if (stillCurrent) {
+          markExported();
+        } else {
+          toast.warning('Exported a snapshot, but newer edits are unsaved', {
+            description: 'Export again to capture the latest changes.',
+          });
+          return;
+        }
+      }
       toast.success('Exported .keya file');
     } catch (e) {
       console.error('Export .keya failed:', e);
@@ -97,30 +149,32 @@ export function TopBar() {
   };
 
   /* ──── Import .keya ──── */
-  const handleImportKeya = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleKeyaFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !db) return;
     e.target.value = '';
+    if (!file || !db) return;
+    pendingImportDbRef.current = db;
+    setPendingKeyaFile(file);
+  };
 
-    const pw = prompt('Enter the password for this .keya file:');
-    if (!pw) return;
+  const handleImportKeyaPassword = async (password: string) => {
+    const file = pendingKeyaFile;
+    const expectedDb = pendingImportDbRef.current;
+    if (!file || !expectedDb) return;
 
+    const buffer = await file.arrayBuffer();
+    const imported = await deserializeFromFile(
+      new Uint8Array(buffer),
+      password
+    );
+
+    setPendingKeyaFile(null);
+    pendingImportDbRef.current = null;
     try {
-      const buffer = await file.arrayBuffer();
-      const imported = await deserializeFromFile(new Uint8Array(buffer), pw);
-      if (useStore.getState().db !== db)
-        throw new Error('Vault changed during import.');
-      mergeIntoDb(db, imported);
-
-      setDb(new Database(db.getData()));
-      await flushSave();
-      toast.success('Imported .keya file', {
-        description: `${imported.api_keys.length} keys imported`,
-      });
-    } catch (e) {
-      console.error('Import .keya failed:', e);
+      await applyImport(imported, expectedDb, '.keya file');
+    } catch (error) {
       toast.error('Import failed', {
-        description: 'Wrong password or corrupted file',
+        description: error instanceof Error ? error.message : 'Vault changed.',
       });
     }
   };
@@ -136,31 +190,31 @@ export function TopBar() {
   /* ──── Import JSON ──── */
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !db) return;
+    const expectedDb = db;
+    e.target.value = '';
+    if (!file || !expectedDb) return;
+
     try {
       const text = await file.text();
-      const imported = JSON.parse(text);
-      if (useStore.getState().db !== db)
-        throw new Error('Vault changed during import.');
-      if (!imported.api_keys || !Array.isArray(imported.api_keys)) {
+      const imported: unknown = JSON.parse(text);
+      if (
+        typeof imported !== 'object' ||
+        imported === null ||
+        !Array.isArray((imported as { api_keys?: unknown }).api_keys)
+      ) {
         toast.error('Import failed', {
           description: 'Invalid Keya export format',
         });
         return;
       }
-      mergeIntoDb(db, imported as KeyaDatabase);
 
-      setDb(new Database(db.getData()));
-      await flushSave();
-      toast.success('Imported JSON file', {
-        description: `${imported.api_keys.length} keys imported`,
-      });
-    } catch {
+      await applyImport(imported as ImportSource, expectedDb, 'JSON export');
+    } catch (error) {
       toast.error('Import failed', {
-        description: 'Failed to parse file',
+        description:
+          error instanceof Error ? error.message : 'Failed to parse file',
       });
     }
-    e.target.value = '';
   };
 
   return (
@@ -196,6 +250,12 @@ export function TopBar() {
 
       <div className="flex-1" />
 
+      {storageMode === 'download' && hasUnsavedChanges && (
+        <span className="shrink-0 text-xs text-amber-600 dark:text-amber-400">
+          Unsaved — export .keya to save
+        </span>
+      )}
+
       {/* Import/Export menu */}
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
@@ -224,7 +284,7 @@ export function TopBar() {
         type="file"
         accept=".keya"
         className="hidden"
-        onChange={handleImportKeya}
+        onChange={handleKeyaFilePicked}
       />
       <input
         ref={importJsonRef}
@@ -241,6 +301,35 @@ export function TopBar() {
         <Lock className="size-3.5" />
         Lock
       </button>
+
+      <Dialog
+        open={!!pendingKeyaFile}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingKeyaFile(null);
+            pendingImportDbRef.current = null;
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Import .keya file</DialogTitle>
+            <DialogDescription>
+              Enter the master password for {pendingKeyaFile?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <VaultPasswordDialog
+            mode="unlock"
+            vaultName={pendingKeyaFile?.name ?? 'Imported vault'}
+            fileName={pendingKeyaFile?.name}
+            onSubmit={handleImportKeyaPassword}
+            onCancel={() => {
+              setPendingKeyaFile(null);
+              pendingImportDbRef.current = null;
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

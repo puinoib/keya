@@ -3,13 +3,7 @@ import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EmojiPicker } from '@ferrucc-io/emoji-picker';
-import {
-  Plus,
-  Trash,
-  PencilSimple,
-  Check,
-  X,
-} from '@phosphor-icons/react';
+import { Plus, Trash, PencilSimple, Check, X } from '@phosphor-icons/react';
 
 function EmojiPickerPopover({
   icon,
@@ -166,7 +160,10 @@ export function GroupsPage() {
                   {getKeyCount(g.id)} keys
                 </span>
                 <button
-                  onClick={() => { setEditingIcon(''); setEditingId(g.id); }}
+                  onClick={() => {
+                    setEditingIcon('');
+                    setEditingId(g.id);
+                  }}
                   className="text-ink-quaternary transition-colors hover:text-ink-primary"
                 >
                   <PencilSimple className="size-3.5" />
@@ -191,10 +188,7 @@ export function GroupsPage() {
         {isAdding ? (
           <div className="p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <EmojiPickerPopover
-                icon={newIcon}
-                onSelect={setNewIcon}
-              />
+              <EmojiPickerPopover icon={newIcon} onSelect={setNewIcon} />
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
