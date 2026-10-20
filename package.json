@@ -1,6 +1,7 @@
 {
   "name": "keya",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "packageManager": "pnpm@10.24.0",
   "type": "module",
