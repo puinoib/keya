@@ -1,93 +1,57 @@
 ---
 title: Quick Start
-description: Set up a folder, create a vault, and add your first API key.
-updated: 2026-06-05
+description: Choose a workspace, create a vault, and save your first key.
+updated: 2026-10-20
 order: 2
 ---
 
-This walkthrough takes you from a fresh install to a working vault with one API key inside. Plan for about two minutes.
+## 1. Choose a workspace
 
-## 1. Before you start
+Use a current Chrome or Edge browser for the folder-based workflow. Open Keya, enter the app from the landing page, and click **Choose Sync Folder**. Read the permission explanation, then select a dedicated folder and grant read/write access.
 
-- Use a **Chromium-based browser** (Chrome, Edge, Arc, Brave). The folder picker relies on the File System Access API, which Firefox and Safari do not ship. If you're stuck on Firefox, see [the FAQ entry on unsupported browsers](/docs/faq).
-- Pick a **synced folder** for your workspace — iCloud Drive, Dropbox, Nutstore, OneDrive, or a plain local folder. The folder holds your `.keya` files, and choosing a synced folder is what makes multi-device work later.
+The folder can be local or managed by your cloud drive. Keya remembers its handle in browser storage, but the browser may ask you to grant permission again. Choosing a synced folder does not make simultaneous editing on different devices safe.
 
-### Choose a workspace folder
+Browsers without a directory picker offer a limited manual file-open/download fallback. See [FAQ](/docs/faq).
 
-The first time you open Keya you'll land on the welcome screen. Click **Open Folder** and grant access to the folder you want to use. Keya stores a handle to that folder in IndexedDB so it can read and write your vault files without re-asking on every reload.
+## 2. Create a vault
 
-> A good workspace is a single dedicated folder, not your entire Documents. Something like `~/iCloud Drive/Keya` keeps things tidy and limits what Keya can see.
+On the workspace screen, choose **New Vault**, enter a name, and set and confirm a strong master password. Use a password manager to generate and retain it. Keya has no password-reset service.
 
-## 2. Create your first vault
+The vault is saved as a `.keya` file. An existing filename is rejected rather than overwritten. Once a vault is open, the sidebar vault switcher lets you create or open another vault.
 
-1. Click the **vault name** in the top-left of the sidebar to open the switcher.
-2. Pick **New Vault**.
-3. Type a master password and confirm it.
+## 3. Add a key
 
-There is **no password recovery**. The encryption is designed so that nobody — not Keya, not you from a different machine — can open a vault without the exact password. Store it in a password manager.
+1. Click **Add Key**.
+2. Enter a name and API key, select the provider, and review the endpoint. You may also add a description, group, and expiry date.
+3. Optionally test connectivity. This sends the key to the configured endpoint and may incur provider charges.
+4. Click **Save Key**. Changes are auto-saved after a short delay in folder mode.
 
-A strong password is the foundation of the whole model. Aim for 16+ characters, or four random words.
+If clipboard detection is enabled, adding a key may offer a candidate from your clipboard. Verify it before accepting. Custom endpoints receive your key, so use only endpoints you trust.
 
-## 3. Add your first API key
+## 4. Find and manage keys
 
-The Keys page is the default landing view after unlock.
+Use search and the sidebar filters to narrow the list by group, provider, connection status, or expiry. Select a key to view details, reveal or copy its value, test it, edit it, or delete it.
 
-1. Click **+ New Key** in the top-right of the list.
-2. Fill in the form:
-   - **Name** — a human label, like `Production OpenAI`. Required.
-   - **API Key** — paste the actual key. Use the eye icon to reveal it for a moment. Required.
-   - **Provider** — pick from the preset list (OpenAI, Anthropic, Google, DeepSeek, Moonshot, Zhipu, Mistral, xAI, MiniMax, Alibaba Cloud, Amazon Bedrock, SiliconFlow, Azure) or a custom provider you've added in Settings. Switching the provider auto-fills a sensible Endpoint.
-   - **Endpoint** — defaults to the provider's standard base URL. Override it for proxies or private deployments. The ↺ icon resets the field to the default.
-   - **Expiration** — optional. Useful for keys you rotate on a schedule. The detail panel shows an **Expired** or **Nd left** badge when this is set.
-   - **Group** — optional folder-like organization. Leave on `Ungrouped` if you're starting fresh; you can add groups in Settings.
-   - **Description** — free-form notes. Shows up in the detail panel.
-3. Hit **Test** to send a no-cost probe to the provider's API. The result pill under the form turns green with a latency number, or red with the error message.
-4. Click **Save Key**. If `Auto-test on save` is enabled in Settings, Keya will re-test in the background and update the badge.
+Clipboard clearing is best-effort; copied secrets can remain in clipboard history. JSON exports are plaintext. For backups, prefer encrypted `.keya` exports.
 
-## 4. Read a key back
+## 5. Lock and reopen
 
-Click any row to slide open the detail panel on the right. From there you can:
+Use the **Lock** action in the top bar or vault switcher. Inactivity locking is configured in Settings → General and defaults to five minutes.
 
-- **Reveal** the key value (eye icon) — it stays masked otherwise.
-- **Copy** to clipboard. The clipboard is **cleared automatically after 15 seconds** so a stray paste elsewhere doesn't leak it.
-- **Test** the key again.
-- **Edit** fields.
-- **Delete** the key with a confirm dialog.
+Locking and switching vaults first save pending changes. **If saving fails, locking is refused and the vault stays unlocked.** Keep the page open and export an encrypted copy before troubleshooting. Do not assume unsaved edits will survive closing or reloading the page.
 
-## 5. Search and filter
+After locking or refreshing, unlock with your master password or an enrolled PRF-supported authenticator. Passwords are not persisted for automatic session restoration.
 
-The top of the Keys page has a search box that matches against name, provider, description, and the key value itself. As you type, filter tags appear above the list — click the × on a tag to clear that filter, or **Clear all** to reset.
+## Settings
 
-You can also filter by **group** (including an `Ungrouped` bucket), **test result** (`Success`, `Failed`, `Untested`), and **expiry status** (`Expired`, `Expiring Soon`).
+- **General:** vault name and icon, PRF biometric enrollment, inactivity interval, and master password changes.
+- **Providers:** preset visibility and custom providers/endpoints.
+- **Groups:** create, rename, or delete groups. Removing a group does not delete its keys.
+- **Keys:** optional tests after saving or on first daily unlock, plus clipboard detection. Automatic tests are disabled by default.
+- **Shortcuts:** inspect or customize keyboard shortcuts.
 
-## 6. Lock up
+## Next steps
 
-- Click the **Lock** button in the top-right of the Keys page, or
-- Pick **Lock** from the vault switcher, or
-- Wait — Settings has an `Auto-lock` timer (default 5 minutes) that locks the vault after inactivity.
-
-Locking purges the in-memory key and the `sessionStorage` session. The vault file on disk stays encrypted. Unlocking again requires the master password unless you're in the same browser tab and the session is still warm.
-
-## Daily habits that pay off
-
-- **Treat the master password like a root password.** If you lose it, the vault is gone. There is no reset email.
-- **Use the workspace folder in a synced cloud drive.** That's how you get free, end-to-end-encrypted multi-device access — Keya never talks to a server, but your cloud does.
-- **Test keys after rotating them.** The `Success` / `Failed` connection badges and expiry warnings are how you spot a key that quietly expired or got revoked.
-- **Check Inbox regularly.** Expired and expiring keys appear as reminders automatically. See [Inbox](/docs/inbox).
-
-## Settings worth knowing
-
-Keya has a few settings that change daily behavior. Find them under **Settings** in the sidebar.
-
-- **General** — vault name and icon, biometric toggle, auto-lock timer, change master password.
-- **Providers** — toggle the 13 presets (OpenAI, Anthropic, Google, DeepSeek, Moonshot, Zhipu, Mistral, xAI, MiniMax, Alibaba Cloud, Amazon Bedrock, SiliconFlow, Azure OpenAI), or add custom providers with a name and endpoint.
-- **Groups** — create, rename, and delete groups. Deleting a group ungroups its keys but doesn't delete them.
-- **Keys** — Auto-Test on Save (tests after every save), Daily First-Open Test (tests all keys on first unlock each day), Detect Clipboard on Add (pre-fills key value from clipboard).
-- **Shortcuts** — full list of keyboard shortcuts with recording and conflict detection. Defaults include `/` (search), `N` (add key), `Cmd+Shift+L` (lock), `J/K` (navigate), `C` (copy), `E` (edit), `T` (test).
-
-## What's next?
-
-- Read the [Security](/docs/security) page to understand what's actually protecting your data.
-- Skim the [FAQ](/docs/faq) for the questions people ask most.
-- Set up [Backup &amp; Restore](/docs/backup) once you have more than a couple of keys.
-- Run a [Vault Health Audit](/docs/inbox) to review expiring keys.
+- Read [Security](/docs/security) for authentication and storage limits.
+- Set up [Backup & Restore](/docs/backup) before relying on the vault.
+- Check [Inbox](/docs/inbox) for expiry and connection-related alerts.

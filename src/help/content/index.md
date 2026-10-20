@@ -1,46 +1,28 @@
 ---
 title: Welcome to Keya
-description: Keya Help Center
-updated: 2026-06-05
+description: Guides to local vaults, authentication, and safe backups.
+updated: 2026-10-20
 order: 1
 ---
 
-Keya is a desktop-grade API key vault that lives entirely in your browser. There is no account, no server, and no telemetry — your keys never leave the folder you choose.
+Keya stores API keys in encrypted `.keya` files in a folder you control. It has no account system or application backend. Your cloud drive can synchronize files; provider connectivity tests send keys to their configured endpoints.
 
-## What you get
+## What you can do
 
-- **Local-first storage.** Every vault is a single `.keya` file in a folder you control. Point Keya at iCloud Drive, Dropbox, Nutstore, OneDrive, or any synced folder and your vaults travel with you.
-- **Strong encryption by default.** Vaults are sealed with Argon2id (3 iterations, 64 MB) and XChaCha20-Poly1305. The master password is the only thing that can open them.
-- **Multi-vault.** Keep work, personal, and client keys in separate files. Switch from the sidebar without re-authenticating the whole app.
-- **Built-in connectivity test.** Hit a provider's API with your key, see latency and pass/fail in one click.
-- **Expiry reminders.** Spot expired and expiring keys at a glance.
-- **Open source (MIT).** Auditable on GitHub.
+- Create separate vaults for different projects.
+- Organize keys with groups, search, and filters.
+- Test connectivity manually or enable optional automatic tests.
+- Review expiry, connection, and endpoint alerts in Inbox.
+- Unlock with a master password or enrolled PRF-supported biometric authentication.
 
-## Where to go next
+Refreshing requires authentication again. Changes are auto-saved in folder mode, but errors and file conflicts need attention. Keep independent backups rather than relying on synchronization alone.
 
-<div class="grid grid-cols-2 gap-3 not-prose">
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/quick-start">
-    <div class="text-sm font-semibold text-ink-primary">Quick Start</div>
-    <div class="text-xs text-ink-quaternary mt-1">Set up a folder, create a vault, add your first key.</div>
-  </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/inbox">
-    <div class="text-sm font-semibold text-ink-primary">Inbox</div>
-    <div class="text-xs text-ink-quaternary mt-1">Expiry reminders that surface when keys need attention.</div>
-  </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/faq">
-    <div class="text-sm font-semibold text-ink-primary">FAQ</div>
-    <div class="text-xs text-ink-quaternary mt-1">Common questions about cost, sync, and recovery.</div>
-  </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/security">
-    <div class="text-sm font-semibold text-ink-primary">Security</div>
-    <div class="text-xs text-ink-quaternary mt-1">How encryption works and what Keya does not do.</div>
-  </a>
-  <a class="block rounded-lg border border-line-subtle p-4 hover:bg-surface-3 transition-colors no-underline" href="/docs/backup">
-    <div class="text-sm font-semibold text-ink-primary">Backup &amp; Restore</div>
-    <div class="text-xs text-ink-quaternary mt-1">Back up vaults, restore on a new device, recover from sync conflicts.</div>
-  </a>
-</div>
+## Guides
 
-## Jump in
+- [Quick Start](/docs/quick-start) — choose a folder, create a vault, and add a key.
+- [Security](/docs/security) — encryption, PRF authentication, and protection limits.
+- [Backup & Restore](/docs/backup) — preserve versions and handle save conflicts.
+- [Inbox](/docs/inbox) — understand alerts and their current limitations.
+- [FAQ](/docs/faq) — browser support, refresh behavior, and recovery.
 
-When you're ready, head to the [Quick Start](/docs/quick-start) guide. The whole setup takes about a minute.
+Start with a current Chrome or Edge browser for the full folder-based workflow. Always keep your master password available independently of biometric unlock.

@@ -1,58 +1,40 @@
 ---
 title: Inbox
-description: Expiry reminders that surface automatically when keys need attention.
-updated: 2026-06-05
+description: Expiry, connectivity, and endpoint alerts for your saved keys.
+updated: 2026-10-20
 order: 3
 ---
 
-The Inbox tracks API keys that are about to expire or have already expired. Items appear and disappear automatically — you don't need to add anything manually.
+The Inbox collects local alerts about keys that may need attention. It does not continuously monitor provider accounts or revoke expired keys.
 
-Open it from the sidebar (first item), or press `Cmd/Ctrl+2`.
+## Alert types
 
-## How items appear
+- **Expired:** the configured expiry date has passed.
+- **Expiring soon:** the key expires today or within seven days.
+- **Connection failed:** the recorded connectivity test failed.
+- **Never tested:** no test timestamp is recorded, or the key is marked untested.
+- **Insecure endpoint:** the configured endpoint starts with `http://`.
+- **Stale test:** the last recorded test was at least 30 days ago.
 
-Keya scans your vault whenever you unlock, add, edit, or delete a key. An inbox item is created when:
+A key without an expiry date can still generate connection or endpoint alerts. A failed connection may reflect network, CORS, endpoint, or provider problems rather than an invalid credential.
 
-- **Expired** — the key's expiry date has passed.
-- **Expiring soon** — the key expires within 7 days.
+## When alerts update
 
-Keys without an expiry date never generate inbox items.
-
-## Two states
-
-| State | Meaning |
-|---|---|
-| **Open** | Needs your attention. Shown in the "Open reminders" section. |
-| **Archived** | You've handled it, or the issue resolved itself. |
-
-Three metric cards at the top show the current count: **Open**, **Critical** (expired), and **Archived**.
+Keya checks alert rules on unlock and during key changes, including test-result updates. The rules use stored fields and test results; evaluating them does not itself call a provider API. Manual and enabled automatic tests are separate operations.
 
 ## Taking action
 
-Each open reminder has two buttons:
+Open Inbox from the sidebar. Use **View key** to inspect, edit, or test the affected key. Archive an item to dismiss it. Archived entries remain available in the archive section.
 
-- **View key** — jumps to the Keys page with that key selected, so you can update, rotate, or test it.
-- **Archive** — dismisses the reminder. Use this after you've handled the key.
+When an issue disappears, open alerts are automatically archived as resolved. For example, a successful test resolves a connection-failed alert, and removing a key resolves its outstanding alerts.
 
-Items are archived one at a time. There is no bulk action.
+**Current limitation:** archived items remain archived even if the same alert type recurs for the same key, including items automatically archived as resolved. An empty Inbox is therefore not proof that every key is healthy. Review current key details and test results as well.
 
-## Auto-archive
+## A useful routine
 
-If you fix the underlying issue — extend the expiry date, remove the expiry, or delete the key — the corresponding reminder is **archived automatically** with a "resolved" label. You don't need to dismiss it manually.
+1. Rotate or update expired keys and check expiry dates after rotation.
+2. Investigate failed tests before treating the key as invalid.
+3. Replace insecure endpoints with a trusted HTTPS endpoint where supported.
+4. Retest stale results when appropriate; provider tests may incur charges.
 
-Archived items show how they were closed: "Archived automatically after the issue was resolved" or "Archived by you."
-
-## Notifications
-
-When new reminders appear during unlock, Keya shows a toast notification in the corner with the count. Click **Open Inbox** in the toast to jump straight there. Silent syncs (after editing a key) don't trigger notifications — only new items do.
-
-## Workflow
-
-1. Check the Inbox when the sidebar badge shows a count.
-2. For each expired key: rotate it, update the expiry, or archive if no longer needed.
-3. For each expiring-soon key: plan a rotation before it stops working.
-4. Archive reminders as you handle them.
-
-## Related
-
-- [Quick Start](/docs/quick-start) — setting expiry dates on keys.
+See [Quick Start](/docs/quick-start) for key management and [Security](/docs/security) for API-testing limits.
