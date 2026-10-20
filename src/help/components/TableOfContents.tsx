@@ -44,7 +44,9 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
               href={`#${h.id}`}
               onClick={(e) => {
                 e.preventDefault();
-                document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth' });
+                document
+                  .getElementById(h.id)
+                  ?.scrollIntoView({ behavior: 'smooth' });
               }}
               className={cn(
                 'block text-xs leading-relaxed py-1 transition-colors',

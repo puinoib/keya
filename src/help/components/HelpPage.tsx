@@ -48,7 +48,10 @@ export function HelpPage({ slug }: { slug: string }) {
         {slug === 'faq' ? (
           <FaqContent content={document.content} />
         ) : (
-          <MarkdownContent content={document.content} onHeadings={handleHeadings} />
+          <MarkdownContent
+            content={document.content}
+            onHeadings={handleHeadings}
+          />
         )}
       </article>
       {!['faq', 'index'].includes(slug) && headings.length > 0 && (

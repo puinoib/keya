@@ -1,85 +1,113 @@
 // Runtime validation for .keya file format
 import { z } from 'zod';
 
-export const ConnectionCheckSchema = z.object({
-  status: z.enum(['success', 'failed', 'untested']),
-  checked_at: z.string().nullable(),
-  latency_ms: z.number().nullable(),
-  error_message: z.string().nullable(),
-});
+export const ConnectionCheckSchema = z
+  .object({
+    status: z.enum(['success', 'failed', 'untested']).default('untested'),
+    checked_at: z.string().nullable().default(null),
+    latency_ms: z.number().nullable().default(null),
+    error_message: z.string().nullable().default(null),
+  })
+  .passthrough();
 
-export const ApiKeySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  provider: z.string(),
-  endpoint: z.string(),
-  key: z.string(),
-  group_id: z.string().nullable(),
-  expires_at: z.string().nullable(),
-  connection_check: ConnectionCheckSchema,
-  created_at: z.string(),
-  updated_at: z.string(),
-});
+export const ApiKeySchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string().default(''),
+    provider: z.string(),
+    endpoint: z.string().default(''),
+    key: z.string(),
+    group_id: z.string().nullable().default(null),
+    expires_at: z.string().nullable().default(null),
+    connection_check: ConnectionCheckSchema.default({
+      status: 'untested',
+      checked_at: null,
+      latency_ms: null,
+      error_message: null,
+    }),
+    created_at: z.string(),
+    updated_at: z.string(),
+  })
+  .passthrough();
 
-export const GroupSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  icon: z.string(),
-  order: z.number(),
-});
+export const GroupSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    icon: z.string().default(''),
+    order: z.number().default(0),
+  })
+  .passthrough();
 
-export const SettingsSchema = z.object({
-  auto_lock_minutes: z.number(),
-  auto_test_on_save: z.boolean(),
-  auto_test_daily: z.boolean(),
-  clipboard_detection_on_add: z.boolean(),
-  custom_providers: z.array(
-    z.object({ name: z.string(), endpoint: z.string() })
-  ),
-  disabled_providers: z.array(z.string()),
-});
+export const SettingsSchema = z
+  .object({
+    auto_lock_minutes: z.number().default(5),
+    auto_test_on_save: z.boolean().default(false),
+    auto_test_daily: z.boolean().default(false),
+    clipboard_detection_on_add: z.boolean().default(true),
+    custom_providers: z
+      .array(z.object({ name: z.string(), endpoint: z.string() }).passthrough())
+      .default([]),
+    disabled_providers: z.array(z.string()).default([]),
+  })
+  .passthrough();
 
-export const InboxItemSchema = z.object({
-  id: z.string(),
-  type: z.enum([
-    'key_expiry_upcoming',
-    'key_expiry_expired',
-    'connection_failed',
-    'never_tested',
-    'insecure_endpoint',
-    'stale_test',
-  ]),
-  entity_id: z.string(),
-  status: z.enum(['open', 'archived']),
-  archive_reason: z.enum(['user', 'resolved']).nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  archived_at: z.string().nullable(),
-  metadata: z
-    .object({
-      key_name: z.string(),
-      provider: z.string(),
-    })
-    .passthrough(),
-});
+export const InboxItemSchema = z
+  .object({
+    id: z.string(),
+    type: z.enum([
+      'key_expiry_upcoming',
+      'key_expiry_expired',
+      'connection_failed',
+      'never_tested',
+      'insecure_endpoint',
+      'stale_test',
+    ]),
+    entity_id: z.string(),
+    status: z.enum(['open', 'archived']),
+    archive_reason: z.enum(['user', 'resolved']).nullable().default(null),
+    created_at: z.string(),
+    updated_at: z.string(),
+    archived_at: z.string().nullable().default(null),
+    metadata: z
+      .object({
+        key_name: z.string(),
+        provider: z.string(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
-export const KeyaDatabaseSchema = z.object({
-  vault_id: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  name: z.string(),
-  icon: z.string(),
-  api_keys: z.array(ApiKeySchema),
-  groups: z.array(GroupSchema),
-  settings: SettingsSchema,
-  inbox: z.array(InboxItemSchema),
-}).passthrough();
+export const KeyaDatabaseSchema = z
+  .object({
+    vault_id: z.string(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    name: z.string().default(''),
+    icon: z.string().default(''),
+    api_keys: z.array(ApiKeySchema).default([]),
+    groups: z.array(GroupSchema).default([]),
+    settings: SettingsSchema.default({
+      auto_lock_minutes: 5,
+      auto_test_on_save: false,
+      auto_test_daily: false,
+      clipboard_detection_on_add: true,
+      custom_providers: [],
+      disabled_providers: [],
+    }),
+    inbox: z.array(InboxItemSchema).default([]),
+  })
+  .passthrough();
 
-/** Validate parsed JSON against KeyaDatabase shape. Throws on failure. */
+/**
+ * Validate parsed JSON against the KeyaDatabase shape.
+ * Returns the normalized object with defaults applied and unknown fields kept.
+ * Throws on failure.
+ */
 export function validateDatabase(
   data: unknown
-): asserts data is import('./types').KeyaDatabase {
+): import('./types').KeyaDatabase {
   const result = KeyaDatabaseSchema.safeParse(data);
   if (!result.success) {
     const issues = result.error.issues
@@ -88,4 +116,5 @@ export function validateDatabase(
       .join('; ');
     throw new Error(`Invalid database format: ${issues}`);
   }
+  return result.data as import('./types').KeyaDatabase;
 }

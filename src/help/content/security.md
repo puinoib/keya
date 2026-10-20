@@ -55,7 +55,7 @@ These checks do not lock cloud clients or other devices, merge conflicting edits
 
 ## Network requests and clipboard
 
-Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Some tests invoke a model and may incur provider charges.
+Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. Amazon Bedrock is not testable from the browser because it requires AWS request signing.
 
 Copied keys leave the app's encrypted storage boundary. The key detail copy action attempts to clear the clipboard after 15 seconds, but browser permissions, page closure, and clipboard history can prevent effective removal. Do not rely on clipboard clearing for secrecy.
 

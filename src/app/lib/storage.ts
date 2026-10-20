@@ -195,7 +195,12 @@ export class FileStorage {
     const db = new Database(data);
     FileStorage.revisions.set(fileName, await FileStorage.digest(buffer));
 
-    await FileStorage.cacheVaultMeta(fileName, db);
+    try {
+      await FileStorage.cacheVaultMeta(fileName, db);
+    } catch (error) {
+      // The decrypted vault is usable even if the optional cache write fails.
+      console.warn('Failed to cache vault metadata:', error);
+    }
     return db;
   }
 
@@ -231,7 +236,11 @@ export class FileStorage {
         password
       );
     });
-    await FileStorage.cacheVaultMeta(fileName, db);
+    try {
+      await FileStorage.cacheVaultMeta(fileName, db);
+    } catch (error) {
+      console.warn('Failed to cache vault metadata:', error);
+    }
     return db;
   }
 

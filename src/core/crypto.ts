@@ -44,7 +44,7 @@ export function deriveKey(
   mem: number = 67108864
 ): Uint8Array {
   ensureInit();
-  const algo: number = (sodium as any).crypto_pwhash_ALG_ARGON2ID13 ?? 2;
+  const algo: number = sodium.crypto_pwhash_ALG_ARGON2ID13 ?? 2;
   return sodium.crypto_pwhash(32, password, salt, ops, mem, algo);
 }
 
@@ -68,7 +68,12 @@ export function encrypt(
 ): Uint8Array {
   ensureInit();
   return sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    plaintext, null, null, nonce, key, null
+    plaintext,
+    null,
+    null,
+    nonce,
+    key,
+    null
   );
 }
 
@@ -80,7 +85,12 @@ export function decrypt(
 ): Uint8Array {
   ensureInit();
   const result = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-    null, ciphertext, null, nonce, key, null
+    null,
+    ciphertext,
+    null,
+    nonce,
+    key,
+    null
   );
   if (!result) {
     throw new Error('Decryption failed: wrong password or corrupted data');

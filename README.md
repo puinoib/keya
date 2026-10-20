@@ -29,7 +29,7 @@ pnpm dev
 
 Open the URL printed by Vite. From the landing page, start the app, choose a dedicated workspace folder, and create a vault with a strong, unique master password.
 
-Chrome or Edge is recommended for folder-based use. Browsers without the directory picker have a limited manual file-open/download fallback, not the full workspace workflow. File writing requires Web Locks support. WebAuthn PRF availability depends on both the browser and authenticator. Browser security APIs require a secure context such as HTTPS or localhost.
+Chrome or Edge is recommended for folder-based use. Browsers without the directory picker have a limited manual `.keya` open/export fallback, not the full workspace workflow; edits are not auto-downloaded. File writing requires Web Locks support. WebAuthn PRF availability depends on both the browser and authenticator. Browser security APIs require a secure context such as HTTPS or localhost.
 
 ## Security and persistence
 
@@ -38,7 +38,7 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 - Biometric enrollment requires PRF; there is no stored-key fallback for unsupported authenticators.
 - Edits are auto-saved after a debounce. Locking and switching flush pending changes. If saving fails, locking is refused to preserve unsaved data; **the vault remains unlocked** until the problem is resolved.
 - Writes are coordinated between same-origin tabs and checked for external file changes. Cloud clients and other devices do not share that lock. Use one device at a time per vault, and keep independent backups.
-- API tests send the key to its configured endpoint. Automatic testing is optional and disabled by default. Provider requests may incur charges; an endpoint's response is not a universal proof of key validity.
+- API tests send the key to its configured endpoint. Automatic testing is optional and disabled by default. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.

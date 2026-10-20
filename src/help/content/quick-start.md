@@ -11,7 +11,7 @@ Use a current Chrome or Edge browser for the folder-based workflow. Open Keya, e
 
 The folder can be local or managed by your cloud drive. Keya remembers its handle in browser storage, but the browser may ask you to grant permission again. Choosing a synced folder does not make simultaneous editing on different devices safe.
 
-Browsers without a directory picker offer a limited manual file-open/download fallback. See [FAQ](/docs/faq).
+Browsers without a directory picker offer a limited manual `.keya` open/export fallback. Edits are not auto-downloaded; use Export .keya to save them. See [FAQ](/docs/faq).
 
 ## 2. Create a vault
 
@@ -23,7 +23,7 @@ The vault is saved as a `.keya` file. An existing filename is rejected rather th
 
 1. Click **Add Key**.
 2. Enter a name and API key, select the provider, and review the endpoint. You may also add a description, group, and expiry date.
-3. Optionally test connectivity. This sends the key to the configured endpoint and may incur provider charges.
+3. Optionally test connectivity. This sends the key to the configured endpoint. Tests use metadata endpoints where available; custom or metered endpoints may incur charges.
 4. Click **Save Key**. Changes are auto-saved after a short delay in folder mode.
 
 If clipboard detection is enabled, adding a key may offer a candidate from your clipboard. Verify it before accepting. Custom endpoints receive your key, so use only endpoints you trust.

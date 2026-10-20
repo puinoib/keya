@@ -19,7 +19,14 @@ const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> = {
   'Alibaba Cloud': ENDPOINT_DEFAULTS.alibaba,
   'Amazon Bedrock': ENDPOINT_DEFAULTS.amazon_bedrock,
   'Azure OpenAI': ENDPOINT_DEFAULTS.azure,
-};function Toggle({
+  Groq: ENDPOINT_DEFAULTS.groq,
+  OpenRouter: ENDPOINT_DEFAULTS.openrouter,
+  Together: ENDPOINT_DEFAULTS.together,
+  Cohere: ENDPOINT_DEFAULTS.cohere,
+  SiliconFlow: ENDPOINT_DEFAULTS.siliconflow,
+};
+
+function Toggle({
   checked,
   onChange,
 }: {
@@ -95,7 +102,7 @@ export function ProvidersPage() {
     updateSettings({
       custom_providers: [...customs, { name, endpoint }],
       disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name,
+        (providerName: string) => providerName !== name
       ),
     });
     setNewName('');
@@ -108,7 +115,7 @@ export function ProvidersPage() {
     updateSettings({
       custom_providers: customs.filter((cp) => cp.name !== name),
       disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name,
+        (providerName: string) => providerName !== name
       ),
     });
   };
@@ -125,7 +132,10 @@ export function ProvidersPage() {
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
         {providers.map((provider) => (
-          <div key={provider.name} className="flex items-center justify-between p-3">
+          <div
+            key={provider.name}
+            className="flex items-center justify-between p-3"
+          >
             <div className="min-w-0 flex items-center gap-2.5">
               {provider.logo ? (
                 <img src={provider.logo} alt="" className="size-4 shrink-0" />
@@ -163,7 +173,9 @@ export function ProvidersPage() {
               )}
               <Toggle
                 checked={provider.isEnabled}
-                onChange={() => toggleProvider(provider.name, !provider.isEnabled)}
+                onChange={() =>
+                  toggleProvider(provider.name, !provider.isEnabled)
+                }
               />
             </div>
           </div>
@@ -193,7 +205,9 @@ export function ProvidersPage() {
               <Button
                 size="sm"
                 onClick={addCustom}
-                disabled={!newName.trim() || !newEndpoint.trim() || duplicateName}
+                disabled={
+                  !newName.trim() || !newEndpoint.trim() || duplicateName
+                }
               >
                 <Check className="size-3.5" /> Add
               </Button>

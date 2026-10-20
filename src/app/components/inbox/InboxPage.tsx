@@ -39,7 +39,10 @@ function getSeverity(item: InboxItem): Severity {
   }
 }
 
-const TYPE_BADGE: Record<InboxItemType, { label: string; icon: typeof Warning }> = {
+const TYPE_BADGE: Record<
+  InboxItemType,
+  { label: string; icon: typeof Warning }
+> = {
   key_expiry_expired: { label: 'Expired', icon: Warning },
   key_expiry_upcoming: { label: 'Upcoming', icon: ClockAfternoon },
   connection_failed: { label: 'Failed', icon: Lightning },
@@ -64,7 +67,9 @@ function getContextSuffix(item: InboxItem): string {
   switch (item.type) {
     case 'key_expiry_expired': {
       const overdue = Math.abs(days_until_expiry ?? 0);
-      return overdue === 1 ? 'expired yesterday' : `expired ${overdue} days ago`;
+      return overdue === 1
+        ? 'expired yesterday'
+        : `expired ${overdue} days ago`;
     }
     case 'key_expiry_upcoming': {
       const days = days_until_expiry ?? 0;

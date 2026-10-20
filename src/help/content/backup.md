@@ -47,7 +47,7 @@ If saving fails or a conflict is reported:
 4. Reopen the versions and compare the keys you need. Reconcile into a separate vault or carefully chosen copy.
 5. Delete redundant copies only after verifying the result and its backup.
 
-Permissions can also cause save failures. Restore access to the workspace, but preserve an export before reloading. Browsers without folder support use manual downloads; keep track of which downloaded file is current.
+Permissions can also cause save failures. Restore access to the workspace, but preserve an export before reloading. Browsers without folder support require explicit Export .keya actions; keep track of which exported file is current.
 
 ## Recovery limits
 

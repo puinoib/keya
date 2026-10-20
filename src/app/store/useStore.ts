@@ -12,6 +12,7 @@ import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
 type WorkspaceState = 'welcome' | 'unlocked';
+export type VaultStorageMode = 'folder' | 'download';
 
 interface AppState {
   // Workspace
@@ -19,6 +20,8 @@ interface AppState {
   db: Database | null;
   password: string | null;
   activeVaultFileName: string | null;
+  storageMode: VaultStorageMode;
+  hasUnsavedChanges: boolean;
 
   // UI
   searchQuery: string;
@@ -48,7 +51,13 @@ interface AppState {
   // Actions - Workspace
   setDb: (db: Database) => void;
   lock: () => void;
-  unlock: (db: Database, password: string, fileName: string) => Promise<void>;
+  unlock: (
+    db: Database,
+    password: string,
+    fileName: string,
+    storageMode?: VaultStorageMode
+  ) => Promise<void>;
+  markExported: () => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   updateKeyboardShortcuts: (shortcuts: Record<string, string>) => void;
 
@@ -113,30 +122,62 @@ export function flushSave(): Promise<void> {
   saveTimer = null;
   return enqueueSave(async () => {
     if (!dirty) return;
-    const { db, password, activeVaultFileName } = useStore.getState();
-    if (!db || !password || !activeVaultFileName) return;
+    const { db, password, activeVaultFileName, storageMode } =
+      useStore.getState();
+
+    // Without an active vault there is nothing to persist. Clear the flag so
+    // a stale async result cannot leave the next unlock in a dirty loop.
+    if (!db || !password || !activeVaultFileName) {
+      dirty = false;
+      useStore.setState({ hasUnsavedChanges: false });
+      return;
+    }
+
+    if (storageMode === 'download') {
+      throw new Error(
+        'Download mode: export a .keya file to save changes before locking or switching vaults.'
+      );
+    }
+
     const snapshot = structuredClone(db.getData());
     dirty = false;
     try {
-      if ('showDirectoryPicker' in window) {
-        await FileStorage.saveVault(activeVaultFileName, snapshot, password);
-      } else {
-        await FileStorage.saveViaDownload(
-          snapshot,
-          password,
-          activeVaultFileName
-        );
+      await FileStorage.saveVault(activeVaultFileName, snapshot, password);
+      try {
+        await FileStorage.cacheVaultMeta(activeVaultFileName, db);
+      } catch (error) {
+        // Cached summaries are optional; the vault file is already saved.
+        console.warn('Failed to update cached vault metadata:', error);
       }
-      await FileStorage.cacheVaultMeta(activeVaultFileName, db);
+      if (!dirty) useStore.setState({ hasUnsavedChanges: false });
     } catch (error) {
       dirty = true;
+      useStore.setState({ hasUnsavedChanges: true });
       throw error;
     }
   });
 }
 
+async function flushUntilClean(): Promise<void> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await flushSave();
+    if (!dirty) return;
+  }
+  throw new Error('Vault is still changing. Retry saving before continuing.');
+}
+
 function scheduleSave() {
+  const { db, password, activeVaultFileName, storageMode } =
+    useStore.getState();
+  if (!db || !password || !activeVaultFileName) return;
+
   dirty = true;
+  useStore.setState({ hasUnsavedChanges: true });
+
+  // Download mode has no safe automatic destination. Keep changes in memory
+  // and require an explicit encrypted export instead of downloading per edit.
+  if (storageMode === 'download') return;
+
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     void flushSave().catch(() => {
@@ -145,6 +186,18 @@ function scheduleSave() {
       );
     });
   }, 500);
+}
+
+function inboxSummaryChanged(summary: {
+  added: unknown[];
+  updated: unknown[];
+  archived: unknown[];
+}): boolean {
+  return (
+    summary.added.length > 0 ||
+    summary.updated.length > 0 ||
+    summary.archived.length > 0
+  );
 }
 
 function runInboxChecksForDatabase(db: Database) {
@@ -233,6 +286,8 @@ export const useStore = create<AppState>((set, get) => {
     db: null,
     password: null,
     activeVaultFileName: null,
+    storageMode: 'folder',
+    hasUnsavedChanges: false,
     searchQuery: '',
     showAddForm: false,
     addKeyDraft: null,
@@ -270,12 +325,12 @@ export const useStore = create<AppState>((set, get) => {
     lock: () => {
       void (async () => {
         try {
-          do {
-            await flushSave();
-          } while (dirty);
-        } catch {
+          await flushUntilClean();
+        } catch (error) {
           toast.error(
-            'Cannot lock: unsaved changes. Export your vault or retry saving.'
+            error instanceof Error
+              ? error.message
+              : 'Cannot lock: unsaved changes. Export your vault or retry saving.'
           );
           return;
         }
@@ -284,6 +339,8 @@ export const useStore = create<AppState>((set, get) => {
           db: null,
           password: null,
           activeVaultFileName: null,
+          storageMode: 'folder',
+          hasUnsavedChanges: false,
           searchQuery: '',
           showAddForm: false,
           addKeyDraft: null,
@@ -295,64 +352,78 @@ export const useStore = create<AppState>((set, get) => {
       })();
     },
 
-    unlock: async (db, password, fileName) => {
-      do {
-        await flushSave();
-      } while (dirty);
+    unlock: async (db, password, fileName, storageMode = 'folder') => {
+      await flushUntilClean();
       const inboxSummary = runInboxChecksForDatabase(db);
-      set({
+      set((state) => ({
         workspaceState: 'unlocked',
         db,
         password,
         activeVaultFileName: fileName,
+        storageMode,
+        hasUnsavedChanges: false,
+        inboxVersion: inboxSummaryChanged(inboxSummary)
+          ? state.inboxVersion + 1
+          : state.inboxVersion,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: {
           added: inboxSummary.added.length,
           updated: inboxSummary.updated.length,
           archived: inboxSummary.archived.length,
         },
-      });
-      if (
-        inboxSummary.added.length > 0 ||
-        inboxSummary.updated.length > 0 ||
-        inboxSummary.archived.length > 0
-      ) {
+      }));
+      if (inboxSummaryChanged(inboxSummary)) {
         scheduleSave();
       }
       maybeRunDailyAutoTest(db);
     },
 
+    markExported: () => {
+      if (get().storageMode !== 'download') return;
+      dirty = false;
+      set({ hasUnsavedChanges: false });
+    },
+
     addKey: (key) => {
       const created = get().db?.addApiKey(key);
-      if (created && get().db) {
-        runInboxChecksForDatabase(get().db!);
-      }
-      set({ showAddForm: false, addKeyDraft: null });
+      const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
+      set((state) => ({
+        showAddForm: false,
+        addKeyDraft: null,
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
       scheduleSave();
       return created;
     },
 
     updateKey: (id, updates) => {
       get().db?.updateApiKey(id, updates);
-      if (get().db) {
-        runInboxChecksForDatabase(get().db!);
-      }
-      set({
+      const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
+      set((state) => ({
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
-      });
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
       scheduleSave();
     },
 
     deleteKey: (id) => {
       get().db?.deleteApiKey(id);
-      if (get().db) {
-        runInboxChecksForDatabase(get().db!);
-      }
-      set({
+      const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
+      set((state) => ({
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
-      });
+        inboxVersion:
+          summary && inboxSummaryChanged(summary)
+            ? state.inboxVersion + 1
+            : state.inboxVersion,
+      }));
       scheduleSave();
     },
 
@@ -365,8 +436,11 @@ export const useStore = create<AppState>((set, get) => {
         return;
       }
 
+      const activeDb = get().db;
       const candidate = await tryDetectClipboardKey(settings);
       const db = get().db;
+      if (db !== activeDb) return;
+
       if (
         candidate &&
         db
@@ -450,7 +524,7 @@ export const useStore = create<AppState>((set, get) => {
         throw new Error('No vault open');
       if (oldPassword !== password)
         throw new Error('Current password is incorrect');
-      await flushSave();
+      await flushUntilClean();
       await enqueueSave(async () => {
         if (get().db !== db)
           throw new Error('Vault changed during password update.');
@@ -468,19 +542,18 @@ export const useStore = create<AppState>((set, get) => {
       const db = get().db;
       if (!db) return { added: 0, updated: 0, archived: 0 };
       const summary = runInboxChecksForDatabase(db);
-      set({
+      set((state) => ({
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: {
           added: summary.added.length,
           updated: summary.updated.length,
           archived: summary.archived.length,
         },
-      });
-      if (
-        summary.added.length > 0 ||
-        summary.updated.length > 0 ||
-        summary.archived.length > 0
-      ) {
+        inboxVersion: inboxSummaryChanged(summary)
+          ? state.inboxVersion + 1
+          : state.inboxVersion,
+      }));
+      if (inboxSummaryChanged(summary)) {
         scheduleSave();
       }
       return {

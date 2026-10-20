@@ -1,11 +1,5 @@
 import { useStore } from '../../store/useStore';
-import {
-  Palette,
-  Spinner,
-  Shield,
-  Eye,
-  EyeSlash,
-} from '@phosphor-icons/react';
+import { Palette, Spinner, Shield, Eye, EyeSlash } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -257,13 +251,15 @@ export function GeneralPage() {
               >
                 <SelectTrigger className="w-24 h-7 text-xs">
                   <SelectValue>
-                    {settings?.auto_lock_minutes ?? 5}{(settings?.auto_lock_minutes ?? 5) > 1 ? ' mins' : ' min'}
+                    {settings?.auto_lock_minutes ?? 5}
+                    {(settings?.auto_lock_minutes ?? 5) > 1 ? ' mins' : ' min'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[1, 2, 5, 10, 15, 30].map((m) => (
                     <SelectItem key={m} value={String(m)}>
-                      {m}{m > 1 ? ' mins' : ' min'}
+                      {m}
+                      {m > 1 ? ' mins' : ' min'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -332,7 +328,9 @@ export function GeneralPage() {
                         type="button"
                         onClick={() => setShowNewPw((visible) => !visible)}
                         className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-                        aria-label={showNewPw ? 'Hide password' : 'Show password'}
+                        aria-label={
+                          showNewPw ? 'Hide password' : 'Show password'
+                        }
                       >
                         {showNewPw ? (
                           <EyeSlash className="size-3.5" />
@@ -389,7 +387,9 @@ export function GeneralPage() {
                       type="button"
                       onClick={() => setShowConfirmPw((visible) => !visible)}
                       className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-                      aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showConfirmPw ? 'Hide password' : 'Show password'
+                      }
                     >
                       {showConfirmPw ? (
                         <EyeSlash className="size-3.5" />
