@@ -35,16 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialogRoot as AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Input } from '@/components/ui/input';
@@ -58,6 +48,7 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import {
+  Archive,
   Copy,
   DotsThree,
   FloppyDisk,
@@ -76,6 +67,7 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
+import { DeleteKeyDialog } from './DeleteKeyDialog';
 
 export function KeyList() {
   const db = useStore((s) => s.db);
@@ -86,11 +78,13 @@ export function KeyList() {
     filterProvider,
     filterTestStatus,
     filterExpiryStatus,
+    showArchived,
     selectedKeyId,
     setSelectedKeyId,
     beginAddKeyFlow,
     updateKey,
-    deleteKey,
+    archiveKey,
+    restoreKey,
   } = useStore();
   const [testing, setTesting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -99,8 +93,11 @@ export function KeyList() {
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
   const keyItemRefs = useRef(new Map<string, HTMLDivElement>());
 
-  let keys = db?.getApiKeys() ?? [];
-  if (searchQuery && db) keys = db.searchKeys(searchQuery);
+  const baseKeys = showArchived
+    ? (db?.getArchivedApiKeys() ?? [])
+    : (db?.getActiveApiKeys() ?? []);
+  let keys = baseKeys;
+  if (searchQuery && db) keys = db.searchKeys(searchQuery, baseKeys);
   if (filterGroupId) {
     keys =
       filterGroupId === '__ungrouped__'
@@ -132,6 +129,7 @@ export function KeyList() {
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
   const handleTest = async (key: ApiKey) => {
+    if (key.archived_at) return;
     const activeDb = useStore.getState().db;
     setTesting(key.id);
     const result = await ApiTester.testKey(key, settings);
@@ -147,6 +145,18 @@ export function KeyList() {
     toast[result.success ? 'success' : 'error'](feedback.title, {
       description: feedback.description,
     });
+  };
+
+  const handleArchive = (key: ApiKey) => {
+    archiveKey(key.id);
+    toast.success(`Archived "${key.name}"`, {
+      action: { label: 'Undo', onClick: () => restoreKey(key.id) },
+    });
+  };
+
+  const handleRestore = (key: ApiKey) => {
+    restoreKey(key.id);
+    toast.success(`Restored "${key.name}"`);
   };
 
   const handleCopy = async (keyValue: string, keyId: string) => {
@@ -223,16 +233,20 @@ export function KeyList() {
   useAppHotkey(
     'key.edit',
     () => {
-      if (selectedKey) setEditingKey(selectedKey);
+      if (selectedKey && !selectedKey.archived_at) setEditingKey(selectedKey);
     },
-    { enabled: keyShortcutsEnabled && !!selectedKey }
+    {
+      enabled: keyShortcutsEnabled && !!selectedKey && !selectedKey.archived_at,
+    }
   );
   useAppHotkey(
     'key.test',
     () => {
-      if (selectedKey) handleTest(selectedKey);
+      if (selectedKey && !selectedKey.archived_at) handleTest(selectedKey);
     },
-    { enabled: keyShortcutsEnabled && !!selectedKey }
+    {
+      enabled: keyShortcutsEnabled && !!selectedKey && !selectedKey.archived_at,
+    }
   );
   useAppHotkey(
     'key.delete',
@@ -247,17 +261,37 @@ export function KeyList() {
 
   if (!db) return null;
 
+  if (showArchived && keys.length === 0 && !hasFilters) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="flex items-center justify-center size-14 rounded-2xl bg-surface-3 text-ink-quaternary mb-5">
+          <Archive className="size-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
+          Nothing archived
+        </h3>
+        <p className="text-xs text-ink-quaternary max-w-[240px]">
+          Archive credentials you no longer use to keep them out of the main
+          list without deleting them.
+        </p>
+      </div>
+    );
+  }
+
   if (keys.length === 0 && !hasFilters) {
+    const archivedCount = db.getArchivedApiKeys().length;
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="flex items-center justify-center size-14 rounded-2xl bg-accent/10 text-accent-bright mb-5">
           <Key className="size-6" />
         </div>
         <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
-          No credentials yet
+          {archivedCount > 0 ? 'No active credentials' : 'No credentials yet'}
         </h3>
         <p className="text-xs text-ink-quaternary mb-6 max-w-[220px]">
-          Store the API keys and tokens your projects depend on
+          {archivedCount > 0
+            ? 'Every credential is archived. Restore one or add a new key.'
+            : 'Store the API keys and tokens your projects depend on'}
         </p>
         <button
           onClick={() => void beginAddKeyFlow()}
@@ -266,6 +300,14 @@ export function KeyList() {
           <Plus className="size-3.5" />
           Add your first key
         </button>
+        {archivedCount > 0 && (
+          <button
+            onClick={() => useStore.getState().setShowArchived(true)}
+            className="mt-3 text-xs text-ink-quaternary hover:text-ink-secondary transition-colors"
+          >
+            View archive ({archivedCount})
+          </button>
+        )}
       </div>
     );
   }
@@ -338,13 +380,23 @@ export function KeyList() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
+                  {key.archived_at ? (
+                    <Archive className="size-3 shrink-0 text-ink-quaternary" />
+                  ) : (
+                    <span
+                      className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
+                    />
+                  )}
                   <span
-                    className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
-                  />
-                  <span className="truncate text-sm font-medium text-ink-primary">
+                    className={`truncate text-sm font-medium ${
+                      key.archived_at
+                        ? 'text-ink-secondary'
+                        : 'text-ink-primary'
+                    }`}
+                  >
                     {key.name}
                   </span>
-                  {expiryLabel && (
+                  {expiryLabel && !key.archived_at && (
                     <>
                       <span className="hidden text-divider sm:inline">·</span>
                       <span
@@ -353,6 +405,11 @@ export function KeyList() {
                         {expiryLabel}
                       </span>
                     </>
+                  )}
+                  {key.archived_at && (
+                    <span className="hidden shrink-0 text-xs text-ink-quaternary sm:inline">
+                      · Archived {format(new Date(key.archived_at), 'MMM d')}
+                    </span>
                   )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
@@ -376,31 +433,33 @@ export function KeyList() {
                            sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100
                            ${hoveredKeyId === key.id ? 'opacity-100' : ''}`}
               >
-                <button
-                  onClick={() => handleTest(key)}
-                  disabled={isTesting}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
-                  title={
-                    isTesting
-                      ? 'Testing...'
-                      : getTestActionLabel(
-                          ApiTester.checkKindFor(key.provider, settings)
-                        )
-                  }
-                  aria-label={
-                    isTesting
-                      ? 'Testing key'
-                      : getTestActionLabel(
-                          ApiTester.checkKindFor(key.provider, settings)
-                        )
-                  }
-                >
-                  {isTesting ? (
-                    <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Flask className="size-4" />
-                  )}
-                </button>
+                {!key.archived_at && (
+                  <button
+                    onClick={() => handleTest(key)}
+                    disabled={isTesting}
+                    className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
+                    title={
+                      isTesting
+                        ? 'Testing...'
+                        : getTestActionLabel(
+                            ApiTester.checkKindFor(key.provider, settings)
+                          )
+                    }
+                    aria-label={
+                      isTesting
+                        ? 'Testing key'
+                        : getTestActionLabel(
+                            ApiTester.checkKindFor(key.provider, settings)
+                          )
+                    }
+                  >
+                    {isTesting ? (
+                      <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Flask className="size-4" />
+                    )}
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleCopy(key.key, key.id)}
@@ -427,9 +486,20 @@ export function KeyList() {
                     <DotsThree className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-44">
-                    <DropdownMenuItem onClick={() => setEditingKey(key)}>
-                      <PencilSimple className="size-3.5" /> Edit
-                    </DropdownMenuItem>
+                    {key.archived_at ? (
+                      <DropdownMenuItem onClick={() => handleRestore(key)}>
+                        <ArrowCounterClockwise className="size-3.5" /> Restore
+                      </DropdownMenuItem>
+                    ) : (
+                      <>
+                        <DropdownMenuItem onClick={() => setEditingKey(key)}>
+                          <PencilSimple className="size-3.5" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchive(key)}>
+                          <Archive className="size-3.5" /> Archive
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeletingKey(key)}
@@ -456,37 +526,10 @@ export function KeyList() {
         }}
       />
 
-      {/* Delete Confirmation */}
-      <AlertDialog
-        open={!!deletingKey}
-        onOpenChange={(open) => {
-          if (!open) setDeletingKey(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Key</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingKey?.name}"? This action
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingKey) {
-                  deleteKey(deletingKey.id);
-                  toast.success(`Deleted "${deletingKey.name}"`);
-                }
-              }}
-              className="bg-danger text-white hover:bg-danger/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteKeyDialog
+        deletingKey={deletingKey}
+        onClose={() => setDeletingKey(null)}
+      />
     </>
   );
 }
