@@ -4,6 +4,7 @@ import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
 import { Database, deserializeFromFile } from '../../../core';
 import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
+import { KeyaLogo } from '@/components/ui/keya-logo';
 import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import {
   Info,
   Check,
 } from '@phosphor-icons/react';
-import { EmojiPicker } from '@ferrucc-io/emoji-picker';
+import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
 import {
   AlertDialogRoot,
   AlertDialogContent,
@@ -247,11 +248,7 @@ export function WelcomePage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <img
-              src="/icon.svg"
-              alt="Keya"
-              className="icon-theme size-14 mb-4"
-            />
+            <KeyaLogo className="size-14 mb-4" />
             <h1 className="text-2xl font-semibold tracking-heading text-ink-primary">
               Keya
             </h1>
@@ -426,26 +423,12 @@ export function WelcomePage() {
                           ref={emojiPickerRef}
                           className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog"
                         >
-                          <EmojiPicker
-                            onEmojiSelect={(emoji) => {
+                          <EmojiPickerPanel
+                            onSelect={(emoji) => {
                               setNewVaultIcon(emoji);
                               setEmojiPickerOpen(false);
                             }}
-                            emojisPerRow={12}
-                            emojiSize={28}
-                            className="border-none"
-                          >
-                            <EmojiPicker.Header>
-                              <EmojiPicker.Input
-                                placeholder="Search emoji..."
-                                hideIcon
-                                className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
-                              />
-                            </EmojiPicker.Header>
-                            <EmojiPicker.Group>
-                              <EmojiPicker.List containerHeight={220} />
-                            </EmojiPicker.Group>
-                          </EmojiPicker>
+                          />
                         </div>
                       )}
                     </div>

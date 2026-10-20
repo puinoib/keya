@@ -22,9 +22,9 @@ import {
   encrypt,
   decrypt,
   initCrypto,
+  requireSodium,
 } from './crypto';
 import { validateDatabase } from './validators';
-import sodium from 'libsodium-wrappers-sumo';
 
 // ── Constants ──
 
@@ -260,6 +260,7 @@ export async function serializeToFile(
   password: string
 ): Promise<Uint8Array> {
   await initCrypto();
+  const sodium = requireSodium();
 
   // Generate cryptographic material
   const masterSeed = sodium.randombytes_buf(MASTER_SEED_SIZE);
@@ -312,6 +313,7 @@ export async function deserializeFromFile(
   password: string
 ): Promise<KeyaDatabase> {
   await initCrypto();
+  const sodium = requireSodium();
 
   if (fileBytes.length < HEADER_SIZE) {
     throw new Error('Invalid .keya file: file is truncated');

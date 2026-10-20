@@ -14,10 +14,8 @@ import {
   isBiometricRegistered,
   unlockWithBiometric,
 } from '@/app/lib/biometric';
-import '@/app/lib/zxcvbn';
-import { zxcvbnAsync } from '@zxcvbn-ts/core';
+import { loadZxcvbn } from '@/app/lib/zxcvbn';
 import type { ZxcvbnResult } from '@zxcvbn-ts/core';
-
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new';
   vaultName: string;
@@ -70,7 +68,15 @@ export function VaultPasswordDialog({
       setZxcvbnResult(null);
       return;
     }
-    zxcvbnAsync(deferredPassword).then(setZxcvbnResult);
+    let cancelled = false;
+    loadZxcvbn()
+      .then((estimate) => estimate(deferredPassword))
+      .then((result) => {
+        if (!cancelled) setZxcvbnResult(result);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [deferredPassword, isCreate]);
 
   const strength = zxcvbnResult

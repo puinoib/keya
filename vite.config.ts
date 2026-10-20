@@ -6,7 +6,13 @@ import path from 'node:path';
 import pkg from './package.json';
 
 export default defineConfig({
-  plugins: [tanstackRouter({ target: 'react' }), react(), tailwindcss()],
+  plugins: [
+    // Split route components into their own chunks so the initial payload only
+    // carries the route being rendered.
+    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    react(),
+    tailwindcss(),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

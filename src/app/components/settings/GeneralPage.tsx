@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useState, useEffect, useRef, useDeferredValue } from 'react';
-import { EmojiPicker } from '@ferrucc-io/emoji-picker';
+import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
 import { toast } from 'sonner';
 import {
   isBiometricSupported,
@@ -17,8 +17,7 @@ import {
   registerBiometric,
   removeBiometric,
 } from '@/app/lib/biometric';
-import '@/app/lib/zxcvbn';
-import { zxcvbnAsync } from '@zxcvbn-ts/core';
+import { loadZxcvbn } from '@/app/lib/zxcvbn';
 import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 
 function Toggle({
@@ -93,7 +92,15 @@ export function GeneralPage() {
       setZxcvbnResult(null);
       return;
     }
-    zxcvbnAsync(deferredNewPw).then(setZxcvbnResult);
+    let cancelled = false;
+    loadZxcvbn()
+      .then((estimate) => estimate(deferredNewPw))
+      .then((result) => {
+        if (!cancelled) setZxcvbnResult(result);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [deferredNewPw, showPwForm]);
 
   const scoreOk = zxcvbnResult != null && zxcvbnResult.score >= 2;
@@ -154,26 +161,12 @@ export function GeneralPage() {
                   ref={emojiPickerRef}
                   className="absolute left-0 top-full mt-1.5 z-50 rounded-lg bg-canvas-panel border border-line shadow-dialog"
                 >
-                  <EmojiPicker
-                    onEmojiSelect={(emoji) => {
+                  <EmojiPickerPanel
+                    onSelect={(emoji) => {
                       updateMeta({ icon: emoji });
                       setIconPickerOpen(false);
                     }}
-                    emojisPerRow={12}
-                    emojiSize={28}
-                    className="border-none"
-                  >
-                    <EmojiPicker.Header>
-                      <EmojiPicker.Input
-                        placeholder="Search emoji..."
-                        hideIcon
-                        className="w-full px-2 py-1.5 text-xs rounded-md bg-surface-2 border border-line text-ink-primary placeholder:text-ink-quaternary outline-none focus:ring-1 focus:ring-accent/50 mb-1.5"
-                      />
-                    </EmojiPicker.Header>
-                    <EmojiPicker.Group>
-                      <EmojiPicker.List containerHeight={220} />
-                    </EmojiPicker.Group>
-                  </EmojiPicker>
+                  />
                 </div>
               )}
             </div>

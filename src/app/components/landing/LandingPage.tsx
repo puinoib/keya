@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { KeyaLogo } from '@/components/ui/keya-logo';
 import { FileStorage } from '@/app/lib/storage';
 import { useStore } from '@/app/store/useStore';
 
@@ -118,7 +119,7 @@ export function LandingPage() {
       <header className="relative z-10 px-6 py-5 sm:px-10">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/icon.svg" alt="Keya" className="icon-theme size-5" />
+            <KeyaLogo className="size-5" />
             <div>
               <div className="text-sm font-medium tracking-tight text-ink-primary">
                 Keya
