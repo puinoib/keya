@@ -153,12 +153,17 @@ describe('§10.3 recipe states', () => {
     expect(manual.kind).toBe('manual_only');
 
     const secured = classifyRecipe(
-      { provider_id: presetId('openai'), endpoint: 'https://api.openai.com/v1' },
+      {
+        provider_id: presetId('openai'),
+        endpoint: 'https://api.openai.com/v1',
+      },
       []
     );
     expect(secured.kind).toBe('auto');
     if (secured.kind === 'auto') {
-      expect(secured.plan.resolvedHref).toBe('https://api.openai.com/v1/models');
+      expect(secured.plan.resolvedHref).toBe(
+        'https://api.openai.com/v1/models'
+      );
       expect(secured.plan.interpreterId).toBe('preset:openai/1');
     }
   });
@@ -221,7 +226,10 @@ describe('§10.3 recipe states', () => {
     const counts = { auto: 0, manual: 0, missing: 0 };
     for (const preset of PRESETS) {
       const state = classifyRecipe(
-        { provider_id: presetId(preset.slug), endpoint: preset.defaultEndpoint },
+        {
+          provider_id: presetId(preset.slug),
+          endpoint: preset.defaultEndpoint,
+        },
         []
       );
       if (state.kind === 'auto') counts.auto += 1;
