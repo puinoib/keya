@@ -91,6 +91,18 @@ export interface VaultStoreState {
 
 export const createVaultStore = (platform: VaultPlatform) =>
   create<VaultStoreState>()((set, get) => {
+    /**
+     * The container registry only feeds the locked-state listing. A failure
+     * there must never turn a successful save or unlock into an error.
+     */
+    const safeContainers = async (): Promise<ContainerRecord[]> => {
+      try {
+        return await platform.listContainers();
+      } catch {
+        return get().containers;
+      }
+    };
+
     const sync = async () => {
       const { session, vault } = get();
       if (!session || !vault) return;
@@ -132,7 +144,7 @@ export const createVaultStore = (platform: VaultPlatform) =>
           set({
             ready: true,
             workspaceName: null,
-            containers: await platform.listContainers(),
+            containers: await safeContainers(),
           });
           return;
         }
@@ -174,7 +186,7 @@ export const createVaultStore = (platform: VaultPlatform) =>
             payload: vault.getPayload(),
             saveState: 'clean',
             busy: false,
-            containers: await platform.listContainers(),
+            containers: await safeContainers(),
           });
           await get().refreshReminders();
           void record;
@@ -207,7 +219,7 @@ export const createVaultStore = (platform: VaultPlatform) =>
             saveState: 'clean',
             busy: false,
             files: await platform.listFiles(),
-            containers: await platform.listContainers(),
+            containers: await safeContainers(),
           });
           await get().refreshReminders();
           return true;
@@ -251,7 +263,7 @@ export const createVaultStore = (platform: VaultPlatform) =>
         set({
           saveState: 'clean',
           payload: vault.getPayload(),
-          containers: await platform.listContainers(),
+          containers: await safeContainers(),
         });
         return true;
       },
