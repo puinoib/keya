@@ -13,13 +13,22 @@ import type { Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import { localState } from '../storage/platform';
-import type { BusinessRule, ObservationRule } from '../../core/runtime/dismissals';
+import type {
+  BusinessRule,
+  ObservationRule,
+} from '../../core/runtime/dismissals';
 import type { Observation } from '../../core/runtime/observations';
 import type { ProbeAuth, Provider } from '../../core/payload/types';
 import { providerIdForLabel } from '../view/catalog';
-import { buildDatabase, ViewDatabase } from '../view/build';
+import { buildDatabase, type ViewDatabase } from '../view/build';
 import { isoToExpiry } from '../view/convert';
-import type { ApiKey, CustomProvider, Group, NewApiKey, Settings } from '../view/types';
+import type {
+  ApiKey,
+  CustomProvider,
+  Group,
+  NewApiKey,
+  Settings,
+} from '../view/types';
 import { fetchUsage, type UsageEntry } from '../lib/usage';
 import { writeUsageSnapshot } from '../lib/usage-cache';
 import type { OpenedVault } from '../lib/storage';
@@ -429,7 +438,9 @@ export const useStore = create<AppState>()((set, get) => {
 
       if (
         candidate &&
-        db?.getActiveApiKeys().some((existing) => existing.key === candidate.raw)
+        db
+          ?.getActiveApiKeys()
+          .some((existing) => existing.key === candidate.raw)
       ) {
         toast('This credential is already saved');
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
@@ -477,7 +488,11 @@ export const useStore = create<AppState>()((set, get) => {
     setShowArchived: (showArchived) => set({ showArchived }),
     clearFilters: () => set({ searchQuery: '', filterGroupId: null }),
     clearSmartFilters: () =>
-      set({ filterProvider: null, filterTestStatus: null, filterExpiryStatus: null }),
+      set({
+        filterProvider: null,
+        filterTestStatus: null,
+        filterExpiryStatus: null,
+      }),
     setSelectedKeyId: (selectedKeyId) => set({ selectedKeyId }),
 
     addGroup: (group) => {
@@ -548,7 +563,10 @@ export const useStore = create<AppState>()((set, get) => {
     changePassword: async (oldPassword, newPassword) => {
       if (!runtime) return;
       const before = runtime.vault.containerInfo.fingerprint;
-      const result = await runtime.vault.changePassword(oldPassword, newPassword);
+      const result = await runtime.vault.changePassword(
+        oldPassword,
+        newPassword
+      );
       if (!result.ok) {
         toast.error(
           result.failure === 'wrong_password'
@@ -585,15 +603,23 @@ export const useStore = create<AppState>()((set, get) => {
       const open = items.filter((item) => item.status === 'open').length;
       const archived = items.length - open;
       const previous = get().lastInboxSyncResult;
-      const added = Math.max(0, open - (previous?.added ?? 0) - (previous?.updated ?? 0));
+      const added = Math.max(
+        0,
+        open - (previous?.added ?? 0) - (previous?.updated ?? 0)
+      );
       const result = { added, updated: 0, archived };
-      set({ lastInboxSyncAt: new Date().toISOString(), lastInboxSyncResult: result });
+      set({
+        lastInboxSyncAt: new Date().toISOString(),
+        lastInboxSyncResult: result,
+      });
       return result;
     },
 
     archiveInboxItem: (id) => {
       if (!runtime) return;
-      const item = get().db?.getInboxItems().find((entry) => entry.id === id);
+      const item = get()
+        .db?.getInboxItems()
+        .find((entry) => entry.id === id);
       if (!item) return;
 
       const rule = toRule(item.type);
@@ -621,9 +647,12 @@ export const useStore = create<AppState>()((set, get) => {
  * Run one manually triggered check for a stored key. The click is the gesture
  * that authorizes the request, so a one-shot approval is created here.
  */
-export async function runManualCheck(
-  keyId: string
-): Promise<{ success: boolean; latency_ms: number; error?: string; kind: 'credential' | 'request' } | null> {
+export async function runManualCheck(keyId: string): Promise<{
+  success: boolean;
+  latency_ms: number;
+  error?: string;
+  kind: 'credential' | 'request';
+} | null> {
   if (!runtime) return null;
   const payload = runtime.vault.getPayload();
   if (!payload.keys.some((key) => key.id === keyId)) return null;
@@ -635,7 +664,8 @@ export async function runManualCheck(
     return {
       success: false,
       latency_ms: 0,
-      error: outcome.status === 'not_executable' ? outcome.reason : outcome.status,
+      error:
+        outcome.status === 'not_executable' ? outcome.reason : outcome.status,
       kind: 'request',
     };
   }
@@ -708,7 +738,9 @@ async function businessCondition(
   if (!item) return null;
 
   if (rule === 'insecure_endpoint') {
-    const key = runtime.vault.getPayload().keys.find((entry) => entry.id === keyId);
+    const key = runtime.vault
+      .getPayload()
+      .keys.find((entry) => entry.id === keyId);
     if (!key?.endpoint) return null;
     try {
       return `http:${new URL(key.endpoint).origin}`;
@@ -717,13 +749,17 @@ async function businessCondition(
     }
   }
 
-  const key = runtime.vault.getPayload().keys.find((entry) => entry.id === keyId);
+  const key = runtime.vault
+    .getPayload()
+    .keys.find((entry) => entry.id === keyId);
   const expiry = key?.expiry;
   if (!expiry) return null;
   return `${expiry.kind === 'date' ? 'date' : 'instant'}:${expiry.value}`;
 }
 
-function isBusinessRule(rule: BusinessRule | ObservationRule): rule is BusinessRule {
+function isBusinessRule(
+  rule: BusinessRule | ObservationRule
+): rule is BusinessRule {
   return (
     rule === 'expiry_upcoming' ||
     rule === 'expiry_expired' ||
@@ -753,7 +789,9 @@ async function applyProviders(
   providers: CustomProvider[]
 ): Promise<void> {
   const file = state.vault.getPayload();
-  const existing = new Map(file.providers.map((provider) => [provider.name, provider]));
+  const existing = new Map(
+    file.providers.map((provider) => [provider.name, provider])
+  );
 
   for (const provider of providers) {
     const previous = existing.get(provider.name);
@@ -805,6 +843,13 @@ function toStoredProvider(provider: CustomProvider, id: string): Provider {
   };
 }
 
+/** Bytes of the current vault, for "Export .keya". */
+export async function exportVaultBytes(): Promise<Uint8Array | null> {
+  if (!runtime) return null;
+  const result = await runtime.vault.exportBytes();
+  return result.ok ? result.bytes : null;
+}
+
 /**
  * Flush pending edits. Returns false when the write failed, so callers can keep
  * the vault open instead of silently dropping changes.
@@ -815,6 +860,12 @@ export async function flushSave(): Promise<boolean> {
     saveTimer = null;
   }
   if (!runtime) return true;
+
+  if (useStore.getState().storageMode === 'download') {
+    useStore.setState({ hasUnsavedChanges: true });
+    toast.error('Export a .keya file to save changes before leaving.');
+    return false;
+  }
 
   const result = await runtime.vault.flush();
   if (!result.ok) {

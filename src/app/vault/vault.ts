@@ -533,6 +533,24 @@ export class Vault {
     if (this.locked) throw new Error('vault is locked');
   }
 
+  /** Current payload as a complete file image, without touching the port. */
+  async exportBytes(): Promise<
+    { ok: true; bytes: Uint8Array } | { ok: false; failure: SaveFailure }
+  > {
+    this.assertUnlocked();
+    const validated = validateKeyaFile(this.payload);
+    if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
+
+    const nonce = freshNonce(this.lastNonce);
+    const bytes = await sealContainer({
+      payload: serializePayload(validated.value),
+      fileKey: this.fileKey,
+      container: this.container,
+      nonce,
+    });
+    return { ok: true, bytes };
+  }
+
   /** Nonce currently on disk, for diagnostics and tests. */
   get lastWrittenNonce(): Uint8Array {
     return this.lastNonce;

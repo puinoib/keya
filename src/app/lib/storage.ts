@@ -63,8 +63,8 @@ export class FileStorage {
     return (await current())?.name ?? null;
   }
 
-  static async getWorkspaceHandle(): Promise<Workspace | null> {
-    return current();
+  static async getWorkspaceHandle(): Promise<FileSystemDirectoryHandle | null> {
+    return (await current())?.raw() ?? null;
   }
 
   static async requestPermission(): Promise<boolean> {
@@ -92,7 +92,11 @@ export class FileStorage {
     if (!folder) throw new Error('No folder is connected.');
 
     const result = await Vault.open(
-      { file: await folder.filePort(fileName), clock: systemClock, locks: webLocks },
+      {
+        file: await folder.filePort(fileName),
+        clock: systemClock,
+        locks: webLocks,
+      },
       { password }
     );
     if (!result.ok) throw new Error(result.failure);
@@ -120,6 +124,32 @@ export class FileStorage {
     return finishOpen(fileName, created.opened.vault);
   }
 
+  /**
+   * Open a vault from bytes already in memory. Used when the browser has no
+   * folder access: the file is read from a copy the user picked.
+   */
+  static async openVaultFromBytes(
+    fileName: string,
+    bytes: Uint8Array,
+    password: string
+  ): Promise<OpenedVault> {
+    let current = bytes.slice();
+    const port = {
+      read: async () => current.slice(),
+      write: async (next: Uint8Array) => {
+        current = next.slice();
+      },
+    };
+
+    const result = await Vault.open(
+      { file: port, clock: systemClock, locks: webLocks },
+      { password }
+    );
+    if (!result.ok) throw new Error(result.failure);
+
+    return finishOpen(fileName, result.vault);
+  }
+
   /** Keep a copy of the current bytes next to the vault. */
   static async backupVault(fileName: string): Promise<void> {
     const folder = await current();
@@ -134,7 +164,10 @@ export class FileStorage {
   }
 }
 
-async function finishOpen(fileName: string, vault: Vault): Promise<OpenedVault> {
+async function finishOpen(
+  fileName: string,
+  vault: Vault
+): Promise<OpenedVault> {
   const deviceKey = await localState.ensureDeviceKey();
   const payload = vault.getPayload();
 

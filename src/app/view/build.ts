@@ -18,17 +18,8 @@ import { businessAlerts, observationAlerts } from '../../core/reminders';
 import type { Reminder } from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
 import { groupToView, keyToView, providerToView } from './convert';
-import {
-  getDaysSince,
-  getDaysUntilExpiry,
-} from './status';
-import type {
-  ApiKey,
-  Group,
-  InboxItem,
-  Settings,
-  VaultData,
-} from './types';
+import { getDaysSince, getDaysUntilExpiry } from './status';
+import type { ApiKey, Group, InboxItem, Settings, VaultData } from './types';
 
 export interface ViewInput {
   file: KeyaFile;
@@ -115,14 +106,18 @@ export function buildInbox(input: ViewInput): InboxItem[] {
       key_name: key.name,
       provider: keyToView(key, file, latest).provider,
       expires_at: key.expiry?.value,
-      days_until_expiry: key.expiry ? getDaysUntilExpiry(key.expiry.value, input.now) ?? undefined : undefined,
+      days_until_expiry: key.expiry
+        ? (getDaysUntilExpiry(key.expiry.value, input.now) ?? undefined)
+        : undefined,
       checked_at: latest?.finished_at ?? null,
       error_message: describeFailure(latest),
       endpoint: key.endpoint ?? undefined,
-      days_since_test: getDaysSince(latest?.finished_at ?? null, input.now) ?? undefined,
+      days_since_test:
+        getDaysSince(latest?.finished_at ?? null, input.now) ?? undefined,
     };
 
-    const stamp = reminder.kind === 'business' ? null : latest?.finished_at ?? null;
+    const stamp =
+      reminder.kind === 'business' ? null : (latest?.finished_at ?? null);
 
     items.push({
       id: `${reminder.rule}:${reminder.key_id}`,
@@ -219,7 +214,9 @@ export class ViewDatabase {
   }
 
   getGroups(): Group[] {
-    return [...this.data.groups].sort((left, right) => left.order - right.order);
+    return [...this.data.groups].sort(
+      (left, right) => left.order - right.order
+    );
   }
 
   getSettings(): Settings {

@@ -12,10 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as NextRouteImport } from './routes/next'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DocsIndexRouteImport } from './routes/docs.index'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedKeysRouteImport } from './routes/_authenticated/keys'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
+import { Route as AuthenticatedSettingsShortcutsRouteImport } from './routes/_authenticated/settings.shortcuts'
+import { Route as AuthenticatedSettingsProvidersRouteImport } from './routes/_authenticated/settings.providers'
+import { Route as AuthenticatedSettingsKeysRouteImport } from './routes/_authenticated/settings.keys'
+import { Route as AuthenticatedSettingsGroupsRouteImport } from './routes/_authenticated/settings.groups'
+import { Route as AuthenticatedSettingsGeneralRouteImport } from './routes/_authenticated/settings.general'
+import { Route as AuthenticatedSettingsAboutRouteImport } from './routes/_authenticated/settings.about'
 
 const StartRoute = StartRouteImport.update({
   id: '/start',
@@ -30,6 +41,10 @@ const NextRoute = NextRouteImport.update({
 const HomeRoute = HomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -52,6 +67,63 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/docs/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedKeysRoute = AuthenticatedKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsShortcutsRoute =
+  AuthenticatedSettingsShortcutsRouteImport.update({
+    id: '/shortcuts',
+    path: '/shortcuts',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsProvidersRoute =
+  AuthenticatedSettingsProvidersRouteImport.update({
+    id: '/providers',
+    path: '/providers',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsKeysRoute =
+  AuthenticatedSettingsKeysRouteImport.update({
+    id: '/keys',
+    path: '/keys',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsGroupsRoute =
+  AuthenticatedSettingsGroupsRouteImport.update({
+    id: '/groups',
+    path: '/groups',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsGeneralRoute =
+  AuthenticatedSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsAboutRoute =
+  AuthenticatedSettingsAboutRouteImport.update({
+    id: '/about',
+    path: '/about',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,8 +131,18 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/next': typeof NextRoute
   '/start': typeof StartRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/keys': typeof AuthenticatedKeysRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/docs/': typeof DocsIndexRoute
+  '/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
+  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
+  '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
+  '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,18 +150,38 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/next': typeof NextRoute
   '/start': typeof StartRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/keys': typeof AuthenticatedKeysRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/docs': typeof DocsIndexRoute
+  '/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
+  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
+  '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
+  '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/home': typeof HomeRoute
   '/next': typeof NextRoute
   '/start': typeof StartRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/keys': typeof AuthenticatedKeysRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/docs/': typeof DocsIndexRoute
+  '/_authenticated/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/_authenticated/settings/general': typeof AuthenticatedSettingsGeneralRoute
+  '/_authenticated/settings/groups': typeof AuthenticatedSettingsGroupsRoute
+  '/_authenticated/settings/keys': typeof AuthenticatedSettingsKeysRoute
+  '/_authenticated/settings/providers': typeof AuthenticatedSettingsProvidersRoute
+  '/_authenticated/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,24 +191,62 @@ export interface FileRouteTypes {
     | '/home'
     | '/next'
     | '/start'
+    | '/inbox'
+    | '/keys'
+    | '/settings'
     | '/docs/$slug'
     | '/docs/'
+    | '/settings/about'
+    | '/settings/general'
+    | '/settings/groups'
+    | '/settings/keys'
+    | '/settings/providers'
+    | '/settings/shortcuts'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$' | '/home' | '/next' | '/start' | '/docs/$slug' | '/docs'
-  id:
-    | '__root__'
+  to:
     | '/'
     | '/$'
     | '/home'
     | '/next'
     | '/start'
+    | '/inbox'
+    | '/keys'
+    | '/docs/$slug'
+    | '/docs'
+    | '/settings/about'
+    | '/settings/general'
+    | '/settings/groups'
+    | '/settings/keys'
+    | '/settings/providers'
+    | '/settings/shortcuts'
+    | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/$'
+    | '/_authenticated'
+    | '/home'
+    | '/next'
+    | '/start'
+    | '/_authenticated/inbox'
+    | '/_authenticated/keys'
+    | '/_authenticated/settings'
     | '/docs/$slug'
     | '/docs/'
+    | '/_authenticated/settings/about'
+    | '/_authenticated/settings/general'
+    | '/_authenticated/settings/groups'
+    | '/_authenticated/settings/keys'
+    | '/_authenticated/settings/providers'
+    | '/_authenticated/settings/shortcuts'
+    | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   HomeRoute: typeof HomeRoute
   NextRoute: typeof NextRoute
   StartRoute: typeof StartRoute
@@ -137,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$': {
       id: '/$'
       path: '/$'
@@ -165,12 +312,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/keys': {
+      id: '/_authenticated/keys'
+      path: '/keys'
+      fullPath: '/keys'
+      preLoaderRoute: typeof AuthenticatedKeysRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/shortcuts': {
+      id: '/_authenticated/settings/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/settings/shortcuts'
+      preLoaderRoute: typeof AuthenticatedSettingsShortcutsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/providers': {
+      id: '/_authenticated/settings/providers'
+      path: '/providers'
+      fullPath: '/settings/providers'
+      preLoaderRoute: typeof AuthenticatedSettingsProvidersRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/keys': {
+      id: '/_authenticated/settings/keys'
+      path: '/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof AuthenticatedSettingsKeysRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/groups': {
+      id: '/_authenticated/settings/groups'
+      path: '/groups'
+      fullPath: '/settings/groups'
+      preLoaderRoute: typeof AuthenticatedSettingsGroupsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/general': {
+      id: '/_authenticated/settings/general'
+      path: '/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof AuthenticatedSettingsGeneralRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/about': {
+      id: '/_authenticated/settings/about'
+      path: '/about'
+      fullPath: '/settings/about'
+      preLoaderRoute: typeof AuthenticatedSettingsAboutRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
   }
 }
+
+interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsAboutRoute: typeof AuthenticatedSettingsAboutRoute
+  AuthenticatedSettingsGeneralRoute: typeof AuthenticatedSettingsGeneralRoute
+  AuthenticatedSettingsGroupsRoute: typeof AuthenticatedSettingsGroupsRoute
+  AuthenticatedSettingsKeysRoute: typeof AuthenticatedSettingsKeysRoute
+  AuthenticatedSettingsProvidersRoute: typeof AuthenticatedSettingsProvidersRoute
+  AuthenticatedSettingsShortcutsRoute: typeof AuthenticatedSettingsShortcutsRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+}
+
+const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsAboutRoute: AuthenticatedSettingsAboutRoute,
+  AuthenticatedSettingsGeneralRoute: AuthenticatedSettingsGeneralRoute,
+  AuthenticatedSettingsGroupsRoute: AuthenticatedSettingsGroupsRoute,
+  AuthenticatedSettingsKeysRoute: AuthenticatedSettingsKeysRoute,
+  AuthenticatedSettingsProvidersRoute: AuthenticatedSettingsProvidersRoute,
+  AuthenticatedSettingsShortcutsRoute: AuthenticatedSettingsShortcutsRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+}
+
+const AuthenticatedSettingsRouteWithChildren =
+  AuthenticatedSettingsRoute._addFileChildren(
+    AuthenticatedSettingsRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedKeysRoute: typeof AuthenticatedKeysRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedKeysRoute: AuthenticatedKeysRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   HomeRoute: HomeRoute,
   NextRoute: NextRoute,
   StartRoute: StartRoute,
