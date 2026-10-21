@@ -1,68 +1,38 @@
 ---
 title: FAQ
-description: Common questions about authentication, synchronization, and recovery.
-updated: 2026-10-20
-order: 5
+description: Browsers, recovery, and the known gaps in this build.
+updated: 2026-03-01
+order: 6
 ---
 
-## Is Keya free?
+## Which browsers work?
 
-Yes. Keya is MIT-licensed open source with no subscription. Your cloud storage and API provider may charge separately.
-
-## How do I get back to the homepage?
-
-The root URL opens the landing page only on a first visit; once Keya has stored a workspace or a vault summary, it sends you straight to the app. Open [/home](/home) at any time, or use **About Keya** in the welcome screen footer or **Settings → About → Product Homepage**.
-
-## Does Keya send my keys anywhere?
-
-Keya has no application backend or analytics. Testing a preset provider sends the key to a metadata endpoint. Reading usage sends the key to that provider's own usage endpoint and nothing else. Usage figures are never written to the vault. They are kept in this tab's session storage for at most a day so that reopening the vault does not lose them, figures older than fifteen minutes are shown as history rather than as current, and a successful refresh never rewrites a `.keya` file. A custom provider is only checked the way you configure it: reachability checks never send the key, while a configured credential check sends it to the check path you chose. Tests can be manual or automatic if enabled in Settings → Keys. Automatic testing is disabled by default. Tests normally do not invoke a model. Custom or metered endpoints may incur charges. Some providers cannot be tested from the browser: Amazon Bedrock requires AWS request signing, and NVIDIA NIM, Baseten, and Exa send no cross-origin headers. Keya reports those, and any request the browser blocks, as unverifiable rather than as an invalid key.
-
-## Where is my data stored?
-
-Encrypted vault contents live in `.keya` files in your chosen folder, or in files you explicitly export in fallback mode. IndexedDB stores the folder handle, cached vault summaries, and PRF biometric enrollment records. It is not a backup of the vault. See [Security](/docs/security).
-
-## Why do I need to unlock after refreshing?
-
-Keya no longer persists a recoverable master password for session restoration. Refreshing clears the in-memory session. Unlock with your password or an enrolled PRF-supported authenticator.
-
-## Why did biometric unlock stop working?
-
-Biometric unlock now requires WebAuthn PRF. A passkey may be created successfully but still lack PRF support; support depends on the browser, operating system, and passkey storage provider. In Chrome, if **Your Chrome profile** fails with a message about WebAuthn PRF, choose **Google Password Manager** or **iCloud Keychain** in the passkey picker and enroll again. Old records that stored an AES key alongside the encrypted password are removed. If storage upgrade is blocked, close other Keya tabs.
-
-Clearing site data also removes the enrollment record. Authenticator credential synchronization does not synchronize Keya's site records; keep your master password available.
+Chrome and Edge, because the folder workflow needs the File System Access API. Firefox and Safari do not implement it, so the app cannot open a folder there.
 
 ## I forgot my password. Can you reset it?
 
-No. If enrolled biometric unlock still works, you may still access and export your data, but it is not a guaranteed recovery method. A `.keya` file alone cannot be recovered without its password. Keep passwords in a password manager.
+No. There is no recovery key, no server, and no backdoor. The password is the only input to the key derivation.
 
-## How do I use multiple vaults?
+## Why do I have to type it again after a reload?
 
-Choose another `.keya` file from the sidebar vault switcher and authenticate. Pending changes are saved before switching. Each vault has its own keys, groups, settings, and password. Creating a file with an existing name is rejected.
+The password is discarded as soon as the file is unlocked. Keya does not keep it in memory between sessions, in session storage, or anywhere on disk, so a reload is a new unlock. This is the intended trade: nothing to recover, nothing to leak.
 
-## My browser cannot pick a folder. What now?
+## Why does a check say "request accepted" instead of "valid"?
 
-Use a current Chrome or Edge browser for full workspace support. Without the directory picker, Keya offers a limited manual `.keya` file-open/export fallback. This does not provide full folder management or automatic in-place saving. Edits stay in memory until you use Export .keya; locking or switching is refused while unsaved changes exist. File writes in folder mode also require Web Locks support.
+A `GET` that returns 2xx only proves the service answered. Unless the preset knows that its endpoint requires the credential, the honest conclusion is "the request was accepted". Only endpoints with real authentication semantics can be reported as accepting the credential.
 
-## Can I edit the same vault on multiple devices?
+## A check fails with "could not complete the request". Is my key wrong?
 
-Use one device at a time and let cloud synchronization finish before moving to another. Keya coordinates same-origin tab writes and rejects detected external changes, but it does not provide distributed locking or merge edits. See [Backup & Restore](/docs/backup).
+Probably not. The browser cannot distinguish a missing CORS header, a DNS failure, a TLS problem, or being offline, so all of them are reported the same way. A timeout is also not a verdict on the credential. Configure the exact final endpoint — Keya does not follow redirects, so a `301` to a trailing slash looks like a network failure.
 
-## Why will the vault not lock?
+## Why do reminders come back on a new device?
 
-Locking first saves pending changes. If saving fails, Keya keeps the vault unlocked to avoid discarding your edits. Keep the page open, export an encrypted copy, and resolve the permission or conflict error. Protect access to your device while the vault remains unlocked.
+Dismissals are stored on the device, not in the vault: they describe a decision about what you wanted to be told, and clearing site data is allowed to lose them. The reminders themselves are computed from the file, so they are always current.
 
-## How do I change my master password?
+## What is not in this build?
 
-Settings → General → Master Password → **Change**. Supply the current password and a new password meeting the displayed requirements. If biometrics are enabled, the UI then requests re-enrollment. Canceling that step can leave the password changed but biometric unlock needing re-enrollment. Backups made before the change still use the old password.
+- Biometric unlock and automatic locking.
+- Import and export screens, including the plaintext JSON exchange format.
+- Usage and allowance queries — the code exists but is not wired up.
 
-## Does archiving delete a key?
-
-No. Archiving moves a credential out of the main list while keeping it encrypted in the vault. Archived keys are excluded from tests and Inbox alerts and can be restored from the **Archived** view. Use **Delete** to remove a credential permanently. Keya has no recycle bin, so recover deleted credentials from a backup or your cloud file history.
-
-## How do I share a key?
-
-Copy the key into an appropriate secret-sharing tool, or create a separate vault and share its encrypted file and password through separate channels. JSON exports contain plaintext keys; do not share them unintentionally.
-
-## How do I report a bug?
-
-Open an issue at [puinoib/keya](https://github.com/puinoib/keya). Include your browser version, reproduction steps, and expected versus actual behavior. Use synthetic test data; never attach real API keys, passwords, plaintext exports, or production vaults.
+Anything stored in this build is in the `.keya` file or in this browser's local storage; nothing else leaves the device.

@@ -1,63 +1,44 @@
 ---
 title: Quick Start
-description: Choose a workspace, create a vault, and save your first key.
-updated: 2026-10-20
+description: Choose a folder, create a vault, and add a credential.
+updated: 2026-03-01
 order: 2
 ---
 
-## 1. Choose a workspace
+## 1. Choose a folder
 
-Use a current Chrome or Edge browser for the folder-based workflow. Open Keya, enter the app from the landing page, and click **Choose Sync Folder**. Read the permission explanation, then select a dedicated folder and grant read/write access.
+Open the app and select **Choose folder**. Keya remembers the folder handle, but browsers still ask for permission again after a reload or a restart.
 
-The folder can be local or managed by your cloud drive. Keya remembers its handle in browser storage, but the browser may ask you to grant permission again. Choosing a synced folder does not make simultaneous editing on different devices safe.
-
-Browsers without a directory picker offer a limited manual `.keya` open/export fallback. Edits are not auto-downloaded; use Export .keya to save them. See [FAQ](/docs/faq).
+Every `.keya` file in that folder is a vault. Nested folders are not scanned.
 
 ## 2. Create a vault
 
-On the workspace screen, choose **New Vault**, enter a name, and set and confirm a strong master password. Use a password manager to generate and retain it. Keya has no password-reset service.
+**New vault** asks for a file name, a vault name, and a master password.
 
-The vault is saved as a `.keya` file. An existing filename is rejected rather than overwritten. Once a vault is open, the sidebar vault switcher lets you create or open another vault.
+The password is the only thing protecting the file. It is judged when you create it or change it — length in characters, and whether it looks guessable — but never on unlock, because files written earlier must keep opening. There is no recovery: a forgotten password means the file stays closed.
 
 ## 3. Add a credential
 
-1. Click **Add Key**.
-2. Enter a name and the API key or token, select the service, and review the endpoint. You may also add a description, group, and expiry date.
-3. Optionally check connectivity. Preset providers receive the key on a metadata endpoint. A custom provider uses the check configured in Settings → Providers; without one, Keya only probes whether the endpoint responds and never sends the key. Custom or metered endpoints may incur charges.
-4. Click **Save Key**. Changes are auto-saved after a short delay in folder mode.
+**New key** takes:
 
-For a service that is not in the preset list, add it under Settings → Providers → **Add Custom Provider**, or choose **Custom** and enter its endpoint directly. Search APIs, scraping tools, email services, payment APIs, and internal endpoints all work this way.
+- **Name** and **description** — what this credential is for.
+- **Provider** — a preset, a custom provider, or *Unassigned*. Unassigned is a real state: you can store the secret before you know where it is used.
+- **Endpoint** — the service's base address, without a query string. Leave it empty if you do not know it; the credential is still stored.
+- **Secret** — the token itself. It is stored inside the encrypted payload.
+- **Group** — optional.
+- **Expiry** — a calendar day (expires at the end of that day in *your* timezone), an exact instant (the same moment everywhere), or nothing.
 
-A custom provider starts with a reachability check: Keya confirms the endpoint responds and does not send the key. To verify a credential, configure a check for that provider with the credential location (Bearer token, `x-api-key`, a custom header, or a query parameter) and an optional check path. Use a cheap metadata endpoint when the service offers one. Some services do not allow browser cross-origin requests at all; Keya then reports the credential as unverifiable instead of failed.
+Changes are written to the file shortly after you make them. The header shows `save: dirty` until they land.
 
-If clipboard detection is enabled, adding a key may offer a candidate from your clipboard. Verify it before accepting. Custom endpoints receive your key, so use only endpoints you trust.
+## 4. Check it (optional)
 
-## 4. Find and manage keys
+**Check now** sends a `GET` request to the provider's target with the credential in the slot the recipe names.
 
-Use search and the sidebar filters to narrow the list by group, provider, connection status, or expiry. Select a key to view details, reveal or copy its value, test it, edit it, archive it, or delete it.
+The first check asks for approval and shows the exact destination. **Always allow this destination** remembers it for that key; **Just once** allows a single request. Plaintext `http:` destinations can only be approved once.
 
-**Archive** a credential you no longer use to move it out of the main list without deleting it. Archived keys stay encrypted in the vault, are excluded from tests and Inbox alerts, and can be restored from the **Archived** view. Deleting is permanent; Keya has no recycle bin, so keep backups if you may need to recover a deleted credential.
+A successful check means one of two different things, and Keya keeps them apart:
 
-Clipboard clearing is best-effort; copied secrets can remain in clipboard history. JSON exports are plaintext. For backups, prefer encrypted `.keya` exports.
+- *request accepted* — the endpoint answered 2xx; this does not prove the credential is valid;
+- *credential accepted* — the provider's endpoint requires the credential, so a 2xx does prove it.
 
-## 5. Lock and reopen
-
-Use the **Lock** action in the top bar or vault switcher. Inactivity locking is configured in Settings → General and defaults to five minutes.
-
-Locking and switching vaults first save pending changes. **If saving fails, locking is refused and the vault stays unlocked.** Keep the page open and export an encrypted copy before troubleshooting. Do not assume unsaved edits will survive closing or reloading the page.
-
-After locking or refreshing, unlock with your master password or an enrolled PRF-supported authenticator. Passwords are not persisted for automatic session restoration.
-
-## Settings
-
-- **General:** vault name and icon, PRF biometric enrollment, inactivity interval, and master password changes.
-- **Providers:** preset visibility and custom providers/endpoints for any API service.
-- **Groups:** create, rename, or delete groups. Removing a group does not delete its keys.
-- **Keys:** optional tests after saving or on first daily unlock, plus clipboard detection. Automatic tests are disabled by default.
-- **Shortcuts:** inspect or customize keyboard shortcuts.
-
-## Next steps
-
-- Read [Security](/docs/security) for authentication and storage limits.
-- Set up [Backup & Restore](/docs/backup) before relying on the vault.
-- Check [Inbox](/docs/inbox) for expiry and connection-related alerts.
+A failed request, a timeout, or a blocked cross-origin answer is never reported as an invalid credential.
