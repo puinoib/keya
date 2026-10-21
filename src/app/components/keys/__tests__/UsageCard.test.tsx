@@ -81,6 +81,34 @@ describe('UsageCard', () => {
     expect(view.textContent).toContain('Refresh');
   });
 
+  it('shows a cached figure as history once it is old', async () => {
+    const checkedAt = '2026-10-20T09:00:00.000Z';
+    const { view } = await render({
+      now: new Date('2026-10-20T12:00:00.000Z'),
+      entry: entry({
+        checked_at: checkedAt,
+        snapshot: {
+          provider: 'OpenCode Go',
+          checked_at: checkedAt,
+          windows: [
+            {
+              id: 'weekly',
+              label: '7 days',
+              percent_used: 88,
+              resets_at: null,
+            },
+          ],
+        },
+      }),
+    });
+
+    expect(view.textContent).toContain('88% used');
+    expect(view.textContent).toContain('Last checked 3h ago');
+    expect(view.textContent).toMatch(/may have moved since/);
+    // A stale figure keeps no fresh colour claim.
+    expect(view.innerHTML).not.toContain('text-danger');
+  });
+
   it('shows why a reply could not be used rather than zero usage', async () => {
     const { view } = await render({
       entry: entry({

@@ -10,6 +10,12 @@ import {
 } from '../lib/clipboard-intake';
 import { FileStorage } from '../lib/storage';
 import { fetchUsage, type UsageEntry } from '../lib/usage';
+import {
+  dropUsageSnapshot,
+  pruneUsageCache,
+  readUsageCache,
+  writeUsageSnapshot,
+} from '../lib/usage-cache';
 import { collectAllAlerts, syncInboxWithAlerts } from '../../core/inbox';
 import { toast } from 'sonner';
 
@@ -248,6 +254,17 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+/** Drop one key's entry without touching the rest of the map. */
+function withoutKey(
+  usage: Record<string, UsageEntry>,
+  id: string
+): Record<string, UsageEntry> {
+  if (!(id in usage)) return usage;
+  const next = { ...usage };
+  delete next[id];
+  return next;
+}
+
 function maybeRunDailyAutoTest(db: Database) {
   const settings = db.getSettings();
   if (!settings.auto_test_daily) return;
@@ -354,6 +371,10 @@ export const useStore = create<AppState>((set, get) => {
           showArchived: false,
           selectedKeyId: null,
           biometricPrompt: null,
+          // The short-lived usage cache survives a lock on purpose: it is what
+          // makes reopening this tab show the allowance again. It expires on
+          // its own, and the vault still holds nothing about usage.
+          usage: {},
         });
       })();
     },
@@ -361,6 +382,14 @@ export const useStore = create<AppState>((set, get) => {
     unlock: async (db, password, fileName, storageMode = 'folder') => {
       await flushUntilClean();
       const inboxSummary = runInboxChecksForDatabase(db);
+      const vaultId = db.getData().vault_id;
+      // Prune first: a cached figure for a key this vault no longer has must
+      // not be hydrated.
+      pruneUsageCache(
+        vaultId,
+        db.getApiKeys().map((key) => key.id)
+      );
+      const cachedUsage = readUsageCache(vaultId);
       set((state) => ({
         workspaceState: 'unlocked',
         db,
@@ -369,6 +398,7 @@ export const useStore = create<AppState>((set, get) => {
         storageMode,
         hasUnsavedChanges: false,
         showArchived: false,
+        usage: cachedUsage,
         inboxVersion: inboxSummaryChanged(inboxSummary)
           ? state.inboxVersion + 1
           : state.inboxVersion,
@@ -410,10 +440,26 @@ export const useStore = create<AppState>((set, get) => {
       const db = get().db;
       if (!db) return;
       // Archived keys are read-only; ignore late async results and edits.
-      if (db.getApiKey(id)?.archived_at) return;
+      const before = db.getApiKey(id);
+      if (!before || before.archived_at) return;
       db.updateApiKey(id, updates);
+      const after = db.getApiKey(id);
+
+      // A snapshot belongs to the credential that was asked. Changing what is
+      // asked — the key, the endpoint or the provider — makes it someone
+      // else's answer, so it is dropped rather than re-labelled.
+      const requery =
+        !after ||
+        before.key !== after.key ||
+        before.endpoint !== after.endpoint ||
+        before.provider !== after.provider;
+      if (requery) {
+        dropUsageSnapshot(db.getData().vault_id, id);
+      }
+
       const summary = runInboxChecksForDatabase(db);
       set((state) => ({
+        usage: requery ? withoutKey(state.usage, id) : state.usage,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
         inboxVersion:
@@ -428,9 +474,10 @@ export const useStore = create<AppState>((set, get) => {
       const db = get().db;
       if (!db) return;
       const key = db.getApiKey(id);
-      if (!key) return;
+      if (!key || key.archived_at) return;
 
-      const started = { vault_id: db.getData().vault_id };
+      const vaultId = db.getData().vault_id;
+      const started = { vault_id: vaultId };
 
       set((state) => ({
         usage: { ...state.usage, [id]: { ...started, state: 'loading' } },
@@ -441,8 +488,11 @@ export const useStore = create<AppState>((set, get) => {
       // A lock, a vault switch, a deleted key or an edited key must not inherit
       // this reply.
       const current = get();
-      if (current.db !== db) return;
-      if (current.db?.getApiKey(id)?.key !== key.key) return;
+      const after = current.db?.getApiKey(id);
+      if (current.db !== db || !after || after.archived_at) return;
+      if (after.key !== key.key) return;
+
+      if (result.ok) writeUsageSnapshot(vaultId, id, result.snapshot);
 
       set((state) => ({
         usage: {
@@ -465,9 +515,12 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     deleteKey: (id) => {
+      const vaultId = get().db?.getData().vault_id;
+      if (vaultId) dropUsageSnapshot(vaultId, id);
       get().db?.deleteApiKey(id);
       const summary = get().db ? runInboxChecksForDatabase(get().db!) : null;
       set((state) => ({
+        usage: withoutKey(state.usage, id),
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
         inboxVersion:
@@ -481,9 +534,11 @@ export const useStore = create<AppState>((set, get) => {
     archiveKey: (id) => {
       const db = get().db;
       if (!db) return;
+      dropUsageSnapshot(db.getData().vault_id, id);
       db.archiveApiKey(id);
       const summary = runInboxChecksForDatabase(db);
       set((state) => ({
+        usage: withoutKey(state.usage, id),
         selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,
@@ -504,6 +559,7 @@ export const useStore = create<AppState>((set, get) => {
       db.removeInboxItemsForEntity(id);
       const summary = runInboxChecksForDatabase(db);
       set((state) => ({
+        usage: withoutKey(state.usage, id),
         selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
         lastInboxSyncAt: new Date().toISOString(),
         lastInboxSyncResult: null,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, Gauge, Warning } from '@phosphor-icons/react';
 import {
   describeAge,
@@ -9,18 +9,21 @@ import {
   type UsageEntry,
   type UsageFailure,
 } from '../../lib/usage';
+import { isStaleSnapshot } from '../../lib/usage-cache';
 
 /**
- * Allowance read from the provider on demand. Nothing here is stored in the
- * vault: the figures are only as good as the last request, so the card always
- * says when that was and refuses to show anything when the provider did not
- * actually answer.
+ * Allowance read from the provider on demand.
+ *
+ * The figures are the provider's, never derived, and they are never written to
+ * the vault. A snapshot may be cached for this tab for a short while, so the
+ * card always says how old it is and shows a stale one as history rather than
+ * as current: a number Keya cannot keep current must not look live.
  */
 export function UsageCard({
   provider,
   entry,
   onRefresh,
-  now = new Date(),
+  now,
 }: {
   provider: string;
   /** This session's result for the key, or undefined before the first query. */
@@ -28,7 +31,9 @@ export function UsageCard({
   onRefresh: () => void;
   now?: Date;
 }) {
-  const [renderedAt] = useState(now);
+  const currentTime = useNow(now);
+  const snapshot = entry?.state === 'ok' ? entry.snapshot : undefined;
+  const stale = isStaleSnapshot(snapshot?.checked_at, currentTime);
 
   if (!supportsUsage(provider)) {
     const reason = unsupportedUsageReason(provider);
@@ -47,7 +52,6 @@ export function UsageCard({
   }
 
   const loading = entry?.state === 'loading';
-  const snapshot = entry?.state === 'ok' ? entry.snapshot : undefined;
   const failure = entry?.state === 'failed' ? entry.failure : undefined;
   const tightest = tightestWindow(snapshot);
 
@@ -81,15 +85,15 @@ export function UsageCard({
 
       {!entry && (
         <p className="text-[11px] leading-relaxed text-ink-quaternary">
-          Ask {provider} for {provider === 'OpenCode Go' ? 'its' : 'the'}{' '}
-          allowance windows. Nothing is stored in this vault.
+          Ask {provider} for its allowance windows. Nothing is stored in this
+          vault.
         </p>
       )}
 
       {snapshot && (
         <div className="space-y-2">
           {snapshot.windows.map((window) => {
-            const reset = describeReset(window.resets_at, renderedAt);
+            const reset = describeReset(window.resets_at, currentTime);
             const used = Math.round(window.percent_used);
             return (
               <div key={window.id}>
@@ -98,26 +102,14 @@ export function UsageCard({
                     {window.label}
                   </span>
                   <span
-                    className={`text-[11px] font-medium ${
-                      used >= 90
-                        ? 'text-danger'
-                        : used >= 70
-                          ? 'text-[#d97706] dark:text-[#fbbf24]'
-                          : 'text-ink-secondary'
-                    }`}
+                    className={`text-[11px] font-medium ${percentTone(used, stale)}`}
                   >
                     {used}% used
                   </span>
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-3">
                   <div
-                    className={`h-full rounded-full ${
-                      used >= 90
-                        ? 'bg-danger'
-                        : used >= 70
-                          ? 'bg-[#d97706] dark:bg-[#fbbf24]'
-                          : 'bg-success-bright'
-                    }`}
+                    className={`h-full rounded-full ${barTone(used, stale)}`}
                     style={{ width: `${used}%` }}
                   />
                 </div>
@@ -129,14 +121,58 @@ export function UsageCard({
               </div>
             );
           })}
-          <p className="text-[10px] text-ink-quaternary">
-            {tightest ? `${tightest.label} is closest to its limit. ` : ''}
-            Read from {provider} {describeAge(snapshot.checked_at, renderedAt)}.
+          <p className="text-[10px] leading-relaxed text-ink-quaternary">
+            {stale ? (
+              <>
+                <Warning className="mr-1 inline size-2.5 align-[-1px]" />
+                Last checked {describeAge(snapshot.checked_at, currentTime)}.
+                The provider may have moved since.
+              </>
+            ) : (
+              <>
+                {tightest ? `${tightest.label} is closest to its limit. ` : ''}
+                Read from {provider}{' '}
+                {describeAge(snapshot.checked_at, currentTime)}.
+              </>
+            )}
           </p>
         </div>
       )}
     </div>
   );
+}
+
+function barTone(used: number, stale: boolean): string {
+  if (stale || used < 70) return 'bg-ink-quaternary';
+  if (used >= 90) return 'bg-danger';
+  return 'bg-[#d97706] dark:bg-[#fbbf24]';
+}
+
+function percentTone(used: number, stale: boolean): string {
+  if (stale) return 'text-ink-tertiary';
+  if (used >= 90) return 'text-danger';
+  if (used >= 70) return 'text-[#d97706] dark:text-[#fbbf24]';
+  return 'text-ink-secondary';
+}
+
+/**
+ * Re-render on a slow tick so an open card's "3m ago" and its stale styling do
+ * not freeze. Only worth doing while there is something to age.
+ */
+function useNow(now?: Date): Date {
+  const [time, setTime] = useState(() => now ?? new Date());
+
+  useEffect(() => {
+    if (now) {
+      setTime(now);
+      return;
+    }
+    setTime(new Date());
+    const timer = setInterval(() => setTime(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, [now]);
+
+  return now ?? time;
 }
 
 function UsageFailureNote({ failure }: { failure: UsageFailure }) {
