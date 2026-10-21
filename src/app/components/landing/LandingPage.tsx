@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { KeyaLogo } from '@/components/ui/keya-logo';
-import { useUi } from '@/app/store/ui-store';
+import { useStore } from '@/app/store/useStore';
 
 const themeOptions = [
   { value: 'system' as const, label: 'System', icon: Monitor },
@@ -68,7 +68,7 @@ const workflowItems = [
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const { theme, setTheme } = useUi();
+  const { theme, setTheme } = useStore();
   const CurrentIcon =
     themeOptions.find((option) => option.value === theme)?.icon ?? Monitor;
 

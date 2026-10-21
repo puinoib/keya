@@ -34,7 +34,7 @@ The password is discarded as soon as the file key is derived. Nothing in the app
 
 Locking first saves pending changes. **If that save fails, locking is refused** and the vault stays open with the error visible; keep the page open and resolve it before leaving the device.
 
-Biometric unlock, automatic locking, and clipboard clearing are not part of this build yet.
+Biometric unlock wraps the password with a key derived by the authenticator through WebAuthn PRF; a device that cannot do PRF is refused rather than offered a weaker fallback. Auto lock and clipboard clearing are on-device conveniences: they cover the case where you walk away, not the case where code is already running in the page.
 
 ## Local data
 
@@ -56,6 +56,6 @@ Destinations you approve are stored on this device; importing a vault never gran
 
 ## Backups and exports
 
-An encrypted `.keya` copy is the backup format. There is no plaintext export in this build, and no import screen yet: a JSON exchange format exists in the specification but is not wired up.
+An encrypted `.keya` copy is the backup format. **Export JSON** writes the same credentials as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. Importing either format is not available yet.
 
 If you change a password, older copies keep opening with the old one. Keya cannot revoke a copy that left the device.
