@@ -1,4 +1,13 @@
-import type { ApiKey } from '../../core/types';
+/**
+ * What a usage query needs from a key. `provider` is the display name the caller
+ * resolved (a preset label or a custom provider name); the v2 payload keeps the
+ * reference instead, and the mapping belongs to the UI layer.
+ */
+export interface UsageSubject {
+  provider: string;
+  endpoint: string;
+  secret: string;
+}
 
 /**
  * Usage and quota read straight from the provider's own metadata endpoint.
@@ -243,7 +252,7 @@ async function readJson(res: Response): Promise<unknown> {
  * refused rather than followed with the credential attached.
  */
 export async function fetchUsage(
-  key: ApiKey,
+  key: UsageSubject,
   options: { timeoutMs?: number } = {}
 ): Promise<UsageResult> {
   const provider = normalizeProvider(key.provider);
@@ -273,7 +282,7 @@ export async function fetchUsage(
   try {
     const res = await fetch(url, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${key.key}` },
+      headers: { Authorization: `Bearer ${key.secret}` },
       signal: controller.signal,
     });
 

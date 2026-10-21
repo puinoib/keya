@@ -20,7 +20,7 @@ export function HelpSidebar({
     <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel px-2 pt-3 pb-2">
       <button
         type="button"
-        onClick={() => navigate({ to: '/keys' })}
+        onClick={() => navigate({ to: '/start' })}
         className="flex items-center gap-2 rounded-md px-2.5 py-1.5 mb-3 text-xs text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
       >
         <ArrowLeft className="size-3.5" />

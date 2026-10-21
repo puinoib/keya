@@ -5,10 +5,6 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import { routeTree } from './routeTree.gen';
 import './index.css';
-import { clearLegacySession } from './app/lib/session';
-
-clearLegacySession();
-
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',

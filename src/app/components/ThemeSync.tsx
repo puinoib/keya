@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useStore } from '../store/useStore';
+import { useUi } from '../store/ui-store';
 
 export function ThemeSync() {
-  const theme = useStore((s) => s.theme);
+  const theme = useUi((state) => state.theme);
 
   useEffect(() => {
     const root = document.documentElement;
