@@ -50,7 +50,7 @@ This is not a distributed lock: another device using the same cloud folder can s
 
 ## Network
 
-There is no Keya backend and no analytics. Network requests come only from a check you approved, and they go to the destination shown in the approval dialog. `http:` destinations cannot be approved permanently. Redirects are never followed.
+There is no Keya backend and no analytics. Network requests come only from something you asked for: a check, which you approve per destination, or a usage query, which is approved for the URL it asks. A daily check reuses only destinations you allowed permanently, and it never asks on its own. `http:` destinations cannot be approved permanently, and usage queries refuse an `http:` endpoint outright because the key would travel in clear text. Redirects are never followed.
 
 Destinations you approve are stored on this device; importing a vault never grants network access.
 
