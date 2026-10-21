@@ -20,6 +20,8 @@ import { providerIdForLabel } from '../view/catalog';
 import { buildDatabase, ViewDatabase } from '../view/build';
 import { isoToExpiry } from '../view/convert';
 import type { ApiKey, CustomProvider, Group, NewApiKey, Settings } from '../view/types';
+import { fetchUsage, type UsageEntry } from '../lib/usage';
+import { writeUsageSnapshot } from '../lib/usage-cache';
 import type { OpenedVault } from '../lib/storage';
 import {
   tryDetectClipboardKey,
@@ -38,6 +40,7 @@ type WorkspaceState = 'welcome' | 'unlocked';
 
 interface Runtime {
   vault: Vault;
+  password: string;
   session: VaultSession;
   local: LocalState;
   fileName: string;
@@ -50,6 +53,8 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface AppState {
   workspaceState: WorkspaceState;
+  /** Session-only, so biometric enrollment can wrap it. Saves never use it. */
+  password: string | null;
   db: ViewDatabase | null;
   activeVaultFileName: string | null;
   storageMode: VaultStorageMode;
@@ -69,6 +74,8 @@ interface AppState {
   showArchived: boolean;
 
   selectedKeyId: string | null;
+  usage: Record<string, UsageEntry>;
+  biometricPrompt: { vaultId: string; password: string } | null;
   inboxVersion: number;
   lastInboxSyncAt: string | null;
   lastInboxSyncResult: {
@@ -96,6 +103,10 @@ interface AppState {
   archiveKey: (id: string) => void;
   restoreKey: (id: string) => void;
 
+  refreshUsage: (keyId: string) => Promise<void>;
+  setBiometricPrompt: (
+    prompt: { vaultId: string; password: string } | null
+  ) => void;
   setSearchQuery: (query: string) => void;
   setShowAddForm: (show: boolean) => void;
   beginAddKeyFlow: () => Promise<void>;
@@ -180,6 +191,7 @@ export const useStore = create<AppState>()((set, get) => {
 
   return {
     workspaceState: 'welcome',
+    password: null,
     db: null,
     activeVaultFileName: null,
     storageMode: 'folder',
@@ -199,6 +211,8 @@ export const useStore = create<AppState>()((set, get) => {
     showArchived: false,
 
     selectedKeyId: null,
+    usage: {},
+    biometricPrompt: null,
     inboxVersion: 0,
     lastInboxSyncAt: null,
     lastInboxSyncResult: null,
@@ -209,6 +223,7 @@ export const useStore = create<AppState>()((set, get) => {
       const preferences = await localState.getPreferences();
       runtime = {
         vault: opened.vault,
+        password: _password,
         session: opened.session,
         local: localState,
         fileName,
@@ -217,6 +232,7 @@ export const useStore = create<AppState>()((set, get) => {
       };
       set({
         workspaceState: 'unlocked',
+        password: _password,
         activeVaultFileName: fileName,
         storageMode,
         hasUnsavedChanges: false,
@@ -235,10 +251,13 @@ export const useStore = create<AppState>()((set, get) => {
       runtime = null;
       set({
         workspaceState: 'welcome',
+        password: null,
         db: null,
         activeVaultFileName: null,
         hasUnsavedChanges: false,
         selectedKeyId: null,
+        usage: {},
+        biometricPrompt: null,
         showAddForm: false,
         addKeyDraft: null,
         clipboardCandidate: null,
@@ -368,6 +387,30 @@ export const useStore = create<AppState>()((set, get) => {
       if (!result.ok) return;
       void afterChange();
     },
+
+    refreshUsage: async (keyId) => {
+      if (!runtime) return;
+      const view = get().db?.getApiKey(keyId);
+      if (!view) return;
+
+      const result = await fetchUsage({
+        provider: view.provider,
+        endpoint: view.endpoint,
+        secret: view.key,
+      });
+      const vaultId = runtime.vault.getPayload().vault.id;
+      const entry: UsageEntry =
+        result.ok === true
+          ? { state: 'ok', snapshot: result.snapshot, vault_id: vaultId }
+          : { state: 'failed', failure: result.failure, vault_id: vaultId };
+
+      set((state) => ({ usage: { ...state.usage, [keyId]: entry } }));
+      if (entry.state === 'ok' && entry.snapshot) {
+        writeUsageSnapshot(entry.vault_id, keyId, entry.snapshot);
+      }
+    },
+
+    setBiometricPrompt: (biometricPrompt) => set({ biometricPrompt }),
 
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     setShowAddForm: (showAddForm) => set({ showAddForm }),

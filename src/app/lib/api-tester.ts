@@ -36,6 +36,50 @@ export class ApiTester {
     return findPreset(id.slice('preset:'.length))?.verifies ?? 'request';
   }
 
+  /** Draft credentials from the form have no stored identity yet. */
+  static async testRaw(
+    provider: string,
+    endpoint: string,
+    key: string,
+    settings?: Settings
+  ): Promise<TestResult> {
+    const { providerIdForLabel: resolve } = await import('../view/catalog');
+    return ApiTester.testKey(
+      {
+        id: 'draft',
+        name: 'draft',
+        description: '',
+        provider,
+        provider_id: resolve(
+          provider,
+          (settings?.custom_providers ?? []).map((entry) => ({
+            id: entry.name,
+            name: entry.name,
+          }))
+        ),
+        endpoint,
+        key,
+        group_id: null,
+        expires_at: null,
+        expiry: null,
+        archived_at: null,
+        connection_check: {
+          status: 'untested',
+          checked_at: null,
+          latency_ms: null,
+          error_message: null,
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      settings
+    );
+  }
+
+  static unverifiableReason(provider: string): string {
+    return `${provider} cannot be verified from this browser; this is not proof that the credential is invalid.`;
+  }
+
   static async testKey(key: ApiKey, settings?: Settings): Promise<TestResult> {
     const stored = await runManualCheck(key.id);
     if (stored) return stored;

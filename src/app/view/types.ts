@@ -45,7 +45,7 @@ export interface ApiKey {
 
 export type NewApiKey = Omit<
   ApiKey,
-  'id' | 'created_at' | 'updated_at' | 'archived_at' | 'connection_check' | 'expiry'
+  'id' | 'created_at' | 'updated_at' | 'archived_at' | 'expiry'
 > & {
   archived_at?: string | null;
   expiry?: Expiry | null;
