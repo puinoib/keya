@@ -17,8 +17,13 @@ import type {
 import { businessAlerts, observationAlerts } from '../../core/reminders';
 import type { Reminder } from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
-import { groupToView, keyToView, providerToView } from './convert';
-import { getDaysSince, getDaysUntilExpiry } from './status';
+import {
+  daysUntilExpiry,
+  groupToView,
+  keyToView,
+  providerToView,
+} from './convert';
+import { getDaysSince } from './status';
 import type { ApiKey, Group, InboxItem, Settings, VaultData } from './types';
 
 export interface ViewInput {
@@ -104,11 +109,10 @@ export function buildInbox(input: ViewInput): InboxItem[] {
     const latest = observations.get(key.id);
     const metadata = {
       key_name: key.name,
-      provider: keyToView(key, file, latest).provider,
+      provider: keyToView(key, file, latest, input).provider,
       expires_at: key.expiry?.value,
-      days_until_expiry: key.expiry
-        ? (getDaysUntilExpiry(key.expiry.value, input.now) ?? undefined)
-        : undefined,
+      days_until_expiry:
+        daysUntilExpiry(key.expiry, input.now, input.timeZone) ?? undefined,
       checked_at: latest?.finished_at ?? null,
       error_message: describeFailure(latest),
       endpoint: key.endpoint ?? undefined,
@@ -241,7 +245,7 @@ export function buildDatabase(input: ViewInput): ViewDatabase {
     name: file.vault.name,
     icon: file.vault.icon,
     api_keys: file.keys.map((key) =>
-      keyToView(key, file, input.observations.get(key.id))
+      keyToView(key, file, input.observations.get(key.id), input)
     ),
     groups: file.groups.map(groupToView),
     settings: buildSettings(file, input.preferences),

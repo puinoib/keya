@@ -21,6 +21,7 @@ import {
 import { currentBindings, type KeyBinding } from './binding';
 import type { Approval } from '../../core/runtime/grants';
 import { consumeApproval } from '../../core/runtime/grants';
+import { sendFingerprint } from '../../core/fingerprint';
 import type {
   BusinessDismissal,
   ObservationDismissal,
@@ -202,6 +203,50 @@ export class VaultSession {
     const binding = (await this.bindings()).get(keyId);
     if (!binding) return false;
     return this.hasGrantFor(binding.send);
+  }
+
+  /**
+   * Usage queries are not probes, but they still send the credential somewhere.
+   * They get the same one-shot consent: a click approves this URL once, and a
+   * standing grant for the same shape keeps working without another click.
+   */
+  async approveUsageOnce(keyId: string, url: string): Promise<string | null> {
+    const fingerprint = await this.usageFingerprint(keyId, url);
+    if (!fingerprint) return null;
+
+    this.approvals = [
+      ...this.approvals,
+      { fingerprint, keyId, sessionId: this.sessionId },
+    ];
+    return fingerprint;
+  }
+
+  /** Consume the approval created for exactly this usage request. */
+  async authorizeUsage(keyId: string, url: string): Promise<boolean> {
+    const fingerprint = await this.usageFingerprint(keyId, url);
+    if (!fingerprint) return false;
+    if (await this.hasGrantFor(fingerprint)) return true;
+
+    const outcome = consumeApproval(this.approvals, {
+      fingerprint,
+      keyId,
+      sessionId: this.sessionId,
+    });
+    this.approvals = outcome.remaining;
+    return outcome.ok;
+  }
+
+  private async usageFingerprint(
+    keyId: string,
+    url: string
+  ): Promise<string | null> {
+    if (!this.payload.keys.some((key) => key.id === keyId)) return null;
+    return sendFingerprint({
+      keyId,
+      resolvedHref: url,
+      auth: { mode: 'bearer' },
+      headers: [],
+    });
   }
 
   /** One-shot consent from a user gesture; consumed by the next probe. */

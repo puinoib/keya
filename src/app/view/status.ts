@@ -1,9 +1,11 @@
 /**
  * Presentation-level status helpers.
  *
- * They read the instant the view exposes, so a calendar-day expiry still shows
- * the status of the day it represents.
+ * Expiry verdicts come from the view, which derives them with the core rules in
+ * the device's time zone; this module only turns them into copy.
  */
+
+const DAY = 24 * 60 * 60 * 1000;
 
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
 export type ConnectionStatusLabel =
@@ -11,37 +13,6 @@ export type ConnectionStatusLabel =
   | 'Reachable'
   | 'Failed'
   | 'Untested';
-
-export const EXPIRY_REMINDER_DAYS = 7;
-
-const DAY = 24 * 60 * 60 * 1000;
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export function getDaysUntilExpiry(
-  expiresAt: string,
-  now = new Date()
-): number | null {
-  const parsed = new Date(expiresAt);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return Math.round(
-    (startOfDay(parsed).getTime() - startOfDay(now).getTime()) / DAY
-  );
-}
-
-export function getExpiryStatus(
-  expiresAt: string | null,
-  now = new Date()
-): ExpiryStatus {
-  if (!expiresAt) return 'none';
-  const days = getDaysUntilExpiry(expiresAt, now);
-  if (days === null) return 'none';
-  if (days < 0) return 'expired';
-  if (days <= EXPIRY_REMINDER_DAYS) return 'expiring_soon';
-  return 'valid';
-}
 
 export function getExpiryStatusLabel(status: ExpiryStatus): string {
   switch (status) {

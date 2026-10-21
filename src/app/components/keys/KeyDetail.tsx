@@ -13,7 +13,6 @@ import type { ApiKey } from '../../view/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import {
   getConnectionStatusLabel,
-  getExpiryStatus,
   getExpiryStatusLabel,
 } from '../../view/status';
 import {
@@ -130,7 +129,7 @@ export function KeyDetail() {
     });
   };
 
-  const expiryStatus = getExpiryStatus(key.expires_at);
+  const expiryStatus = key.expiry_status;
   const groupLabel = group ? `${group.icon} ${group.name}` : '📥 Ungrouped';
   const expiryLabel =
     expiryStatus === 'expired' || expiryStatus === 'expiring_soon'

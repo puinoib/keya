@@ -18,7 +18,7 @@ import {
   getProviderSections,
 } from '../../view/catalog';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
-import { getExpiryStatus, getExpiryStatusLabel } from '../../view/status';
+import { getExpiryStatusLabel } from '../../view/status';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,7 +108,7 @@ export function KeyList() {
     });
   if (filterExpiryStatus) {
     keys = keys.filter((k) => {
-      const expiryStatus = getExpiryStatus(k.expires_at);
+      const expiryStatus = k.expiry_status;
       if (filterExpiryStatus === 'expired') return expiryStatus === 'expired';
       if (filterExpiryStatus === 'expiring')
         return expiryStatus === 'expiring_soon';
@@ -323,7 +323,7 @@ export function KeyList() {
         {keys.map((key) => {
           const isTesting = testing === key.id;
           const isSelected = selectedKeyId === key.id;
-          const expiryStatus = getExpiryStatus(key.expires_at);
+          const expiryStatus = key.expiry_status;
           const status =
             key.connection_check.status === 'success'
               ? {
