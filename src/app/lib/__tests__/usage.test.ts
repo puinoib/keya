@@ -41,14 +41,12 @@ describe('usage request policy', () => {
   });
 
   it('asks the approved URL with the stored key as a bearer token', async () => {
-    const fetchMock = vi.fn(
-      async (_url: string, _init: RequestInit) => ({
-        status: 401,
-        url: usageRequestUrl(SUBJECT),
-        headers: { get: () => 'application/json' },
-        json: async () => ({}),
-      })
-    );
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({
+      status: 401,
+      url: usageRequestUrl(SUBJECT),
+      headers: { get: () => 'application/json' },
+      json: async () => ({}),
+    }));
     vi.stubGlobal('fetch', fetchMock);
 
     await fetchUsage(SUBJECT, { authorize: async () => true });
