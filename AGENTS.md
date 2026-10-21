@@ -28,11 +28,17 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 
 | Task | Starting points |
 |---|---|
-| Encryption or `.keya` format | `src/core/crypto.ts`, `src/core/schema.ts`, `src/core/validators.ts` and core tests |
-| Save, lock, switch, import, or password change | `src/app/store/useStore.ts`, `src/app/lib/storage.ts`, `src/app/components/layout/TopBar.tsx` |
-| Authentication or refresh behavior | `src/app/lib/session.ts`, `src/app/lib/biometric.ts`, `src/main.tsx`, `src/app/hooks/useAutoLock.ts`, `src/routes/_authenticated.tsx` |
-| Inbox rules | `src/core/inbox.ts`, `src/core/key-status.ts` and their tests |
-| Provider requests | `src/app/lib/api-tester.ts`; distinguish connectivity from credential validity. Custom providers only run the check configured in Settings, and an unverifiable provider must never be stored as a failure |
+| Encryption, byte layout, KDF | `src/core/format/{constants,preamble,container,kdf}.ts`, frozen vector in `src/core/__tests__/container.test.ts` |
+| Payload model and validation | `src/core/payload/{types,limits,validate,normalize,serialize}.ts`; the spec is `docs/keya-format.md` (not in git) |
+| Derived keys (consent, freshness) | `src/core/fingerprint/index.ts`; vectors in `src/core/__tests__/appendix-c-fingerprints.test.ts` |
+| Edits, timestamps, ordering | `src/core/payload/edits.ts` (pure transactions) and `src/app/vault/vault.ts` (who applies them) |
+| Save, lock, password change, clone | `src/app/vault/vault.ts`; write matrix and I17 in the spec §3.6 |
+| Workspace folder and file access | `src/app/storage/{workspace,browser,platform}.ts` |
+| Device-local state | `src/app/storage/local/{state,idb-kv}.ts` (containers, observations, dismissals, grants, prefs, device key) |
+| Probe request and interpretation | `src/core/probe/request.ts`, `src/app/probe/{execute,check}.ts`; a generic recipe may only claim `request/ok`, never credential validity |
+| Presets | `src/core/presets/{data,classify}.ts`; presets are data, so changing a target invalidates grants |
+| Reminders | `src/core/reminders.ts`, `src/core/runtime/*`; dismissals are device-local and bound to a fact fingerprint |
+| UI | `src/app/screens/next/*` and `src/app/store/{vault-store,next-vault}.ts` |
 | Deployed response headers or caching | `worker/index.ts`, `wrangler.toml`; the CSP keeps `'wasm-unsafe-eval'` for libsodium and allows user-supplied endpoints in `connect-src` |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
 
@@ -45,11 +51,12 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 
 ## Security and data safety
 
-- Never persist plaintext passwords or encryption keys alongside the secrets they decrypt. Session storage does not restore an unlocked session; refresh requires authentication.
-- Biometric unlock requires WebAuthn PRF. Unsupported or failed PRF must not downgrade to a stored AES key.
-- Preserve the save queue and `flushSave()` lifecycle when changing lock, switch, import, or password updates. Saving failure must remain visible and must not silently discard unsaved data.
-- File writes use Web Locks and revision checks. Creating a vault must reject existing filenames; saving must reject detected external changes. These checks do not provide distributed locking against cloud clients.
-- Bind asynchronous results to the vault that initiated them; do not apply stale results to the currently selected vault.
-- Treat `.keya` as a persistent user format: assess compatibility and migration before changing serialization or validation. The implementation, not old documentation, defines the current format.
-- Keep real keys and passwords out of logs, tests, screenshots, and commits. Use synthetic fixtures. JSON exports contain plaintext secrets.
+- Never persist plaintext passwords or encryption keys alongside the secrets they decrypt. The password is discarded once the file key exists; nothing restores an unlocked session, so a refresh requires authentication.
+- Saving copies `version`, `kdf_*` and `salt` verbatim and only rotates the nonce. Never regenerate a container field on the save path: there is no password there, and the result would be a file nobody can open.
+- Preserve the write queue and `Vault.flush()` lifecycle when changing lock, password or cloning. A failed save keeps the payload dirty and visible; a lock that cannot flush must be cancelled.
+- File writes use Web Locks and digest checks. Creating a vault must reject existing filenames; saving must reject detected external changes. These checks do not provide distributed locking against cloud clients.
+- Authorize every request by its own `send_fingerprint`. Automatic checks need a persistent grant; plaintext targets can only get single-use approvals. A generic recipe tops out at `request/ok`.
+- Bind asynchronous results to the session and binding that produced them; a result for a rotated secret or a changed destination must be discarded, not stored.
+- `.keya` is a persistent user format with no migration path: unknown fields and unknown versions are rejected. Changing the payload is a format decision — update `docs/keya-format.md` in the same change.
+- Keep real keys and passwords out of logs, tests, screenshots, and commits. Use synthetic fixtures. Never persist provider error text; keep to the controlled `detail_code`.
 - Describe actual security limits. Local encryption does not protect an unlocked app from compromised same-origin code, browser extensions, or the operating system.
