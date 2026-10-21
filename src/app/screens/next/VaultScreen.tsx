@@ -15,6 +15,7 @@ import type {
   ObservationDismissal,
 } from '@/core/runtime/dismissals';
 import { KeysPanel } from './KeysPanel';
+import { SettingsPanel } from './SettingsPanel';
 
 export function VaultScreen() {
   const payload = useVault((state) => state.payload);
@@ -23,6 +24,7 @@ export function VaultScreen() {
   const reminders = useVault((state) => state.reminders);
   const error = useVault((state) => state.error);
 
+  const [tab, setTab] = useState<'keys' | 'settings'>('keys');
   const [silenced, setSilenced] = useState<{
     business: BusinessDismissal[];
     observation: ObservationDismissal[];
@@ -170,7 +172,24 @@ export function VaultScreen() {
         )}
       </section>
 
-      <KeysPanel />
+      <nav className="flex gap-2 border-b border-line pb-2">
+        <Button
+          size="sm"
+          variant={tab === 'keys' ? 'default' : 'ghost'}
+          onClick={() => setTab('keys')}
+        >
+          Keys
+        </Button>
+        <Button
+          size="sm"
+          variant={tab === 'settings' ? 'default' : 'ghost'}
+          onClick={() => setTab('settings')}
+        >
+          Providers & groups
+        </Button>
+      </nav>
+
+      {tab === 'keys' ? <KeysPanel /> : <SettingsPanel />}
     </main>
   );
 }
