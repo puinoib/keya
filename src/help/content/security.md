@@ -1,62 +1,61 @@
 ---
 title: Security
-description: Encryption, authentication, and the limits of local protection.
-updated: 2026-10-20
-order: 6
+description: The file format, the key derivation, and the limits of local protection.
+updated: 2026-03-01
+order: 4
 ---
 
-Keya encrypts vault contents on disk. It does not protect an unlocked vault against compromised application code, browser extensions, or the operating system. This is not a claim of an independent security audit.
+Keya encrypts vault contents on disk. It does not protect an unlocked vault against compromised application code, browser extensions, or the operating system. This is not a security audit.
 
-## What is encrypted
-
-The payload contains API keys, groups, settings, inbox items, and vault metadata, including archived credentials. Archiving keeps the secret in the vault; only permanent deletion removes it from the current payload. File names, file sizes, and the binary header are not encrypted. The header includes the vault UUID and timestamps.
-
-IndexedDB separately stores the workspace directory handle and cached vault summaries, including names, icons, and key counts. These summaries are not encrypted. PRF biometric enrollment also stores a credential ID, PRF salt, nonce, and encrypted master password; the PRF-derived encryption key is not stored.
-
-## Current file format
+## What the file contains
 
 ```text
-Header (128B) | HeaderHash (32B) | EncParams (96B) | PayloadLen (4B) | Payload (N)
+preamble (54 bytes) | ciphertext (one AEAD message)
 ```
 
-- **Header:** magic `KEYA`, version 1, flags, vault UUID, timestamps, random master seed, and reserved bytes.
-- **HeaderHash:** unkeyed SHA-256 over the header, encryption parameters, and payload length. This detects accidental corruption; it is not an HMAC or authentication of the header against a malicious editor.
-- **EncParams:** Argon2id algorithm and resource settings, salt, and encryption nonce.
-- **PayloadLen:** unsigned 32-bit little-endian ciphertext length.
-- **Payload:** XChaCha20-Poly1305 authenticated ciphertext of JSON padded with spaces to a 4096-byte boundary.
+- **preamble:** magic `KEYA`, format version, Argon2id parameters, the 16-byte salt, and the 24-byte nonce. It is public: anyone with the file can read it.
+- **ciphertext:** XChaCha20-Poly1305 over the payload with the *whole preamble* as associated data. There is no length field, so truncating or appending bytes fails authentication.
 
-Current saves pre-hash the password with SHA-256, run Argon2id with `ops=10` and `mem=67108864` bytes (64 MiB), then hash the master seed together with the derived key to obtain the encryption key. Each save generates a fresh master seed, 16-byte salt, and 24-byte nonce.
+Encrypted: credential secrets, names, descriptions, endpoints, expiry dates, groups, custom provider recipes, and the vault's own name and icon.
 
-Payload authentication uses libsodium's XChaCha20-Poly1305 AEAD API. The header is not passed as AEAD additional authenticated data. After decryption, Keya validates the database shape and checks that the payload vault ID matches the header. The source of truth is `src/core/schema.ts` and `src/core/crypto.ts`.
+Not encrypted: the file name, its size, and the preamble. The preamble deliberately carries no vault identifier, so nothing business-specific is visible before unlocking.
 
-## Passwords and sessions
+## Key derivation
 
-The unlocked app holds the password and decrypted data in memory so it can display and save the vault. It does not persist the password in sessionStorage or localStorage for restoration. Old recoverable session records are discarded.
+The file key is `Argon2id(password)` — no pre-hash, no second secret mixed in. The default is 10 passes over 64 MiB, and unlocking runs it once in a worker; saving does not run it again.
 
-**Reloading requires authentication again.** There is no warm session restoration or shared unlocked state across tabs. Keep your master password in a password manager; Keya has no password-reset service.
+- The salt belongs to the file. Renaming or copying the file keeps the same key; **changing the password** picks a new salt and rewrites everything.
+- Every save generates a new nonce, checked against the one already on disk.
+- A wrong password, a modified ciphertext, a truncated file, and an appended byte all fail the same way. They are deliberately indistinguishable.
 
-Locking first attempts to save pending changes. On success it clears the active vault and password from application state. This is not a guarantee of secure erasure of all copies from JavaScript memory.
+## Sessions
 
-**If saving fails, locking is refused and the vault remains unlocked.** Keep the page open, export an encrypted copy, and resolve the error before leaving the device. The default inactivity timeout is five minutes; choose an available interval in Settings → General.
+The password is discarded as soon as the file key is derived. Nothing in the app retains it, and reloading requires it again — there is no warm session and no shared unlocked state between tabs.
 
-## Biometric unlock
+Locking first saves pending changes. **If that save fails, locking is refused** and the vault stays open with the error visible; keep the page open and resolve it before leaving the device.
 
-Biometric unlock requires a WebAuthn authenticator supporting the **PRF extension**. Keya derives an AES-GCM key from PRF output using HKDF, and uses it to encrypt or decrypt the stored master password. Authenticator credentials are managed by the browser/authenticator, not stored as private keys in Keya's IndexedDB.
+Biometric unlock, automatic locking, and clipboard clearing are not part of this build yet.
 
-If PRF is unavailable or evaluation fails during enrollment, Keya refuses registration instead of storing a fallback encryption key. A passkey can be created successfully while still not supporting PRF: support depends on the browser, operating system, and passkey storage provider. In Chrome, **Your Chrome profile** may not return PRF even when Google Password Manager or iCloud Keychain does. If enrollment fails after choosing where to save the passkey, choose Google Password Manager or iCloud Keychain and try again. Legacy records that stored a key beside the ciphertext are removed during the storage upgrade or when encountered. Close older Keya tabs if an upgrade is blocked.
+## Local data
 
-An enrolled credential and its Keya site record are needed for biometric unlock. Do not rely on them as your only recovery method. Clearing site data requires password unlock and re-enrollment. Credential availability or synchronization depends on the authenticator and browser; Keya does not synchronize its enrollment records.
+The browser stores, unencrypted: the folder handle, the container registry (vault name, icon, key count), the check results for each key, the dismissals you made, approved destinations, and preferences. Clearing site data loses them; the vault file is unaffected.
+
+Check results never contain the request, the headers, the response body, or the provider's own error text. They record an outcome and a controlled code, which is what the reminder text is generated from.
 
 ## Saving and synchronization
 
-Same-origin tabs coordinate file writes using Web Locks. Keya compares the current file against the revision it opened or last saved, and rejects detected external modifications. Creating a vault with an existing filename is rejected.
+Writes are serialized across tabs, and each save is rejected if the file changed since it was read. Creating a vault with an existing name is rejected rather than overwriting.
 
-These checks do not lock cloud clients or other devices, merge conflicting edits, or eliminate every race with external writers. Use one device at a time per vault and keep versioned backups. See [Backup & Restore](/docs/backup).
+This is not a distributed lock: another device using the same cloud folder can still write last. Use one device at a time per vault, and rely on versioned backups.
 
-## Network requests and clipboard
+## Network
 
-Keya has no application backend or analytics. Loading the app still retrieves its static assets. Manual API tests and enabled automatic tests send keys to the configured provider endpoint. Review custom endpoints carefully and prefer HTTPS. Tests use provider metadata endpoints where available; custom or metered endpoints may incur charges. Amazon Bedrock is not testable from the browser because it requires AWS request signing; NVIDIA NIM and Baseten are not testable because they send no cross-origin headers.
+There is no Keya backend and no analytics. Network requests come only from a check you approved, and they go to the destination shown in the approval dialog. `http:` destinations cannot be approved permanently. Redirects are never followed.
 
-Copied keys leave the app's encrypted storage boundary. The key detail copy action attempts to clear the clipboard after 15 seconds, but browser permissions, page closure, and clipboard history can prevent effective removal. Do not rely on clipboard clearing for secrecy.
+Destinations you approve are stored on this device; importing a vault never grants network access.
 
-JSON exports contain plaintext keys, including archived ones. Encrypted `.keya` exports are preferable for backup. Neither format should be attached to a public bug report with real secrets inside.
+## Backups and exports
+
+An encrypted `.keya` copy is the backup format. There is no plaintext export in this build, and no import screen yet: a JSON exchange format exists in the specification but is not wired up.
+
+If you change a password, older copies keep opening with the old one. Keya cannot revoke a copy that left the device.
