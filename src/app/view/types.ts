@@ -10,7 +10,11 @@
 import type { Expiry } from '../../core/time/expiry';
 
 export type ConnectionStatus = 'success' | 'failed' | 'untested';
-export type ConnectionKind = 'credential' | 'request';
+export type ConnectionKind =
+  | 'credential'
+  | 'request'
+  | 'reachability'
+  | 'unverifiable';
 
 /** How the last check on this device ended. Provider text is never stored. */
 export interface ConnectionCheck {
@@ -45,8 +49,16 @@ export interface ApiKey {
 
 export type NewApiKey = Omit<
   ApiKey,
-  'id' | 'created_at' | 'updated_at' | 'archived_at' | 'expiry'
+  | 'id'
+  | 'created_at'
+  | 'updated_at'
+  | 'archived_at'
+  | 'expiry'
+  | 'provider_id'
+  | 'connection_check'
 > & {
+  provider_id?: string | null;
+  connection_check?: ConnectionCheck;
   archived_at?: string | null;
   expiry?: Expiry | null;
 };

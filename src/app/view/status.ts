@@ -6,7 +6,11 @@
  */
 
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
-export type ConnectionStatusLabel = 'Verified' | 'Reachable' | 'Failed' | 'Untested';
+export type ConnectionStatusLabel =
+  | 'Verified'
+  | 'Reachable'
+  | 'Failed'
+  | 'Untested';
 
 export const EXPIRY_REMINDER_DAYS = 7;
 
@@ -54,14 +58,17 @@ export function getExpiryStatusLabel(status: ExpiryStatus): string {
 
 export function getConnectionStatusLabel(
   status: 'success' | 'failed' | 'untested',
-  kind: 'credential' | 'request' | undefined
+  kind?: 'credential' | 'request' | 'reachability' | 'unverifiable'
 ): ConnectionStatusLabel {
   if (status === 'untested') return 'Untested';
   if (status === 'failed') return 'Failed';
   return kind === 'credential' ? 'Verified' : 'Reachable';
 }
 
-export function getDaysSince(date: string | null, now = new Date()): number | null {
+export function getDaysSince(
+  date: string | null,
+  now = new Date()
+): number | null {
   if (!date) return null;
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return null;

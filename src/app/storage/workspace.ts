@@ -83,6 +83,11 @@ export class Workspace {
     return this.handle.name;
   }
 
+  /** The underlying directory handle, for pickers that start in this folder. */
+  raw(): FileSystemDirectoryHandle {
+    return this.handle;
+  }
+
   async permission(): Promise<PermissionState> {
     const state = await this.handle.queryPermission?.({ mode: 'readwrite' });
     return (state ?? 'prompt') as PermissionState;

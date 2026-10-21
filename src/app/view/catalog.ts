@@ -50,7 +50,10 @@ export function isPresetProvider(name: string): boolean {
   );
 }
 
-export function getCustomProvider(name: string, settings: Settings | undefined) {
+export function getCustomProvider(
+  name: string,
+  settings: Settings | undefined
+) {
   const wanted = name.trim().toLowerCase();
   return settings?.custom_providers?.find(
     (provider) => provider.name.trim().toLowerCase() === wanted
@@ -79,7 +82,11 @@ export function getProviderSections(
 
   return [
     ...groupProvidersByCategory(enabled),
-    { id: 'custom', label: 'Custom providers', providers: [...customs, 'Custom'] },
+    {
+      id: 'custom',
+      label: 'Custom providers',
+      providers: [...customs, 'Custom'],
+    },
   ];
 }
 
@@ -111,9 +118,7 @@ export function providerIdForLabel(
   const wanted = label.trim().toLowerCase();
   if (!wanted || wanted === 'custom') return null;
 
-  const preset = PRESETS.find(
-    (entry) => entry.label.toLowerCase() === wanted
-  );
+  const preset = PRESETS.find((entry) => entry.label.toLowerCase() === wanted);
   if (preset) return `preset:${preset.slug}`;
 
   return (

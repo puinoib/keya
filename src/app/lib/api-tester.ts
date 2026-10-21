@@ -15,7 +15,11 @@ import { providerIdForLabel } from '../view/catalog';
 import type { ApiKey, Settings } from '../view/types';
 import { runManualCheck } from '../store/useStore';
 
-export type TestKind = 'credential' | 'request';
+export type TestKind =
+  | 'credential'
+  | 'request'
+  | 'reachability'
+  | 'unverifiable';
 
 export interface TestResult {
   success: boolean;
@@ -33,7 +37,11 @@ export class ApiTester {
     }));
     const id = providerIdForLabel(provider, providers);
     if (!id?.startsWith('preset:')) return 'request';
-    return findPreset(id.slice('preset:'.length))?.verifies ?? 'request';
+
+    const preset = findPreset(id.slice('preset:'.length));
+    if (!preset) return 'request';
+    if (!preset.probe) return 'unverifiable';
+    return preset.verifies;
   }
 
   /** Draft credentials from the form have no stored identity yet. */
@@ -91,7 +99,8 @@ export class ApiTester {
     }));
     const state = classifyRecipe(
       {
-        provider_id: key.provider_id ?? providerIdForLabel(key.provider, providers),
+        provider_id:
+          key.provider_id ?? providerIdForLabel(key.provider, providers),
         endpoint: key.endpoint || null,
       },
       []
