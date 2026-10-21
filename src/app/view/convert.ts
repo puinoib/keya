@@ -3,10 +3,61 @@
  */
 
 import type { Expiry } from '../../core/time/expiry';
+import { expiryStatus } from '../../core/time/expiry';
 import type { Key, KeyaFile, Provider } from '../../core/payload/types';
 import type { Observation } from '../../core/runtime/observations';
 import type { ApiKey, ConnectionCheck, CustomProvider, Group } from './types';
+import type { ExpiryStatus } from './status';
 import { providerLabel } from './catalog';
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/** The local calendar day an instant falls on, as `YYYY-MM-DD`. */
+function localDayOf(input: Date | string, timeZone: string): string {
+  const date = typeof input === 'string' ? new Date(input) : input;
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+function daysBetweenDays(from: string, to: string): number {
+  const a = Date.parse(`${from}T00:00:00Z`);
+  const b = Date.parse(`${to}T00:00:00Z`);
+  return Math.round((b - a) / DAY);
+}
+
+/** Calendar days from the local day of `now` to the expiry's local day. */
+export function daysUntilExpiry(
+  expiry: Expiry | null,
+  now: Date,
+  timeZone: string
+): number | null {
+  if (!expiry) return null;
+  return daysBetweenDays(
+    localDayOf(now, timeZone),
+    expiry.kind === 'date' ? expiry.value : localDayOf(expiry.value, timeZone)
+  );
+}
+
+function toViewStatus(status: ReturnType<typeof expiryStatus>): ExpiryStatus {
+  switch (status) {
+    case 'expired':
+      return 'expired';
+    case 'upcoming':
+      return 'expiring_soon';
+    case 'ok':
+      return 'valid';
+    default:
+      return 'none';
+  }
+}
 
 /**
  * A calendar day is presented as local midnight, which is what the date picker
@@ -68,7 +119,8 @@ export function connectionFromObservation(
 export function keyToView(
   key: Key,
   file: KeyaFile,
-  observation: Observation | undefined
+  observation: Observation | undefined,
+  context: { now: Date; timeZone: string }
 ): ApiKey {
   return {
     id: key.id,
@@ -80,6 +132,14 @@ export function keyToView(
     key: key.secret,
     group_id: key.group_id,
     expires_at: expiryToIso(key.expiry),
+    expiry_status: toViewStatus(
+      expiryStatus(key.expiry, context.now, context.timeZone)
+    ),
+    days_until_expiry: daysUntilExpiry(
+      key.expiry,
+      context.now,
+      context.timeZone
+    ),
     expiry: key.expiry,
     archived_at: key.archived_at,
     connection_check: connectionFromObservation(observation),
@@ -95,7 +155,11 @@ export function groupToView(group: Group): Group {
 export function providerToView(provider: Provider): CustomProvider {
   const probe = provider.probe;
   if (!probe) {
-    return { name: provider.name, endpoint: provider.default_endpoint ?? '' };
+    return {
+      id: provider.id,
+      name: provider.name,
+      endpoint: provider.default_endpoint ?? '',
+    };
   }
 
   const auth = probe.auth;
@@ -105,6 +169,7 @@ export function providerToView(provider: Provider): CustomProvider {
       : auth.mode;
 
   return {
+    id: provider.id,
     name: provider.name,
     endpoint: provider.default_endpoint ?? '',
     check: {

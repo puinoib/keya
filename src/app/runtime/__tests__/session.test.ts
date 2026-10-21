@@ -232,3 +232,40 @@ describe('probes', () => {
     expect(await value.grant(IDS.key)).toBeNull();
   });
 });
+
+describe('usage consent', () => {
+  const URL = 'https://example.test/usage';
+
+  it('consumes the approval once and then refuses', async () => {
+    const { session: value } = await session();
+
+    expect(await value.authorizeUsage(IDS.key, URL)).toBe(false);
+    expect(await value.approveUsageOnce(IDS.key, URL)).not.toBeNull();
+    expect(await value.authorizeUsage(IDS.key, URL)).toBe(true);
+    expect(await value.authorizeUsage(IDS.key, URL)).toBe(false);
+  });
+
+  it('keeps approvals apart from the probe approval', async () => {
+    const { session: value } = await session();
+
+    await value.approveOnce(IDS.key);
+    expect(await value.authorizeUsage(IDS.key, URL)).toBe(false);
+  });
+
+  it('accepts a standing grant without a fresh click', async () => {
+    const { session: value } = await session();
+    const fingerprint = await value.approveUsageOnce(IDS.key, URL);
+    await value.authorizeUsage(IDS.key, URL);
+
+    expect(fingerprint).not.toBeNull();
+    // A different URL is a different request and needs its own consent.
+    expect(await value.authorizeUsage(IDS.key, `${URL}?v=2`)).toBe(false);
+  });
+
+  it('ignores keys that are not in the vault', async () => {
+    const { session: value } = await session();
+
+    expect(await value.approveUsageOnce('not-a-key', URL)).toBeNull();
+    expect(await value.authorizeUsage('not-a-key', URL)).toBe(false);
+  });
+});

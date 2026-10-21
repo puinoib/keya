@@ -69,6 +69,8 @@ export class ApiTester {
         key,
         group_id: null,
         expires_at: null,
+        expiry_status: 'none',
+        days_until_expiry: null,
         expiry: null,
         archived_at: null,
         connection_check: {

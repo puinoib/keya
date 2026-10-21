@@ -9,6 +9,25 @@ export interface UsageSubject {
   secret: string;
 }
 
+export interface UsageOptions {
+  timeoutMs?: number;
+  /**
+   * Called with the exact URL before anything is sent. Usage queries leave the
+   * device too, so they need the same consent a probe does.
+   */
+  authorize?: (url: string) => Promise<boolean>;
+}
+
+/** The URL a usage query for this subject would ask, or null when unknown. */
+export function usageRequestUrl(subject: {
+  provider: string;
+  endpoint: string;
+}): string | null {
+  const source = USAGE_SOURCES[normalizeProvider(subject.provider)];
+  if (!source) return null;
+  return usageUrlFor(subject.endpoint, source);
+}
+
 /**
  * Usage and quota read straight from the provider's own metadata endpoint.
  *
@@ -20,6 +39,7 @@ export interface UsageSubject {
 
 export type UsageFailureKind =
   | 'unsupported'
+  | 'unapproved'
   | 'auth'
   | 'forbidden'
   | 'rate_limited'
@@ -253,7 +273,7 @@ async function readJson(res: Response): Promise<unknown> {
  */
 export async function fetchUsage(
   key: UsageSubject,
-  options: { timeoutMs?: number } = {}
+  options: UsageOptions = {}
 ): Promise<UsageResult> {
   const provider = normalizeProvider(key.provider);
   const source = USAGE_SOURCES[provider];
@@ -272,6 +292,20 @@ export async function fetchUsage(
       key.endpoint.trim()
         ? 'Endpoint must be an absolute http(s) URL'
         : 'Endpoint is required before reading usage'
+    );
+  }
+
+  if (new URL(url).protocol !== 'https:') {
+    return failure(
+      'network',
+      'Usage needs an https endpoint: plain http would send the key in clear text.'
+    );
+  }
+
+  if (options.authorize && !(await options.authorize(url))) {
+    return failure(
+      'unapproved',
+      'This request needs approval before the key is sent.'
     );
   }
 

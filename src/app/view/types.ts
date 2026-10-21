@@ -37,6 +37,10 @@ export interface ApiKey {
   endpoint: string;
   key: string;
   group_id: string | null;
+  /** Verdict from the core rules, so screens never re-derive it. */
+  expiry_status: import('./status').ExpiryStatus;
+  /** Calendar days until the expiry day; negative once passed. */
+  days_until_expiry: number | null;
   /** Local-midnight ISO form of the expiry, or an exact instant. */
   expires_at: string | null;
   /** The stored representation, so the form can round-trip a calendar day. */
@@ -56,6 +60,8 @@ export type NewApiKey = Omit<
   | 'expiry'
   | 'provider_id'
   | 'connection_check'
+  | 'expiry_status'
+  | 'days_until_expiry'
 > & {
   provider_id?: string | null;
   connection_check?: ConnectionCheck;
@@ -83,6 +89,8 @@ export interface CustomProviderCheck {
 }
 
 export interface CustomProvider {
+  /** Payload provider id, so an edit can follow a rename. */
+  id?: string;
   name: string;
   endpoint: string;
   check?: CustomProviderCheck;

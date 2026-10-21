@@ -29,7 +29,7 @@ import type {
   NewApiKey,
   Settings,
 } from '../view/types';
-import { fetchUsage, type UsageEntry } from '../lib/usage';
+import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import { writeUsageSnapshot } from '../lib/usage-cache';
 import type { OpenedVault } from '../lib/storage';
 import {
@@ -179,7 +179,7 @@ async function buildView(state: {
     dismissals,
     preferences: state.preferences,
     now: new Date(),
-    timeZone: 'UTC',
+    timeZone: deviceTimeZone(),
   });
 }
 
@@ -334,7 +334,10 @@ export const useStore = create<AppState>()((set, get) => {
         .keys.find((entry) => entry.id === id);
       void afterChange();
       return saved
-        ? keyToView(saved, runtime.vault.getPayload(), undefined)
+        ? keyToView(saved, runtime.vault.getPayload(), undefined, {
+            now: new Date(),
+            timeZone: deviceTimeZone(),
+          })
         : undefined;
     },
 
@@ -408,16 +411,31 @@ export const useStore = create<AppState>()((set, get) => {
     },
 
     refreshUsage: async (keyId) => {
-      if (!runtime) return;
+      const active = runtime;
+      if (!active) return;
       const view = get().db?.getApiKey(keyId);
       if (!view) return;
 
-      const result = await fetchUsage({
+      // The click is the gesture: approve this one request shape, then let the
+      // session decide whether it may go out.
+      const url = usageRequestUrl({
         provider: view.provider,
         endpoint: view.endpoint,
-        secret: view.key,
       });
-      const vaultId = runtime.vault.getPayload().vault.id;
+      if (url) await active.session.approveUsageOnce(keyId, url);
+
+      const result = await fetchUsage(
+        {
+          provider: view.provider,
+          endpoint: view.endpoint,
+          secret: view.key,
+        },
+        { authorize: (target) => active.session.authorizeUsage(keyId, target) }
+      );
+
+      const vaultId = active.vault.getPayload().vault.id;
+      if (runtime !== active) return;
+
       const entry: UsageEntry =
         result.ok === true
           ? { state: 'ok', snapshot: result.snapshot, vault_id: vaultId }
@@ -873,19 +891,35 @@ async function applyProviders(
   providers: CustomProvider[]
 ): Promise<void> {
   const file = state.vault.getPayload();
-  const existing = new Map(
+  const byId = new Map(
+    file.providers.map((provider) => [provider.id, provider])
+  );
+  const byName = new Map(
     file.providers.map((provider) => [provider.name, provider])
   );
 
+  // Match on id first: a rename must keep the id the keys already point at.
+  const kept = new Set<string>();
   for (const provider of providers) {
-    const previous = existing.get(provider.name);
+    const previous =
+      (provider.id ? byId.get(provider.id) : undefined) ??
+      byName.get(provider.name);
     const id = previous?.id ?? `custom:${crypto.randomUUID()}`;
-    state.vault.saveProvider(toStoredProvider(provider, id));
+    kept.add(id);
+
+    const saved = state.vault.saveProvider(toStoredProvider(provider, id));
+    if (!saved.ok) toast.error(saved.reason);
   }
 
   for (const provider of file.providers) {
-    if (!providers.some((entry) => entry.name === provider.name)) {
-      state.vault.removeProvider(provider.id);
+    if (kept.has(provider.id)) continue;
+    const removed = state.vault.removeProvider(provider.id);
+    if (!removed.ok) {
+      toast.error(
+        removed.reason === 'provider_in_use'
+          ? `${provider.name} is still used by a saved key, so it was kept.`
+          : removed.reason
+      );
     }
   }
 }

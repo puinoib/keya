@@ -211,13 +211,17 @@ export function ProvidersPage() {
     const check = buildCheck(checkAuth, checkPath, checkName);
     if (check && validateCustomCheck(check)) return;
 
+    const editing = editingName
+      ? customs.find((cp) => cp.name === editingName)
+      : undefined;
     const entry: CustomProvider = {
+      ...(editing?.id ? { id: editing.id } : {}),
       name,
       endpoint,
       ...(check ? { check } : {}),
     };
-    const nextCustoms = editingName
-      ? customs.map((cp) => (cp.name === editingName ? entry : cp))
+    const nextCustoms = editing
+      ? customs.map((cp) => (cp.id === editing.id ? entry : cp))
       : [...customs, entry];
 
     updateSettings({
