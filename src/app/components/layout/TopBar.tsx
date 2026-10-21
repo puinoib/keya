@@ -1,4 +1,4 @@
-import { exportVaultBytes, flushSave, useStore } from '../../store/useStore';
+import { exportVaultBytes, useStore } from '../../store/useStore';
 import {
   MagnifyingGlass,
   Plus,
@@ -65,12 +65,6 @@ export function TopBar() {
   const handleExportKeya = async () => {
     if (!db) return;
     try {
-      const saved = await flushSave();
-      if (!saved) {
-        toast.error('Save the vault before exporting.');
-        return;
-      }
-
       const bytes = await exportVaultBytes();
       if (!bytes) {
         toast.error('Export failed');

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
-import { useStore } from '../../store/useStore';
+import { runManualCheck, useStore } from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -127,16 +127,13 @@ export function KeyList() {
 
   const handleTest = async (key: ApiKey) => {
     if (key.archived_at) return;
-    const activeDb = useStore.getState().db;
+    const vaultId = useStore.getState().db?.getData().vault_id;
     setTesting(key.id);
     const result = await ApiTester.testKey(key, settings);
-    if (useStore.getState().db !== activeDb) {
+    if (useStore.getState().db?.getData().vault_id !== vaultId) {
       setTesting(null);
       return;
     }
-    updateKey(key.id, {
-      connection_check: toConnectionCheck(result),
-    });
     setTesting(null);
     const feedback = describeTestResult(result, key.name);
     toast[result.success ? 'success' : 'error'](feedback.title, {
@@ -650,19 +647,9 @@ export function EditKeyDialog({
       }),
     });
 
-    // Auto-test on save
+    // Auto-test on save: the edit is stored now, so the check records itself.
     if (settings?.auto_test_on_save) {
-      const { provider, endpoint, key: keyValue } = form;
-      const keyId = editingKey.id;
-      const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
-        (result) => {
-          if (useStore.getState().db !== activeDb) return;
-          useStore.getState().updateKey(keyId, {
-            connection_check: toConnectionCheck(result),
-          });
-        }
-      );
+      void runManualCheck(editingKey.id);
     }
   };
 
