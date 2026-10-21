@@ -7,6 +7,7 @@
  * written under an older policy must still open.
  */
 
+import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 import {
   MIN_ZXCVBN_SCORE,
   checkPasswordShape,
@@ -16,7 +17,13 @@ import {
 import { loadZxcvbn } from './zxcvbn';
 
 export type PasswordVerdict =
-  | { ok: true; score: number; codepoints: number }
+  | {
+      ok: true;
+      score: number;
+      codepoints: number;
+      /** The estimate behind the score, for meters and feedback copy. */
+      estimate: ZxcvbnResult;
+    }
   | {
       ok: false;
       reason: 'malformed' | 'too_short' | 'weak';
@@ -24,6 +31,7 @@ export type PasswordVerdict =
       codepoints: number;
       /** Minimum length that applied, so the message can state it. */
       required: number;
+      estimate?: ZxcvbnResult;
     };
 
 export async function judgePassword(
@@ -43,10 +51,11 @@ export async function judgePassword(
       score: result.score,
       codepoints,
       required,
+      estimate: result,
     };
   }
 
-  return { ok: true, score: result.score, codepoints };
+  return { ok: true, score: result.score, codepoints, estimate: result };
 }
 
 export function describePasswordVerdict(verdict: PasswordVerdict): string {

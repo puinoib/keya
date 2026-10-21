@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { useStore } from '@/app/store/useStore';
+import { useAutoLock } from '@/app/hooks/useAutoLock';
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: () => {
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/_authenticated')({
 function AuthenticatedLayout() {
   const navigate = useNavigate();
   const workspaceState = useStore((s) => s.workspaceState);
+  useAutoLock();
 
   useEffect(() => {
     // beforeLoad only runs on navigation; also redirect after locking.

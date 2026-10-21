@@ -14,8 +14,11 @@ import {
   isBiometricRegistered,
   unlockWithBiometric,
 } from '@/app/lib/biometric';
-import { loadZxcvbn } from '@/app/lib/zxcvbn';
-import type { ZxcvbnResult } from '@zxcvbn-ts/core';
+import {
+  describePasswordVerdict,
+  judgePassword,
+  type PasswordVerdict,
+} from '@/app/lib/password-policy';
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new';
   vaultName: string;
@@ -51,36 +54,33 @@ export function VaultPasswordDialog({
   const [bioLoading, setBioLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
+  const [verdict, setVerdict] = useState<PasswordVerdict | null>(null);
 
   const isCreate = mode === 'new';
-  const scoreOk =
-    !isCreate || (zxcvbnResult != null && zxcvbnResult.score >= 2);
   const canSubmit = isCreate
-    ? password.length >= 8 && password === confirm && scoreOk
+    ? verdict?.ok === true && password === confirm
     : password.length > 0;
 
-  // Use deferred value for async zxcvbn check (React 19)
+  // Use deferred value for the async policy check (React 19)
   const deferredPassword = useDeferredValue(password);
 
   useEffect(() => {
     if (!deferredPassword || !isCreate) {
-      setZxcvbnResult(null);
+      setVerdict(null);
       return;
     }
     let cancelled = false;
-    loadZxcvbn()
-      .then((estimate) => estimate(deferredPassword))
-      .then((result) => {
-        if (!cancelled) setZxcvbnResult(result);
-      });
+    judgePassword(deferredPassword).then((result) => {
+      if (!cancelled) setVerdict(result);
+    });
     return () => {
       cancelled = true;
     };
   }, [deferredPassword, isCreate]);
 
-  const strength = zxcvbnResult
-    ? STRENGTH_CONFIG[zxcvbnResult.score as keyof typeof STRENGTH_CONFIG]
+  const estimate = verdict?.estimate ?? null;
+  const strength = estimate
+    ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
     : null;
 
   useEffect(() => {
@@ -177,9 +177,9 @@ export function VaultPasswordDialog({
                   <div
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-colors ${
-                      zxcvbnResult && i <= zxcvbnResult.score
+                      estimate && i <= estimate.score
                         ? STRENGTH_CONFIG[
-                            zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
+                            estimate.score as keyof typeof STRENGTH_CONFIG
                           ].color
                         : 'bg-surface-3'
                     }`}
@@ -192,21 +192,18 @@ export function VaultPasswordDialog({
                 </span>
               )}
             </div>
-            {zxcvbnResult && zxcvbnResult.score < 2 && (
+            {verdict && !verdict.ok && (
               <p className="text-xs text-danger">
-                Password too weak — needs at least Fair strength
+                {describePasswordVerdict(verdict)}
               </p>
             )}
-            {zxcvbnResult?.feedback.warning && (
-              <p className="text-xs text-danger">
-                {zxcvbnResult.feedback.warning}
-              </p>
+            {estimate?.feedback.warning && (
+              <p className="text-xs text-danger">{estimate.feedback.warning}</p>
             )}
-            {zxcvbnResult &&
-              zxcvbnResult.feedback.suggestions &&
-              zxcvbnResult.feedback.suggestions.length > 0 && (
+            {estimate?.feedback.suggestions &&
+              estimate.feedback.suggestions.length > 0 && (
                 <p className="text-xs text-ink-quaternary">
-                  {zxcvbnResult.feedback.suggestions[0]}
+                  {estimate.feedback.suggestions[0]}
                 </p>
               )}
           </div>

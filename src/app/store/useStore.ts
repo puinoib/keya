@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import type { Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
-import { localState } from '../storage/platform';
+import { deviceTimeZone, localState } from '../storage/platform';
 import type {
   BusinessRule,
   ObservationRule,
@@ -43,6 +43,7 @@ import {
   writeShortcutMap,
   type ShortcutMap,
 } from '../lib/shortcuts';
+import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
 
 export type VaultStorageMode = 'folder' | 'download';
 type WorkspaceState = 'welcome' | 'unlocked';
@@ -248,6 +249,7 @@ export const useStore = create<AppState>()((set, get) => {
         inboxVersion: get().inboxVersion + 1,
       });
       await get().refresh();
+      void runDailyProbe();
     },
 
     lock: async () => {
@@ -570,6 +572,13 @@ export const useStore = create<AppState>()((set, get) => {
 
     changePassword: async (oldPassword, newPassword) => {
       if (!runtime) return;
+
+      const verdict = await judgePassword(newPassword);
+      if (!verdict.ok) {
+        toast.error(describePasswordVerdict(verdict));
+        return;
+      }
+
       const before = runtime.vault.containerInfo.fingerprint;
       const result = await runtime.vault.changePassword(
         oldPassword,
@@ -600,7 +609,9 @@ export const useStore = create<AppState>()((set, get) => {
       );
 
       runtime.fingerprint = runtime.vault.containerInfo.fingerprint;
-      set({ hasUnsavedChanges: false });
+      // Biometric enrollment wraps whatever is held here, so it must follow.
+      runtime.password = newPassword;
+      set({ hasUnsavedChanges: false, password: newPassword });
       await get().refresh();
       toast.success('Password changed.');
     },
@@ -680,6 +691,7 @@ export async function runManualCheck(keyId: string): Promise<{
     };
   }
   const observation = outcome.observation;
+  if (observation.outcome === 'ok') void offerStandingApproval(keyId);
 
   return {
     success: observation.outcome === 'ok',
@@ -690,6 +702,68 @@ export async function runManualCheck(keyId: string): Promise<{
         : (observation.detail_code ?? observation.outcome),
     kind: observation.kind,
   };
+}
+
+/**
+ * A manual check is consent for one request. Daily auto-test can only reuse
+ * persistent consent, so offer it once the destination has actually answered.
+ */
+async function offerStandingApproval(keyId: string): Promise<void> {
+  const active = runtime;
+  if (!active) return;
+  if (await active.session.hasGrant(keyId)) return;
+
+  toast('Allow this destination permanently?', {
+    description:
+      'Daily auto-test only checks destinations you allowed permanently.',
+    action: {
+      label: 'Always allow',
+      onClick: () => {
+        void active.session.grant(keyId);
+      },
+    },
+  });
+}
+
+/** Local `YYYY-MM-DD`, so "once a day" follows the device's clock. */
+function localDay(now: Date, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * Daily auto-test. It reuses standing grants only: a key the user never
+ * approved permanently is left untouched instead of being sent silently.
+ */
+async function runDailyProbe(): Promise<void> {
+  const active = runtime;
+  if (!active || !active.preferences.auto_probe_daily) return;
+
+  const day = localDay(new Date(), deviceTimeZone());
+  if (active.preferences.last_daily_probe_day === day) return;
+
+  active.preferences = { ...active.preferences, last_daily_probe_day: day };
+  await localState.setPreferences({ last_daily_probe_day: day });
+
+  const keys = active.vault
+    .getPayload()
+    .keys.filter((key) => key.archived_at === null)
+    .map((key) => key.id);
+
+  for (const keyId of keys) {
+    if (runtime !== active) return;
+    await active.session.probe(keyId, 'automatic');
+  }
+
+  if (runtime === active) await useStore.getState().refresh();
 }
 
 async function dismissReminder(
