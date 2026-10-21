@@ -5,7 +5,6 @@ import {
   getStoredCheckKind,
   getTestActionHint,
   getTestActionLabel,
-  toConnectionCheck,
 } from '../../lib/test-feedback';
 import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
@@ -96,16 +95,13 @@ export function KeyDetail() {
 
   const handleTest = async () => {
     if (key.archived_at) return;
-    const activeDb = useStore.getState().db;
+    const vaultId = useStore.getState().db?.getData().vault_id;
     setTesting(true);
     const result = await ApiTester.testKey(key);
-    if (useStore.getState().db !== activeDb) {
+    if (useStore.getState().db?.getData().vault_id !== vaultId) {
       setTesting(false);
       return;
     }
-    updateKey(key.id, {
-      connection_check: toConnectionCheck(result),
-    });
     setTesting(false);
     const feedback = describeTestResult(result);
     toast[result.success ? 'success' : 'error'](feedback.title, {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { useStore } from '../../store/useStore';
+import { runManualCheck, useStore } from '../../store/useStore';
 import type { Settings } from '../../view/types';
 import {
   getDefaultEndpointForProvider,
@@ -15,7 +15,6 @@ import {
   describeTestResult,
   getTestActionHint,
   getTestActionLabel,
-  toConnectionCheck,
 } from '../../lib/test-feedback';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
@@ -95,7 +94,7 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { addKey, updateKey, db, addKeyDraft, clearAddKeyDraft } = useStore();
+  const { addKey, db, addKeyDraft, clearAddKeyDraft } = useStore();
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -199,14 +198,6 @@ export function KeyForm({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      connection_check: testState.result
-        ? toConnectionCheck(testState.result)
-        : {
-            status: 'untested',
-            checked_at: null,
-            latency_ms: null,
-            error_message: null,
-          },
     });
 
     if (!created) {
@@ -216,9 +207,6 @@ export function KeyForm({
       return;
     }
 
-    const provider = form.provider;
-    const endpoint = form.endpoint;
-    const keyValue = form.key_value;
     const keyName = form.name;
     const newKeyId = created.id;
     setForm(empty);
@@ -229,17 +217,10 @@ export function KeyForm({
 
     toast.success('Key saved', { description: keyName });
 
-    // Auto-test on save
-    if (settings?.auto_test_on_save && created) {
-      const activeDb = useStore.getState().db;
-      ApiTester.testRaw(provider, endpoint, keyValue, settings).then(
-        (result) => {
-          if (useStore.getState().db !== activeDb) return;
-          updateKey(created.id, {
-            connection_check: toConnectionCheck(result),
-          });
-        }
-      );
+    // Auto-test on save: now that the key has an id, the check runs through
+    // the vault session so the result is recorded as an observation.
+    if (settings?.auto_test_on_save) {
+      void runManualCheck(created.id);
     }
   };
 

@@ -21,7 +21,7 @@ import type { Observation } from '../../core/runtime/observations';
 import type { ProbeAuth, Provider } from '../../core/payload/types';
 import { providerIdForLabel } from '../view/catalog';
 import { buildDatabase, type ViewDatabase } from '../view/build';
-import { isoToExpiry } from '../view/convert';
+import { isoToExpiry, keyToView } from '../view/convert';
 import type {
   ApiKey,
   CustomProvider,
@@ -324,8 +324,16 @@ export const useStore = create<AppState>()((set, get) => {
         toast.error(result.reason);
         return undefined;
       }
+
+      // The rebuilt view lands after this call returns, so answer from the
+      // payload itself: callers use the result to know the save took effect.
+      const saved = runtime.vault
+        .getPayload()
+        .keys.find((entry) => entry.id === id);
       void afterChange();
-      return get().db?.getApiKey(id);
+      return saved
+        ? keyToView(saved, runtime.vault.getPayload(), undefined)
+        : undefined;
     },
 
     updateKey: (id, updates) => {
@@ -653,13 +661,15 @@ export async function runManualCheck(keyId: string): Promise<{
   error?: string;
   kind: 'credential' | 'request';
 } | null> {
-  if (!runtime) return null;
-  const payload = runtime.vault.getPayload();
+  const active = runtime;
+  if (!active) return null;
+  const payload = active.vault.getPayload();
   if (!payload.keys.some((key) => key.id === keyId)) return null;
 
-  await runtime.session.approveOnce(keyId);
-  const outcome = await runtime.session.probe(keyId, 'manual');
-  await useStore.getState().refresh();
+  await active.session.approveOnce(keyId);
+  const outcome = await active.session.probe(keyId, 'manual');
+  // A switch mid-check must not repaint the vault that did not ask for it.
+  if (runtime === active) await useStore.getState().refresh();
   if (outcome.status !== 'observed' && outcome.status !== 'discarded') {
     return {
       success: false,
@@ -862,7 +872,9 @@ export async function flushSave(): Promise<boolean> {
   if (!runtime) return true;
 
   if (useStore.getState().storageMode === 'download') {
-    useStore.setState({ hasUnsavedChanges: true });
+    // This mode has no writable copy: the exported file is the save. Only
+    // pending edits block leaving, so an exported vault can lock normally.
+    if (!useStore.getState().hasUnsavedChanges) return true;
     toast.error('Export a .keya file to save changes before leaving.');
     return false;
   }
