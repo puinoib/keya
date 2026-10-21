@@ -46,18 +46,18 @@ export interface ContainerRecord {
 
 export interface Preferences {
   auto_lock_minutes: number;
-  auto_probe_enabled: boolean;
-  clipboard_detection: boolean;
+  auto_probe_on_save: boolean;
+  auto_probe_daily: boolean;
+  clipboard_detection_on_add: boolean;
   hidden_presets: string[];
-  theme: 'system' | 'light' | 'dark';
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   auto_lock_minutes: 5,
-  auto_probe_enabled: false,
-  clipboard_detection: true,
+  auto_probe_on_save: false,
+  auto_probe_daily: false,
+  clipboard_detection_on_add: true,
   hidden_presets: [],
-  theme: 'system',
 };
 
 export interface LocalStateOptions {

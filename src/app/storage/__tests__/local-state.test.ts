@@ -230,13 +230,13 @@ describe('grants and preferences', () => {
     const local = state();
     expect(await local.getPreferences()).toMatchObject({
       auto_lock_minutes: 5,
-      auto_probe_enabled: false,
+      auto_probe_on_save: false,
     });
 
     await local.setPreferences({ auto_lock_minutes: 30 });
     expect(await local.getPreferences()).toMatchObject({
       auto_lock_minutes: 30,
-      auto_probe_enabled: false,
+      auto_probe_on_save: false,
     });
   });
 });
