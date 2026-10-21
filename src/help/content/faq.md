@@ -31,8 +31,7 @@ Dismissals are stored on the device, not in the vault: they describe a decision 
 
 ## What is not in this build?
 
-- Biometric unlock and automatic locking.
-- Import and export screens, including the plaintext JSON exchange format.
-- Usage and allowance queries — the code exists but is not wired up.
+- Importing `.keya` files or JSON exports. Export works both ways: `.keya` stays encrypted, JSON is plaintext.
+- Usage and allowance queries on a provider's credential.
 
 Anything stored in this build is in the `.keya` file or in this browser's local storage; nothing else leaves the device.

@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StartRouteImport } from './routes/start'
-import { Route as NextRouteImport } from './routes/next'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as SplatRouteImport } from './routes/$'
@@ -31,11 +30,6 @@ import { Route as AuthenticatedSettingsAboutRouteImport } from './routes/_authen
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NextRoute = NextRouteImport.update({
-  id: '/next',
-  path: '/next',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeRoute = HomeRouteImport.update({
@@ -129,7 +123,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/home': typeof HomeRoute
-  '/next': typeof NextRoute
   '/start': typeof StartRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/keys': typeof AuthenticatedKeysRoute
@@ -148,7 +141,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/home': typeof HomeRoute
-  '/next': typeof NextRoute
   '/start': typeof StartRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/keys': typeof AuthenticatedKeysRoute
@@ -168,7 +160,6 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/home': typeof HomeRoute
-  '/next': typeof NextRoute
   '/start': typeof StartRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/keys': typeof AuthenticatedKeysRoute
@@ -189,7 +180,6 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/home'
-    | '/next'
     | '/start'
     | '/inbox'
     | '/keys'
@@ -208,7 +198,6 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/home'
-    | '/next'
     | '/start'
     | '/inbox'
     | '/keys'
@@ -227,7 +216,6 @@ export interface FileRouteTypes {
     | '/$'
     | '/_authenticated'
     | '/home'
-    | '/next'
     | '/start'
     | '/_authenticated/inbox'
     | '/_authenticated/keys'
@@ -248,7 +236,6 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   HomeRoute: typeof HomeRoute
-  NextRoute: typeof NextRoute
   StartRoute: typeof StartRoute
   DocsSlugRoute: typeof DocsSlugRoute
   DocsIndexRoute: typeof DocsIndexRoute
@@ -261,13 +248,6 @@ declare module '@tanstack/react-router' {
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/next': {
-      id: '/next'
-      path: '/next'
-      fullPath: '/next'
-      preLoaderRoute: typeof NextRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -431,7 +411,6 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   HomeRoute: HomeRoute,
-  NextRoute: NextRoute,
   StartRoute: StartRoute,
   DocsSlugRoute: DocsSlugRoute,
   DocsIndexRoute: DocsIndexRoute,

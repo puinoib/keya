@@ -5,7 +5,7 @@ import { HelpSidebar, HelpSearch } from './index';
 import { HelpIndex } from './HelpIndex';
 import { HelpPage } from './HelpPage';
 import { loadManifest } from '../lib/manifest';
-import { useUi } from '@/app/store/ui-store';
+import { useStore } from '@/app/store/useStore';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,7 +28,7 @@ export function HelpLayout() {
   const { documents } = loadManifest();
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, setTheme } = useUi();
+  const { theme, setTheme } = useStore();
   const [currentSlug, setCurrentSlug] = useState<string | null>(() =>
     getSlugFromPath(location.pathname)
   );

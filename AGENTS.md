@@ -38,7 +38,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Probe request and interpretation | `src/core/probe/request.ts`, `src/app/probe/{execute,check}.ts`; a generic recipe may only claim `request/ok`, never credential validity |
 | Presets | `src/core/presets/{data,classify}.ts`; presets are data, so changing a target invalidates grants |
 | Reminders | `src/core/reminders.ts`, `src/core/runtime/*`; dismissals are device-local and bound to a fact fingerprint |
-| UI | `src/app/screens/next/*` and `src/app/store/{vault-store,next-vault}.ts` |
+| UI | `src/app/components/*` and `src/app/store/useStore.ts` |
 | Deployed response headers or caching | `worker/index.ts`, `wrangler.toml`; the CSP keeps `'wasm-unsafe-eval'` for libsodium and allows user-supplied endpoints in `connect-src` |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
 
