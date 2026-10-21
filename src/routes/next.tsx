@@ -1,10 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { NextApp } from '@/app/screens/next/NextApp';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-/**
- * The v2 stack's own entry point, kept beside the v1 routes while the rest of
- * the UI is migrated.
- */
+/** Kept so older links keep working; the entry point is `/start`. */
 export const Route = createFileRoute('/next')({
-  component: NextApp,
+  beforeLoad: () => {
+    throw redirect({ to: '/start', replace: true });
+  },
 });
