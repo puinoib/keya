@@ -32,6 +32,5 @@ Dismissals are stored on the device, not in the vault: they describe a decision 
 ## What is not in this build?
 
 - Importing `.keya` files or JSON exports. Export works both ways: `.keya` stays encrypted, JSON is plaintext.
-- Usage and allowance queries on a provider's credential.
 
 Anything stored in this build is in the `.keya` file or in this browser's local storage; nothing else leaves the device.
