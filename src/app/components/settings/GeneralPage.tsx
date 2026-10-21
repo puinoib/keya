@@ -17,8 +17,11 @@ import {
   registerBiometric,
   removeBiometric,
 } from '@/app/lib/biometric';
-import { loadZxcvbn } from '@/app/lib/zxcvbn';
-import type { ZxcvbnResult } from '@zxcvbn-ts/core';
+import {
+  describePasswordVerdict,
+  judgePassword,
+  type PasswordVerdict,
+} from '@/app/lib/password-policy';
 
 function Toggle({
   checked,
@@ -77,35 +80,33 @@ export function GeneralPage() {
   const [showOldPw, setShowOldPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [zxcvbnResult, setZxcvbnResult] = useState<ZxcvbnResult | null>(null);
+  const [verdict, setVerdict] = useState<PasswordVerdict | null>(null);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
   const vaultId = data?.vault_id;
-  const strength = zxcvbnResult
-    ? STRENGTH_CONFIG[zxcvbnResult.score as keyof typeof STRENGTH_CONFIG]
+  const estimate = verdict?.estimate ?? null;
+  const strength = estimate
+    ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
     : null;
 
   const deferredNewPw = useDeferredValue(newPw);
   useEffect(() => {
     if (!deferredNewPw || !showPwForm) {
-      setZxcvbnResult(null);
+      setVerdict(null);
       return;
     }
     let cancelled = false;
-    loadZxcvbn()
-      .then((estimate) => estimate(deferredNewPw))
-      .then((result) => {
-        if (!cancelled) setZxcvbnResult(result);
-      });
+    judgePassword(deferredNewPw).then((result) => {
+      if (!cancelled) setVerdict(result);
+    });
     return () => {
       cancelled = true;
     };
   }, [deferredNewPw, showPwForm]);
 
-  const scoreOk = zxcvbnResult != null && zxcvbnResult.score >= 2;
   const canChangePw =
-    oldPw.length > 0 && newPw.length >= 8 && newPw === confirmPw && scoreOk;
+    oldPw.length > 0 && newPw === confirmPw && verdict?.ok === true;
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -340,9 +341,9 @@ export function GeneralPage() {
                               <div
                                 key={i}
                                 className={`h-1 flex-1 rounded-full transition-colors ${
-                                  zxcvbnResult && i <= zxcvbnResult.score
+                                  estimate && i <= estimate.score
                                     ? STRENGTH_CONFIG[
-                                        zxcvbnResult.score as keyof typeof STRENGTH_CONFIG
+                                        estimate.score as keyof typeof STRENGTH_CONFIG
                                       ].color
                                     : 'bg-surface-3'
                                 }`}
@@ -355,9 +356,9 @@ export function GeneralPage() {
                             </span>
                           )}
                         </div>
-                        {zxcvbnResult && zxcvbnResult.score < 2 && (
+                        {verdict && !verdict.ok && (
                           <p className="text-xs text-danger">
-                            Password too weak — needs at least Fair strength
+                            {describePasswordVerdict(verdict)}
                           </p>
                         )}
                       </div>

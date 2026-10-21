@@ -197,6 +197,13 @@ export class VaultSession {
     return grant;
   }
 
+  /** Whether this key's exact request already holds a persistent grant. */
+  async hasGrant(keyId: string): Promise<boolean> {
+    const binding = (await this.bindings()).get(keyId);
+    if (!binding) return false;
+    return this.hasGrantFor(binding.send);
+  }
+
   /** One-shot consent from a user gesture; consumed by the next probe. */
   async approveOnce(keyId: string): Promise<string | null> {
     const binding = (await this.bindings()).get(keyId);
@@ -211,7 +218,7 @@ export class VaultSession {
 
   async probe(keyId: string, mode: CheckMode): Promise<CheckOutcome> {
     const authorization: AuthorizationPort = {
-      hasGrant: (fingerprint) => this.hasGrant(fingerprint),
+      hasGrant: (fingerprint) => this.hasGrantFor(fingerprint),
       consumeApproval: (fingerprint, id) => {
         const outcome = consumeApproval(this.approvals, {
           fingerprint,
@@ -245,7 +252,7 @@ export class VaultSession {
     this.approvals = [];
   }
 
-  private async hasGrant(fingerprint: string): Promise<boolean> {
+  private async hasGrantFor(fingerprint: string): Promise<boolean> {
     return this.local.hasGrant(fingerprint);
   }
 

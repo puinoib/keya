@@ -6,6 +6,7 @@
  */
 
 import { Vault } from '../vault/vault';
+import { describePasswordVerdict, judgePassword } from './password-policy';
 import { VaultSession } from '../runtime/session';
 import { webLocks } from '../storage/browser';
 import { systemClock } from '../vault/ports';
@@ -109,6 +110,9 @@ export class FileStorage {
     password: string,
     meta?: { name?: string; icon?: string }
   ): Promise<OpenedVault> {
+    const verdict = await judgePassword(password);
+    if (!verdict.ok) throw new Error(describePasswordVerdict(verdict));
+
     const folder = await current();
     if (!folder) throw new Error('No folder is connected.');
     if (!(await folder.ensureWritable())) {
