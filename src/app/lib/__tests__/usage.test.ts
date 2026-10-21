@@ -41,18 +41,20 @@ describe('usage request policy', () => {
   });
 
   it('asks the approved URL with the stored key as a bearer token', async () => {
-    const fetchMock = vi.fn(async () => ({
-      status: 401,
-      url: usageRequestUrl(SUBJECT),
-      headers: { get: () => 'application/json' },
-      json: async () => ({}),
-    }));
+    const fetchMock = vi.fn(
+      async (_url: string, _init: RequestInit) => ({
+        status: 401,
+        url: usageRequestUrl(SUBJECT),
+        headers: { get: () => 'application/json' },
+        json: async () => ({}),
+      })
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     await fetchUsage(SUBJECT, { authorize: async () => true });
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(usageRequestUrl(SUBJECT));
     expect((init.headers as Record<string, string>).Authorization).toBe(
       'Bearer synthetic-secret'
