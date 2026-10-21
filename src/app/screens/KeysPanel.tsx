@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useVault } from '@/app/store/next-vault';
+import { useVault } from '@/app/store/vault';
 import { findPreset, PRESETS } from '@/core/presets/data';
 import { classifyRecipe, type RecipePlan } from '@/core/presets/classify';
 import { expiryStatus } from '@/core/time/expiry';

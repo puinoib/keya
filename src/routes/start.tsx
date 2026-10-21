@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { NextApp } from '@/app/screens/next/NextApp';
+import { App } from '@/app/screens/App';
 
 /**
  * The application entry: unlock a vault, or create one.
@@ -9,5 +9,5 @@ import { NextApp } from '@/app/screens/next/NextApp';
  * being removed.
  */
 export const Route = createFileRoute('/start')({
-  component: NextApp,
+  component: App,
 });
