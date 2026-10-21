@@ -32,20 +32,27 @@ export function isWellFormed(password: string): boolean {
   return true;
 }
 
+/**
+ * The minimum length for this password. Non-ASCII-heavy passphrases need more,
+ * because the estimator's dictionaries are English-centric and would otherwise
+ * overrate them.
+ */
+export function requiredPasswordCodepoints(password: string): number {
+  const points = [...password].length;
+  const ascii = [...password].filter(
+    (char) => char.charCodeAt(0) < 0x80
+  ).length;
+  return points > 0 && ascii * 2 < points
+    ? MIN_PASSWORD_CODEPOINTS_NON_ASCII
+    : MIN_PASSWORD_CODEPOINTS;
+}
+
 /** Shape-only check, before any strength estimator runs. */
 export function checkPasswordShape(
   password: string
 ): PasswordShapeProblem | null {
   if (!isWellFormed(password)) return 'malformed';
-
-  const points = passwordCodepoints(password);
-  const ascii = [...password].filter(
-    (char) => char.charCodeAt(0) < 0x80
-  ).length;
-  const required =
-    points > 0 && ascii * 2 < points
-      ? MIN_PASSWORD_CODEPOINTS_NON_ASCII
-      : MIN_PASSWORD_CODEPOINTS;
-
-  return points < required ? 'too_short' : null;
+  return passwordCodepoints(password) < requiredPasswordCodepoints(password)
+    ? 'too_short'
+    : null;
 }
