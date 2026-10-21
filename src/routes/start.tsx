@@ -1,14 +1,13 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useStore } from '@/app/store/useStore';
-import { WelcomePage } from '@/app/components/welcome/WelcomePage';
+import { createFileRoute } from '@tanstack/react-router';
+import { NextApp } from '@/app/screens/next/NextApp';
 
+/**
+ * The application entry: unlock a vault, or create one.
+ *
+ * This used to render the v1 welcome screen; the v2 runtime now lives here so
+ * the whole app has a single entry point while the remaining v1 routes are
+ * being removed.
+ */
 export const Route = createFileRoute('/start')({
-  beforeLoad: () => {
-    const workspaceState = useStore.getState().workspaceState;
-
-    if (workspaceState === 'unlocked') {
-      throw redirect({ to: '/keys' });
-    }
-  },
-  component: WelcomePage,
+  component: NextApp,
 });
