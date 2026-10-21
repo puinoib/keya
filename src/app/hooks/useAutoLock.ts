@@ -39,7 +39,10 @@ export function useAutoLock() {
       const db = useStore.getState().db;
       const timeoutMs = (db?.getSettings().auto_lock_minutes ?? 5) * 60 * 1000;
       if (Date.now() - lastActivityRef.current >= timeoutMs) {
-        lock();
+        // Restart the window first: a refused lock (unsaved edits that could
+        // not be written) must not retry on every tick and spam the user.
+        lastActivityRef.current = Date.now();
+        void lock();
       }
     }, CHECK_INTERVAL_MS);
 
