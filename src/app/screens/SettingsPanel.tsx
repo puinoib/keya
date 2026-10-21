@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useVault } from '@/app/store/next-vault';
+import { useVault } from '@/app/store/vault';
 import { MAX_STATIC_HEADERS } from '@/core/payload/limits';
 import type {
   Group,

@@ -1,17 +1,16 @@
 /**
- * Entry point for the v2 stack.
+ * Application entry: unlock a vault, or create one.
  *
- * Exists next to the v1 UI so the new format can be exercised end to end before
- * the rest of the screens are migrated; when the migration is finished this
- * becomes the only entry and the v1 routes disappear.
+ * The tab bar and the screen switch live in `VaultScreen`; this component only
+ * decides between "locked" and "unlocked".
  */
 
 import { useEffect } from 'react';
-import { useVault } from '@/app/store/next-vault';
+import { useVault } from '@/app/store/vault';
 import { UnlockScreen } from './UnlockScreen';
 import { VaultScreen } from './VaultScreen';
 
-export function NextApp() {
+export function App() {
   const ready = useVault((state) => state.ready);
   const session = useVault((state) => state.session);
 

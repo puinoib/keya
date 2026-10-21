@@ -11,18 +11,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { KeysPanel } from '../KeysPanel';
-import { useVault } from '../../../store/next-vault';
-import { VaultSession } from '../../../runtime/session';
-import { LocalState, type KeyValuePort } from '../../../storage/local/state';
-import { importDeviceKey } from '../../../../core/fingerprint';
-import { cloneFile } from '../../../../core/__tests__/fixtures';
-import type { Vault } from '../../../vault/vault';
+import { useVault } from '../../store/vault';
+import { VaultSession } from '../../runtime/session';
+import { LocalState, type KeyValuePort } from '../../storage/local/state';
+import { importDeviceKey } from '../../../core/fingerprint';
+import { cloneFile } from '../../../core/__tests__/fixtures';
+import type { Vault } from '../../vault/vault';
 import type {
   Group,
   Key,
   KeyaFile,
   Provider,
-} from '../../../../core/payload/types';
+} from '../../../core/payload/types';
 import {
   deleteGroup,
   deleteKey,
@@ -34,7 +34,7 @@ import {
   upsertKey,
   upsertProvider,
   type EditResult,
-} from '../../../../core/payload/edits';
+} from '../../../core/payload/edits';
 
 const NOW = '2026-03-01T12:00:00.000Z';
 

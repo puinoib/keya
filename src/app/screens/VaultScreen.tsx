@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useVault } from '@/app/store/next-vault';
+import { useVault } from '@/app/store/vault';
 import type { Reminder } from '@/core/reminders';
 import type {
   BusinessDismissal,
