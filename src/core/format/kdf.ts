@@ -48,9 +48,13 @@ export async function deriveFileKeyInline(
   options: DeriveOptions
 ): Promise<Uint8Array> {
   const sodium = await loadSodium();
+  // The password is handed over as text: libsodium encodes it to UTF-8 itself,
+  // without normalization, which is exactly the rule the format needs. Passing
+  // a pre-encoded array also breaks under a different realm (jsdom), where the
+  // `instanceof Uint8Array` check inside the bundle fails.
   return sodium.crypto_pwhash(
     KEY_LENGTH,
-    sodium.from_string(options.password),
+    options.password,
     options.salt,
     options.kdf.ops,
     options.kdf.mem,
