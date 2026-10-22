@@ -21,6 +21,7 @@ import { deriveFileKey } from '../../core/format/kdf';
 import { serializePayload } from '../../core/payload/serialize';
 import type { KeyaFile } from '../../core/payload/types';
 import { Vault } from '../vault/vault';
+import { checkPasswordShape } from '../../core/payload/password';
 import { systemClock } from '../vault/ports';
 import { VaultSession } from '../runtime/session';
 import { IndexedDbKeyValue } from './local/idb-kv';
@@ -123,12 +124,15 @@ export async function createVault(
 ): Promise<
   { ok: true; opened: OpenedSession } | { ok: false; failure: string }
 > {
+  const shape = checkPasswordShape(password);
+  if (shape) return { ok: false, failure: shape };
+
   const now = new Date().toISOString();
   const payload: KeyaFile = {
     vault: {
       id: crypto.randomUUID(),
       name: options.name.trim() || fileName.replace(/\.keya$/, ''),
-      icon: options.icon.trim(),
+      icon: options.icon?.trim() ?? '',
       created_at: now,
       content_updated_at: now,
     },
