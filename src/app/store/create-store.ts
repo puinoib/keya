@@ -759,7 +759,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
     const payload = active.vault.getPayload();
     if (!payload.keys.some((key) => key.id === keyId)) return null;
 
-    let outcome;
+    let outcome: Awaited<ReturnType<typeof active.session.probe>>;
     try {
       await active.session.approveOnce(keyId);
       outcome = await active.session.probe(keyId, 'manual');
