@@ -10,11 +10,7 @@
 import type { Expiry } from '../../core/time/expiry';
 
 export type ConnectionStatus = 'success' | 'failed' | 'untested';
-export type ConnectionKind =
-  | 'credential'
-  | 'request'
-  | 'reachability'
-  | 'unverifiable';
+export type ConnectionKind = 'credential' | 'request' | 'unverifiable';
 
 /** How the last check on this device ended. Provider text is never stored. */
 export interface ConnectionCheck {
@@ -105,16 +101,16 @@ export interface Settings {
   disabled_providers: string[];
 }
 
-export type InboxItemType =
-  | 'key_expiry_upcoming'
-  | 'key_expiry_expired'
-  | 'connection_failed'
-  | 'never_tested'
+/** The core reminder rule behind this row, so nothing has to be translated. */
+export type InboxRule =
+  | 'expiry_upcoming'
+  | 'expiry_expired'
   | 'insecure_endpoint'
-  | 'stale_test';
+  | 'never_probed'
+  | 'probe_failed'
+  | 'probe_stale';
 
 export type InboxItemStatus = 'open' | 'archived';
-export type InboxArchiveReason = 'user' | 'resolved';
 
 export interface InboxItemMetadata {
   key_name: string;
@@ -129,10 +125,9 @@ export interface InboxItemMetadata {
 
 export interface InboxItem {
   id: string;
-  type: InboxItemType;
+  rule: InboxRule;
   entity_id: string;
   status: InboxItemStatus;
-  archive_reason: InboxArchiveReason | null;
   created_at: string;
   updated_at: string;
   archived_at: string | null;

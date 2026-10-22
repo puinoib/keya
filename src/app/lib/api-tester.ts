@@ -15,11 +15,7 @@ import { providerIdForLabel } from '../view/catalog';
 import type { ApiKey, Settings } from '../view/types';
 import { runManualCheck } from '../store/useStore';
 
-export type TestKind =
-  | 'credential'
-  | 'request'
-  | 'reachability'
-  | 'unverifiable';
+export type TestKind = 'credential' | 'request' | 'unverifiable';
 
 export interface TestResult {
   success: boolean;

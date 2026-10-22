@@ -3,15 +3,11 @@ import type { TestKind, TestResult } from './api-tester';
 
 /** Label and hint for the action that triggers a check. */
 export function getTestActionLabel(kind: TestKind): string {
-  if (kind === 'reachability') return 'Check endpoint';
   if (kind === 'unverifiable') return 'Cannot verify';
   return 'Test key';
 }
 
 export function getTestActionHint(kind: TestKind): string {
-  if (kind === 'reachability') {
-    return 'Checks that the endpoint responds. The key is not sent.';
-  }
   if (kind === 'unverifiable') {
     return 'Keya cannot verify this provider from a browser.';
   }
@@ -30,19 +26,6 @@ export function describeTestResult(
     return {
       title: 'Could not verify the credential',
       description: result.error ?? 'This provider cannot be verified here.',
-    };
-  }
-
-  if (result.kind === 'reachability') {
-    if (!result.success) {
-      return {
-        title: 'Endpoint unreachable',
-        description: result.error ?? 'The endpoint did not respond.',
-      };
-    }
-    return {
-      title: 'Endpoint reached',
-      description: `${forSubject}${latency}. The key was not sent.`,
     };
   }
 

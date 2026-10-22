@@ -204,9 +204,7 @@ export function KeyDetail() {
                 {testOk && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
                     <CheckCircle className="size-3" />
-                    {checkKind === 'reachability'
-                      ? 'Reachable'
-                      : getConnectionStatusLabel(connectionStatus)}
+                    {getConnectionStatusLabel(connectionStatus, checkKind)}
                   </span>
                 )}
                 {testFail && (
@@ -241,13 +239,6 @@ export function KeyDetail() {
                   </span>
                 )}
               </div>
-
-              {checkKind === 'reachability' && (
-                <p className="mb-4 text-[11px] leading-relaxed text-ink-quaternary">
-                  Endpoint checks confirm the host responds. The key is not
-                  sent, so the credential stays unverified.
-                </p>
-              )}
 
               {checkKind === 'unverifiable' && (
                 <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
