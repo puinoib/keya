@@ -5,44 +5,6 @@ export type CustomCheckAuth = CustomProviderCheck['auth'];
 const ABSOLUTE_URL = /^https?:\/\//i;
 const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
-/** Join the provider endpoint with an optional check path. */
-export function resolveCheckUrl(endpoint: string, path?: string): string {
-  const base = endpoint.trim().replace(/\/+$/, '');
-  const target = (path ?? '').trim();
-  if (!target || target === '.') return base;
-  if (ABSOLUTE_URL.test(target)) return target;
-  return `${base}/${target.replace(/^\/+/, '')}`;
-}
-
-/** Build the request URL and headers for a configured custom provider check. */
-export function buildCustomCheckRequest(
-  check: CustomProviderCheck,
-  endpoint: string,
-  key: string
-): { url: string; headers: Record<string, string> } {
-  const url = resolveCheckUrl(endpoint, check.path);
-
-  if (check.auth === 'bearer') {
-    return { url, headers: { Authorization: `Bearer ${key}` } };
-  }
-  if (check.auth === 'basic') {
-    const bytes = new TextEncoder().encode(key);
-    let binary = '';
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    return { url, headers: { Authorization: `Basic ${btoa(binary)}` } };
-  }
-  if (check.auth === 'x-api-key') {
-    return { url, headers: { 'x-api-key': key } };
-  }
-  if (check.auth === 'header') {
-    return { url, headers: { [check.header_name ?? 'x-api-key']: key } };
-  }
-
-  const withKey = new URL(url);
-  withKey.searchParams.set(check.query_param ?? 'api_key', key);
-  return { url: withKey.toString(), headers: {} };
-}
-
 /** Human-readable summary used in settings and hints. */
 export function describeCustomCheck(
   check: CustomProviderCheck | undefined
