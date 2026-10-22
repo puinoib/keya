@@ -39,6 +39,7 @@ function storeOn(h: Harness, saveDelayMs?: number) {
     clock: () => new Date(FIXED_NOW),
     timeZone: () => 'UTC',
     saveDelayMs,
+    confirmDestination: async () => true,
   });
 }
 

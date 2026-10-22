@@ -22,6 +22,7 @@ import {
   judgePassword,
   type PasswordVerdict,
 } from '@/app/lib/password-policy';
+import type { Grant } from '@/core/runtime/grants';
 
 function Toggle({
   checked,
@@ -61,8 +62,15 @@ const STRENGTH_CONFIG = {
 } as const;
 
 export function GeneralPage() {
-  const { view, updateMeta, updateSettings, changePassword, verifyPassword } =
-    useStore();
+  const {
+    view,
+    updateMeta,
+    updateSettings,
+    changePassword,
+    verifyPassword,
+    listGrants,
+    revokeGrant,
+  } = useStore();
   const preferences = view?.preferences;
   const data = view?.file.vault;
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -72,6 +80,7 @@ export function GeneralPage() {
   // Enrollment re-asks for the password instead of keeping it in the session.
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [enrollPw, setEnrollPw] = useState('');
+  const [grants, setGrants] = useState<Grant[]>([]);
 
   // Change password state
   const [showPwForm, setShowPwForm] = useState(false);
@@ -133,6 +142,18 @@ export function GeneralPage() {
       .then(setBioRegistered)
       .catch(() => setBioRegistered(false));
   }, [bioSupported, vaultId]);
+
+  // Standing approvals are device state, so they are read here, not from the file.
+  useEffect(() => {
+    if (!vaultId) return;
+    let cancelled = false;
+    listGrants().then((list) => {
+      if (!cancelled) setGrants(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [vaultId, listGrants]);
 
   if (!data) return null;
 
@@ -289,6 +310,42 @@ export function GeneralPage() {
                     Cancel
                   </button>
                 </div>
+              </div>
+            )}
+            {grants.length > 0 && (
+              <div className="p-3 space-y-2">
+                <p className="text-xs font-medium text-ink-primary">
+                  Approved destinations
+                </p>
+                <p className="text-[11px] text-ink-quaternary">
+                  Daily auto-test may only reuse these. Revoking one asks again
+                  before the next request.
+                </p>
+                {grants.map((grant) => (
+                  <div
+                    key={grant.fingerprint}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate font-mono text-[11px] text-ink-secondary">
+                      {grant.origin}
+                      {grant.path}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await revokeGrant(grant.fingerprint);
+                        setGrants((list) =>
+                          list.filter(
+                            (entry) => entry.fingerprint !== grant.fingerprint
+                          )
+                        );
+                      }}
+                      className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-danger/80 hover:bg-danger/5 hover:text-danger transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
             <div className="flex items-center justify-between p-3">

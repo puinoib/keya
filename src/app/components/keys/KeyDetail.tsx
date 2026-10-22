@@ -109,6 +109,7 @@ export function KeyDetail() {
       return;
     }
     setTesting(false);
+    if (!result) return;
     const feedback = describeTestResult(result);
     toast[result.success ? 'success' : 'error'](feedback.title, {
       description: feedback.description,

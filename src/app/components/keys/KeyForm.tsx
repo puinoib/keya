@@ -11,7 +11,7 @@ import { dateToExpiry } from '../../state/presentation';
 import { hasDuplicateSecret, sortedGroups } from '../../state/view';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
 import type { Provider } from '../../../core/payload/types';
-import { runManualCheck, useStore } from '../../store/useStore';
+import { runAutomaticCheck, useStore } from '../../store/useStore';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -237,10 +237,10 @@ export function KeyForm({
 
     toast.success('Key saved', { description: keyName });
 
-    // Auto-test on save: now that the key has an id, the check runs through
-    // the vault session so the result is recorded as an observation.
+    // Auto-test on save reuses only a standing grant; it never invents the
+    // gesture that a one-shot approval requires.
     if (preferences?.auto_probe_on_save) {
-      void runManualCheck(created.id);
+      void runAutomaticCheck(created.id);
     }
   };
 

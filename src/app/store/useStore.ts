@@ -21,6 +21,7 @@ export const useStore = browserStore.useStore;
 export const flushSave = browserStore.flushSave;
 export const exportVaultBytes = browserStore.exportVaultBytes;
 export const runManualCheck = browserStore.runManualCheck;
+export const runAutomaticCheck = browserStore.runAutomaticCheck;
 
 /**
  * A hidden tab throttles timers, so the debounce is not a guarantee. Flush when

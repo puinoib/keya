@@ -47,6 +47,7 @@ function makeStore(h: Harness, saveDelayMs = 0) {
       return `aaaaaaaa-aaaa-4aaa-8aaa-${String(generated).padStart(12, '0')}`;
     },
     saveDelayMs,
+    confirmDestination: async () => true,
   });
 }
 
@@ -657,4 +658,54 @@ describe('deleting a key', () => {
       ).toHaveLength(0)
     );
   }, 30_000);
+});
+
+describe('a manual check asks about the destination', () => {
+  it('sends nothing when the user declines', async () => {
+    const h = await openHarness();
+    const store = createAppStore({
+      local: h.local,
+      clock: () => new Date(FIXED_NOW),
+      timeZone: () => 'UTC',
+      saveDelayMs: 0,
+      confirmDestination: async () => false,
+    });
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    await expect(store.runManualCheck(IDS.key)).resolves.toBeNull();
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('shows the resolved address before sending', async () => {
+    const h = await openHarness();
+    const asked: string[] = [];
+    const store = createAppStore({
+      local: h.local,
+      clock: () => new Date(FIXED_NOW),
+      timeZone: () => 'UTC',
+      saveDelayMs: 0,
+      confirmDestination: async (href) => {
+        asked.push(href);
+        return true;
+      },
+    });
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    await store.runManualCheck(IDS.key);
+    expect(asked).toEqual(['https://edge.example.com/v1/models']);
+    expect(h.requests).toEqual(['https://edge.example.com/v1/models']);
+  });
+
+  it('never keeps a persistent grant for a plaintext target', async () => {
+    const payload = cloneFile();
+    payload.keys[0].endpoint = 'http://edge.example.com/v1';
+    const h = await openHarness({ payload });
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    await store.runManualCheck(IDS.key);
+
+    expect(await h.session.hasGrant(IDS.key)).toBe(false);
+    expect(await h.local.listGrants()).toHaveLength(0);
+  });
 });

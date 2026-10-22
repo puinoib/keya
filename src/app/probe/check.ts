@@ -130,8 +130,11 @@ export async function runCheck(
     deviceKey: dependencies.deviceKey,
   });
 
+  // A plaintext target never reuses standing consent: every execution needs a
+  // fresh gesture, even if a grant row exists from an older build (I7).
   const authorized =
-    (await dependencies.authorization.hasGrant(send)) ||
+    (state.kind === 'auto' &&
+      (await dependencies.authorization.hasGrant(send))) ||
     (request.mode === 'manual' &&
       dependencies.authorization.consumeApproval(send, key.id));
 

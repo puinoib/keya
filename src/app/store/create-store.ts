@@ -16,6 +16,7 @@ import type { EditFailure, SaveFailure, Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import type { Observation } from '../../core/runtime/observations';
+import type { Grant } from '../../core/runtime/grants';
 import { summarizeIssues, type Issue } from '../../core/payload/validate';
 import type { Expiry } from '../../core/time/expiry';
 import type { Group, Key } from '../../core/payload/types';
@@ -66,6 +67,11 @@ export interface StoreDeps {
   newId?: () => string;
   /** How long edits are coalesced before a write. */
   saveDelayMs?: number;
+  /**
+   * How a manual check asks the user to approve the real destination. Injected
+   * so tests can answer without a toast.
+   */
+  confirmDestination?: (resolvedHref: string) => Promise<boolean>;
 }
 
 export interface ManualCheckResult {
@@ -80,6 +86,8 @@ export interface AppStore {
   flushSave: () => Promise<boolean>;
   exportVaultBytes: () => Promise<Uint8Array | null>;
   runManualCheck: (keyId: string) => Promise<ManualCheckResult | null>;
+  /** Runs without a new gesture: only a persistent grant can authorize it. */
+  runAutomaticCheck: (keyId: string) => Promise<void>;
 }
 
 /** Fields a caller may change on a stored key; the rest is the vault's own. */
@@ -210,6 +218,9 @@ export interface AppState {
     newPassword: string
   ) => Promise<{ ok: true } | { ok: false; reason: string }>;
   setReminderDismissed: (row: ReminderRow, dismissed: boolean) => void;
+  /** Standing approvals for this device, so they can be inspected and revoked. */
+  listGrants: () => Promise<Grant[]>;
+  revokeGrant: (fingerprint: string) => Promise<void>;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
 }
 
@@ -250,11 +261,49 @@ async function buildView(state: {
   });
 }
 
+/**
+ * Show the address the credential would actually reach, and wait for a gesture.
+ * `resolvedHref` is the string the fingerprint covers, so what the user
+ * approves is exactly what is sent.
+ */
+function askDestination(resolvedHref: string): Promise<boolean> {
+  let target: URL;
+  try {
+    target = new URL(resolvedHref);
+  } catch {
+    return Promise.resolve(false);
+  }
+  const plaintext = target.protocol === 'http:';
+  const where = `${target.origin}${target.pathname}${target.search}`;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    toast(plaintext ? 'Send this key over plain http?' : 'Send this key?', {
+      description: plaintext
+        ? `${where} — this travels in clear text and is never remembered.`
+        : `${where} — this destination has not been allowed permanently.`,
+      duration: 20_000,
+      action: {
+        label: plaintext ? 'Send in clear text' : 'Send',
+        onClick: () => settle(true),
+      },
+      onDismiss: () => settle(false),
+      onAutoClose: () => settle(false),
+    });
+  });
+}
+
 export function createAppStore(deps: StoreDeps): AppStore {
   const clock = deps.clock ?? (() => new Date());
   const timeZone = deps.timeZone ?? (() => 'UTC');
   const newId = deps.newId ?? (() => crypto.randomUUID());
   const saveDelayMs = deps.saveDelayMs ?? 500;
+  const confirmDestination = deps.confirmDestination ?? askDestination;
 
   let runtime: Runtime | null = null;
   /** Bumped whenever the session is replaced; stale async results check it. */
@@ -868,6 +917,16 @@ export function createAppStore(deps: StoreDeps): AppStore {
         return { ok: true as const };
       },
 
+      listGrants: async () => {
+        if (!runtime) return [];
+        return runtime.local.listGrants();
+      },
+
+      revokeGrant: async (fingerprint) => {
+        if (!runtime) return;
+        await runtime.local.removeGrant(fingerprint);
+      },
+
       setReminderDismissed: (row, dismissed) => {
         if (!runtime) return;
         void (dismissed ? dismissReminder(row) : restoreReminder(row));
@@ -897,6 +956,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
     if (!active) return null;
     const payload = active.vault.getPayload();
     if (!payload.keys.some((key) => key.id === keyId)) return null;
+
+    const binding = (await active.session.bindings()).get(keyId);
+    if (binding && !(await active.session.hasGrant(keyId))) {
+      if (!(await confirmDestination(binding.plan.resolvedHref))) return null;
+    }
 
     let outcome: Awaited<ReturnType<typeof active.session.probe>>;
     try {
@@ -941,12 +1005,31 @@ export function createAppStore(deps: StoreDeps): AppStore {
   };
 
   /**
+   * A check the app starts on its own (after a save). It reuses only a
+   * persistent grant, so it never invents the gesture that consent requires.
+   */
+  const runAutomaticCheck = async (keyId: string): Promise<void> => {
+    const active = runtime;
+    if (!active) return;
+    try {
+      await active.session.probe(keyId, 'automatic');
+    } catch {
+      // A lock or switch tears the session down; nothing to report.
+      return;
+    }
+    if (runtime === active) await getState().refresh();
+  };
+
+  /**
    * A manual check is consent for one request. Daily auto-test can only reuse
    * persistent consent, so offer it once the destination has actually answered.
+   * A plaintext destination can never hold one, so it is never offered.
    */
   const offerStandingApproval = async (keyId: string): Promise<void> => {
     const active = runtime;
     if (!active) return;
+    const binding = (await active.session.bindings()).get(keyId);
+    if (!binding || binding.plan.resolvedHref.startsWith('http:')) return;
     if (await active.session.hasGrant(keyId)) return;
 
     toast('Allow this destination permanently?', {
@@ -1209,7 +1292,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
     return true;
   };
 
-  return { useStore, flushSave, exportVaultBytes, runManualCheck };
+  return {
+    useStore,
+    flushSave,
+    exportVaultBytes,
+    runManualCheck,
+    runAutomaticCheck,
+  };
 }
 
 export { SHORTCUT_DEFINITIONS };

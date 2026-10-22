@@ -20,7 +20,11 @@ import {
 } from '../../core/reminders';
 import { currentBindings, type KeyBinding } from './binding';
 import type { Approval } from '../../core/runtime/grants';
-import { consumeApproval } from '../../core/runtime/grants';
+import {
+  allowsPersistentGrant,
+  consumeApproval,
+} from '../../core/runtime/grants';
+import { isPlaintextRequest } from '../../core/payload/url';
 import { sendFingerprint } from '../../core/fingerprint';
 import type {
   BusinessDismissal,
@@ -187,11 +191,13 @@ export class VaultSession {
   /**
    * Persistent consent for one request shape. Called only after the user has
    * seen the real recipient; the fingerprint is recomputed here so the grant
-   * cannot be written for a stale configuration.
+   * cannot be written for a stale configuration. A plaintext target can never
+   * hold one (I7).
    */
   async grant(keyId: string): Promise<Grant | null> {
     const binding = (await this.bindings()).get(keyId);
     if (!binding) return null;
+    if (!this.mayPersistGrant(binding.plan.resolvedHref)) return null;
 
     const grant: Grant = {
       fingerprint: binding.send,
@@ -209,7 +215,17 @@ export class VaultSession {
   async hasGrant(keyId: string): Promise<boolean> {
     const binding = (await this.bindings()).get(keyId);
     if (!binding) return false;
+    if (!this.mayPersistGrant(binding.plan.resolvedHref)) return false;
     return this.hasGrantFor(binding.send);
+  }
+
+  /** `http:` never keeps consent, so a stored grant for it must not count. */
+  private mayPersistGrant(resolvedHref: string): boolean {
+    try {
+      return allowsPersistentGrant(isPlaintextRequest(new URL(resolvedHref)));
+    } catch {
+      return false;
+    }
   }
 
   /**

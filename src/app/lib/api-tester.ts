@@ -41,16 +41,12 @@ function notExecutableKind(state: RecipeState): TestKind {
 }
 
 export class ApiTester {
-  /** A stored key: the result becomes an observation. */
-  static async testStored(keyId: string): Promise<TestResult> {
-    const stored = await runManualCheck(keyId);
-    if (stored) return stored;
-    return {
-      success: false,
-      latency_ms: 0,
-      error: 'This key is no longer in the vault.',
-      kind: 'unverifiable',
-    };
+  /**
+   * A stored key: the result becomes an observation. Null means the user
+   * declined the destination prompt, which is not a failed check.
+   */
+  static async testStored(keyId: string): Promise<TestResult | null> {
+    return runManualCheck(keyId);
   }
 
   /**

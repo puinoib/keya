@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
-import { runManualCheck, useStore, type KeyPatch } from '../../store/useStore';
+import {
+  runAutomaticCheck,
+  useStore,
+  type KeyPatch,
+} from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -152,6 +156,7 @@ export function KeyList() {
       return;
     }
     setTesting(null);
+    if (!result) return;
     const feedback = describeTestResult(result, key.name);
     toast[result.success ? 'success' : 'error'](feedback.title, {
       description: feedback.description,
@@ -665,9 +670,9 @@ export function EditKeyDialog({
 
     toast.success('Key updated', { description: form.name.trim() });
 
-    // Auto-test on save: the edit is stored now, so the check records itself.
+    // Auto-test on save reuses only a standing grant.
     if (preferences?.auto_probe_on_save) {
-      void runManualCheck(editingKey.id);
+      void runAutomaticCheck(editingKey.id);
     }
   };
 

@@ -31,6 +31,7 @@ export async function buildComponentStore(
       return `bbbbbbbb-bbbb-4bbb-8bbb-${String(generated).padStart(12, '0')}`;
     },
     saveDelayMs: 0,
+    confirmDestination: async () => true,
   });
 
   await api.useStore

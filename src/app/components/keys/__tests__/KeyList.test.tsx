@@ -37,6 +37,10 @@ vi.mock('../../../store/useStore', () => ({
     (
       holder.api as { runManualCheck: (...a: unknown[]) => unknown }
     ).runManualCheck(...args),
+  runAutomaticCheck: (...args: unknown[]) =>
+    (
+      holder.api as { runAutomaticCheck: (...a: unknown[]) => unknown }
+    ).runAutomaticCheck(...args),
 }));
 
 const { KeyList, EditKeyDialog } = await import('../KeyList');
