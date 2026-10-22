@@ -9,7 +9,7 @@ const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 export function describeCustomCheck(
   check: CustomProviderCheck | undefined
 ): string {
-  if (!check) return 'Reachability only';
+  if (!check) return 'No check configured';
 
   const path = check.path?.trim() || 'endpoint';
   const extra = check.headers?.length

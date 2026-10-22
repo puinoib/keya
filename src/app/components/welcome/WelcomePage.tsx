@@ -51,6 +51,7 @@ type Mode = 'home' | 'unlock' | 'new';
 export function WelcomePage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('home');
+  const [legacyFile, setLegacyFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [folderName, setFolderName] = useState<string | null>(null);
@@ -202,13 +203,13 @@ export function WelcomePage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    window.__legacyFile = file;
+    setLegacyFile(file);
     setSelectedVault(file.name);
     setMode('unlock');
   };
 
   const handleLegacyUnlock = async (password: string) => {
-    const file = window.__legacyFile;
+    const file = legacyFile;
     if (!file) throw new Error('Please select a .keya file first.');
     const buffer = await file.arrayBuffer();
     const opened = await FileStorage.openVaultFromBytes(

@@ -36,5 +36,4 @@ interface Window {
   showDirectoryPicker?(
     options?: FilePickerOptions
   ): Promise<FileSystemDirectoryHandle>;
-  __legacyFile?: File;
 }

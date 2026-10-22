@@ -2,7 +2,6 @@ import { useStore } from '../../store/useStore';
 import { ApiTester } from '../../lib/api-tester';
 import {
   describeTestResult,
-  getStoredCheckKind,
   getTestActionHint,
   getTestActionLabel,
 } from '../../lib/test-feedback';
@@ -75,7 +74,7 @@ export function KeyDetail() {
     ? db.getGroups().find((g) => g.id === key.group_id)
     : null;
   const connectionStatus = key.connection_check.status;
-  const checkKind = getStoredCheckKind(key.connection_check);
+  const checkKind = key.connection_check.kind ?? 'credential';
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
   const plannedKind = ApiTester.checkKindFor(key.provider, db.getSettings());
