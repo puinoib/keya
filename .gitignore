@@ -3,6 +3,8 @@
 # Dependencies
 node_modules/
 node_modules/.tmp/
+# pnpm's package cache, when a local store dir is configured
+.pnpm-store/
 
 # Build output
 dist/
