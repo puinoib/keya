@@ -5,7 +5,7 @@
  */
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function cancelClipboardClear(): void {
+function cancelClipboardClear(): void {
   if (clearTimer) clearTimeout(clearTimer);
   clearTimer = null;
 }

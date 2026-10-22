@@ -134,7 +134,10 @@ export interface InboxItem {
   metadata: InboxItemMetadata;
 }
 
-/** What `db.getData()` used to hand to components. */
+/**
+ * The snapshot the screens read and the JSON export writes: current keys, the
+ * reminder list, and the settings assembled from the file plus this device.
+ */
 export interface VaultData {
   vault_id: string;
   created_at: string;

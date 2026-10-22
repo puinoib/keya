@@ -1,7 +1,5 @@
 import type { CustomProviderCheck } from '../view/types';
 
-export type CustomCheckAuth = CustomProviderCheck['auth'];
-
 const ABSOLUTE_URL = /^https?:\/\//i;
 const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
