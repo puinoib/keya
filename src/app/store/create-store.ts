@@ -759,8 +759,23 @@ export function createAppStore(deps: StoreDeps): AppStore {
     const payload = active.vault.getPayload();
     if (!payload.keys.some((key) => key.id === keyId)) return null;
 
-    await active.session.approveOnce(keyId);
-    const outcome = await active.session.probe(keyId, 'manual');
+    let outcome;
+    try {
+      await active.session.approveOnce(keyId);
+      outcome = await active.session.probe(keyId, 'manual');
+    } catch (error) {
+      // Locking (or switching) mid-flight tears the session down; the caller
+      // still needs an answer instead of an unhandled rejection.
+      return {
+        success: false,
+        latency_ms: 0,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'The check could not finish.',
+        kind: 'request' as const,
+      };
+    }
     // A switch mid-check must not repaint the vault that did not ask for it.
     if (runtime === active) await getState().refresh();
     if (outcome.status !== 'observed' && outcome.status !== 'discarded') {
