@@ -611,3 +611,50 @@ describe('changing the password', () => {
     expect(store.useStore.getState().workspaceState).toBe('unlocked');
   }, 30_000);
 });
+
+describe('deleting a key', () => {
+  it('keeps its local history until the file write lands', async () => {
+    const { store, h } = await unlocked();
+    await h.local.recordObservation({
+      observation_id: 'obs-review',
+      vault_id: h.payload.vault.id,
+      key_id: IDS.key,
+      binding: 'synthetic-binding',
+      kind: 'request',
+      outcome: 'ok',
+      detail_code: null,
+      http_status: 200,
+      latency_ms: 1,
+      started_at: FIXED_NOW,
+      finished_at: FIXED_NOW,
+    });
+
+    h.file.failNextWrite = true;
+    store.useStore.getState().deleteKey(IDS.key);
+    await vi.waitFor(() =>
+      expect(store.useStore.getState().saveFailure).toBe('io_failed')
+    );
+
+    // The file still holds the key, so its history must still be there.
+    expect(
+      await h.local.listObservations(h.payload.vault.id, IDS.key)
+    ).toHaveLength(1);
+    const reopened = await Vault.open(
+      memoryPorts(new MemoryFile(h.file.bytes), fixedClock()),
+      { password: PASSWORD }
+    );
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) {
+      expect(
+        reopened.vault.getPayload().keys.some((key) => key.id === IDS.key)
+      ).toBe(true);
+    }
+
+    await expect(store.flushSave()).resolves.toBe(true);
+    await vi.waitFor(async () =>
+      expect(
+        await h.local.listObservations(h.payload.vault.id, IDS.key)
+      ).toHaveLength(0)
+    );
+  }, 30_000);
+});

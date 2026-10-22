@@ -32,6 +32,10 @@ import {
 import { deriveFileKey, KdfError } from '../../core/format/kdf';
 import { inspectContainer, type Preamble } from '../../core/format/preamble';
 import { parsePayload, serializePayload } from '../../core/payload/serialize';
+import {
+  checkIconForWriter,
+  normalizeKeyaFile,
+} from '../../core/payload/normalize';
 import type { KeyaFile } from '../../core/payload/types';
 import {
   summarizeIssues,
@@ -81,6 +85,9 @@ export type PasswordFailure =
   | 'kdf_busy'
   | 'kdf_cancelled'
   | SaveFailure;
+
+/** Why an edit never reached memory: a transaction rule or class A. */
+export type EditFailure = EditRejection | 'invalid_edit' | 'invalid_icon';
 
 export interface OpenOptions {
   password: string;
@@ -261,14 +268,38 @@ export class Vault {
     return matches;
   }
 
-  /** Apply an edit transaction result and mark the payload dirty. */
+  /**
+   * Apply an edit transaction result and mark the payload dirty.
+   *
+   * Every write entry point ends here, so this is the one place that runs the
+   * shared normalization (I14) and class A validation before the edit reaches
+   * memory. Rejecting it here is what keeps an unsaveable payload out of the
+   * vault; the alternative is a dirty vault whose every save fails.
+   */
   applyEdit(
     result: EditResult
-  ): { ok: true; changed: boolean } | { ok: false; reason: EditRejection } {
+  ):
+    | { ok: true; changed: boolean }
+    | { ok: false; reason: EditFailure; issues?: Issue[] } {
     this.assertUnlocked();
     if (!result.ok) return { ok: false, reason: result.reason };
     if (!result.changed) return { ok: true, changed: false };
-    this.payload = result.value;
+
+    const normalized = normalizeKeyaFile(result.value);
+    const validated = validateKeyaFile(normalized);
+    if (!validated.ok) {
+      return { ok: false, reason: 'invalid_edit', issues: validated.issues };
+    }
+    if (checkIconForWriter(normalized.vault.icon) !== 'ok') {
+      return { ok: false, reason: 'invalid_icon' };
+    }
+    for (const group of normalized.groups) {
+      if (checkIconForWriter(group.icon) !== 'ok') {
+        return { ok: false, reason: 'invalid_icon' };
+      }
+    }
+
+    this.payload = validated.value;
     this.revision += 1;
     this.dirty = true;
     return { ok: true, changed: true };

@@ -12,10 +12,11 @@
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { toast } from 'sonner';
-import type { SaveFailure, Vault } from '../vault/vault';
+import type { EditFailure, SaveFailure, Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import type { Observation } from '../../core/runtime/observations';
+import { summarizeIssues, type Issue } from '../../core/payload/validate';
 import type { Expiry } from '../../core/time/expiry';
 import type { Group, Key } from '../../core/payload/types';
 import {
@@ -258,6 +259,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
   let runtime: Runtime | null = null;
   /** Bumped whenever the session is replaced; stale async results check it. */
   let generation = 0;
+  /** Key deletions whose local records may go once the file write lands. */
+  const pendingLocalCleanup: { vaultId: string; keyId: string }[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let inboxBaseline: { vaultId: string; open: string[] } | null = null;
   let setState!: StoreApi<AppState>['setState'];
@@ -476,7 +479,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
         const result = runtime.vault.saveKey(key);
         if (!result.ok) {
-          toast.error(result.reason);
+          toast.error(describeEditFailure(result.reason, result.issues));
           return undefined;
         }
 
@@ -485,6 +488,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const saved = runtime.vault
           .getPayload()
           .keys.find((entry) => entry.id === id);
+        if (saved && saved.secret !== input.secret) {
+          // Normalization trimmed it; say so rather than changing bytes quietly.
+          toast('Surrounding whitespace was removed from the credential.');
+        }
         void afterChange();
         return saved;
       },
@@ -520,8 +527,15 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
         const result = runtime.vault.saveKey(next);
         if (!result.ok) {
-          toast.error(result.reason);
+          toast.error(describeEditFailure(result.reason, result.issues));
           return false;
+        }
+
+        const stored = runtime.vault
+          .getPayload()
+          .keys.find((entry) => entry.id === id);
+        if (stored && stored.secret !== next.secret) {
+          toast('Surrounding whitespace was removed from the credential.');
         }
 
         // A snapshot describes the request that produced it; a rotated secret or
@@ -543,27 +557,41 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (!runtime) return;
         const result = runtime.vault.removeKey(id);
         if (!result.ok) {
-          toast.error(result.reason);
+          toast.error(describeEditFailure(result.reason, result.issues));
           return;
         }
-        void runtime.local.forgetKey(runtime.vault.getPayload().vault.id, id);
-        dropUsageSnapshot(runtime.vault.getPayload().vault.id, id);
+        const active = runtime;
+        if (!active) return;
+        const vaultId = active.vault.getPayload().vault.id;
+        // §8: the file must no longer contain the key before its observations
+        // and dismissals are removed, or a failed save strands them.
+        pendingLocalCleanup.push({ vaultId, keyId: id });
+        dropUsageSnapshot(vaultId, id);
         set((state) => ({ usage: withoutKey(state.usage, id) }));
         if (get().selectedKeyId === id) set({ selectedKeyId: null });
         void afterChange();
+        // A deletion is small and important enough to commit immediately; the
+        // local cleanup runs only after this flush succeeds.
+        void flushSave();
       },
 
       archiveKey: (id) => {
         if (!runtime) return;
         const result = runtime.vault.archiveKey(id, true);
-        if (!result.ok) return;
+        if (!result.ok) {
+          toast.error(describeEditFailure(result.reason, result.issues));
+          return;
+        }
         void afterChange();
       },
 
       restoreKey: (id) => {
         if (!runtime) return;
         const result = runtime.vault.archiveKey(id, false);
-        if (!result.ok) return;
+        if (!result.ok) {
+          toast.error(describeEditFailure(result.reason, result.issues));
+          return;
+        }
         void afterChange();
       },
 
@@ -716,7 +744,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
           order: group.order,
         });
         if (!result.ok) {
-          toast.error(result.reason);
+          toast.error(describeEditFailure(result.reason, result.issues));
           return;
         }
         void afterChange();
@@ -728,7 +756,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const existing = file.groups.find((group) => group.id === id);
         if (!existing) return;
         const result = runtime.vault.saveGroup({ ...existing, ...updates });
-        if (!result.ok) return;
+        if (!result.ok) {
+          toast.error(describeEditFailure(result.reason, result.issues));
+          return;
+        }
         void afterChange();
       },
 
@@ -736,7 +767,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (!runtime) return;
         const result = runtime.vault.removeGroup(id);
         if (!result.ok) {
-          toast.error(result.reason);
+          toast.error(describeEditFailure(result.reason, result.issues));
           return;
         }
         void afterChange();
@@ -846,7 +877,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
       updateMeta: (updates) => {
         if (!runtime) return;
         const result = runtime.vault.updateMeta(updates);
-        if (!result.ok) return;
+        if (!result.ok) {
+          toast.error(describeEditFailure(result.reason, result.issues));
+          return;
+        }
         void afterChange();
       },
     };
@@ -926,6 +960,19 @@ export function createAppStore(deps: StoreDeps): AppStore {
       },
     });
   };
+
+  /** Turn a refused edit into the sentence the user sees. */
+  function describeEditFailure(reason: EditFailure, issues?: Issue[]): string {
+    if (reason === 'invalid_edit') {
+      return issues && issues.length > 0
+        ? summarizeIssues(issues)
+        : 'Those values are not valid for this vault.';
+    }
+    if (reason === 'invalid_icon') {
+      return 'An icon must be a single emoji.';
+    }
+    return reason;
+  }
 
   /** Drop one key's entry without touching the rest of the map. */
   function withoutKey(
@@ -1115,6 +1162,23 @@ export function createAppStore(deps: StoreDeps): AppStore {
   };
 
   /**
+   * Local observations and dismissals owed a delete. They are removed only
+   * after the file write that dropped the key succeeded, and a failure puts the
+   * item back so a later successful save retries it.
+   */
+  const drainLocalCleanup = async (): Promise<void> => {
+    if (pendingLocalCleanup.length === 0) return;
+    const pending = pendingLocalCleanup.splice(0);
+    for (const item of pending) {
+      try {
+        await deps.local.forgetKey(item.vaultId, item.keyId);
+      } catch {
+        pendingLocalCleanup.push(item);
+      }
+    }
+  };
+
+  /**
    * Flush pending edits. Returns false when the write failed, so callers can keep
    * the vault open instead of silently dropping changes.
    */
@@ -1140,6 +1204,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
     }
 
     setState({ hasUnsavedChanges: false, saveFailure: null });
+    await drainLocalCleanup();
     await getState().refresh();
     return true;
   };

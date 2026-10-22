@@ -153,6 +153,32 @@ describe('saving', () => {
     await changing;
   }, 30_000);
 
+  it('normalizes an edit and refuses one that is not legal', async () => {
+    const { vault } = await openedFile();
+    const base = vault.getPayload().keys[0];
+
+    const padded = {
+      ...base,
+      id: crypto.randomUUID(),
+      name: 'Padded',
+      secret: '  sk-padded\n',
+    };
+    expect(vault.saveKey(padded).ok).toBe(true);
+    expect(
+      vault.getPayload().keys.find((key) => key.id === padded.id)?.secret
+    ).toBe('sk-padded');
+
+    const before = vault.getPayload();
+    const rejected = vault.saveKey({
+      ...base,
+      id: crypto.randomUUID(),
+      name: 'x'.repeat(201),
+    });
+    expect(rejected).toMatchObject({ ok: false, reason: 'invalid_edit' });
+    // A refused edit leaves memory exactly as it was.
+    expect(vault.getPayload()).toBe(before);
+  });
+
   it('verifies a password by re-deriving it, without keeping it', async () => {
     const { vault } = await openedFile();
 
