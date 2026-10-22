@@ -3,8 +3,11 @@
  *
  * Holds the unlocked vault, rebuilds the view the screens render from, and
  * routes every action to the vault's edit transactions, the device-local store
- * or the probe pipeline. The password is never kept here: it is handed to
- * `unlock` and discarded.
+ * or the probe pipeline.
+ *
+ * The password is kept for the length of the session and only so biometric
+ * enrollment can wrap it; nothing reads it to save or to unlock, and `lock`
+ * drops it with the vault.
  */
 
 import { create } from 'zustand';
