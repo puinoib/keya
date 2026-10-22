@@ -9,6 +9,23 @@ export class MemoryFile implements FilePort {
   bytes: Uint8Array | null;
   writes = 0;
   failNextWrite = false;
+  /** True while a gated write is waiting for `releaseWrite()`. */
+  blocked = false;
+  private gateNextWrite = false;
+  private release: (() => void) | null = null;
+
+  /** Hold the next `write()` until `releaseWrite()` is called. */
+  blockNextWrite(): void {
+    this.gateNextWrite = true;
+    this.blocked = false;
+  }
+
+  releaseWrite(): void {
+    const release = this.release;
+    this.release = null;
+    release?.();
+  }
+
   /** Simulate another writer replacing the file behind our back. */
   externallyReplace(bytes: Uint8Array): void {
     this.bytes = bytes;
@@ -23,6 +40,14 @@ export class MemoryFile implements FilePort {
   }
 
   async write(next: Uint8Array): Promise<void> {
+    if (this.gateNextWrite) {
+      this.gateNextWrite = false;
+      this.blocked = true;
+      await new Promise<void>((resolve) => {
+        this.release = resolve;
+      });
+      this.blocked = false;
+    }
     if (this.failNextWrite) {
       this.failNextWrite = false;
       throw new Error('disk full');

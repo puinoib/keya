@@ -2,7 +2,7 @@
  * §16.6 / §16.8 — vault lifecycle: open, save, lock, password change, clone.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { sealContainer, generateNonce } from '../../../core/format/container';
 import { deriveFileKeyInline } from '../../../core/format/kdf';
 import { inspectContainer, nonceOf } from '../../../core/format/preamble';
@@ -183,6 +183,34 @@ describe('saving', () => {
     vault.updateMeta({ name: 'C' });
     await vault.flush();
     expect(file.writes - before).toBe(1);
+  });
+
+  it('writes an edit that lands while a save is in flight', async () => {
+    const { file, clock, vault } = await openedFile();
+
+    file.blockNextWrite();
+    vault.updateMeta({ name: 'First' });
+    const saving = vault.flush();
+    await vi.waitFor(() => expect(file.blocked).toBe(true));
+
+    // The first write already holds a snapshot without this edit. It must not
+    // be marked clean over the newer payload, and the flush loop must write it.
+    clock.advance(1000);
+    vault.updateMeta({ name: 'Second' });
+    file.releaseWrite();
+
+    expect(await saving).toEqual({ ok: true });
+    expect(file.writes).toBe(2);
+    expect(vault.getPayload().vault.name).toBe('Second');
+    expect(vault.hasUnsavedChanges).toBe(false);
+
+    const reopened = await Vault.open(
+      memoryPorts(new MemoryFile(file.bytes), clock),
+      { password: PASSWORD }
+    );
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok)
+      expect(reopened.vault.getPayload().vault.name).toBe('Second');
   });
 
   it('does not write when nothing changed', async () => {

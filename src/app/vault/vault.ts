@@ -121,6 +121,12 @@ export class Vault {
   private digest: string;
   private lastNonce: Uint8Array;
   private dirty = false;
+  /**
+   * Bumped on every applied edit. A save captures it before writing so it can
+   * tell "the payload I wrote is still current" from "an edit landed while the
+   * write was in flight".
+   */
+  private revision = 0;
   private locked = false;
   private queue: Promise<void> = Promise.resolve();
   private readonly ports: VaultPorts;
@@ -243,6 +249,7 @@ export class Vault {
     if (!result.ok) return { ok: false, reason: result.reason };
     if (!result.changed) return { ok: true, changed: false };
     this.payload = result.value;
+    this.revision += 1;
     this.dirty = true;
     return { ok: true, changed: true };
   }
@@ -288,15 +295,16 @@ export class Vault {
   }
 
   /**
-   * Flush every pending change. The queue is serialized and each run snapshots
-   * the payload at execution time, so coalescing is automatic: however many
-   * edits arrived, one write happens.
+   * Flush every pending change. Runs are serialized through one queue, and the
+   * run keeps writing until nothing is dirty: an edit that lands during a write
+   * is left dirty by `writeOnce`, so this loop is what turns it into a second
+   * write instead of losing it.
    */
   async flush(): Promise<{ ok: true } | { ok: false; failure: SaveFailure }> {
     this.assertUnlocked();
     const run = this.queue.then(
-      () => this.writeOnce(),
-      () => this.writeOnce()
+      () => this.writeUntilClean(),
+      () => this.writeUntilClean()
     );
     this.queue = run.then(
       () => undefined,
@@ -305,11 +313,25 @@ export class Vault {
     return run;
   }
 
+  /** Write, and retry while edits keep landing mid-write. */
+  private async writeUntilClean(): Promise<
+    { ok: true } | { ok: false; failure: SaveFailure }
+  > {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const result = await this.writeOnce();
+      if (!result.ok) return result;
+      if (!this.dirty) return result;
+    }
+    // Still dirty after the bound: report it rather than claim a clean save.
+    return { ok: false, failure: 'io_failed' };
+  }
+
   private async writeOnce(): Promise<
     { ok: true } | { ok: false; failure: SaveFailure }
   > {
     if (!this.dirty) return { ok: true };
 
+    const revision = this.revision;
     const validated = validateKeyaFile(this.payload);
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
 
@@ -336,8 +358,13 @@ export class Vault {
 
         this.digest = await digestOf(file);
         this.lastNonce = nonce;
-        this.payload = validated.value;
-        this.dirty = false;
+        // Only the payload that actually reached the file may be marked clean.
+        // A newer edit keeps its payload and the dirty flag, and the loop in
+        // `flush` writes it next.
+        if (this.revision === revision) {
+          this.payload = validated.value;
+          this.dirty = false;
+        }
         return { ok: true as const };
       });
     } catch {
