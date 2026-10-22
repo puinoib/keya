@@ -39,7 +39,7 @@ vi.mock('../../../store/useStore', () => ({
     ).runManualCheck(...args),
 }));
 
-const { KeyList } = await import('../KeyList');
+const { KeyList, EditKeyDialog } = await import('../KeyList');
 
 let harness: ComponentHarness;
 
@@ -164,5 +164,29 @@ describe('KeyList', () => {
     fireEvent.click(row!);
 
     expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
+  });
+
+  it('edits the secret, not a stray field', () => {
+    const onSave = vi.fn(() => true);
+    const key = cloneFile().keys[0];
+    render(
+      <EditKeyDialog
+        editingKey={key}
+        onClose={() => undefined}
+        onSave={onSave}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(
+      'sk-... or your API token'
+    ) as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'sk-rotated' } });
+    expect(input.value).toBe('sk-rotated');
+
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+    expect(onSave).toHaveBeenCalledWith(
+      key.id,
+      expect.objectContaining({ secret: 'sk-rotated' })
+    );
   });
 });

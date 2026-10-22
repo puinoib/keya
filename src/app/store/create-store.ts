@@ -169,7 +169,7 @@ export interface AppState {
   refresh: () => Promise<void>;
 
   addKey: (input: NewKeyInput) => Key | undefined;
-  updateKey: (id: string, patch: KeyPatch) => void;
+  updateKey: (id: string, patch: KeyPatch) => boolean;
   deleteKey: (id: string) => void;
   archiveKey: (id: string) => void;
   restoreKey: (id: string) => void;
@@ -433,10 +433,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
       },
 
       updateKey: (id, patch) => {
-        if (!runtime) return;
+        if (!runtime) return false;
         const file = runtime.vault.getPayload();
         const existing = file.keys.find((key) => key.id === id);
-        if (!existing) return;
+        if (!existing) return false;
 
         const next: Key = {
           ...existing,
@@ -464,7 +464,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const result = runtime.vault.saveKey(next);
         if (!result.ok) {
           toast.error(result.reason);
-          return;
+          return false;
         }
 
         // A snapshot describes the request that produced it; a rotated secret or
@@ -479,6 +479,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         }
 
         void afterChange();
+        return true;
       },
 
       deleteKey: (id) => {

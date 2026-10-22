@@ -529,8 +529,9 @@ export function KeyList() {
         editingKey={editingKey}
         onClose={() => setEditingKey(null)}
         onSave={(id, updates) => {
-          updateKey(id, updates);
+          if (!updateKey(id, updates)) return false;
           setEditingKey(null);
+          return true;
         }}
       />
 
@@ -551,7 +552,7 @@ export function EditKeyDialog({
 }: {
   editingKey: Key | null;
   onClose: () => void;
-  onSave: (id: string, patch: KeyPatch) => void;
+  onSave: (id: string, patch: KeyPatch) => boolean;
 }) {
   const view = useStore((s) => s.view);
   const providers = view?.file.providers ?? [];
@@ -651,8 +652,7 @@ export function EditKeyDialog({
       return;
     }
 
-    toast.success('Key updated', { description: form.name.trim() });
-    onSave(editingKey.id, {
+    const saved = onSave(editingKey.id, {
       name: form.name.trim(),
       secret: form.secret.trim(),
       providerId: providerIdForLabel(form.provider, providers),
@@ -661,6 +661,9 @@ export function EditKeyDialog({
       groupId: form.groupId,
       expiry: dateToExpiry(form.expiry),
     });
+    if (!saved) return;
+
+    toast.success('Key updated', { description: form.name.trim() });
 
     // Auto-test on save: the edit is stored now, so the check records itself.
     if (preferences?.auto_probe_on_save) {
@@ -706,7 +709,7 @@ export function EditKeyDialog({
                 value={form.secret}
                 masked={!showKey}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, key: e.target.value }))
+                  setForm((f) => ({ ...f, secret: e.target.value }))
                 }
                 placeholder="sk-... or your API token"
                 className="pr-9 font-mono text-sm break-all"

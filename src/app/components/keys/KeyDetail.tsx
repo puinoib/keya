@@ -424,8 +424,9 @@ export function KeyDetail() {
         editingKey={editingKey}
         onClose={() => setEditingKey(null)}
         onSave={(id, updates) => {
-          updateKey(id, updates);
+          if (!updateKey(id, updates)) return false;
           setEditingKey(null);
+          return true;
         }}
       />
 
