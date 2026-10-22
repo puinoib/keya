@@ -22,6 +22,7 @@ import {
   checkOf,
   expiryOf,
   hasDuplicateSecret,
+  keyById,
   searchKeys,
   sortedGroups,
 } from '../../state/view';
@@ -632,24 +633,33 @@ export function EditKeyDialog({
     providers
   );
 
+  // Seed the fields when a different key is opened, not when the provider list
+  // is rebuilt: a background refresh must not roll back what is being typed.
+  const providersRef = useRef(providers);
+  providersRef.current = providers;
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
   useEffect(() => {
     if (!editingKey) return;
-    const label = providerLabel(editingKey.provider_id, providers);
+    const latest =
+      (viewRef.current ? keyById(viewRef.current, editingKey.id) : undefined) ??
+      editingKey;
+    const current = providersRef.current;
+    const label = providerLabel(latest.provider_id, current);
     const endpoint =
-      editingKey.endpoint ??
-      getDefaultEndpointForProvider(label, providers) ??
-      '';
+      latest.endpoint ?? getDefaultEndpointForProvider(label, current) ?? '';
     setForm({
-      name: editingKey.name,
-      secret: editingKey.secret,
+      name: latest.name,
+      secret: latest.secret,
       provider: label,
       endpoint,
-      description: editingKey.description,
-      groupId: editingKey.group_id,
-      expiry: expiryToDate(editingKey.expiry),
+      description: latest.description,
+      groupId: latest.group_id,
+      expiry: expiryToDate(latest.expiry),
     });
     setTestState({ testing: false, result: null });
-  }, [editingKey, providers]);
+  }, [editingKey]);
 
   const handleTest = async () => {
     if (!form.secret) return;

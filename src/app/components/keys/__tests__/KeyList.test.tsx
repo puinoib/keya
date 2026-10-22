@@ -188,6 +188,37 @@ describe('KeyList', () => {
     );
   });
 
+  it('keeps typed input when the provider list is rebuilt', async () => {
+    const key = cloneFile().keys[0];
+    render(
+      <EditKeyDialog
+        editingKey={key}
+        onClose={() => undefined}
+        onSave={() => true}
+      />
+    );
+
+    const name = screen.getByLabelText('Name') as HTMLInputElement;
+    fireEvent.change(name, { target: { value: 'Typed while open' } });
+    expect(name.value).toBe('Typed while open');
+
+    harness.api.useStore.getState().updateSettings({
+      providers: [{ name: 'Acme', endpoint: 'https://api.acme.test' }],
+    });
+    await vi.waitFor(() =>
+      expect(
+        harness.api.useStore
+          .getState()
+          .view?.file.providers.some((p) => p.name === 'Acme')
+      ).toBe(true)
+    );
+
+    // A refresh rebuilt the provider list; the dialog must not reset itself.
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe(
+      'Typed while open'
+    );
+  });
+
   it('exposes the row selector by name', () => {
     render(<KeyList />);
     expect(

@@ -151,25 +151,31 @@ export function KeyForm({
     setForm((f) => (f.endpoint ? f : { ...f, endpoint: defaultEndpoint }));
   }, [open, defaultEndpoint]);
 
+  // The form is reset when the dialog opens, not whenever the provider list
+  // happens to be rebuilt: a background refresh must not erase typed input.
+  const providersRef = useRef(providers);
+  providersRef.current = providers;
+
   useEffect(() => {
     if (!open) return;
+    const current = providersRef.current;
     if (addKeyDraft) {
-      const draftForm = toFormData(addKeyDraft, providers);
+      const draftForm = toFormData(addKeyDraft, current);
       setForm({
         ...draftForm,
         endpoint:
           draftForm.endpoint ||
-          getDefaultEndpointForProvider(draftForm.provider, providers) ||
+          getDefaultEndpointForProvider(draftForm.provider, current) ||
           '',
       });
       setShowKey(false);
       setTestState({ testing: false, result: null });
       return;
     }
-    setForm(getEmptyForm(providers));
+    setForm(getEmptyForm(current));
     setShowKey(false);
     setTestState({ testing: false, result: null });
-  }, [open, addKeyDraft, providers]);
+  }, [open, addKeyDraft]);
 
   const handleProviderChange = (provider: string | null) => {
     if (!provider) return;
