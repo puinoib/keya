@@ -248,6 +248,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
   const clock = deps.clock ?? (() => new Date());
   const timeZone = deps.timeZone ?? (() => 'UTC');
   const newId = deps.newId ?? (() => crypto.randomUUID());
+  const saveDelayMs = deps.saveDelayMs ?? 500;
 
   let runtime: Runtime | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -262,11 +263,18 @@ export function createAppStore(deps: StoreDeps): AppStore {
     const scheduleSave = () => {
       set({ hasUnsavedChanges: true });
       if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = null;
+
+      // A download-mode vault has no writable copy: the export is the save, so
+      // there is nothing to debounce and the reminder belongs to leaving, not
+      // to every edit.
+      if (getState().storageMode === 'download') return;
+
       saveTimer = setTimeout(() => {
         void flushSave().catch(() => {
           toast.error('The vault was not saved. Keep this page open.');
         });
-      }, 500);
+      }, saveDelayMs);
     };
 
     const afterChange = async () => {
