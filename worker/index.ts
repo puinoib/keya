@@ -16,11 +16,13 @@ const CONTENT_SECURITY_POLICY = [
   // React and third-party components set inline style attributes.
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
-  "img-src 'self' data: https:",
+  // Provider marks and icons ship in the bundle; no remote image is loaded.
+  "img-src 'self' data:",
   // Provider connectivity tests issue requests to endpoints the user supplies,
   // so this origin list cannot be narrowed to known hosts. cloudflareinsights.com
-  // receives the Web Analytics beacon payload.
-  "connect-src 'self' https: http: ws: wss: https://cloudflareinsights.com",
+  // receives the Web Analytics beacon payload (already covered by https:).
+  // No WebSocket or EventSource is used, so `ws:`/`wss:` are deliberately absent.
+  "connect-src 'self' https: http: https://cloudflareinsights.com",
   "frame-ancestors 'none'",
   "base-uri 'none'",
   "form-action 'none'",
