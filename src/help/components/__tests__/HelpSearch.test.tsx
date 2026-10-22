@@ -87,4 +87,50 @@ describe('HelpSearch', () => {
       )
     ).toBe(false);
   });
+
+  it('navigates to the chosen document and clears the query', async () => {
+    const onNavigate = vi.fn();
+    await act(async () => {
+      root.render(<HelpSearch documents={documents} onNavigate={onNavigate} />);
+    });
+
+    const input = container.querySelector('input')!;
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!;
+    await act(async () => {
+      valueSetter.call(input, 'security');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const result = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Security')
+    );
+    expect(result).toBeTruthy();
+    await act(async () => {
+      result!.click();
+    });
+
+    expect(onNavigate).toHaveBeenCalledWith('security');
+    expect(input.value).toBe('');
+  });
+
+  it('shows an empty state when nothing matches', async () => {
+    await act(async () => {
+      root.render(<HelpSearch documents={documents} onNavigate={vi.fn()} />);
+    });
+
+    const input = container.querySelector('input')!;
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!;
+    await act(async () => {
+      valueSetter.call(input, 'zzzzz');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    expect(container.textContent).toContain('No matching results');
+  });
 });

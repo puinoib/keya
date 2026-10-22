@@ -2,10 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { loadManifest, getDocument } from '../manifest';
 
 describe('manifest', () => {
-  it('should load manifest', async () => {
+  it('loads every guide in frontmatter order', async () => {
     const manifest = await loadManifest();
-    expect(manifest.documents).toBeDefined();
-    expect(manifest.documents.length).toBeGreaterThan(0);
+    expect(manifest.documents.map((doc) => doc.slug)).toEqual([
+      'index',
+      'quick-start',
+      'inbox',
+      'security',
+      'backup',
+      'faq',
+    ]);
+    for (const doc of manifest.documents) {
+      expect(doc.title.length).toBeGreaterThan(0);
+      expect(doc.content.length).toBeGreaterThan(0);
+    }
   });
 
   it('should get document by slug', async () => {

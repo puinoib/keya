@@ -8,10 +8,18 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  KDF_MEM_OFFSET,
+  KDF_OPS_OFFSET,
   KDF_WORK_MAX,
   KDF_WORK_MIN,
   MAX_FILE_SIZE,
   MIN_FILE_SIZE,
+  NONCE_OFFSET,
+  NONCE_SIZE,
+  SALT_OFFSET,
+  SALT_SIZE,
+  VERSION_OFFSET,
+  VERSION_SIZE,
   isKdfParamsAccepted,
 } from '../format/constants';
 import {
@@ -92,21 +100,23 @@ describe('§16.1 container', () => {
     if (!opened.ok) expect(opened.failure).toBe('auth_failed');
   });
 
-  it('3 single-byte changes in the preamble are rejected', async () => {
+  it('3 every preamble byte is authenticated', async () => {
     const { key, file } = await seal();
-    const mutable: [number, number][] = [
-      [4, 0xff], // version
-      [6, 0x01], // kdf_ops
-      [10, 0x01], // kdf_mem
-      [14, 0x99], // salt
-      [30, 0x99], // nonce
+    const ranges: [number, number][] = [
+      [VERSION_OFFSET, VERSION_SIZE],
+      [KDF_OPS_OFFSET, 4],
+      [KDF_MEM_OFFSET, 4],
+      [SALT_OFFSET, SALT_SIZE],
+      [NONCE_OFFSET, NONCE_SIZE],
     ];
 
-    for (const [offset, value] of mutable) {
-      const tampered = file.slice();
-      tampered[offset] = value;
-      const opened = await openContainer(tampered, key);
-      expect(opened.ok, `offset ${offset}`).toBe(false);
+    for (const [start, length] of ranges) {
+      for (let offset = start; offset < start + length; offset += 1) {
+        const tampered = file.slice();
+        tampered[offset] ^= 0x01;
+        const opened = await openContainer(tampered, key);
+        expect(opened.ok, `offset ${offset}`).toBe(false);
+      }
     }
   });
 
@@ -208,10 +218,22 @@ describe('§16.1 container', () => {
     if (!inspected.ok) expect(inspected.failure).toBe('unsupported_version');
   });
 
-  it('10 the minimum length is preamble + tag (v2: 70)', () => {
+  it('10 length 69 and over 32 MiB are rejected up front', () => {
     expect(MIN_FILE_SIZE).toBe(70);
-    const empty = new Uint8Array(69);
-    expect(inspectContainer(empty).ok).toBe(false);
+
+    const short = inspectContainer(new Uint8Array(69));
+    expect(short.ok).toBe(false);
+    if (!short.ok) expect(short.failure).toBe('file_too_short');
+
+    const oversized = inspectContainer(new Uint8Array(MAX_FILE_SIZE + 1));
+    expect(oversized.ok).toBe(false);
+    if (!oversized.ok) expect(oversized.failure).toBe('file_too_large');
+
+    // 70 bytes clears the length gate and fails on content instead, which is
+    // what makes the boundary mean "preamble + tag".
+    const boundary = inspectContainer(new Uint8Array(70));
+    expect(boundary.ok).toBe(false);
+    if (!boundary.ok) expect(boundary.failure).toBe('bad_magic');
   });
 
   it('11 two saves of the same payload never reuse a keystream', async () => {

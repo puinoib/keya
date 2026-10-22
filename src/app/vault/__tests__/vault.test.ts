@@ -179,6 +179,45 @@ describe('saving', () => {
     expect(vault.getPayload()).toBe(before);
   });
 
+  it('32 refuses a whitespace-only secret without dirtying the vault', async () => {
+    const { vault } = await openedFile();
+    const base = vault.getPayload().keys[0];
+    const before = vault.getPayload();
+
+    const result = vault.saveKey({
+      ...base,
+      id: crypto.randomUUID(),
+      secret: '   \n\t ',
+    });
+
+    expect(result).toMatchObject({ ok: false, reason: 'invalid_edit' });
+    expect(vault.hasUnsavedChanges).toBe(false);
+    expect(vault.getPayload()).toBe(before);
+  });
+
+  it('39 normalizes the same credential to the same bytes on every path', async () => {
+    const padded = await openedFile();
+    const plain = await openedFile();
+    const base = padded.vault.getPayload().keys[0];
+    const id = crypto.randomUUID();
+
+    expect(
+      padded.vault.saveKey({ ...base, id, secret: '  sk-same\n' }).ok
+    ).toBe(true);
+    expect(plain.vault.saveKey({ ...base, id, secret: 'sk-same' }).ok).toBe(
+      true
+    );
+
+    const only = (vault: Vault) => {
+      const file = vault.getPayload();
+      return serializePayload({
+        ...file,
+        keys: file.keys.filter((key) => key.id === id),
+      });
+    };
+    expect(only(padded.vault)).toEqual(only(plain.vault));
+  });
+
   it('verifies a password by re-deriving it, without keeping it', async () => {
     const { vault } = await openedFile();
 

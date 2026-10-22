@@ -1,8 +1,9 @@
 /**
  * §16.2 — plaintext and class A validation.
  *
- * Each test name carries the spec item number so "which spec items are green"
- * stays a mechanical question.
+ * Each test name carries the §16.2 item number, so "which spec items are
+ * green" stays a mechanical question. The file groups related rules rather
+ * than following the spec's order.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,7 +25,7 @@ describe('§16.2 class A validation', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('11 rejects a string carrying a lone surrogate', () => {
+  it('15 rejects a string carrying a lone surrogate', () => {
     const issues = rejectResult((file) => {
       file.keys[0].name = 'broken \uD800 name';
     });
@@ -32,7 +33,7 @@ describe('§16.2 class A validation', () => {
     expect(issues.map((issue) => issue.code)).toContain('bad_charset');
   });
 
-  it('12 rejects unknown and missing fields with a path', () => {
+  it('16 rejects unknown and missing fields with a path', () => {
     const unknown = reject((file) => {
       (file as unknown as Record<string, unknown>).schema_version = 1;
     });
@@ -49,14 +50,14 @@ describe('§16.2 class A validation', () => {
     expect(pathsOf(missing)).toContain('keys[0].secret');
   });
 
-  it('13 rejects duplicate ids', () => {
+  it('17 rejects duplicate ids', () => {
     const result = reject((file) => {
       file.groups.push({ ...file.groups[0] });
     });
     expect(pathsOf(result)).toContain('groups[1].id');
   });
 
-  it('14 rejects dangling references', () => {
+  it('18 rejects dangling references', () => {
     const group = reject((file) => {
       file.keys[0].group_id = '55555555-5555-4555-8555-555555555555';
     });
@@ -74,7 +75,7 @@ describe('§16.2 class A validation', () => {
     expect(preset.ok).toBe(true);
   });
 
-  it('15 rejects header tokens carrying separators or spaces', () => {
+  it('19 rejects header tokens carrying separators or spaces', () => {
     for (const name of ['x-api-key\r\nX-Evil: 1', 'x api key', 'x:y']) {
       const result = reject((file) => {
         file.providers[0].probe = {
@@ -87,7 +88,7 @@ describe('§16.2 class A validation', () => {
     }
   });
 
-  it('16 rejects forbidden and malformed static headers', () => {
+  it('20 rejects forbidden and malformed static headers', () => {
     const cases: ((file: ReturnType<typeof cloneFile>) => void)[] = [
       (file) => {
         file.providers[0].probe!.headers = [
@@ -140,7 +141,7 @@ describe('§16.2 class A validation', () => {
     for (const mutate of cases) expect(reject(mutate).ok).toBe(false);
   });
 
-  it('17 rejects endpoint shapes that are not base addresses', () => {
+  it('21 rejects endpoint shapes that are not base addresses', () => {
     for (const endpoint of [
       'https://user:pass@example.com/v1',
       'https://example.com/v1#frag',
@@ -155,7 +156,7 @@ describe('§16.2 class A validation', () => {
     }
   });
 
-  it('18 rejects impossible calendar days, accepts leap days', () => {
+  it('24 rejects impossible calendar days, accepts leap days', () => {
     for (const value of ['2026-02-30', '2026-13-01', '2026-1-1']) {
       const result = reject((file) => {
         file.keys[0].expiry = { kind: 'date', value };
@@ -169,7 +170,7 @@ describe('§16.2 class A validation', () => {
     expect(leap.ok).toBe(true);
   });
 
-  it('19 validates timestamps by round-trip, not by Date.parse leniency', () => {
+  it('26 validates timestamps by round-trip, not by Date.parse leniency', () => {
     for (const value of [
       '2026-02-29T00:00:00.000Z',
       '2026-01-01T24:00:00.000Z',
@@ -190,7 +191,7 @@ describe('§16.2 class A validation', () => {
     expect(old.ok).toBe(true);
   });
 
-  it('20 accepts only lowercase, version 4, RFC variant uuids', () => {
+  it('27 accepts only lowercase, version 4, RFC variant uuids', () => {
     for (const id of [
       '11111111-1111-1111-8111-111111111111', // version 1
       '11111111-1111-4111-c111-111111111111', // bad variant
@@ -204,7 +205,7 @@ describe('§16.2 class A validation', () => {
     }
   });
 
-  it('21 enforces length and count limits', () => {
+  it('28 enforces length and count limits', () => {
     const longName = reject((file) => {
       file.keys[0].name = 'x'.repeat(201);
     });
@@ -221,7 +222,7 @@ describe('§16.2 class A validation', () => {
     expect(manyGroups.ok).toBe(false);
   });
 
-  it('22 requires provider names to be unique within the file', () => {
+  it('23 requires provider names to be unique within the file', () => {
     const result = reject((file) => {
       file.providers.push(
         makeProvider({ id: `custom:${IDS.vault}`, name: 'EDGE gateway' })
@@ -230,7 +231,7 @@ describe('§16.2 class A validation', () => {
     expect(pathsOf(result)).toContain('providers[1].name');
   });
 
-  it('23 keeps reader-side icon validation to bytes', () => {
+  it('30 keeps reader-side icon validation to bytes', () => {
     // Two grapheme clusters under the byte cap are legal for a reader; only the
     // writer refuses them (grapheme segmentation is not portable).
     const twoClusters = reject((file) => {
@@ -244,7 +245,7 @@ describe('§16.2 class A validation', () => {
     expect(tooLong.ok).toBe(false);
   });
 
-  it('rejects control characters in free text but allows tab, newline, CR', () => {
+  it('33 rejects control characters in free text but allows tab, newline, CR', () => {
     const control = reject((file) => {
       file.keys[0].secret = 'sk\u0000secret';
     });
@@ -256,7 +257,7 @@ describe('§16.2 class A validation', () => {
     expect(multiline.ok).toBe(true);
   });
 
-  it('accepts a query in probe.target but rejects a colliding credential param', () => {
+  it('22 accepts a query in probe.target but rejects a colliding credential param', () => {
     const withQuery = reject((file) => {
       file.providers[0].probe = {
         target: 'models?api-version=2024-10-21',
@@ -277,7 +278,7 @@ describe('§16.2 class A validation', () => {
     expect(pathsOf(collision)).toContain('providers[0].probe.auth.param');
   });
 
-  it('rejects expiry value shapes that do not match the kind', () => {
+  it('25 rejects expiry value shapes that do not match the kind', () => {
     const dateWithTimestamp = reject((file) => {
       file.keys[0].expiry = {
         kind: 'date',
@@ -292,7 +293,7 @@ describe('§16.2 class A validation', () => {
     expect(instantWithDay.ok).toBe(false);
   });
 
-  it('rejects null icons — the empty string is the only "no icon" encoding', () => {
+  it('31 rejects null icons — the empty string is the only "no icon" encoding', () => {
     const result = reject((file) => {
       (file.vault as unknown as Record<string, unknown>).icon = null;
     });
