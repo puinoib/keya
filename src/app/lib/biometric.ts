@@ -8,9 +8,26 @@
 
 import { openMetaDB, BIOMETRIC_STORE } from '../storage/biometric-db';
 
+/**
+ * Where the wrapped password lives. Injected so the no-downgrade rule can be
+ * tested without a browser, and so the storage choice stays a detail.
+ */
+export interface BiometricRecordStore {
+  get(vaultId: string): Promise<BiometricRecord | null>;
+  put(record: BiometricRecord): Promise<void>;
+  delete(vaultId: string): Promise<void>;
+}
+
+export interface BiometricDeps {
+  store?: BiometricRecordStore;
+  credentials?: CredentialsContainer;
+  /** Relying-party id; the hostname in the browser. */
+  rpId?: string;
+}
+
 // ── Types ──
 
-interface BiometricRecord {
+export interface BiometricRecord {
   vault_id: string;
   credentialId: Uint8Array;
   encryptedPassword: string;
@@ -42,34 +59,49 @@ function toBuffer(source: Uint8Array): ArrayBuffer {
 
 // ── IndexedDB ──
 
-async function getRecord(vaultId: string): Promise<BiometricRecord | null> {
-  const db = await openMetaDB();
-  return new Promise((resolve) => {
-    const tx = db.transaction(BIOMETRIC_STORE, 'readonly');
-    const req = tx.objectStore(BIOMETRIC_STORE).get(vaultId);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => resolve(null);
-  });
+/** The browser's record store: one IndexedDB object store keyed by vault id. */
+export function indexedDbRecordStore(): BiometricRecordStore {
+  return {
+    async get(vaultId) {
+      const db = await openMetaDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(BIOMETRIC_STORE, 'readonly');
+        const req = tx.objectStore(BIOMETRIC_STORE).get(vaultId);
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => resolve(null);
+      });
+    },
+    async put(record) {
+      const db = await openMetaDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(BIOMETRIC_STORE, 'readwrite');
+        tx.objectStore(BIOMETRIC_STORE).put(record);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    },
+    async delete(vaultId) {
+      const db = await openMetaDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(BIOMETRIC_STORE, 'readwrite');
+        tx.objectStore(BIOMETRIC_STORE).delete(vaultId);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    },
+  };
 }
 
-async function putRecord(record: BiometricRecord): Promise<void> {
-  const db = await openMetaDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(BIOMETRIC_STORE, 'readwrite');
-    tx.objectStore(BIOMETRIC_STORE).put(record);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+let browserStore: BiometricRecordStore | null = null;
+
+function recordStore(deps: BiometricDeps): BiometricRecordStore {
+  if (deps.store) return deps.store;
+  browserStore ??= indexedDbRecordStore();
+  return browserStore;
 }
 
-async function deleteRecord(vaultId: string): Promise<void> {
-  const db = await openMetaDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(BIOMETRIC_STORE, 'readwrite');
-    tx.objectStore(BIOMETRIC_STORE).delete(vaultId);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+function credentialsOf(deps: BiometricDeps): CredentialsContainer {
+  return deps.credentials ?? navigator.credentials;
 }
 
 // ── AES-GCM encrypt/decrypt ──
@@ -122,8 +154,8 @@ async function aesDecrypt(
 
 // ── WebAuthn PRF ──
 
-function rpId(): string {
-  return location.hostname;
+function rpIdOf(deps: BiometricDeps): string {
+  return deps.rpId ?? location.hostname;
 }
 
 async function deriveKeyFromPrf(prfOutput: ArrayBuffer): Promise<CryptoKey> {
@@ -151,13 +183,14 @@ async function deriveKeyFromPrf(prfOutput: ArrayBuffer): Promise<CryptoKey> {
 /** Perform a separate get() to evaluate PRF when create() didn't return results. */
 async function evalPrf(
   credentialId: ArrayBuffer,
-  prfSalt: Uint8Array
+  prfSalt: Uint8Array,
+  deps: BiometricDeps
 ): Promise<ArrayBuffer | null> {
   try {
-    const assertion = (await navigator.credentials.get({
+    const assertion = (await credentialsOf(deps).get({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rpId: rpId(),
+        rpId: rpIdOf(deps),
         allowCredentials: [{ id: credentialId, type: 'public-key' }],
         userVerification: 'required',
         extensions: { prf: { eval: { first: toBuffer(prfSalt) } } },
@@ -182,10 +215,14 @@ export function isBiometricSupported(): boolean {
   );
 }
 
-export async function isBiometricRegistered(vaultId: string): Promise<boolean> {
-  const record = await getRecord(vaultId);
+export async function isBiometricRegistered(
+  vaultId: string,
+  deps: BiometricDeps = {}
+): Promise<boolean> {
+  const store = recordStore(deps);
+  const record = await store.get(vaultId);
   if (record?.aesKey) {
-    await deleteRecord(vaultId);
+    await store.delete(vaultId);
     return false;
   }
   return !!record?.prfSalt;
@@ -197,14 +234,16 @@ export async function isBiometricRegistered(vaultId: string): Promise<boolean> {
  */
 export async function registerBiometric(
   vaultId: string,
-  password: string
+  password: string,
+  deps: BiometricDeps = {}
 ): Promise<void> {
+  const store = recordStore(deps);
   const prfSalt = crypto.getRandomValues(new Uint8Array(32));
 
   // Step 1: Create WebAuthn credential (triggers Touch ID / Face ID)
-  const credential = (await navigator.credentials.create({
+  const credential = (await credentialsOf(deps).create({
     publicKey: {
-      rp: { id: rpId(), name: 'Keya' },
+      rp: { id: rpIdOf(deps), name: 'Keya' },
       user: {
         id: crypto.getRandomValues(new Uint8Array(32)),
         name: `keya-vault-${vaultId}`,
@@ -235,14 +274,14 @@ export async function registerBiometric(
     prfOutput = prfExt.results?.first as ArrayBuffer | undefined;
     // If create() didn't return PRF output, try a separate get()
     if (!prfOutput) {
-      prfOutput = (await evalPrf(credential.rawId, prfSalt)) ?? undefined;
+      prfOutput = (await evalPrf(credential.rawId, prfSalt, deps)) ?? undefined;
     }
   }
 
   if (prfOutput) {
     const aesKey = await deriveKeyFromPrf(prfOutput);
     const encryptedPassword = await aesEncrypt(password, aesKey, iv);
-    await putRecord({
+    await store.put({
       vault_id: vaultId,
       credentialId: new Uint8Array(credential.rawId),
       encryptedPassword,
@@ -262,16 +301,20 @@ export async function registerBiometric(
  * Authenticate via biometric and return decrypted vault password.
  * Automatically detects PRF or legacy mode from the stored record.
  */
-export async function unlockWithBiometric(vaultId: string): Promise<string> {
-  const record = await getRecord(vaultId);
+export async function unlockWithBiometric(
+  vaultId: string,
+  deps: BiometricDeps = {}
+): Promise<string> {
+  const store = recordStore(deps);
+  const record = await store.get(vaultId);
   if (!record) throw new Error('No biometric credential found for this vault.');
 
   if (record.prfSalt) {
     // PRF mode: derive key from biometric + credential
-    const assertion = (await navigator.credentials.get({
+    const assertion = (await credentialsOf(deps).get({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rpId: rpId(),
+        rpId: rpIdOf(deps),
         allowCredentials: [
           { id: toBuffer(record.credentialId), type: 'public-key' },
         ],
@@ -292,7 +335,7 @@ export async function unlockWithBiometric(vaultId: string): Promise<string> {
     return aesDecrypt(record.encryptedPassword, aesKey, fromBase64(record.iv));
   }
 
-  await deleteRecord(vaultId);
+  await store.delete(vaultId);
   throw new Error(
     'Legacy biometric credentials were removed. Unlock with your master password.'
   );
@@ -301,6 +344,9 @@ export async function unlockWithBiometric(vaultId: string): Promise<string> {
 /**
  * Remove biometric credential for a vault.
  */
-export async function removeBiometric(vaultId: string): Promise<void> {
-  await deleteRecord(vaultId);
+export async function removeBiometric(
+  vaultId: string,
+  deps: BiometricDeps = {}
+): Promise<void> {
+  await recordStore(deps).delete(vaultId);
 }
