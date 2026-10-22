@@ -54,6 +54,7 @@ import {
 } from '../lib/shortcuts';
 import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
 import { isBiometricRegistered, removeBiometric } from '../lib/biometric';
+import { clearClipboardNow } from '../lib/clipboard';
 
 export type VaultStorageMode = 'folder' | 'download';
 
@@ -441,6 +442,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         }
         generation += 1;
         active.session.lock();
+        // A copied credential must not outlive the session it was copied from.
+        void clearClipboardNow();
         runtime = null;
         set({
           workspaceState: 'welcome',

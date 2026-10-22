@@ -47,4 +47,12 @@ describe('search', () => {
     const results = searchDocuments(index, '常见问题');
     expect(results.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('does not treat a blank term as a match for every document', () => {
+    const index = buildSearchIndex(mockDocuments);
+
+    expect(searchDocuments(index, '   ')).toEqual([]);
+    expect(searchDocuments(index, ' 快速  开始 ')).toHaveLength(1);
+    expect(searchDocuments(index, '快速  开始')[0].document.slug).toBe('test1');
+  });
 });

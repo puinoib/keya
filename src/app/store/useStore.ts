@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { deviceTimeZone, localState } from '../storage/platform';
 import { createAppStore } from './create-store';
 import { describeSaveFailure } from '../state/presentation';
+import { clearClipboardNow } from '../lib/clipboard';
 
 const browserStore = createAppStore({
   local: localState,
@@ -29,6 +30,7 @@ export const runAutomaticCheck = browserStore.runAutomaticCheck;
  * chance rather than an atomic commit.
  */
 function flushBeforeLeaving(): void {
+  void clearClipboardNow();
   void browserStore.flushSave().then(
     (ok) => {
       if (ok) return;

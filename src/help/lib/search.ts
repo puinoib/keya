@@ -12,7 +12,12 @@ export function searchDocuments(
     return [];
   }
 
-  const terms = query.toLowerCase().split(/\s+/);
+  // An empty term would match every document (`includes('')` is always true).
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length > 0);
+  if (terms.length === 0) return [];
   const results: SearchResult[] = [];
 
   for (const doc of index.documents) {

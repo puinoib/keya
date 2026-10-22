@@ -4,6 +4,7 @@
  * nothing is cleared.
  */
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
+let scheduledValue: string | null = null;
 
 function cancelClipboardClear(): void {
   if (clearTimer) clearTimeout(clearTimer);
@@ -20,10 +21,23 @@ export function scheduleClipboardClear(value: string, delayMs = 15_000): void {
   }
 
   cancelClipboardClear();
+  scheduledValue = value;
   clearTimer = setTimeout(() => {
     clearTimer = null;
+    scheduledValue = null;
     void clearIfUnchanged(value);
   }, delayMs);
+}
+
+/**
+ * Clear now instead of waiting out the timer. Called when the vault locks or
+ * the page goes away, so a copied credential does not outlive the session.
+ */
+export async function clearClipboardNow(): Promise<void> {
+  const value = scheduledValue;
+  cancelClipboardClear();
+  scheduledValue = null;
+  if (value !== null) await clearIfUnchanged(value);
 }
 
 async function clearIfUnchanged(value: string): Promise<void> {

@@ -58,13 +58,11 @@ export function MarkdownContent({
       if (link) {
         e.preventDefault();
         const href = link.getAttribute('data-internal-link');
-        if (href) {
-          if (href.startsWith('/docs/')) {
-            const slug = href.replace('/docs/', '');
-            navigate({ to: '/docs/$slug', params: { slug } });
-          } else {
-            navigate({ to: href as never });
-          }
+        if (href?.startsWith('/docs/')) {
+          navigate({
+            to: '/docs/$slug',
+            params: { slug: href.slice('/docs/'.length) },
+          });
         }
       }
     };

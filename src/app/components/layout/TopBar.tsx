@@ -88,8 +88,16 @@ export function TopBar() {
   /* ──── Export JSON ──── */
   const handleExportJson = () => {
     if (!view) return;
+    const confirmed = window.confirm(
+      'Export JSON writes every key in this vault as plain text, including the secrets.\n\n' +
+        'The file is not a backup. Store it somewhere safe and delete it when you are done.\n\n' +
+        'Export the plaintext JSON file?'
+    );
+    if (!confirmed) return;
     downloadJSON(buildJsonExport(view.file), jsonExportFileName());
-    toast.success('Exported JSON file');
+    toast.success('Exported JSON file', {
+      description: 'Plain text: delete it once the keys have been moved.',
+    });
   };
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">
