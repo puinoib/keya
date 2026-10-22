@@ -51,6 +51,8 @@
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-router-devtools": "^1.167.0",
     "@tanstack/router-plugin": "^1.168.14",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/libsodium-wrappers": "^0.7.14",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
