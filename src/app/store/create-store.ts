@@ -12,7 +12,7 @@
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { toast } from 'sonner';
-import type { Vault } from '../vault/vault';
+import type { SaveFailure, Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import type { Observation } from '../../core/runtime/observations';
@@ -30,6 +30,7 @@ import {
   type ReminderRow,
   type VaultView,
 } from '../state/view';
+import { describeSaveFailure } from '../state/presentation';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import {
   dropUsageSnapshot,
@@ -128,6 +129,8 @@ export interface AppState {
   activeVaultFileName: string | null;
   storageMode: VaultStorageMode;
   hasUnsavedChanges: boolean;
+  /** Why the last save failed, or null. Cleared by the next successful save. */
+  saveFailure: SaveFailure | null;
 
   searchQuery: string;
   showAddForm: boolean;
@@ -269,9 +272,21 @@ export function createAppStore(deps: StoreDeps): AppStore {
       if (getState().storageMode === 'download') return;
 
       saveTimer = setTimeout(() => {
-        void flushSave().catch(() => {
-          toast.error('The vault was not saved. Keep this page open.');
-        });
+        void flushSave().then(
+          (ok) => {
+            if (ok) return;
+            const failure = getState().saveFailure;
+            toast.error('The vault was not saved. Keep this page open.', {
+              description: failure
+                ? describeSaveFailure(failure)
+                : 'Export a copy before leaving.',
+            });
+          },
+          () =>
+            toast.error('The vault was not saved. Keep this page open.', {
+              description: 'Export a copy before leaving.',
+            })
+        );
       }, saveDelayMs);
     };
 
@@ -286,6 +301,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
       activeVaultFileName: null,
       storageMode: 'folder',
       hasUnsavedChanges: false,
+      saveFailure: null,
 
       searchQuery: '',
       showAddForm: false,
@@ -322,6 +338,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
           activeVaultFileName: fileName,
           storageMode,
           hasUnsavedChanges: false,
+          saveFailure: null,
           inboxVersion: get().inboxVersion + 1,
         });
         await get().refresh();
@@ -357,6 +374,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
           view: null,
           activeVaultFileName: null,
           hasUnsavedChanges: false,
+          saveFailure: null,
           selectedKeyId: null,
           usage: {},
           biometricPrompt: null,
@@ -1043,11 +1061,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
     const result = await runtime.vault.flush();
     if (!result.ok) {
-      setState({ hasUnsavedChanges: true });
+      setState({ hasUnsavedChanges: true, saveFailure: result.failure });
       return false;
     }
 
-    setState({ hasUnsavedChanges: false });
+    setState({ hasUnsavedChanges: false, saveFailure: null });
     await getState().refresh();
     return true;
   };

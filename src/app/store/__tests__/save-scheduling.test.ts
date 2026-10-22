@@ -107,4 +107,29 @@ describe('save scheduling', () => {
     );
     expect(store.useStore.getState().workspaceState).toBe('unlocked');
   });
+
+  it('reports a failed debounced save and keeps the edits pending', async () => {
+    const h = await openHarness();
+    const store = storeOn(h, 0);
+    await store.useStore.getState().unlock(h.opened, 'w.keya', 'folder');
+
+    h.file.failNextWrite = true;
+    store.useStore.getState().addKey({ ...NEW_KEY, name: 'Survives' });
+
+    await vi.waitFor(() =>
+      expect(store.useStore.getState().saveFailure).toBe('io_failed')
+    );
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
+    expect(sonner.messages).toContain(
+      'error:The vault was not saved. Keep this page open.'
+    );
+    expect(
+      h.vault.getPayload().keys.some((key) => key.name === 'Survives')
+    ).toBe(true);
+
+    // The top bar's retry clears the failure and writes the pending edit.
+    await expect(store.flushSave()).resolves.toBe(true);
+    expect(store.useStore.getState().saveFailure).toBeNull();
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(false);
+  });
 });

@@ -156,3 +156,29 @@ export function daysSince(date: string | null, now: Date): number | null {
   if (Number.isNaN(parsed.getTime())) return null;
   return Math.floor((now.getTime() - parsed.getTime()) / DAY);
 }
+
+/**
+ * Why the last save failed, in the words the top bar and the toast share.
+ * `locked` is included because flush can race a lock.
+ */
+export function describeSaveFailure(
+  failure:
+    | 'locked'
+    | 'invalid_payload'
+    | 'external_change'
+    | 'io_failed'
+    | string
+): string {
+  switch (failure) {
+    case 'external_change':
+      return 'the file changed on disk; your edits are kept in memory';
+    case 'io_failed':
+      return 'the file could not be written; your edits are kept in memory';
+    case 'invalid_payload':
+      return 'some edits are not valid, so nothing was written';
+    case 'locked':
+      return 'the vault locked before the save finished';
+    default:
+      return 'the save did not complete';
+  }
+}

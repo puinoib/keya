@@ -1,5 +1,6 @@
-import { exportVaultBytes, useStore } from '../../store/useStore';
+import { exportVaultBytes, flushSave, useStore } from '../../store/useStore';
 import { buildJsonExport, jsonExportFileName } from '../../lib/export-json';
+import { describeSaveFailure } from '../../state/presentation';
 import {
   MagnifyingGlass,
   Plus,
@@ -54,6 +55,7 @@ export function TopBar() {
     view,
     storageMode,
     hasUnsavedChanges,
+    saveFailure,
     markExported,
   } = useStore();
   const notifyUnavailable = (feature: string) => {
@@ -122,10 +124,22 @@ export function TopBar() {
 
       <div className="flex-1" />
 
-      {storageMode === 'download' && hasUnsavedChanges && (
-        <span className="shrink-0 text-xs text-amber-600 dark:text-amber-400">
-          Unsaved — export .keya to save
-        </span>
+      {saveFailure ? (
+        <button
+          type="button"
+          onClick={() => void flushSave()}
+          title={describeSaveFailure(saveFailure)}
+          className="shrink-0 rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger/5"
+        >
+          Not saved — retry
+        </button>
+      ) : (
+        storageMode === 'download' &&
+        hasUnsavedChanges && (
+          <span className="shrink-0 text-xs text-amber-600 dark:text-amber-400">
+            Unsaved — export .keya to save
+          </span>
+        )
       )}
 
       {/* Import/Export menu */}
