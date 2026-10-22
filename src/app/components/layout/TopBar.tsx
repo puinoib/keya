@@ -137,6 +137,7 @@ export function TopBar() {
           {/* Keya import/export — encrypted, first priority */}
           <DropdownMenuItem
             disabled
+            title="Import is not available in this build"
             onClick={() => notifyUnavailable('Import .keya')}
           >
             <Key className="size-3.5" /> Import .keya
@@ -148,6 +149,7 @@ export function TopBar() {
           {/* JSON import/export — unencrypted, secondary */}
           <DropdownMenuItem
             disabled
+            title="Import is not available in this build"
             onClick={() => notifyUnavailable('Import JSON')}
           >
             <FileCode className="size-3.5" /> Import JSON
