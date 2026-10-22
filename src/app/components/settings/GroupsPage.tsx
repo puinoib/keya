@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
+import { activeKeys, sortedGroups } from '../../state/view';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
@@ -52,9 +53,9 @@ function EmojiPickerPopover({
 }
 
 export function GroupsPage() {
-  const { db, addGroup, updateGroup, deleteGroup } = useStore();
-  const groups = db?.getGroups() ?? [];
-  const keys = db?.getActiveApiKeys() ?? [];
+  const { view, addGroup, updateGroup, deleteGroup } = useStore();
+  const groups = view ? sortedGroups(view) : [];
+  const keys = view ? activeKeys(view) : [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingIcon, setEditingIcon] = useState('');

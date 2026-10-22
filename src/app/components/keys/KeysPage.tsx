@@ -6,6 +6,8 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { useStore } from '../../store/useStore';
+import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
+import { providerLabel } from '../../state/providers';
 import { KeyList } from '../keys/KeyList';
 import { KeyDetail } from '../keys/KeyDetail';
 
@@ -25,7 +27,7 @@ const EXPIRY_STATUS_LABELS: Record<string, string> = {
 
 export function KeysPage() {
   const {
-    db,
+    view,
     selectedKeyId,
     searchQuery,
     filterGroupId,
@@ -42,11 +44,17 @@ export function KeysPage() {
     clearSmartFilters,
   } = useStore();
 
-  const groups = db?.getGroups() ?? [];
-  const viewKeys = showArchived
-    ? (db?.getArchivedApiKeys() ?? [])
-    : (db?.getActiveApiKeys() ?? []);
-  const providers = [...new Set(viewKeys.map((k) => k.provider))].sort();
+  const groups = view ? sortedGroups(view) : [];
+  const viewKeys = !view
+    ? []
+    : showArchived
+      ? archivedKeys(view)
+      : activeKeys(view);
+  const providersOf = (providerId: string | null) =>
+    providerLabel(providerId, view?.file.providers ?? []);
+  const providers = [
+    ...new Set(viewKeys.map((key) => providersOf(key.provider_id))),
+  ].sort();
   const hasSmartFilters =
     filterProvider || filterTestStatus || filterExpiryStatus;
 

@@ -1,4 +1,4 @@
-import type { ApiKey } from '../../view/types';
+import type { Key } from '../../../core/payload/types';
 import { useStore } from '../../store/useStore';
 import {
   AlertDialogRoot as AlertDialog,
@@ -16,7 +16,7 @@ export function DeleteKeyDialog({
   deletingKey,
   onClose,
 }: {
-  deletingKey: ApiKey | null;
+  deletingKey: Key | null;
   onClose: () => void;
 }) {
   const deleteKey = useStore((state) => state.deleteKey);

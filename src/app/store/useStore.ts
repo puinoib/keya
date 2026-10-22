@@ -16,24 +16,21 @@ import type { Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import { deviceTimeZone, localState } from '../storage/platform';
-import type {
-  BusinessRule,
-  ObservationRule,
-} from '../../core/runtime/dismissals';
 import type { Observation } from '../../core/runtime/observations';
-import { expiryCondition } from '../../core/time/expiry';
-import { insecureEndpointCondition } from '../../core/payload/url';
-import type { ProbeAuth, Provider } from '../../core/payload/types';
-import { providerIdForLabel } from '../view/catalog';
-import { buildDatabase, type ViewDatabase } from '../view/build';
-import { isoToExpiry, keyToView } from '../view/convert';
-import type {
-  ApiKey,
-  CustomProvider,
-  Group,
-  NewApiKey,
-  Settings,
-} from '../view/types';
+import type { Expiry } from '../../core/time/expiry';
+import type { Group, Key } from '../../core/payload/types';
+import {
+  draftToProvider,
+  providerLabel,
+  type ProviderDraft,
+} from '../state/providers';
+import {
+  buildVaultView,
+  hasDuplicateSecret,
+  keyById,
+  type ReminderRow,
+  type VaultView,
+} from '../state/view';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import {
   dropUsageSnapshot,
@@ -57,20 +54,38 @@ import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
 
 export type VaultStorageMode = 'folder' | 'download';
 
-/** Fields a caller may change; everything else is derived or immutable. */
-export type KeyUpdate = Partial<
-  Pick<
-    ApiKey,
-    | 'name'
-    | 'description'
-    | 'provider'
-    | 'endpoint'
-    | 'key'
-    | 'group_id'
-    | 'expires_at'
-    | 'archived_at'
-  >
->;
+/** Fields a caller may change on a stored key; the rest is the vault's own. */
+export interface KeyPatch {
+  name?: string;
+  description?: string;
+  providerId?: string | null;
+  endpoint?: string;
+  secret?: string;
+  groupId?: string | null;
+  expiry?: Expiry | null;
+  archivedAt?: string | null;
+}
+
+/** What the add form hands over: a new key with its provider already resolved. */
+export interface NewKeyInput {
+  name: string;
+  secret: string;
+  providerId: string | null;
+  endpoint: string;
+  description: string;
+  groupId: string | null;
+  expiry: Expiry | null;
+}
+
+/** The settings page writes device preferences and, separately, providers. */
+export interface SettingsPatch {
+  auto_lock_minutes?: number;
+  auto_probe_on_save?: boolean;
+  auto_probe_daily?: boolean;
+  clipboard_detection_on_add?: boolean;
+  hidden_presets?: string[];
+  providers?: ProviderDraft[];
+}
 type WorkspaceState = 'welcome' | 'unlocked';
 
 interface Runtime {
@@ -90,7 +105,7 @@ interface AppState {
   workspaceState: WorkspaceState;
   /** Session-only, so biometric enrollment can wrap it. Saves never use it. */
   password: string | null;
-  db: ViewDatabase | null;
+  view: VaultView | null;
   activeVaultFileName: string | null;
   storageMode: VaultStorageMode;
   hasUnsavedChanges: boolean;
@@ -131,8 +146,8 @@ interface AppState {
   updateKeyboardShortcuts: (shortcuts: ShortcutMap) => void;
   refresh: () => Promise<void>;
 
-  addKey: (key: NewApiKey) => ApiKey | undefined;
-  updateKey: (id: string, updates: KeyUpdate) => void;
+  addKey: (input: NewKeyInput) => Key | undefined;
+  updateKey: (id: string, patch: KeyPatch) => void;
   deleteKey: (id: string) => void;
   archiveKey: (id: string) => void;
   restoreKey: (id: string) => void;
@@ -158,12 +173,15 @@ interface AppState {
   setSelectedKeyId: (id: string | null) => void;
 
   addGroup: (group: Omit<Group, 'id'>) => void;
-  updateGroup: (id: string, updates: Partial<Group>) => void;
+  updateGroup: (
+    id: string,
+    patch: Partial<Pick<Group, 'name' | 'icon' | 'order'>>
+  ) => void;
   deleteGroup: (id: string) => void;
 
-  updateSettings: (updates: Partial<Settings>) => void;
+  updateSettings: (patch: SettingsPatch) => void;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
-  archiveInboxItem: (id: string) => void;
+  setReminderDismissed: (row: ReminderRow, dismissed: boolean) => void;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
 }
 
@@ -180,29 +198,25 @@ async function buildView(state: {
   session: VaultSession;
   local: LocalState;
   preferences: Preferences;
-}): Promise<ViewDatabase> {
+}): Promise<VaultView> {
   const file = state.vault.getPayload();
   const bindings = await state.session.bindings();
-  const observations = new Map<string, Observation>();
+  const checks = new Map<string, Observation>();
 
-  for (const key of file.keys) {
-    const binding = bindings.get(key.id);
-    if (!binding) continue;
-    const list = await state.local.listObservations(file.vault.id, key.id);
+  for (const [keyId, binding] of bindings) {
+    const list = await state.local.listObservations(file.vault.id, keyId);
     const latest = list.find((entry) => entry.binding === binding.binding);
-    if (latest) observations.set(key.id, latest);
+    if (latest) checks.set(keyId, latest);
   }
 
-  const dismissals = await state.session.dismissed();
-
-  return buildDatabase({
+  return buildVaultView({
     file,
-    observations,
-    bindings,
-    dismissals,
     preferences: state.preferences,
     now: new Date(),
     timeZone: deviceTimeZone(),
+    checks,
+    bindings,
+    dismissals: await state.session.dismissed(),
   });
 }
 
@@ -225,7 +239,7 @@ export const useStore = create<AppState>()((set, get) => {
   return {
     workspaceState: 'welcome',
     password: null,
-    db: null,
+    view: null,
     activeVaultFileName: null,
     storageMode: 'folder',
     hasUnsavedChanges: false,
@@ -277,7 +291,7 @@ export const useStore = create<AppState>()((set, get) => {
       const vaultId = opened.vault.getPayload().vault.id;
       const keyIds = opened.vault.getPayload().keys.map((key) => key.id);
       pruneUsageCache(vaultId, keyIds);
-      inboxBaseline = { vaultId, open: openItemIds(get().db) };
+      inboxBaseline = { vaultId, open: openReminderIds(get().view) };
       set({ usage: readUsageCache(vaultId) });
 
       void runDailyProbe();
@@ -294,7 +308,7 @@ export const useStore = create<AppState>()((set, get) => {
       set({
         workspaceState: 'welcome',
         password: null,
-        db: null,
+        view: null,
         activeVaultFileName: null,
         hasUnsavedChanges: false,
         selectedKeyId: null,
@@ -329,26 +343,25 @@ export const useStore = create<AppState>()((set, get) => {
 
     refresh: async () => {
       if (!runtime) return;
-      const db = await buildView(runtime);
-      set({ db, inboxVersion: get().inboxVersion + 1 });
-      announceNewReminders(db);
+      const view = await buildView(runtime);
+      set({ view, inboxVersion: get().inboxVersion + 1 });
+      announceNewReminders(view);
     },
 
     addKey: (input) => {
       if (!runtime) return undefined;
-      const file = runtime.vault.getPayload();
       const now = new Date().toISOString();
       const id = crypto.randomUUID();
-      const key = {
+      const key: Key = {
         id,
         name: input.name,
         description: input.description,
-        provider_id: providerIdForLabel(input.provider, file.providers),
+        provider_id: input.providerId,
         endpoint: input.endpoint.trim() || null,
-        secret: input.key,
-        group_id: input.group_id,
-        expiry: isoToExpiry(input.expires_at),
-        archived_at: input.archived_at ?? null,
+        secret: input.secret,
+        group_id: input.groupId,
+        expiry: input.expiry,
+        archived_at: null,
         created_at: now,
         content_updated_at: now,
       };
@@ -365,44 +378,35 @@ export const useStore = create<AppState>()((set, get) => {
         .getPayload()
         .keys.find((entry) => entry.id === id);
       void afterChange();
-      return saved
-        ? keyToView(saved, runtime.vault.getPayload(), undefined, {
-            now: new Date(),
-            timeZone: deviceTimeZone(),
-          })
-        : undefined;
+      return saved;
     },
 
-    updateKey: (id, updates) => {
+    updateKey: (id, patch) => {
       if (!runtime) return;
       const file = runtime.vault.getPayload();
       const existing = file.keys.find((key) => key.id === id);
       if (!existing) return;
 
-      const next = {
+      const next: Key = {
         ...existing,
-        name: updates.name ?? existing.name,
-        description: updates.description ?? existing.description,
+        name: patch.name ?? existing.name,
+        description: patch.description ?? existing.description,
         provider_id:
-          updates.provider !== undefined
-            ? providerIdForLabel(updates.provider, file.providers)
+          patch.providerId !== undefined
+            ? patch.providerId
             : existing.provider_id,
         endpoint:
-          updates.endpoint !== undefined
-            ? updates.endpoint.trim() || null
+          patch.endpoint !== undefined
+            ? patch.endpoint.trim() || null
             : existing.endpoint,
-        secret: updates.key ?? existing.secret,
+        secret: patch.secret ?? existing.secret,
         group_id:
-          updates.group_id !== undefined ? updates.group_id : existing.group_id,
-        expiry:
-          updates.expires_at !== undefined
-            ? isoToExpiry(updates.expires_at)
-            : existing.expiry,
+          patch.groupId !== undefined ? patch.groupId : existing.group_id,
+        expiry: patch.expiry !== undefined ? patch.expiry : existing.expiry,
         archived_at:
-          updates.archived_at !== undefined
-            ? updates.archived_at
+          patch.archivedAt !== undefined
+            ? patch.archivedAt
             : existing.archived_at,
-        created_at: existing.created_at,
         content_updated_at: new Date().toISOString(),
       };
 
@@ -457,23 +461,20 @@ export const useStore = create<AppState>()((set, get) => {
     refreshUsage: async (keyId) => {
       const active = runtime;
       if (!active) return;
-      const view = get().db?.getApiKey(keyId);
-      if (!view) return;
+      const view = get().view;
+      const key = view ? keyById(view, keyId) : undefined;
+      if (!view || !key) return;
+
+      const provider = providerLabel(key.provider_id, view.file.providers);
+      const endpoint = key.endpoint ?? '';
 
       // The click is the gesture: approve this one request shape, then let the
       // session decide whether it may go out.
-      const url = usageRequestUrl({
-        provider: view.provider,
-        endpoint: view.endpoint,
-      });
+      const url = usageRequestUrl({ provider, endpoint });
       if (url) await active.session.approveUsageOnce(keyId, url);
 
       const result = await fetchUsage(
-        {
-          provider: view.provider,
-          endpoint: view.endpoint,
-          secret: view.key,
-        },
+        { provider, endpoint, secret: key.secret },
         { authorize: (target) => active.session.authorizeUsage(keyId, target) }
       );
 
@@ -497,23 +498,21 @@ export const useStore = create<AppState>()((set, get) => {
     setShowAddForm: (showAddForm) => set({ showAddForm }),
 
     beginAddKeyFlow: async () => {
-      const settings = get().db?.getSettings();
-      if (!settings?.clipboard_detection_on_add) {
+      const view = get().view;
+      if (!view?.preferences.clipboard_detection_on_add) {
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
         return;
       }
 
-      const activeDb = get().db;
-      const candidate = await tryDetectClipboardKey(settings);
-      const db = get().db;
-      if (db !== activeDb) return;
+      const vaultId = view.vaultId;
+      const candidate = await tryDetectClipboardKey(
+        view.preferences,
+        view.file.providers
+      );
+      const current = get().view;
+      if (!current || current.vaultId !== vaultId) return;
 
-      if (
-        candidate &&
-        db
-          ?.getActiveApiKeys()
-          .some((existing) => existing.key === candidate.raw)
-      ) {
+      if (candidate && hasDuplicateSecret(current, candidate.raw)) {
         toast('This credential is already saved');
         set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
         return;
@@ -602,32 +601,30 @@ export const useStore = create<AppState>()((set, get) => {
       void afterChange();
     },
 
-    updateSettings: (updates) => {
+    updateSettings: (patch) => {
       if (!runtime) return;
       const preferences: Preferences = { ...runtime.preferences };
 
-      if (updates.auto_lock_minutes !== undefined) {
-        preferences.auto_lock_minutes = updates.auto_lock_minutes;
+      if (patch.auto_lock_minutes !== undefined) {
+        preferences.auto_lock_minutes = patch.auto_lock_minutes;
       }
-      if (updates.auto_test_on_save !== undefined) {
-        preferences.auto_probe_on_save = updates.auto_test_on_save;
+      if (patch.auto_probe_on_save !== undefined) {
+        preferences.auto_probe_on_save = patch.auto_probe_on_save;
       }
-      if (updates.auto_test_daily !== undefined) {
-        preferences.auto_probe_daily = updates.auto_test_daily;
+      if (patch.auto_probe_daily !== undefined) {
+        preferences.auto_probe_daily = patch.auto_probe_daily;
       }
-      if (updates.clipboard_detection_on_add !== undefined) {
+      if (patch.clipboard_detection_on_add !== undefined) {
         preferences.clipboard_detection_on_add =
-          updates.clipboard_detection_on_add;
+          patch.clipboard_detection_on_add;
       }
-      if (updates.disabled_providers !== undefined) {
-        preferences.hidden_presets = updates.disabled_providers;
+      if (patch.hidden_presets !== undefined) {
+        preferences.hidden_presets = patch.hidden_presets;
       }
       runtime.preferences = preferences;
       void localState.setPreferences(preferences);
 
-      if (updates.custom_providers) {
-        void applyProviders(runtime, updates.custom_providers);
-      }
+      if (patch.providers) void applyProviders(runtime, patch.providers);
 
       void get().refresh();
     },
@@ -678,22 +675,9 @@ export const useStore = create<AppState>()((set, get) => {
       toast.success('Password changed.');
     },
 
-    archiveInboxItem: (id) => {
+    setReminderDismissed: (row, dismissed) => {
       if (!runtime) return;
-      const item = get()
-        .db?.getInboxItems()
-        .find((entry) => entry.id === id);
-      if (!item) return;
-
-      const rule = item.rule;
-      if (item.status === 'open') {
-        const reminder = get()
-          .db?.getInboxItems()
-          .find((entry) => entry.id === id);
-        void dismissReminder(item.entity_id, rule, reminder?.metadata);
-      } else {
-        void restoreReminder(item.entity_id, rule);
-      }
+      void (dismissed ? dismissReminder(row) : restoreReminder(row));
       void afterChange();
     },
 
@@ -781,12 +765,11 @@ function withoutKey(
 }
 
 /** The open reminder ids of one view, used to spot what appeared later. */
-function openItemIds(db: ViewDatabase | null): string[] {
-  if (!db) return [];
-  return db
-    .getInboxItems()
-    .filter((item) => item.status === 'open')
-    .map((item) => item.id);
+function openReminderIds(view: VaultView | null): string[] {
+  if (!view) return [];
+  return view.reminders
+    .filter((row) => !row.dismissed)
+    .map((row) => `${row.reminder.rule}:${row.key.id}`);
 }
 
 let inboxBaseline: { vaultId: string; open: string[] } | null = null;
@@ -795,9 +778,9 @@ let inboxBaseline: { vaultId: string; open: string[] } | null = null;
  * Announce reminders that appeared while the vault was open. The list itself is
  * computed, so "new" means new to this device since the last refresh.
  */
-function announceNewReminders(db: ViewDatabase): void {
-  const vaultId = db.getData().vault_id;
-  const open = openItemIds(db);
+function announceNewReminders(view: VaultView): void {
+  const vaultId = view.vaultId;
+  const open = openReminderIds(view);
   const previous = inboxBaseline;
 
   inboxBaseline = { vaultId, open };
@@ -857,111 +840,87 @@ async function runDailyProbe(): Promise<void> {
   if (runtime === active) await useStore.getState().refresh();
 }
 
-async function dismissReminder(
-  keyId: string,
-  rule: BusinessRule | ObservationRule,
-  _metadata: unknown
-): Promise<void> {
+/**
+ * Put a reminder away. The reminder already carries the fact it was computed
+ * from — a condition or a binding — so the dismissal is written for exactly
+ * that fact and stops applying once the fact changes.
+ */
+async function dismissReminder(row: ReminderRow): Promise<void> {
   if (!runtime) return;
+  const { reminder } = row;
   const vaultId = runtime.vault.getPayload().vault.id;
   const now = new Date().toISOString();
 
-  if (isBusinessRule(rule)) {
-    const condition = await businessCondition(keyId, rule);
-    if (!condition) return;
+  if (reminder.kind === 'business') {
     await runtime.local.putBusinessDismissal({
       vault_id: vaultId,
-      key_id: keyId,
-      rule,
-      condition,
+      key_id: reminder.key_id,
+      rule: reminder.rule,
+      condition: reminder.condition,
       dismissed_at: now,
     });
     return;
   }
 
-  const binding = (await runtime.session.bindings()).get(keyId)?.binding;
-  if (!binding) return;
   await runtime.local.putObservationDismissal({
     vault_id: vaultId,
-    key_id: keyId,
-    rule,
-    binding,
+    key_id: reminder.key_id,
+    rule: reminder.rule,
+    binding: reminder.binding,
     dismissed_at: now,
   });
 }
 
-async function restoreReminder(
-  keyId: string,
-  rule: BusinessRule | ObservationRule
-): Promise<void> {
+async function restoreReminder(row: ReminderRow): Promise<void> {
   if (!runtime) return;
+  const { reminder } = row;
   const vaultId = runtime.vault.getPayload().vault.id;
-  if (isBusinessRule(rule)) {
-    await runtime.local.removeBusinessDismissal(vaultId, keyId, rule);
+
+  if (reminder.kind === 'business') {
+    await runtime.local.removeBusinessDismissal(
+      vaultId,
+      reminder.key_id,
+      reminder.rule
+    );
     return;
   }
-  await runtime.local.removeObservationDismissal(vaultId, keyId, rule);
-}
 
-async function businessCondition(
-  keyId: string,
-  rule: BusinessRule
-): Promise<string | null> {
-  if (!runtime) return null;
-  const key = runtime.vault
-    .getPayload()
-    .keys.find((entry) => entry.id === keyId);
-  if (!key) return null;
-
-  // The dismissal is bound to the same fact string the reminder carries.
-  if (rule === 'insecure_endpoint') {
-    if (!key.endpoint) return null;
-    try {
-      return insecureEndpointCondition(new URL(key.endpoint));
-    } catch {
-      return null;
-    }
-  }
-
-  return expiryCondition(key.expiry);
-}
-
-function isBusinessRule(
-  rule: BusinessRule | ObservationRule
-): rule is BusinessRule {
-  return (
-    rule === 'expiry_upcoming' ||
-    rule === 'expiry_expired' ||
-    rule === 'insecure_endpoint'
+  await runtime.local.removeObservationDismissal(
+    vaultId,
+    reminder.key_id,
+    reminder.rule
   );
 }
 
+/**
+ * Write the custom providers the settings page shows. Matching is by id first,
+ * so renaming a provider keeps the references keys already point at.
+ */
 async function applyProviders(
   state: Runtime,
-  providers: CustomProvider[]
+  drafts: ProviderDraft[]
 ): Promise<void> {
   const file = state.vault.getPayload();
-  const byId = new Map(
-    file.providers.map((provider) => [provider.id, provider])
-  );
+  const existing = file.providers;
+
+  const byId = new Map(existing.map((provider) => [provider.id, provider]));
   const byName = new Map(
-    file.providers.map((provider) => [provider.name, provider])
+    existing.map((provider) => [provider.name.trim().toLowerCase(), provider])
   );
 
-  // Match on id first: a rename must keep the id the keys already point at.
   const kept = new Set<string>();
-  for (const provider of providers) {
+  for (const draft of drafts) {
     const previous =
-      (provider.id ? byId.get(provider.id) : undefined) ??
-      byName.get(provider.name);
+      (draft.id ? byId.get(draft.id) : undefined) ??
+      byName.get(draft.name.trim().toLowerCase());
     const id = previous?.id ?? `custom:${crypto.randomUUID()}`;
     kept.add(id);
 
-    const saved = state.vault.saveProvider(toStoredProvider(provider, id));
+    const saved = state.vault.saveProvider(draftToProvider(draft, id));
     if (!saved.ok) toast.error(saved.reason);
   }
 
-  for (const provider of file.providers) {
+  for (const provider of existing) {
     if (kept.has(provider.id)) continue;
     const removed = state.vault.removeProvider(provider.id);
     if (!removed.ok) {
@@ -972,43 +931,6 @@ async function applyProviders(
       );
     }
   }
-}
-
-function toStoredProvider(provider: CustomProvider, id: string): Provider {
-  const check = provider.check;
-  let probe: Provider['probe'] = null;
-
-  if (check) {
-    const auth: ProbeAuth =
-      check.auth === 'x-api-key'
-        ? { mode: 'header', name: 'x-api-key' }
-        : check.auth === 'header'
-          ? { mode: 'header', name: check.header_name?.trim() || 'x-api-key' }
-          : check.auth === 'query'
-            ? { mode: 'query', param: check.query_param?.trim() || 'key' }
-            : check.auth === 'basic'
-              ? { mode: 'basic' }
-              : { mode: 'bearer' };
-
-    probe = {
-      target: (check.path ?? '').trim() || '.',
-      auth,
-      headers: (check.headers ?? [])
-        .filter((header) => header.name.trim() && header.value.trim())
-        .map((header) => ({
-          name: header.name.trim().toLowerCase(),
-          value: header.value.trim(),
-        })),
-    };
-  }
-
-  return {
-    id,
-    name: provider.name,
-    description: '',
-    default_endpoint: provider.endpoint.trim() || null,
-    probe,
-  };
 }
 
 /** Bytes of the current vault, for "Export .keya". */

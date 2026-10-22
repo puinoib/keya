@@ -2,22 +2,37 @@ import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
-import { runManualCheck, useStore } from '../../store/useStore';
+import { runManualCheck, useStore, type KeyPatch } from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
-import { ApiTester } from '../../lib/api-tester';
+import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
 import {
   describeTestResult,
   getTestActionHint,
   getTestActionLabel,
 } from '../../lib/test-feedback';
-import type { ApiKey } from '../../view/types';
+import type { Key } from '../../../core/payload/types';
+import {
+  activeKeys,
+  archivedKeys,
+  checkOf,
+  expiryOf,
+  hasDuplicateSecret,
+  searchKeys,
+  sortedGroups,
+} from '../../state/view';
+import {
+  dateToExpiry,
+  expiryToDate,
+  expiryStatusLabel,
+} from '../../state/presentation';
 import {
   getDefaultEndpointForProvider,
   getProviderSections,
-} from '../../view/catalog';
+  providerIdForLabel,
+  providerLabel,
+} from '../../state/providers';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
-import { getExpiryStatusLabel } from '../../view/status';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +68,7 @@ import {
   PencilSimple,
   Eye,
   EyeSlash,
-  Key,
+  Key as KeyIcon,
   Plus,
   MagnifyingGlass,
   ArrowCounterClockwise,
@@ -66,8 +81,8 @@ import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
 
 export function KeyList() {
-  const db = useStore((s) => s.db);
-  const settings = db?.getSettings();
+  const view = useStore((s) => s.view);
+  const providers = view?.file.providers ?? [];
   const {
     searchQuery,
     filterGroupId,
@@ -84,35 +99,38 @@ export function KeyList() {
   } = useStore();
   const [testing, setTesting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
-  const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
+  const [editingKey, setEditingKey] = useState<Key | null>(null);
+  const [deletingKey, setDeletingKey] = useState<Key | null>(null);
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
   const keyItemRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const baseKeys = showArchived
-    ? (db?.getArchivedApiKeys() ?? [])
-    : (db?.getActiveApiKeys() ?? []);
+  const baseKeys = !view
+    ? []
+    : showArchived
+      ? archivedKeys(view)
+      : activeKeys(view);
+
   let keys = baseKeys;
-  if (searchQuery && db) keys = db.searchKeys(searchQuery, baseKeys);
+  if (view && searchQuery) keys = searchKeys(view, keys, searchQuery);
   if (filterGroupId) {
     keys =
       filterGroupId === '__ungrouped__'
-        ? keys.filter((k) => !k.group_id)
-        : keys.filter((k) => k.group_id === filterGroupId);
+        ? keys.filter((key) => !key.group_id)
+        : keys.filter((key) => key.group_id === filterGroupId);
   }
-  if (filterProvider) keys = keys.filter((k) => k.provider === filterProvider);
-  if (filterTestStatus)
-    keys = keys.filter((k) => {
-      return k.connection_check.status === filterTestStatus;
-    });
-  if (filterExpiryStatus) {
-    keys = keys.filter((k) => {
-      const expiryStatus = k.expiry_status;
-      if (filterExpiryStatus === 'expired') return expiryStatus === 'expired';
-      if (filterExpiryStatus === 'expiring')
-        return expiryStatus === 'expiring_soon';
+  if (view && filterProvider)
+    keys = keys.filter(
+      (key) => providerLabel(key.provider_id, providers) === filterProvider
+    );
+  if (view && filterTestStatus)
+    keys = keys.filter((key) => checkOf(view, key).status === filterTestStatus);
+  if (view && filterExpiryStatus) {
+    keys = keys.filter((key) => {
+      const status = expiryOf(view, key).status;
+      if (filterExpiryStatus === 'expired') return status === 'expired';
+      if (filterExpiryStatus === 'expiring') return status === 'expiring_soon';
       if (filterExpiryStatus === 'valid')
-        return expiryStatus === 'valid' || expiryStatus === 'none';
+        return status === 'valid' || status === 'none';
       return true;
     });
   }
@@ -124,12 +142,12 @@ export function KeyList() {
     }
   }, [selectedKeyId, keys, setSelectedKeyId]);
 
-  const handleTest = async (key: ApiKey) => {
+  const handleTest = async (key: Key) => {
     if (key.archived_at) return;
-    const vaultId = useStore.getState().db?.getData().vault_id;
+    const vaultId = useStore.getState().view?.vaultId;
     setTesting(key.id);
-    const result = await ApiTester.testKey(key, settings);
-    if (useStore.getState().db?.getData().vault_id !== vaultId) {
+    const result = await ApiTester.testStored(key.id);
+    if (useStore.getState().view?.vaultId !== vaultId) {
       setTesting(null);
       return;
     }
@@ -140,14 +158,14 @@ export function KeyList() {
     });
   };
 
-  const handleArchive = (key: ApiKey) => {
+  const handleArchive = (key: Key) => {
     archiveKey(key.id);
     toast.success(`Archived "${key.name}"`, {
       action: { label: 'Undo', onClick: () => restoreKey(key.id) },
     });
   };
 
-  const handleRestore = (key: ApiKey) => {
+  const handleRestore = (key: Key) => {
     restoreKey(key.id);
     toast.success(`Restored "${key.name}"`);
   };
@@ -219,7 +237,7 @@ export function KeyList() {
   useAppHotkey(
     'key.copy',
     () => {
-      if (selectedKey) handleCopy(selectedKey.key, selectedKey.id);
+      if (selectedKey) handleCopy(selectedKey.secret, selectedKey.id);
     },
     { enabled: keyShortcutsEnabled && !!selectedKey }
   );
@@ -252,7 +270,7 @@ export function KeyList() {
     enabled: !!selectedKeyId && !editingKey && !deletingKey,
   });
 
-  if (!db) return null;
+  if (!view) return null;
 
   if (showArchived && keys.length === 0 && !hasFilters) {
     return (
@@ -272,11 +290,11 @@ export function KeyList() {
   }
 
   if (keys.length === 0 && !hasFilters) {
-    const archivedCount = db.getArchivedApiKeys().length;
+    const archivedCount = archivedKeys(view).length;
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="flex items-center justify-center size-14 rounded-2xl bg-accent/10 text-accent-bright mb-5">
-          <Key className="size-6" />
+          <KeyIcon className="size-6" />
         </div>
         <h3 className="text-sm font-semibold text-ink-primary mb-1.5">
           {archivedCount > 0 ? 'No active credentials' : 'No credentials yet'}
@@ -322,22 +340,26 @@ export function KeyList() {
         {keys.map((key) => {
           const isTesting = testing === key.id;
           const isSelected = selectedKeyId === key.id;
-          const expiryStatus = key.expiry_status;
+          const check = view ? checkOf(view, key) : null;
+          const expiryStatus = view ? expiryOf(view, key).status : 'none';
           const status =
-            key.connection_check.status === 'success'
+            check?.status === 'success'
               ? {
                   dot: 'bg-success-bright',
                 }
-              : key.connection_check.status === 'failed'
+              : check?.status === 'failed'
                 ? {
                     dot: 'bg-danger',
                   }
                 : {
                     dot: 'bg-ink-quaternary/35',
                   };
+          const checkLabel = check
+            ? getTestActionLabel(check.kind)
+            : getTestActionLabel('request');
           const expiryLabel =
             expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
-              ? getExpiryStatusLabel(expiryStatus)
+              ? expiryStatusLabel(expiryStatus)
               : null;
           const expiryClassName =
             expiryStatus === 'expired'
@@ -406,8 +428,13 @@ export function KeyList() {
                   )}
                 </div>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-quaternary">
-                  <ProviderLogo provider={key.provider} className="size-3" />
-                  <span className="shrink-0">{key.provider}</span>
+                  <ProviderLogo
+                    provider={providerLabel(key.provider_id, providers)}
+                    className="size-3"
+                  />
+                  <span className="shrink-0">
+                    {providerLabel(key.provider_id, providers)}
+                  </span>
                   {key.description && (
                     <>
                       <span className="text-divider">·</span>
@@ -431,20 +458,8 @@ export function KeyList() {
                     onClick={() => handleTest(key)}
                     disabled={isTesting}
                     className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary disabled:opacity-50"
-                    title={
-                      isTesting
-                        ? 'Testing...'
-                        : getTestActionLabel(
-                            ApiTester.checkKindFor(key.provider, settings)
-                          )
-                    }
-                    aria-label={
-                      isTesting
-                        ? 'Testing key'
-                        : getTestActionLabel(
-                            ApiTester.checkKindFor(key.provider, settings)
-                          )
-                    }
+                    title={isTesting ? 'Testing...' : checkLabel}
+                    aria-label={isTesting ? 'Testing key' : checkLabel}
                   >
                     {isTesting ? (
                       <span className="size-3 border-[1.5px] border-ink-primary border-t-transparent rounded-full animate-spin" />
@@ -455,7 +470,7 @@ export function KeyList() {
                 )}
 
                 <button
-                  onClick={() => handleCopy(key.key, key.id)}
+                  onClick={() => handleCopy(key.secret, key.id)}
                   className="inline-flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors duration-150 hover:bg-surface-4 hover:text-ink-primary"
                   title={copiedId === key.id ? 'Copied!' : 'Copy to clipboard'}
                   aria-label={
@@ -534,11 +549,13 @@ export function EditKeyDialog({
   onClose,
   onSave,
 }: {
-  editingKey: ApiKey | null;
+  editingKey: Key | null;
   onClose: () => void;
-  onSave: (id: string, updates: Partial<ApiKey>) => void;
+  onSave: (id: string, patch: KeyPatch) => void;
 }) {
-  const db = useStore((s) => s.db);
+  const view = useStore((s) => s.view);
+  const providers = view?.file.providers ?? [];
+  const preferences = view?.preferences;
   const [showKey, setShowKey] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -559,14 +576,14 @@ export function EditKeyDialog({
 
   const [form, setForm] = useState({
     name: editingKey?.name ?? '',
-    key: editingKey?.key ?? '',
-    provider: editingKey?.provider ?? 'OpenAI',
+    secret: editingKey?.secret ?? '',
+    provider: editingKey
+      ? providerLabel(editingKey.provider_id, providers)
+      : 'OpenAI',
     endpoint: editingKey?.endpoint ?? '',
     description: editingKey?.description ?? '',
-    group_id: editingKey?.group_id ?? (null as string | null),
-    expires_at: editingKey?.expires_at
-      ? new Date(editingKey.expires_at)
-      : (undefined as Date | undefined),
+    groupId: editingKey?.group_id ?? (null as string | null),
+    expiry: expiryToDate(editingKey?.expiry ?? null),
   });
   const [testState, setTestState] = useState<{
     testing: boolean;
@@ -576,43 +593,45 @@ export function EditKeyDialog({
     result: null,
   });
 
-  const settings = db?.getSettings();
-  const checkKind = ApiTester.checkKindFor(form.provider, settings);
-  const providerSections = getProviderSections(settings);
+  const providerSections = getProviderSections(preferences, providers);
+  const formCheckKind = checkKind(
+    providerIdForLabel(form.provider, providers),
+    form.endpoint,
+    providers
+  );
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
-    settings
+    providers
   );
 
   useEffect(() => {
     if (!editingKey) return;
+    const label = providerLabel(editingKey.provider_id, providers);
     const endpoint =
-      editingKey.endpoint ||
-      getDefaultEndpointForProvider(editingKey.provider, settings) ||
+      editingKey.endpoint ??
+      getDefaultEndpointForProvider(label, providers) ??
       '';
     setForm({
       name: editingKey.name,
-      key: editingKey.key,
-      provider: editingKey.provider,
+      secret: editingKey.secret,
+      provider: label,
       endpoint,
       description: editingKey.description,
-      group_id: editingKey.group_id,
-      expires_at: editingKey.expires_at
-        ? new Date(editingKey.expires_at)
-        : undefined,
+      groupId: editingKey.group_id,
+      expiry: expiryToDate(editingKey.expiry),
     });
     setTestState({ testing: false, result: null });
-  }, [editingKey, settings]);
+  }, [editingKey, providers]);
 
   const handleTest = async () => {
-    if (!form.key) return;
+    if (!form.secret) return;
     setTestState({ testing: true, result: null });
-    const result = await ApiTester.testRaw(
-      form.provider,
-      form.endpoint,
-      form.key,
-      settings
-    );
+    const result = await ApiTester.testDraft({
+      providerId: providerIdForLabel(form.provider, providers),
+      endpoint: form.endpoint,
+      secret: form.secret,
+      providers,
+    });
     setTestState({ testing: false, result });
     const feedback = describeTestResult(
       result,
@@ -625,7 +644,7 @@ export function EditKeyDialog({
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
-    if (db?.hasDuplicateApiKeyValue(form.key.trim(), editingKey.id)) {
+    if (view && hasDuplicateSecret(view, form.secret.trim(), editingKey.id)) {
       toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
@@ -635,16 +654,16 @@ export function EditKeyDialog({
     toast.success('Key updated', { description: form.name.trim() });
     onSave(editingKey.id, {
       name: form.name.trim(),
-      key: form.key.trim(),
-      provider: form.provider,
+      secret: form.secret.trim(),
+      providerId: providerIdForLabel(form.provider, providers),
       endpoint: form.endpoint,
       description: form.description,
-      group_id: form.group_id,
-      expires_at: form.expires_at ? form.expires_at.toISOString() : null,
+      groupId: form.groupId,
+      expiry: dateToExpiry(form.expiry),
     });
 
     // Auto-test on save: the edit is stored now, so the check records itself.
-    if (settings?.auto_test_on_save) {
+    if (preferences?.auto_probe_on_save) {
       void runManualCheck(editingKey.id);
     }
   };
@@ -684,7 +703,7 @@ export function EditKeyDialog({
             <Label className="text-xs">API Key or Token</Label>
             <div className="relative">
               <AutoResizeTextarea
-                value={form.key}
+                value={form.secret}
                 masked={!showKey}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, key: e.target.value }))
@@ -717,7 +736,7 @@ export function EditKeyDialog({
               onValueChange={(v) => {
                 if (!v) return;
                 const endpoint =
-                  getDefaultEndpointForProvider(v, settings) ?? form.endpoint;
+                  getDefaultEndpointForProvider(v, providers) ?? form.endpoint;
                 setForm((f) => ({ ...f, provider: v, endpoint }));
               }}
             >
@@ -783,16 +802,14 @@ export function EditKeyDialog({
               <Calendar className="size-3.5 shrink-0" />
               <span
                 className={
-                  !form.expires_at
-                    ? 'text-ink-quaternary'
-                    : 'text-ink-secondary'
+                  !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
                 }
               >
-                {form.expires_at
-                  ? format(form.expires_at, 'MMM d, yyyy')
+                {form.expiry
+                  ? format(form.expiry, 'MMM d, yyyy')
                   : 'Pick a date'}
               </span>
-              {form.expires_at && (
+              {form.expiry && (
                 <span
                   role="button"
                   onClick={(e) => {
@@ -808,7 +825,7 @@ export function EditKeyDialog({
             {showCalendar && (
               <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
                 <DayPicker
-                  value={form.expires_at}
+                  value={form.expiry}
                   onChange={(d) => {
                     setForm((f) => ({ ...f, expires_at: d }));
                     setShowCalendar(false);
@@ -822,9 +839,9 @@ export function EditKeyDialog({
           <div className="space-y-1.5">
             <Label className="text-xs">Group</Label>
             <GroupSelect
-              groups={db?.getGroups() ?? []}
-              value={form.group_id}
-              onChange={(group_id) => setForm((f) => ({ ...f, group_id }))}
+              groups={view ? sortedGroups(view) : []}
+              value={form.groupId}
+              onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
             />
           </div>
 
@@ -851,15 +868,15 @@ export function EditKeyDialog({
               variant="outline"
               size="sm"
               onClick={handleTest}
-              disabled={!form.key || testState.testing}
-              title={getTestActionHint(checkKind)}
+              disabled={!form.secret || testState.testing}
+              title={getTestActionHint(formCheckKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              {getTestActionLabel(checkKind)}
+              {getTestActionLabel(formCheckKind)}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               <X className="size-3.5" />
@@ -867,9 +884,9 @@ export function EditKeyDialog({
             </Button>
           </div>
 
-          {checkKind !== 'credential' && (
+          {formCheckKind !== 'credential' && (
             <p className="text-[11px] leading-relaxed text-ink-quaternary">
-              {getTestActionHint(checkKind)}
+              {getTestActionHint(formCheckKind)}
             </p>
           )}
         </form>

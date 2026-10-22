@@ -1,6 +1,7 @@
 import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
+import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { SidebarSection } from './SidebarSection';
 
@@ -59,7 +60,7 @@ export function Sidebar() {
     select: (state) => state.location.pathname,
   });
   const {
-    db,
+    view,
     filterGroupId,
     filterProvider,
     filterTestStatus,
@@ -69,9 +70,9 @@ export function Sidebar() {
     setFilterGroupId,
   } = useStore();
 
-  const keyCount = db?.getActiveApiKeys().length ?? 0;
-  const archivedCount = db?.getArchivedApiKeys().length ?? 0;
-  const openInboxCount = db?.getOpenInboxItems().length ?? 0;
+  const openInboxCount = view
+    ? view.reminders.filter((row) => !row.dismissed).length
+    : 0;
   const isInboxActive = pathname === '/inbox';
   const isAllKeysActive =
     pathname === '/keys' &&
@@ -87,12 +88,13 @@ export function Sidebar() {
     navigate({ to: '/keys' });
   };
 
-  if (!db) return null;
+  if (!view) return null;
 
-  const groups = db.getGroups();
-  const ungroupedCount = db
-    .getActiveApiKeys()
-    .filter((k) => !k.group_id).length;
+  const liveKeys = activeKeys(view);
+  const keyCount = liveKeys.length;
+  const archivedCount = archivedKeys(view).length;
+  const groups = sortedGroups(view);
+  const ungroupedCount = liveKeys.filter((key) => !key.group_id).length;
 
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
@@ -159,9 +161,9 @@ export function Sidebar() {
 
           {/* Groups */}
           {groups.map((group) => {
-            const count = db
-              .getActiveApiKeys()
-              .filter((k) => k.group_id === group.id).length;
+            const count = liveKeys.filter(
+              (key) => key.group_id === group.id
+            ).length;
             return (
               <SidebarFilterButton
                 key={group.id}

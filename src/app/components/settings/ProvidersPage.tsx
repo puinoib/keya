@@ -4,8 +4,10 @@ import {
   PRESET_PROVIDERS,
   getDefaultEndpointForProvider,
   groupProvidersByCategory,
-} from '../../view/catalog';
-import type { CustomProvider, CustomProviderCheck } from '../../view/types';
+  providerToDraft,
+  type ProviderCheckDraft,
+  type ProviderDraft,
+} from '../../state/providers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,7 +33,7 @@ import {
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
 
-type CheckAuthChoice = 'none' | CustomProviderCheck['auth'];
+type CheckAuthChoice = 'none' | ProviderCheckDraft['auth'];
 
 const CHECK_AUTH_LABELS: Record<CheckAuthChoice, string> = {
   none: 'Reachability only',
@@ -46,11 +48,11 @@ function buildCheck(
   auth: CheckAuthChoice,
   path: string,
   name: string
-): CustomProviderCheck | undefined {
+): ProviderCheckDraft | undefined {
   if (auth === 'none') return undefined;
   const trimmedPath = path.trim();
   const trimmedName = name.trim();
-  const check: CustomProviderCheck = { auth };
+  const check: ProviderCheckDraft = { auth };
   if (trimmedPath) check.path = trimmedPath;
   if (auth === 'header') check.header_name = trimmedName;
   if (auth === 'query') check.query_param = trimmedName;
@@ -61,7 +63,7 @@ const presetEndpoints: Record<(typeof PRESET_PROVIDERS)[number], string> =
   Object.fromEntries(
     PRESET_PROVIDERS.map((name) => [
       name,
-      getDefaultEndpointForProvider(name, undefined) ?? '',
+      getDefaultEndpointForProvider(name, []) ?? '',
     ])
   ) as Record<(typeof PRESET_PROVIDERS)[number], string>;
 
@@ -95,7 +97,7 @@ function Toggle({
 }
 
 export function ProvidersPage() {
-  const { db, updateSettings } = useStore();
+  const { view, updateSettings } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
@@ -107,9 +109,11 @@ export function ProvidersPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [showAll, setShowAll] = useState<Record<string, boolean>>({});
 
-  const settings = db?.getSettings();
-  const disabled = new Set(settings?.disabled_providers ?? []);
-  const customs = settings?.custom_providers ?? [];
+  const preferences = view?.preferences;
+  const disabled = new Set(preferences?.hidden_presets ?? []);
+  const customs: ProviderDraft[] = view
+    ? view.file.providers.map(providerToDraft)
+    : [];
 
   const allNames = new Set([
     ...PRESET_PROVIDERS,
@@ -121,7 +125,7 @@ export function ProvidersPage() {
       name,
       logo: getProviderLogo(name),
       endpoint: presetEndpoints[name],
-      check: undefined as CustomProviderCheck | undefined,
+      check: undefined as ProviderCheckDraft | undefined,
       isCustom: false,
       isEnabled: !disabled.has(name),
     }));
@@ -167,11 +171,11 @@ export function ProvidersPage() {
     : sections;
 
   const toggleProvider = (name: string, enable: boolean) => {
-    if (!settings) return;
+    if (!preferences) return;
     const updated = enable
-      ? settings.disabled_providers.filter((n: string) => n !== name)
-      : [...settings.disabled_providers, name];
-    updateSettings({ disabled_providers: updated });
+      ? preferences.hidden_presets.filter((entry) => entry !== name)
+      : [...preferences.hidden_presets, name];
+    updateSettings({ hidden_presets: updated });
   };
 
   const resetForm = () => {
@@ -189,7 +193,7 @@ export function ProvidersPage() {
     setIsAdding(true);
   };
 
-  const startEdit = (provider: CustomProvider) => {
+  const startEdit = (provider: ProviderDraft) => {
     setEditingName(provider.name);
     setNewName(provider.name);
     setNewEndpoint(provider.endpoint);
@@ -202,7 +206,7 @@ export function ProvidersPage() {
   };
 
   const saveCustom = () => {
-    if (!settings) return;
+    if (!preferences) return;
     const name = newName.trim();
     const endpoint = newEndpoint.trim();
     if (!name || !endpoint) return;
@@ -214,7 +218,7 @@ export function ProvidersPage() {
     const editing = editingName
       ? customs.find((cp) => cp.name === editingName)
       : undefined;
-    const entry: CustomProvider = {
+    const entry: ProviderDraft = {
       ...(editing?.id ? { id: editing.id } : {}),
       name,
       endpoint,
@@ -225,20 +229,20 @@ export function ProvidersPage() {
       : [...customs, entry];
 
     updateSettings({
-      custom_providers: nextCustoms,
-      disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name
+      providers: nextCustoms,
+      hidden_presets: preferences.hidden_presets.filter(
+        (providerName) => providerName !== name
       ),
     });
     resetForm();
   };
 
   const removeCustom = (name: string) => {
-    if (!settings) return;
+    if (!preferences) return;
     updateSettings({
-      custom_providers: customs.filter((cp) => cp.name !== name),
-      disabled_providers: settings.disabled_providers.filter(
-        (providerName: string) => providerName !== name
+      providers: customs.filter((cp) => cp.name !== name),
+      hidden_presets: preferences.hidden_presets.filter(
+        (providerName) => providerName !== name
       ),
     });
   };
@@ -249,7 +253,7 @@ export function ProvidersPage() {
     ? validateCustomCheck(pendingCheck)
     : null;
 
-  if (!db || !settings) return null;
+  if (!view || !preferences) return null;
 
   return (
     <>

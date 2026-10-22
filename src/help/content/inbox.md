@@ -34,7 +34,7 @@ The decision belongs to this device:
 - switching to another device brings the item back once, so it can be re-reviewed there;
 - clearing site data does the same.
 
-Archived items stay visible under **Archived** at the bottom of the list. Restoring one puts it back immediately — an alert you cannot find again would be a one-way door.
+Archived items stay visible under **Archived** at the bottom of the list, with the date you put them away. There is no separate undo: the item returns on its own once the underlying fact changes, because a dismissal only ever described the fact it was dismissed for.
 
 A dismissal stops applying when the fact behind it changes. Moving an expiry to a new date, or a destination to a new host, brings the item back on its own; moving the expiry back to the value you dismissed restores the old decision.
 

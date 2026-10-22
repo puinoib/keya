@@ -1,4 +1,5 @@
 import { exportVaultBytes, useStore } from '../../store/useStore';
+import { buildJsonExport, jsonExportFileName } from '../../lib/export-json';
 import {
   MagnifyingGlass,
   Plus,
@@ -50,7 +51,7 @@ export function TopBar() {
     searchQuery,
     setSearchQuery,
     beginAddKeyFlow,
-    db,
+    view,
     storageMode,
     hasUnsavedChanges,
     markExported,
@@ -63,7 +64,7 @@ export function TopBar() {
 
   /* ──── Export .keya ──── */
   const handleExportKeya = async () => {
-    if (!db) return;
+    if (!view) return;
     try {
       const bytes = await exportVaultBytes();
       if (!bytes) {
@@ -84,9 +85,8 @@ export function TopBar() {
 
   /* ──── Export JSON ──── */
   const handleExportJson = () => {
-    if (!db) return;
-    const date = new Date().toISOString().slice(0, 10);
-    downloadJSON(db.getData(), `keya-export-${date}.json`);
+    if (!view) return;
+    downloadJSON(buildJsonExport(view.file), jsonExportFileName());
     toast.success('Exported JSON file');
   };
   return (

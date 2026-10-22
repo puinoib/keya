@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRESET_PROVIDERS } from '../../view/catalog';
+import { PRESET_PROVIDERS } from '../../state/providers';
 import { getProviderLogo, isMonochromeProviderLogo } from '../provider-logo';
 
 describe('provider logos', () => {

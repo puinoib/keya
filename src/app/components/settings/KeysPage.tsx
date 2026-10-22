@@ -30,10 +30,10 @@ function Toggle({
 }
 
 export function KeysPage() {
-  const { db, updateSettings } = useStore();
-  const settings = db?.getSettings();
+  const { view, updateSettings } = useStore();
+  const preferences = view?.preferences;
 
-  if (!settings) return null;
+  if (!preferences) return null;
 
   return (
     <>
@@ -52,10 +52,10 @@ export function KeysPage() {
             </p>
           </div>
           <Toggle
-            checked={!!settings.auto_test_on_save}
+            checked={!!preferences.auto_probe_on_save}
             onChange={() =>
               updateSettings({
-                auto_test_on_save: !settings.auto_test_on_save,
+                auto_probe_on_save: !preferences.auto_probe_on_save,
               })
             }
           />
@@ -70,10 +70,10 @@ export function KeysPage() {
             </p>
           </div>
           <Toggle
-            checked={!!settings.auto_test_daily}
+            checked={!!preferences.auto_probe_daily}
             onChange={() =>
               updateSettings({
-                auto_test_daily: !settings.auto_test_daily,
+                auto_probe_daily: !preferences.auto_probe_daily,
               })
             }
           />
@@ -88,11 +88,11 @@ export function KeysPage() {
             </p>
           </div>
           <Toggle
-            checked={!!settings.clipboard_detection_on_add}
+            checked={!!preferences.clipboard_detection_on_add}
             onChange={() =>
               updateSettings({
                 clipboard_detection_on_add:
-                  !settings.clipboard_detection_on_add,
+                  !preferences.clipboard_detection_on_add,
               })
             }
           />

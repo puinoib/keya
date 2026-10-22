@@ -1,14 +1,18 @@
-import type { Settings } from '../view/types';
-import { getDefaultEndpointForProvider } from '../view/catalog';
+import type { Provider } from '../../core/payload/types';
+import type { Preferences } from '../storage/local/state';
+import {
+  getDefaultEndpointForProvider,
+  providerIdForLabel,
+} from '../state/providers';
 
+/** What a detected credential fills into the add form. */
 export interface AddKeyDraft {
   name: string;
-  key_value: string;
-  provider: string;
+  secret: string;
+  providerId: string | null;
   endpoint: string;
   description: string;
-  group_id: string | null;
-  expires_at: Date | undefined;
+  groupId: string | null;
 }
 
 export interface ClipboardKeyCandidate {
@@ -457,10 +461,10 @@ function scoreCandidate(
 
 function buildCandidate(
   match: MatchCandidate,
-  settings?: Settings
+  providers: readonly Provider[]
 ): ClipboardKeyCandidate {
   const endpoint =
-    getDefaultEndpointForProvider(match.provider, settings) ?? '';
+    getDefaultEndpointForProvider(match.provider, providers) ?? '';
 
   return {
     raw: match.raw,
@@ -468,19 +472,18 @@ function buildCandidate(
     provider: match.provider,
     draft: {
       name: buildSuggestedName(match.provider),
-      key_value: match.raw,
-      provider: match.provider,
+      secret: match.raw,
+      providerId: providerIdForLabel(match.provider, providers),
       endpoint,
       description: '',
-      group_id: null,
-      expires_at: undefined,
+      groupId: null,
     },
   };
 }
 
 function detectFromClipboardText(
   text: string,
-  settings?: Settings
+  providers: readonly Provider[]
 ): ClipboardKeyCandidate | null {
   const lines = text
     .split(/\r?\n/)
@@ -544,11 +547,12 @@ function detectFromClipboardText(
   });
 
   const latest = resolved.at(-1);
-  return latest ? buildCandidate(latest, settings) : null;
+  return latest ? buildCandidate(latest, providers) : null;
 }
 
 export async function tryDetectClipboardKey(
-  settings?: Settings
+  _preferences: Preferences,
+  providers: readonly Provider[]
 ): Promise<ClipboardKeyCandidate | null> {
   if (
     typeof navigator === 'undefined' ||
@@ -560,7 +564,7 @@ export async function tryDetectClipboardKey(
 
   try {
     const text = await navigator.clipboard.readText();
-    return detectFromClipboardText(text, settings);
+    return detectFromClipboardText(text, providers);
   } catch {
     return null;
   }
