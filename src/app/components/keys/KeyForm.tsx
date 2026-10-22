@@ -221,9 +221,9 @@ export function KeyForm({
     });
 
     if (!created) {
-      toast.error('Credential already exists', {
-        description: 'A matching key value is already saved in this vault.',
-      });
+      // `addKey` already reported the real reason (limit, invalid values, or a
+      // locked vault); the duplicate case is handled above.
+      toast.error('The key was not saved.');
       return;
     }
 

@@ -400,6 +400,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
           hasUnsavedChanges: false,
           saveFailure: null,
           inboxVersion: get().inboxVersion + 1,
+          // Filters belong to the vault that was open when they were set.
+          selectedKeyId: null,
+          searchQuery: '',
+          filterGroupId: null,
+          filterProvider: null,
+          filterTestStatus: null,
+          filterExpiryStatus: null,
         });
         await get().refresh();
 
@@ -653,10 +660,21 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const view = get().view;
         const key = view ? keyById(view, keyId) : undefined;
         if (!view || !key) return;
+        // One request at a time per key: a second click would consume a second
+        // one-shot approval for a query that is already running.
+        if (get().usage[keyId]?.state === 'loading') return;
 
         const provider = providerLabel(key.provider_id, view.file.providers);
         const endpoint = key.endpoint ?? '';
         const secret = key.secret;
+        const vaultId = active.vault.getPayload().vault.id;
+
+        set((state) => ({
+          usage: {
+            ...state.usage,
+            [keyId]: { state: 'loading', vault_id: vaultId },
+          },
+        }));
 
         // The click is the gesture: approve this one request shape, then let the
         // session decide whether it may go out.
@@ -686,8 +704,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         ) {
           return;
         }
-
-        const vaultId = active.vault.getPayload().vault.id;
 
         const entry: UsageEntry =
           result.ok === true

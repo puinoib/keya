@@ -792,3 +792,62 @@ describe('provider drafts', () => {
     expect(h.vault.getPayload().keys[0].provider_id).toBe(before.id);
   });
 });
+
+describe('switching vaults and re-querying usage', () => {
+  it('clears the previous vault filters on the next unlock', async () => {
+    const first = await openHarness();
+    const store = makeStore(first);
+    await store.useStore.getState().unlock(first.opened, 'work.keya', 'folder');
+    store.useStore.getState().setFilterProvider('OpenAI');
+    store.useStore.getState().setSearchQuery('edge');
+    store.useStore.getState().setSelectedKeyId(IDS.key);
+
+    const second = await openHarness();
+    await store.useStore
+      .getState()
+      .unlock(second.opened, 'other.keya', 'folder');
+
+    const state = store.useStore.getState();
+    expect(state.filterProvider).toBeNull();
+    expect(state.searchQuery).toBe('');
+    expect(state.selectedKeyId).toBeNull();
+  });
+
+  it('marks a usage query as loading and ignores a second click', async () => {
+    const payload = cloneFile();
+    payload.keys[0].provider_id = 'preset:opencode-go';
+    payload.keys[0].endpoint = 'https://opencode.ai/zen/go/v1';
+    const h = await openHarness({ payload });
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      await gate;
+      return new Response(
+        JSON.stringify({ usage: { rolling: { percent: 10 } } }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    }) as typeof fetch;
+
+    try {
+      const first = store.useStore.getState().refreshUsage(IDS.key);
+      expect(store.useStore.getState().usage[IDS.key]?.state).toBe('loading');
+
+      // A second click while the first is in flight must not consume another
+      // one-shot approval.
+      await store.useStore.getState().refreshUsage(IDS.key);
+      expect(store.useStore.getState().usage[IDS.key]?.state).toBe('loading');
+
+      release();
+      await first;
+      expect(store.useStore.getState().usage[IDS.key]?.state).toBe('ok');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
