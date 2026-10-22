@@ -814,7 +814,7 @@ export function EditKeyDialog({
                   role="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setForm((f) => ({ ...f, expires_at: undefined }));
+                    setForm((f) => ({ ...f, expiry: undefined }));
                   }}
                   className="ml-auto text-ink-quaternary hover:text-ink-secondary"
                 >
@@ -827,7 +827,7 @@ export function EditKeyDialog({
                 <DayPicker
                   value={form.expiry}
                   onChange={(d) => {
-                    setForm((f) => ({ ...f, expires_at: d }));
+                    setForm((f) => ({ ...f, expiry: d }));
                     setShowCalendar(false);
                   }}
                 />
