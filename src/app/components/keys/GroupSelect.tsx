@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Group } from '../../view/types';
+import type { Group } from '../../../core/payload/types';
 import {
   Select,
   SelectContent,

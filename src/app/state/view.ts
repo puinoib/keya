@@ -18,6 +18,7 @@ import type {
 import type { Reminder } from '../../core/reminders';
 import { businessAlerts, observationAlerts } from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
+import { providerLabel } from './providers';
 import {
   checkStatus,
   daysSince,
@@ -42,11 +43,24 @@ export interface VaultView {
   reminders: ReminderRow[];
 }
 
+/** The rules an Inbox row can carry, in the order the list knows them. */
+export type InboxRule =
+  | 'expiry_upcoming'
+  | 'expiry_expired'
+  | 'insecure_endpoint'
+  | 'never_probed'
+  | 'probe_failed'
+  | 'probe_stale';
+
 /** A reminder plus the key it is about and whether it was put away. */
 export interface ReminderRow {
   reminder: Reminder;
   key: Key;
   dismissed: boolean;
+  /** When the dismissal was recorded, for the archived list. */
+  dismissedAt: string | null;
+  /** The check result behind the row, or the refresh time for business rows. */
+  stamp: string;
 }
 
 export interface ViewInput {
@@ -93,16 +107,39 @@ export function buildVaultView(input: ViewInput): VaultView {
     const key = byId.get(reminder.key_id);
     if (!key) continue;
 
+    const businessKey = `${reminder.key_id}|${reminder.rule}|${
+      reminder.kind === 'business' ? reminder.condition : reminder.binding
+    }`;
     const dismissed =
       reminder.kind === 'business'
-        ? dismissedBusiness.has(
-            `${reminder.key_id}|${reminder.rule}|${reminder.condition}`
-          )
-        : dismissedObservation.has(
-            `${reminder.key_id}|${reminder.rule}|${reminder.binding}`
-          );
+        ? dismissedBusiness.has(businessKey)
+        : dismissedObservation.has(businessKey);
+    const dismissedAt = dismissed
+      ? ((reminder.kind === 'business'
+          ? input.dismissals.business.find(
+              (entry) =>
+                entry.key_id === reminder.key_id &&
+                entry.rule === reminder.rule &&
+                entry.condition === reminder.condition
+            )?.dismissed_at
+          : input.dismissals.observation.find(
+              (entry) =>
+                entry.key_id === reminder.key_id &&
+                entry.rule === reminder.rule &&
+                entry.binding === reminder.binding
+            )?.dismissed_at) ?? null)
+      : null;
 
-    reminders.push({ reminder, key, dismissed });
+    reminders.push({
+      reminder,
+      key,
+      dismissed,
+      dismissedAt,
+      stamp:
+        reminder.kind === 'observation'
+          ? (input.checks.get(key.id)?.finished_at ?? input.now.toISOString())
+          : input.now.toISOString(),
+    });
   }
 
   return {
@@ -149,15 +186,20 @@ export function providers(view: VaultView): Provider[] {
   return view.file.providers;
 }
 
-export function searchKeys(keys: readonly Key[], query: string): Key[] {
+export function searchKeys(
+  view: VaultView,
+  keys: readonly Key[],
+  query: string
+): Key[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return [...keys];
   return keys.filter(
     (key) =>
       key.name.toLowerCase().includes(needle) ||
       key.description.toLowerCase().includes(needle) ||
-      key.secret.toLowerCase().includes(needle) ||
-      key.endpoint?.toLowerCase().includes(needle) === true
+      providerLabel(key.provider_id, view.file.providers)
+        .toLowerCase()
+        .includes(needle)
   );
 }
 

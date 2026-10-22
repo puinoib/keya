@@ -131,3 +131,99 @@ export function providerIdForLabel(
       ?.id ?? null
   );
 }
+
+// ── the settings form's model for a custom provider ──────────────────────────
+
+export interface ProviderCheckDraft {
+  path?: string;
+  auth: 'bearer' | 'basic' | 'x-api-key' | 'header' | 'query';
+  header_name?: string;
+  query_param?: string;
+  headers?: { name: string; value: string }[];
+}
+
+/** What the custom-provider editor edits; mapped to a `Provider` on save. */
+export interface ProviderDraft {
+  /** Present when the draft was loaded from a stored provider. */
+  id?: string;
+  name: string;
+  endpoint: string;
+  check?: ProviderCheckDraft;
+}
+
+export function providerToDraft(provider: Provider): ProviderDraft {
+  const probe = provider.probe;
+  if (!probe) {
+    return {
+      id: provider.id,
+      name: provider.name,
+      endpoint: provider.default_endpoint ?? '',
+    };
+  }
+
+  const mode =
+    probe.auth.mode === 'header' &&
+    probe.auth.name.toLowerCase() === 'x-api-key'
+      ? ('x-api-key' as const)
+      : probe.auth.mode;
+
+  return {
+    id: provider.id,
+    name: provider.name,
+    endpoint: provider.default_endpoint ?? '',
+    check: {
+      path: probe.target,
+      auth: mode,
+      header_name: probe.auth.mode === 'header' ? probe.auth.name : undefined,
+      query_param: probe.auth.mode === 'query' ? probe.auth.param : undefined,
+      headers: probe.headers.map((header) => ({ ...header })),
+    },
+  };
+}
+
+/**
+ * A draft becomes a stored provider. The probe is the only place a key is
+ * described, so an empty check is stored as "no probe" rather than a guess.
+ */
+export function draftToProvider(draft: ProviderDraft, id: string): Provider {
+  const check = draft.check;
+  let probe: Provider['probe'] = null;
+
+  if (check) {
+    const auth =
+      check.auth === 'x-api-key'
+        ? ({ mode: 'header', name: 'x-api-key' } as const)
+        : check.auth === 'header'
+          ? ({
+              mode: 'header',
+              name: check.header_name?.trim() || 'x-api-key',
+            } as const)
+          : check.auth === 'query'
+            ? ({
+                mode: 'query',
+                param: check.query_param?.trim() || 'key',
+              } as const)
+            : check.auth === 'basic'
+              ? ({ mode: 'basic' } as const)
+              : ({ mode: 'bearer' } as const);
+
+    probe = {
+      target: (check.path ?? '').trim() || '.',
+      auth,
+      headers: (check.headers ?? [])
+        .filter((header) => header.name.trim() && header.value.trim())
+        .map((header) => ({
+          name: header.name.trim().toLowerCase(),
+          value: header.value.trim(),
+        })),
+    };
+  }
+
+  return {
+    id,
+    name: draft.name.trim(),
+    description: '',
+    default_endpoint: draft.endpoint.trim() || null,
+    probe,
+  };
+}

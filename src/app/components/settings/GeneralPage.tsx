@@ -61,10 +61,10 @@ const STRENGTH_CONFIG = {
 } as const;
 
 export function GeneralPage() {
-  const { db, password, updateMeta, updateSettings, changePassword } =
+  const { view, password, updateMeta, updateSettings, changePassword } =
     useStore();
-  const settings = db?.getSettings();
-  const data = db?.getData();
+  const preferences = view?.preferences;
+  const data = view?.file.vault;
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [bioRegistered, setBioRegistered] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
@@ -84,7 +84,7 @@ export function GeneralPage() {
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
-  const vaultId = data?.vault_id;
+  const vaultId = data?.id;
   const estimate = verdict?.estimate ?? null;
   const strength = estimate
     ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
@@ -238,15 +238,17 @@ export function GeneralPage() {
                 </p>
               </div>
               <Select
-                value={String(settings?.auto_lock_minutes ?? 5)}
+                value={String(preferences?.auto_lock_minutes ?? 5)}
                 onValueChange={(v) =>
                   updateSettings({ auto_lock_minutes: Number(v) })
                 }
               >
                 <SelectTrigger className="w-24 h-7 text-xs">
                   <SelectValue>
-                    {settings?.auto_lock_minutes ?? 5}
-                    {(settings?.auto_lock_minutes ?? 5) > 1 ? ' mins' : ' min'}
+                    {preferences?.auto_lock_minutes ?? 5}
+                    {(preferences?.auto_lock_minutes ?? 5) > 1
+                      ? ' mins'
+                      : ' min'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

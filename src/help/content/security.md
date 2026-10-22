@@ -56,6 +56,6 @@ Destinations you approve are stored on this device; importing a vault never gran
 
 ## Backups and exports
 
-An encrypted `.keya` copy is the backup format. **Export JSON** writes the same credentials as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. Importing either format is not available yet.
+An encrypted `.keya` copy is the backup format. **Export JSON** writes the vault's keys, providers and groups as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. It carries no device state — no preferences, check results, dismissals or approvals. Importing either format is not available yet.
 
 If you change a password, older copies keep opening with the old one. Keya cannot revoke a copy that left the device.

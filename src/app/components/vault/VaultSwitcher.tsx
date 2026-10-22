@@ -32,7 +32,7 @@ import {
 import { useNavigate } from '@tanstack/react-router';
 
 export function VaultSwitcher() {
-  const { db, activeVaultFileName, theme, setTheme } = useStore();
+  const { view, activeVaultFileName, theme, setTheme } = useStore();
   const navigate = useNavigate();
   const [vaults, setVaults] = useState<string[]>([]);
   const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({});
@@ -48,7 +48,7 @@ export function VaultSwitcher() {
     });
   }, [activeVaultFileName]);
 
-  const vaultData = db?.getData();
+  const vaultData = view?.file.vault;
   const currentName =
     (vaultData?.name && vaultData.name.trim()) ||
     activeVaultFileName?.replace(/\.keya$/, '') ||

@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { runManualCheck, useStore } from '../../store/useStore';
-import type { Settings } from '../../view/types';
 import {
   getDefaultEndpointForProvider,
   getProviderSections,
-} from '../../view/catalog';
+  providerIdForLabel,
+  providerLabel,
+} from '../../state/providers';
+import { dateToExpiry } from '../../state/presentation';
+import { hasDuplicateSecret, sortedGroups } from '../../state/view';
 import type { AddKeyDraft } from '../../lib/clipboard-intake';
+import type { Provider } from '../../../core/payload/types';
+import { runManualCheck, useStore } from '../../store/useStore';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
-import { ApiTester } from '../../lib/api-tester';
+import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
 import {
   describeTestResult,
@@ -50,12 +54,14 @@ import { toast } from 'sonner';
 
 interface FormData {
   name: string;
-  key_value: string;
+  secret: string;
+  /** The picker works in labels; the id is resolved when saving. */
   provider: string;
   endpoint: string;
   description: string;
-  group_id: string | null;
-  expires_at: Date | undefined;
+  groupId: string | null;
+  /** What the day picker shows. */
+  expiry: Date | undefined;
 }
 
 interface TestState {
@@ -65,24 +71,33 @@ interface TestState {
 
 const empty: FormData = {
   name: '',
-  key_value: '',
+  secret: '',
   provider: 'OpenAI',
   endpoint: '',
   description: '',
-  group_id: null,
-  expires_at: undefined,
+  groupId: null,
+  expiry: undefined,
 };
 
-function toFormData(draft: AddKeyDraft): FormData {
+function toFormData(
+  draft: AddKeyDraft,
+  providers: readonly Provider[]
+): FormData {
   return {
-    ...draft,
+    name: draft.name,
+    secret: draft.secret,
+    provider: providerLabel(draft.providerId, providers),
+    endpoint: draft.endpoint,
+    description: draft.description,
+    groupId: draft.groupId,
+    expiry: undefined,
   };
 }
 
-function getEmptyForm(settings: Settings | undefined): FormData {
+function getEmptyForm(providers: readonly Provider[]): FormData {
   return {
     ...empty,
-    endpoint: getDefaultEndpointForProvider(empty.provider, settings) ?? '',
+    endpoint: getDefaultEndpointForProvider(empty.provider, providers) ?? '',
   };
 }
 
@@ -94,7 +109,7 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { addKey, db, addKeyDraft, clearAddKeyDraft } = useStore();
+  const { addKey, view, addKeyDraft, clearAddKeyDraft } = useStore();
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
@@ -118,13 +133,18 @@ export function KeyForm({
     return () => document.removeEventListener('mousedown', handler);
   }, [showCalendar]);
 
-  const settings = db?.getSettings();
-  const providerSections = getProviderSections(settings);
+  const providers = view?.file.providers ?? [];
+  const preferences = view?.preferences;
+  const providerSections = getProviderSections(preferences, providers);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
-    settings
+    providers
   );
-  const checkKind = ApiTester.checkKindFor(form.provider, settings);
+  const formCheckKind = checkKind(
+    providerIdForLabel(form.provider, providers),
+    form.endpoint,
+    providers
+  );
 
   useEffect(() => {
     if (!open || !defaultEndpoint) return;
@@ -134,26 +154,26 @@ export function KeyForm({
   useEffect(() => {
     if (!open) return;
     if (addKeyDraft) {
-      const draftForm = toFormData(addKeyDraft);
+      const draftForm = toFormData(addKeyDraft, providers);
       setForm({
         ...draftForm,
         endpoint:
           draftForm.endpoint ||
-          getDefaultEndpointForProvider(draftForm.provider, settings) ||
+          getDefaultEndpointForProvider(draftForm.provider, providers) ||
           '',
       });
       setShowKey(false);
       setTestState({ testing: false, result: null });
       return;
     }
-    setForm(getEmptyForm(settings));
+    setForm(getEmptyForm(providers));
     setShowKey(false);
     setTestState({ testing: false, result: null });
-  }, [open, addKeyDraft, settings]);
+  }, [open, addKeyDraft, providers]);
 
   const handleProviderChange = (provider: string | null) => {
     if (!provider) return;
-    const endpoint = getDefaultEndpointForProvider(provider, settings) ?? '';
+    const endpoint = getDefaultEndpointForProvider(provider, providers) ?? '';
     setForm((f) => ({ ...f, provider, endpoint }));
     setTestState({ testing: false, result: null });
   };
@@ -165,14 +185,14 @@ export function KeyForm({
   };
 
   const handleTest = async () => {
-    if (!form.key_value) return;
+    if (!form.secret) return;
     setTestState({ testing: true, result: null });
-    const result = await ApiTester.testRaw(
-      form.provider,
-      form.endpoint,
-      form.key_value,
-      settings
-    );
+    const result = await ApiTester.testDraft({
+      providerId: providerIdForLabel(form.provider, providers),
+      endpoint: form.endpoint,
+      secret: form.secret,
+      providers,
+    });
     setTestState({ testing: false, result });
     const feedback = describeTestResult(result, form.name || form.provider);
     toast[result.success ? 'success' : 'error'](feedback.title, {
@@ -182,8 +202,8 @@ export function KeyForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.key_value) return;
-    if (db?.hasDuplicateApiKeyValue(form.key_value)) {
+    if (!form.name || !form.secret) return;
+    if (view && hasDuplicateSecret(view, form.secret)) {
       toast.error('Credential already exists', {
         description: 'A matching key value is already saved in this vault.',
       });
@@ -192,12 +212,12 @@ export function KeyForm({
 
     const created = addKey({
       name: form.name,
-      key: form.key_value,
-      provider: form.provider,
+      secret: form.secret,
+      providerId: providerIdForLabel(form.provider, providers),
       endpoint: form.endpoint,
       description: form.description,
-      group_id: form.group_id,
-      expires_at: form.expires_at ? form.expires_at.toISOString() : null,
+      groupId: form.groupId,
+      expiry: dateToExpiry(form.expiry),
     });
 
     if (!created) {
@@ -219,13 +239,13 @@ export function KeyForm({
 
     // Auto-test on save: now that the key has an id, the check runs through
     // the vault session so the result is recorded as an observation.
-    if (settings?.auto_test_on_save) {
+    if (preferences?.auto_probe_on_save) {
       void runManualCheck(created.id);
     }
   };
 
   const handleClose = () => {
-    setForm(getEmptyForm(settings));
+    setForm(getEmptyForm(providers));
     clearAddKeyDraft();
     setTestState({ testing: false, result: null });
     onClose();
@@ -271,10 +291,10 @@ export function KeyForm({
                 data-form-type="other"
                 data-lpignore="true"
                 spellCheck={false}
-                value={form.key_value}
+                value={form.secret}
                 masked={!showKey}
                 onChange={(e) => {
-                  setForm((f) => ({ ...f, key_value: e.target.value }));
+                  setForm((f) => ({ ...f, secret: e.target.value }));
                   setTestState({ testing: false, result: null });
                 }}
                 placeholder="sk-... or your API token"
@@ -371,16 +391,14 @@ export function KeyForm({
               <Calendar className="size-3.5 shrink-0" />
               <span
                 className={
-                  !form.expires_at
-                    ? 'text-ink-quaternary'
-                    : 'text-ink-secondary'
+                  !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
                 }
               >
-                {form.expires_at
-                  ? format(form.expires_at, 'MMM d, yyyy')
+                {form.expiry
+                  ? format(form.expiry, 'MMM d, yyyy')
                   : 'Pick a date'}
               </span>
-              {form.expires_at && (
+              {form.expiry && (
                 <span
                   role="button"
                   onClick={(e) => {
@@ -396,7 +414,7 @@ export function KeyForm({
             {showCalendar && (
               <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
                 <DayPicker
-                  value={form.expires_at}
+                  value={form.expiry}
                   onChange={(d) => {
                     setForm((f) => ({ ...f, expires_at: d }));
                     setShowCalendar(false);
@@ -412,9 +430,9 @@ export function KeyForm({
               Group
             </Label>
             <GroupSelect
-              groups={db?.getGroups() ?? []}
-              value={form.group_id}
-              onChange={(group_id) => setForm((f) => ({ ...f, group_id }))}
+              groups={view ? sortedGroups(view) : []}
+              value={form.groupId}
+              onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
             />
           </div>
 
@@ -444,15 +462,15 @@ export function KeyForm({
               variant="outline"
               size="sm"
               onClick={handleTest}
-              disabled={!form.key_value || testState.testing}
-              title={getTestActionHint(checkKind)}
+              disabled={!form.secret || testState.testing}
+              title={getTestActionHint(formCheckKind)}
             >
               {testState.testing ? (
                 <Spinner className="size-3.5 animate-spin" />
               ) : (
                 <Flask className="size-3.5" />
               )}
-              {getTestActionLabel(checkKind)}
+              {getTestActionLabel(formCheckKind)}
             </Button>
             <Button
               type="button"
@@ -465,9 +483,9 @@ export function KeyForm({
             </Button>
           </div>
 
-          {checkKind !== 'credential' && (
+          {formCheckKind !== 'credential' && (
             <p className="text-[11px] leading-relaxed text-ink-quaternary">
-              {getTestActionHint(checkKind)}
+              {getTestActionHint(formCheckKind)}
             </p>
           )}
         </form>

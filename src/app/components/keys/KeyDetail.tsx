@@ -1,5 +1,8 @@
 import { useStore } from '../../store/useStore';
-import { ApiTester } from '../../lib/api-tester';
+import { ApiTester, unverifiableReason } from '../../lib/api-tester';
+import { checkOf, expiryOf, keyById, sortedGroups } from '../../state/view';
+import { expiryToDate, expiryStatusLabel } from '../../state/presentation';
+import { providerLabel } from '../../state/providers';
 import {
   describeTestResult,
   getTestActionHint,
@@ -8,12 +11,9 @@ import {
 import { maskKey } from '@/lib/mask';
 import { toast } from 'sonner';
 import { scheduleClipboardClear } from '../../lib/clipboard';
-import type { ApiKey } from '../../view/types';
+import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
-import {
-  getConnectionStatusLabel,
-  getExpiryStatusLabel,
-} from '../../view/status';
+import { checkStatusLabel } from '../../state/presentation';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -41,7 +41,7 @@ import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 
 export function KeyDetail() {
   const {
-    db,
+    view,
     selectedKeyId,
     setSelectedKeyId,
     updateKey,
@@ -53,8 +53,8 @@ export function KeyDetail() {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
-  const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
+  const [editingKey, setEditingKey] = useState<Key | null>(null);
+  const [deletingKey, setDeletingKey] = useState<Key | null>(null);
 
   useEffect(() => {
     setShowKey(false);
@@ -65,26 +65,34 @@ export function KeyDetail() {
     enabled: !!selectedKeyId && !editingKey,
   });
 
-  if (!db || !selectedKeyId) return null;
+  if (!view || !selectedKeyId) return null;
 
-  const key = db.getApiKeys().find((k) => k.id === selectedKeyId);
+  const key = keyById(view, selectedKeyId);
   if (!key) return null;
 
+  const providers = view.file.providers;
+  const provider = providerLabel(key.provider_id, providers);
   const group = key.group_id
-    ? db.getGroups().find((g) => g.id === key.group_id)
+    ? sortedGroups(view).find((entry) => entry.id === key.group_id)
     : null;
-  const connectionStatus = key.connection_check.status;
-  const checkKind = key.connection_check.kind ?? 'credential';
+  const check = checkOf(view, key);
+  const observed = check.observation;
+  const connectionStatus = check.status;
+  const connectionLabel = checkStatusLabel(check.status, check.kind);
+  const plannedKind = check.kind;
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
-  const plannedKind = ApiTester.checkKindFor(key.provider, db.getSettings());
+  const checkError =
+    check.kind === 'unverifiable'
+      ? unverifiableReason(provider)
+      : (observed?.detail_code ?? null);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(key.key);
+      await navigator.clipboard.writeText(key.secret);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      scheduleClipboardClear(key.key);
+      scheduleClipboardClear(key.secret);
       toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
@@ -93,10 +101,10 @@ export function KeyDetail() {
 
   const handleTest = async () => {
     if (key.archived_at) return;
-    const vaultId = useStore.getState().db?.getData().vault_id;
+    const vaultId = useStore.getState().view?.vaultId;
     setTesting(true);
-    const result = await ApiTester.testKey(key);
-    if (useStore.getState().db?.getData().vault_id !== vaultId) {
+    const result = await ApiTester.testStored(key.id);
+    if (useStore.getState().view?.vaultId !== vaultId) {
       setTesting(false);
       return;
     }
@@ -128,14 +136,17 @@ export function KeyDetail() {
     });
   };
 
-  const expiryStatus = key.expiry_status;
+  const expiryStatus = expiryOf(view, key).status;
+  const expiryDate = expiryToDate(key.expiry);
   const groupLabel = group ? `${group.icon} ${group.name}` : '📥 Ungrouped';
   const expiryLabel =
     expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
-      ? getExpiryStatusLabel(expiryStatus)
+      ? expiryStatusLabel(expiryStatus)
       : null;
-  const expiryValue = key.expires_at
-    ? [formatDate(key.expires_at), expiryLabel].filter(Boolean).join(' · ')
+  const expiryValue = expiryDate
+    ? [formatDate(expiryDate.toISOString()), expiryLabel]
+        .filter(Boolean)
+        .join(' · ')
     : 'Never';
 
   return (
@@ -156,14 +167,14 @@ export function KeyDetail() {
                 {key.name}
               </h2>
               <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-tertiary">
-                {getProviderLogo(key.provider) && (
+                {getProviderLogo(provider) && (
                   <img
-                    src={getProviderLogo(key.provider)!}
+                    src={getProviderLogo(provider)!}
                     alt=""
                     className="size-3 shrink-0"
                   />
                 )}
-                <span className="truncate">{key.provider}</span>
+                <span className="truncate">{provider}</span>
               </p>
               {key.archived_at && (
                 <div className="mt-2 rounded-md border border-line-subtle bg-surface-2 px-2 py-1.5">
@@ -177,13 +188,11 @@ export function KeyDetail() {
                   </p>
                 </div>
               )}
-              {testFail &&
-                !key.archived_at &&
-                key.connection_check.error_message && (
-                  <p className="mt-1.5 text-xs text-danger/80 break-words">
-                    {key.connection_check.error_message}
-                  </p>
-                )}
+              {testFail && !key.archived_at && checkError && (
+                <p className="mt-1.5 text-xs text-danger/80 break-words">
+                  {checkError}
+                </p>
+              )}
             </div>
             <button
               onClick={() => setSelectedKeyId(null)}
@@ -203,7 +212,7 @@ export function KeyDetail() {
                 {testOk && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
                     <CheckCircle className="size-3" />
-                    {getConnectionStatusLabel(connectionStatus, checkKind)}
+                    {connectionLabel}
                   </span>
                 )}
                 {testFail && (
@@ -212,16 +221,16 @@ export function KeyDetail() {
                   </span>
                 )}
                 {connectionStatus === 'untested' &&
-                  checkKind === 'unverifiable' && (
+                  check.kind === 'unverifiable' && (
                     <span
                       className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary"
-                      title={key.connection_check.error_message ?? undefined}
+                      title={checkError ?? undefined}
                     >
                       <MinusCircle className="size-3" /> Cannot verify
                     </span>
                   )}
                 {connectionStatus === 'untested' &&
-                  checkKind !== 'unverifiable' && (
+                  check.kind !== 'unverifiable' && (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
                       <MinusCircle className="size-3" /> Untested
                     </span>
@@ -239,17 +248,16 @@ export function KeyDetail() {
                 )}
               </div>
 
-              {checkKind === 'unverifiable' && (
+              {check.kind === 'unverifiable' && (
                 <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
-                  {key.connection_check.error_message ??
-                    ApiTester.unverifiableReason(key.provider)}
+                  {checkError ?? unverifiableReason(provider)}
                 </p>
               )}
             </>
           )}
 
           <UsageCard
-            provider={key.provider}
+            provider={provider}
             entry={usage[key.id]}
             onRefresh={() => void refreshUsage(key.id)}
           />
@@ -287,7 +295,7 @@ export function KeyDetail() {
               </div>
             </div>
             <p className="font-mono text-xs text-ink-secondary break-all leading-relaxed select-all">
-              {showKey ? key.key : maskKey(key.key)}
+              {showKey ? key.secret : maskKey(key.secret)}
             </p>
           </div>
 
@@ -330,8 +338,8 @@ export function KeyDetail() {
                 icon={Clock}
                 label="Last tested"
                 value={
-                  key.connection_check.checked_at
-                    ? formatDate(key.connection_check.checked_at)
+                  observed?.finished_at
+                    ? formatDate(observed?.finished_at)
                     : 'Never'
                 }
               />
@@ -339,11 +347,11 @@ export function KeyDetail() {
                 icon={Flask}
                 label="Latency"
                 value={
-                  key.connection_check.latency_ms != null
-                    ? `${key.connection_check.latency_ms}ms`
+                  observed?.latency_ms != null
+                    ? `${observed?.latency_ms}ms`
                     : '-'
                 }
-                highlight={testOk && key.connection_check.latency_ms != null}
+                highlight={testOk && observed?.latency_ms != null}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -355,7 +363,7 @@ export function KeyDetail() {
               <MetaRow
                 icon={Clock}
                 label="Updated"
-                value={formatDate(key.updated_at)}
+                value={formatDate(key.content_updated_at)}
               />
             </div>
           </div>

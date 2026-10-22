@@ -226,14 +226,15 @@ describe('list behaviour', () => {
     expect(archivedKeys(view).map((key) => key.name)).toEqual(['Retired key']);
   });
 
-  it('matches name, description and secret', () => {
-    const keys = cloneFile().keys;
+  it('matches name, description and provider label', () => {
+    const view = buildVaultView(input());
+    const keys = view.file.keys;
 
-    expect(searchKeys(keys, 'edge')).toHaveLength(1);
-    expect(searchKeys(keys, 'staging')).toHaveLength(1);
-    expect(searchKeys(keys, 'sk-synthetic')).toHaveLength(1);
-    expect(searchKeys(keys, 'nothing')).toHaveLength(0);
-    expect(searchKeys(keys, '   ')).toHaveLength(1);
+    expect(searchKeys(view, keys, 'edge')).toHaveLength(1);
+    expect(searchKeys(view, keys, 'staging')).toHaveLength(1);
+    expect(searchKeys(view, keys, 'gateway')).toHaveLength(1);
+    expect(searchKeys(view, keys, 'nothing')).toHaveLength(0);
+    expect(searchKeys(view, keys, '   ')).toHaveLength(1);
   });
 
   it('ignores archived keys and the edited key itself', () => {

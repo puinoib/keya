@@ -1,11 +1,11 @@
-import type { CustomProviderCheck } from '../view/types';
+import type { ProviderCheckDraft } from '../state/providers';
 
 const ABSOLUTE_URL = /^https?:\/\//i;
 const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 /** Human-readable summary used in settings and hints. */
 export function describeCustomCheck(
-  check: CustomProviderCheck | undefined
+  check: ProviderCheckDraft | undefined
 ): string {
   if (!check) return 'No check configured';
 
@@ -30,7 +30,7 @@ export function describeCustomCheck(
 }
 
 /** Return an error message for an unusable check, or null when it is valid. */
-export function validateCustomCheck(check: CustomProviderCheck): string | null {
+export function validateCustomCheck(check: ProviderCheckDraft): string | null {
   const path = check.path?.trim();
   if (
     path &&

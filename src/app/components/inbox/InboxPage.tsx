@@ -11,7 +11,13 @@ import {
   CaretDown,
   X,
 } from '@phosphor-icons/react';
-import type { InboxItem, InboxRule } from '@/app/view/types';
+import type { Key } from '../../../core/payload/types';
+import {
+  reminderDisplay,
+  type InboxRule,
+  type ReminderRow,
+} from '../../state/view';
+import { providerLabel } from '../../state/providers';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
@@ -55,77 +61,74 @@ const SEVERITY_BADGE_CLASS: Record<Severity, string> = {
   info: 'bg-ink-quaternary/10 text-ink-tertiary',
 };
 
-function getTitle(item: InboxItem): string {
-  return item.metadata.key_name;
-}
-
-function getContextSuffix(item: InboxItem): string {
-  const { days_until_expiry, error_message, endpoint, days_since_test } =
-    item.metadata;
-  switch (item.rule) {
+function getContextSuffix(
+  row: ReminderRow,
+  display: ReturnType<typeof reminderDisplay>
+): string {
+  switch (row.reminder.rule) {
     case 'expiry_expired': {
-      const overdue = Math.abs(days_until_expiry ?? 0);
+      const overdue = Math.abs(display.daysUntilExpiry ?? 0);
       return overdue === 1
         ? 'expired yesterday'
         : `expired ${overdue} days ago`;
     }
     case 'expiry_upcoming': {
-      const days = days_until_expiry ?? 0;
+      const days = display.daysUntilExpiry ?? 0;
       return days === 0 ? 'expires today' : `expires in ${days} days`;
     }
     case 'probe_failed':
-      return error_message ?? 'connection failed';
+      return display.failureText ?? 'connection failed';
     case 'never_probed':
       return 'never tested';
     case 'insecure_endpoint':
-      return endpoint ?? 'insecure endpoint';
+      return display.endpoint ?? 'insecure endpoint';
     case 'probe_stale':
-      return `last tested ${days_since_test ?? 0} days ago`;
+      return `last tested ${display.daysSinceCheck ?? 0} days ago`;
   }
 }
 
-function getArchivedContext(item: InboxItem): string {
-  return `${TYPE_BADGE[item.rule].label} · Archived`;
+function getArchivedContext(row: ReminderRow): string {
+  return `${TYPE_BADGE[row.reminder.rule].label} · Archived`;
 }
 
 export function InboxPage() {
   const navigate = useNavigate();
-  const db = useStore((s) => s.db);
+  const view = useStore((s) => s.view);
   const inboxVersion = useStore((s) => s.inboxVersion);
-  const archiveInboxItem = useStore((s) => s.archiveInboxItem);
+  const setReminderDismissed = useStore((s) => s.setReminderDismissed);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
   const setShowArchived = useStore((s) => s.setShowArchived);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
 
-  const items = useMemo(
-    () => db?.getInboxItems() ?? [],
+  const rows = useMemo(
+    () => view?.reminders ?? [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [db, inboxVersion]
+    [view, inboxVersion]
   );
   const openItems = useMemo(() => {
-    const open = items.filter((item) => item.status === 'open');
+    const open = rows.filter((row) => !row.dismissed);
     return open.sort((a, b) => {
-      const sa = SEVERITY_ORDER[getSeverity(a.rule)];
-      const sb = SEVERITY_ORDER[getSeverity(b.rule)];
+      const sa = SEVERITY_ORDER[getSeverity(a.reminder.rule)];
+      const sb = SEVERITY_ORDER[getSeverity(b.reminder.rule)];
       if (sa !== sb) return sa - sb;
-      return (
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      );
+      return Date.parse(b.stamp) - Date.parse(a.stamp);
     });
-  }, [items]);
+  }, [rows]);
   const archivedItems = useMemo(
-    () => items.filter((item) => item.status === 'archived'),
-    [items]
+    () => rows.filter((row) => row.dismissed),
+    [rows]
   );
 
-  const handleViewKey = (entityId: string) => {
-    const key = db?.getApiKey(entityId);
-    if (!key) {
+  const providerOf = (key: Key) =>
+    providerLabel(key.provider_id, view?.file.providers ?? []);
+
+  const handleViewKey = (key: Key) => {
+    if (view && !view.file.keys.some((entry) => entry.id === key.id)) {
       toast('This credential no longer exists');
       return;
     }
     setShowArchived(Boolean(key.archived_at));
-    setSelectedKeyId(entityId);
+    setSelectedKeyId(key.id);
     navigate({ to: '/keys' });
   };
 
@@ -154,12 +157,16 @@ export function InboxPage() {
         </div>
       ) : (
         <div className="rounded-lg border border-line-subtle bg-surface-2/40 overflow-hidden divide-y divide-line-subtle">
-          {openItems.map((item) => {
-            const severity = getSeverity(item.rule);
-            const badge = TYPE_BADGE[item.rule];
+          {openItems.map((row) => {
+            const rule = row.reminder.rule;
+            const severity = getSeverity(rule);
+            const badge = TYPE_BADGE[rule];
             const BadgeIcon = badge.icon;
+            const display = view
+              ? reminderDisplay(view, row, providerOf)
+              : null;
             return (
-              <div key={item.id} className="px-4 py-3">
+              <div key={`${rule}:${row.key.id}`} className="px-4 py-3">
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -173,16 +180,17 @@ export function InboxPage() {
                         {badge.label}
                       </span>
                       <span className="text-sm font-medium text-ink-primary truncate">
-                        {getTitle(item)}
+                        {row.key.name}
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-ink-quaternary truncate">
                       <ProviderLogo
-                        provider={item.metadata.provider}
+                        provider={display?.provider ?? ''}
                         className="size-3"
                       />
                       <span className="truncate">
-                        {item.metadata.provider} · {getContextSuffix(item)}
+                        {display?.provider} ·{' '}
+                        {display ? getContextSuffix(row, display) : ''}
                       </span>
                     </div>
                   </div>
@@ -191,12 +199,12 @@ export function InboxPage() {
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs"
-                      onClick={() => handleViewKey(item.entity_id)}
+                      onClick={() => handleViewKey(row.key)}
                     >
                       View
                     </Button>
                     <button
-                      onClick={() => archiveInboxItem(item.id)}
+                      onClick={() => setReminderDismissed(row, true)}
                       className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
                     >
                       <X className="size-3.5" />
@@ -226,23 +234,23 @@ export function InboxPage() {
           </button>
           {archivedExpanded && (
             <div className="mt-2 rounded-lg border border-line-subtle bg-surface-2/20 overflow-hidden divide-y divide-line-subtle">
-              {archivedItems.slice(0, 20).map((item) => (
+              {archivedItems.slice(0, 20).map((row) => (
                 <div
-                  key={item.id}
+                  key={`${row.reminder.rule}:${row.key.id}`}
                   className="px-4 py-2.5 flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0 text-sm text-ink-tertiary truncate">
-                    {getTitle(item)}
+                    {row.key.name}
                     <span className="ml-2 text-xs text-ink-quaternary">
-                      {getArchivedContext(item)}
+                      {getArchivedContext(row)}
                     </span>
                   </div>
                   <div className="shrink-0 text-xs text-ink-quaternary">
-                    {item.archived_at
+                    {row.dismissedAt
                       ? new Intl.DateTimeFormat('en', {
                           month: 'short',
                           day: 'numeric',
-                        }).format(new Date(item.archived_at))
+                        }).format(new Date(row.dismissedAt))
                       : ''}
                   </div>
                 </div>
