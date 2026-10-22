@@ -405,3 +405,25 @@ describe('manual checks', () => {
     expect(h.vault.getPayload().keys).toHaveLength(cloneFile().keys.length);
   });
 });
+
+describe('a check that is still in flight', () => {
+  it('settles instead of rejecting when the vault is locked underneath it', async () => {
+    const h = await openHarness({
+      fetch: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return { status: 200, contentType: 'application/json' };
+      },
+    });
+    const store = makeStore(h);
+    await store.useStore
+      .getState()
+      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+
+    const pending = store.runManualCheck(IDS.key);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await store.useStore.getState().lock();
+
+    await expect(pending).resolves.toMatchObject({ kind: 'request' });
+    expect(store.useStore.getState().workspaceState).toBe('welcome');
+  });
+});
