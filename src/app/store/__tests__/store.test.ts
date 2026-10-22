@@ -413,6 +413,79 @@ describe('a check that is still in flight', () => {
     expect(store.useStore.getState().workspaceState).toBe('welcome');
   });
 
+  it('aborts an in-flight request when the vault locks', async () => {
+    let signal: AbortSignal | undefined;
+    const h = await openHarness({
+      fetch: async (url, init) => {
+        void url;
+        return new Promise((_resolve, reject) => {
+          signal = init.signal;
+          init.signal.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError'))
+          );
+        });
+      },
+    });
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const pending = store.runManualCheck(IDS.key);
+    await vi.waitFor(() => expect(signal).toBeDefined());
+    await store.useStore.getState().lock();
+
+    await expect(pending).resolves.toMatchObject({ kind: 'request' });
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('drops a refresh that started before the vault locked', async () => {
+    const h = await openHarness();
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const original = h.local.listObservations.bind(h.local);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let calls = 0;
+    h.local.listObservations = async (...args) => {
+      calls += 1;
+      if (calls === 1) await gate;
+      return original(...args);
+    };
+
+    const pending = store.useStore.getState().refresh();
+    await store.useStore.getState().lock();
+    release();
+    await pending;
+
+    expect(store.useStore.getState().workspaceState).toBe('welcome');
+    expect(store.useStore.getState().view).toBeNull();
+  });
+
+  it('cancels a lock when an edit lands after the flush', async () => {
+    const h = await openHarness();
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const original = h.local.listObservations.bind(h.local);
+    let injected = false;
+    h.local.listObservations = async (...args) => {
+      if (!injected) {
+        injected = true;
+        store.useStore.getState().updateMeta({ name: 'Late edit' });
+      }
+      return original(...args);
+    };
+
+    await store.useStore.getState().lock();
+
+    // The vault is still dirty, so the lock was refused and the edit survives.
+    expect(store.useStore.getState().workspaceState).toBe('unlocked');
+    expect(h.vault.hasUnsavedChanges).toBe(true);
+    expect(h.vault.getPayload().vault.name).toBe('Late edit');
+  });
+
   it('keeps a failing daily run from rejecting out of unlock', async () => {
     const h = await openHarness();
     await h.local.setPreferences({ auto_probe_daily: true });

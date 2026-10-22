@@ -16,6 +16,8 @@ export interface UsageOptions {
    * device too, so they need the same consent a probe does.
    */
   authorize?: (url: string) => Promise<boolean>;
+  /** Aborted when the vault locks, so a late request stops sending the key. */
+  signal?: AbortSignal;
 }
 
 /** The URL a usage query for this subject would ask, or null when unknown. */
@@ -322,6 +324,9 @@ export async function fetchUsage(
   }
 
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort();
+  if (options.signal?.aborted) controller.abort();
+  options.signal?.addEventListener('abort', abortFromCaller);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -329,6 +334,10 @@ export async function fetchUsage(
     const res = await fetch(url, {
       method: 'GET',
       headers: { Authorization: `Bearer ${key.secret}` },
+      redirect: 'error',
+      credentials: 'omit',
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
       signal: controller.signal,
     });
 
@@ -392,6 +401,7 @@ export async function fetchUsage(
     );
   } finally {
     clearTimeout(timer);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 }
 

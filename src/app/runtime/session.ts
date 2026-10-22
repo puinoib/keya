@@ -55,6 +55,8 @@ export class VaultSession {
   /** One-shot approvals for this unlock only; never persisted. */
   private approvals: Approval[] = [];
   private requestSeq = 0;
+  /** Aborted when the session ends, so no request outlives the unlock. */
+  private readonly controller = new AbortController();
 
   constructor(options: SessionOptions) {
     this.vault = options.vault;
@@ -63,6 +65,11 @@ export class VaultSession {
     this.fetch = options.fetch;
     this.clock = options.clock;
     this.timeZone = options.timeZone;
+  }
+
+  /** Pass to every request this session starts. */
+  get signal(): AbortSignal {
+    return this.controller.signal;
   }
 
   get payload() {
@@ -287,13 +294,19 @@ export class VaultSession {
           return this.requestSeq;
         },
         sessionId: this.sessionId,
+        signal: this.signal,
+        isActive: () => !this.signal.aborted,
       },
       { keyId, mode }
     );
   }
 
-  /** Lock out: approvals die with the session (I8). */
+  /**
+   * Lock out: approvals die with the session (I8), and every request it started
+   * is aborted so a credential cannot leave after the user asked to stop.
+   */
   lock(): void {
+    this.controller.abort();
     this.approvals = [];
   }
 

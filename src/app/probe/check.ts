@@ -36,6 +36,10 @@ export interface CheckDependencies {
   /** Allocates the next `request_seq` for this session. */
   nextRequestSeq: () => number;
   sessionId: string;
+  /** Aborted when the vault locks or switches. */
+  signal?: AbortSignal;
+  /** False once the session that started this check has ended. */
+  isActive?: () => boolean;
 }
 
 export interface CheckRequest {
@@ -149,9 +153,16 @@ export async function runCheck(
       keyId: key.id,
       sessionId: dependencies.sessionId,
       requestSeq,
+      signal: dependencies.signal,
     },
     dependencies.fetch
   );
+
+  // A locked session may still deliver an aborted request's synthetic outcome.
+  // It describes a configuration that is no longer open, so never store it.
+  if (dependencies.signal?.aborted || dependencies.isActive?.() === false) {
+    return { status: 'discarded', observation };
+  }
 
   // The key may have changed while the request was in flight; a result for a
   // configuration that no longer exists must not be stored.

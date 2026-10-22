@@ -252,6 +252,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
   const saveDelayMs = deps.saveDelayMs ?? 500;
 
   let runtime: Runtime | null = null;
+  /** Bumped whenever the session is replaced; stale async results check it. */
+  let generation = 0;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let inboxBaseline: { vaultId: string; open: string[] } | null = null;
   let setState!: StoreApi<AppState>['setState'];
@@ -325,6 +327,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
       unlock: async (opened, fileName, storageMode = 'folder') => {
         const preferences = await deps.local.getPreferences();
+        generation += 1;
         runtime = {
           vault: opened.vault,
           session: opened.session,
@@ -367,7 +370,17 @@ export function createAppStore(deps: StoreDeps): AppStore {
           toast.error('Could not save. The vault stays unlocked.');
           return;
         }
-        runtime?.vault.lock();
+        const active = runtime;
+        if (!active) return;
+        // I11: an edit can land while `flushSave` refreshes, in which case the
+        // vault is still dirty and locking must be cancelled, not forced.
+        const locked = active.vault.lock();
+        if (!locked.ok) {
+          toast.error('Could not save. The vault stays unlocked.');
+          return;
+        }
+        generation += 1;
+        active.session.lock();
         runtime = null;
         set({
           workspaceState: 'welcome',
@@ -406,12 +419,31 @@ export function createAppStore(deps: StoreDeps): AppStore {
       },
 
       refresh: async () => {
-        if (!runtime) return;
-        const view = await buildView({
-          ...runtime,
-          now: clock(),
-          timeZone: timeZone(),
-        });
+        const active = runtime;
+        if (!active) return;
+        const run = generation;
+        let view: VaultView;
+        try {
+          view = await buildView({
+            ...active,
+            now: clock(),
+            timeZone: timeZone(),
+          });
+        } catch (error) {
+          // A lock can land while the view is being assembled; that refresh has
+          // nothing left to render. Anything else is a real failure.
+          if (
+            runtime !== active ||
+            generation !== run ||
+            active.vault.isLocked
+          ) {
+            return;
+          }
+          throw error;
+        }
+        // A refresh that started before a lock or switch must not repaint the
+        // next session with the previous vault.
+        if (runtime !== active || generation !== run) return;
         set({ view, inboxVersion: get().inboxVersion + 1 });
         announceNewReminders(view);
       },
@@ -536,6 +568,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
         const provider = providerLabel(key.provider_id, view.file.providers);
         const endpoint = key.endpoint ?? '';
+        const secret = key.secret;
 
         // The click is the gesture: approve this one request shape, then let the
         // session decide whether it may go out.
@@ -543,14 +576,30 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (url) await active.session.approveUsageOnce(keyId, url);
 
         const result = await fetchUsage(
-          { provider, endpoint, secret: key.secret },
+          { provider, endpoint, secret },
           {
             authorize: (target) => active.session.authorizeUsage(keyId, target),
+            signal: active.session.signal,
           }
         );
 
-        const vaultId = active.vault.getPayload().vault.id;
         if (runtime !== active) return;
+
+        // A snapshot describes the request that produced it. If the secret or
+        // destination changed while it was in flight, it is about a credential
+        // this vault no longer holds.
+        const current = active.vault
+          .getPayload()
+          .keys.find((entry) => entry.id === keyId);
+        if (
+          !current ||
+          current.secret !== secret ||
+          (current.endpoint ?? '') !== endpoint
+        ) {
+          return;
+        }
+
+        const vaultId = active.vault.getPayload().vault.id;
 
         const entry: UsageEntry =
           result.ok === true
