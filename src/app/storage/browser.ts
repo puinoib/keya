@@ -51,7 +51,3 @@ export const webLocks: LockPort = {
   run: (name, task) =>
     navigator.locks.request(name, { mode: 'exclusive' }, task),
 };
-
-export function hasWebLocks(): boolean {
-  return typeof navigator !== 'undefined' && 'locks' in navigator;
-}

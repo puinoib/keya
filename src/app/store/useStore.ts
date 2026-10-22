@@ -32,7 +32,12 @@ import type {
   Settings,
 } from '../view/types';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
-import { writeUsageSnapshot } from '../lib/usage-cache';
+import {
+  dropUsageSnapshot,
+  pruneUsageCache,
+  readUsageCache,
+  writeUsageSnapshot,
+} from '../lib/usage-cache';
 import type { OpenedVault } from '../lib/storage';
 import {
   tryDetectClipboardKey,
@@ -111,7 +116,6 @@ interface AppState {
     archived: number;
   } | null;
 
-  setDb: (db: ViewDatabase) => void;
   lock: () => Promise<void>;
   unlock: (
     opened: OpenedVault,
@@ -156,7 +160,6 @@ interface AppState {
 
   updateSettings: (updates: Partial<Settings>) => void;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
-  runInboxChecks: () => { added: number; updated: number; archived: number };
   archiveInboxItem: (id: string) => void;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
 }
@@ -244,8 +247,6 @@ export const useStore = create<AppState>()((set, get) => {
     lastInboxSyncAt: null,
     lastInboxSyncResult: null,
 
-    setDb: (db) => set({ db }),
-
     unlock: async (opened, _password, fileName, storageMode = 'folder') => {
       const preferences = await localState.getPreferences();
       runtime = {
@@ -266,6 +267,16 @@ export const useStore = create<AppState>()((set, get) => {
         inboxVersion: get().inboxVersion + 1,
       });
       await get().refresh();
+
+      // A cached allowance only describes keys this vault still has, and the
+      // reminder baseline must start from what is already open so unlocking
+      // does not announce a backlog the user has seen.
+      const vaultId = opened.vault.getPayload().vault.id;
+      const keyIds = opened.vault.getPayload().keys.map((key) => key.id);
+      pruneUsageCache(vaultId, keyIds);
+      inboxBaseline = { vaultId, open: openItemIds(get().db) };
+      set({ usage: readUsageCache(vaultId) });
+
       void runDailyProbe();
     },
 
@@ -317,6 +328,7 @@ export const useStore = create<AppState>()((set, get) => {
       if (!runtime) return;
       const db = await buildView(runtime);
       set({ db, inboxVersion: get().inboxVersion + 1 });
+      announceNewReminders(db);
     },
 
     addKey: (input) => {
@@ -396,6 +408,18 @@ export const useStore = create<AppState>()((set, get) => {
         toast.error(result.reason);
         return;
       }
+
+      // A snapshot describes the request that produced it; a rotated secret or
+      // a moved endpoint makes it describe someone else's allowance.
+      const requery =
+        next.secret !== existing.secret ||
+        next.endpoint !== existing.endpoint ||
+        next.provider_id !== existing.provider_id;
+      if (requery) {
+        dropUsageSnapshot(runtime.vault.getPayload().vault.id, id);
+        set((state) => ({ usage: withoutKey(state.usage, id) }));
+      }
+
       void afterChange();
     },
 
@@ -407,6 +431,8 @@ export const useStore = create<AppState>()((set, get) => {
         return;
       }
       void runtime.local.forgetKey(runtime.vault.getPayload().vault.id, id);
+      dropUsageSnapshot(runtime.vault.getPayload().vault.id, id);
+      set((state) => ({ usage: withoutKey(state.usage, id) }));
       if (get().selectedKeyId === id) set({ selectedKeyId: null });
       void afterChange();
     },
@@ -649,24 +675,6 @@ export const useStore = create<AppState>()((set, get) => {
       toast.success('Password changed.');
     },
 
-    runInboxChecks: () => {
-      void get().refresh();
-      const items = get().db?.getInboxItems() ?? [];
-      const open = items.filter((item) => item.status === 'open').length;
-      const archived = items.length - open;
-      const previous = get().lastInboxSyncResult;
-      const added = Math.max(
-        0,
-        open - (previous?.added ?? 0) - (previous?.updated ?? 0)
-      );
-      const result = { added, updated: 0, archived };
-      set({
-        lastInboxSyncAt: new Date().toISOString(),
-        lastInboxSyncResult: result,
-      });
-      return result;
-    },
-
     archiveInboxItem: (id) => {
       if (!runtime) return;
       const item = get()
@@ -755,6 +763,53 @@ async function offerStandingApproval(keyId: string): Promise<void> {
         void active.session.grant(keyId);
       },
     },
+  });
+}
+
+/** Drop one key's entry without touching the rest of the map. */
+function withoutKey(
+  usage: Record<string, UsageEntry>,
+  id: string
+): Record<string, UsageEntry> {
+  if (!(id in usage)) return usage;
+  const next = { ...usage };
+  delete next[id];
+  return next;
+}
+
+/** The open reminder ids of one view, used to spot what appeared later. */
+function openItemIds(db: ViewDatabase | null): string[] {
+  if (!db) return [];
+  return db
+    .getInboxItems()
+    .filter((item) => item.status === 'open')
+    .map((item) => item.id);
+}
+
+let inboxBaseline: { vaultId: string; open: string[] } | null = null;
+
+/**
+ * Announce reminders that appeared while the vault was open. The list itself is
+ * computed, so "new" means new to this device since the last refresh.
+ */
+function announceNewReminders(db: ViewDatabase): void {
+  const vaultId = db.getData().vault_id;
+  const open = openItemIds(db);
+  const previous = inboxBaseline;
+
+  inboxBaseline = { vaultId, open };
+
+  if (!previous || previous.vaultId !== vaultId) return;
+
+  const before = new Set(previous.open);
+  const now = new Set(open);
+  const added = open.filter((id) => !before.has(id)).length;
+  const archived = previous.open.filter((id) => !now.has(id)).length;
+  if (added === 0 && archived === 0) return;
+
+  useStore.setState({
+    lastInboxSyncAt: new Date().toISOString(),
+    lastInboxSyncResult: { added, updated: 0, archived },
   });
 }
 

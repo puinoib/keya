@@ -1,5 +1,3 @@
-import type { InboxItem } from '../view/types';
-
 export function getInboxToastCopy(summary: {
   added: number;
   updated: number;
@@ -17,13 +15,4 @@ export function getInboxToastCopy(summary: {
         ? `${summary.updated} existing reminder${summary.updated > 1 ? 's were' : ' was'} refreshed as well.`
         : 'Review and archive each reminder after you handle it.',
   };
-}
-
-export function formatInboxItemTime(item: InboxItem): string {
-  if (!item.metadata.expires_at) return '';
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(item.metadata.expires_at));
 }
