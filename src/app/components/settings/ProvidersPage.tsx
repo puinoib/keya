@@ -228,11 +228,19 @@ export function ProvidersPage() {
       ? customs.map((cp) => (cp.id === editing.id ? entry : cp))
       : [...customs, entry];
 
+    // A rename must carry the enabled/disabled state with it and must not leave
+    // the old name behind, where it would silently disable a future provider.
+    const previousName = editing?.name;
+    const wasHidden = previousName
+      ? preferences.hidden_presets.includes(previousName)
+      : false;
+    const hidden = preferences.hidden_presets.filter(
+      (providerName) => providerName !== name && providerName !== previousName
+    );
+
     updateSettings({
       providers: nextCustoms,
-      hidden_presets: preferences.hidden_presets.filter(
-        (providerName) => providerName !== name
-      ),
+      hidden_presets: wasHidden ? [...hidden, name] : hidden,
     });
     resetForm();
   };

@@ -1216,12 +1216,31 @@ export function createAppStore(deps: StoreDeps): AppStore {
     );
 
     const kept = new Set<string>();
+    const claimed = new Set<string>();
+    const seenNames = new Set<string>();
     for (const draft of drafts) {
+      const name = draft.name.trim();
+      const nameKey = name.toLowerCase();
+      // Two drafts with the same name cannot both exist (A 类 uniqueness), so
+      // refuse the duplicate instead of letting one silently replace the other.
+      if (seenNames.has(nameKey)) {
+        toast.error(
+          `Two providers are both named "${name}", so one was skipped.`
+        );
+        continue;
+      }
+      seenNames.add(nameKey);
+
+      // Match by id first. A name-only fallback is allowed once per stored
+      // provider, for settings state written before drafts carried ids.
+      const byIdMatch = draft.id ? byId.get(draft.id) : undefined;
+      const byNameMatch = byIdMatch ? undefined : byName.get(nameKey);
       const previous =
-        (draft.id ? byId.get(draft.id) : undefined) ??
-        byName.get(draft.name.trim().toLowerCase());
+        byIdMatch ??
+        (byNameMatch && !claimed.has(byNameMatch.id) ? byNameMatch : undefined);
       const id = previous?.id ?? `custom:${newId()}`;
       kept.add(id);
+      claimed.add(id);
 
       const saved = state.vault.saveProvider(draftToProvider(draft, id));
       if (!saved.ok) toast.error(saved.reason);

@@ -743,3 +743,52 @@ describe('two overlapping checks', () => {
     expect(observations[0].outcome).toBe('ok');
   }, 30_000);
 });
+
+describe('provider drafts', () => {
+  it('refuses two providers with the same name instead of dropping one', async () => {
+    const { store, h } = await unlocked();
+
+    store.useStore.getState().updateSettings({
+      providers: [
+        { name: 'Acme', endpoint: 'https://api.acme.test' },
+        { name: 'Acme', endpoint: 'https://other.acme.test' },
+      ],
+    });
+
+    await vi.waitFor(() =>
+      expect(
+        h.vault.getPayload().providers.some((p) => p.name === 'Acme')
+      ).toBe(true)
+    );
+    expect(
+      h.vault.getPayload().providers.filter((p) => p.name === 'Acme')
+    ).toHaveLength(1);
+  });
+
+  it('renames a custom provider without changing its id', async () => {
+    const { store, h } = await unlocked();
+    const before = h.vault.getPayload().providers[0];
+
+    store.useStore.getState().updateSettings({
+      providers: [
+        {
+          id: before.id,
+          name: 'Renamed gateway',
+          endpoint: 'https://edge.example.com/v1',
+        },
+      ],
+    });
+
+    await vi.waitFor(() =>
+      expect(
+        h.vault.getPayload().providers.some((p) => p.name === 'Renamed gateway')
+      ).toBe(true)
+    );
+    const after = h.vault
+      .getPayload()
+      .providers.find((p) => p.name === 'Renamed gateway');
+    expect(after?.id).toBe(before.id);
+    // The key still points at the renamed provider.
+    expect(h.vault.getPayload().keys[0].provider_id).toBe(before.id);
+  });
+});
