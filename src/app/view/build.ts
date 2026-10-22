@@ -15,7 +15,6 @@ import type {
   ObservationDismissal,
 } from '../../core/runtime/dismissals';
 import { businessAlerts, observationAlerts } from '../../core/reminders';
-import type { Reminder } from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
 import {
   daysUntilExpiry,
@@ -40,15 +39,6 @@ export interface ViewInput {
   now: Date;
   timeZone: string;
 }
-
-const TYPE_OF_RULE: Record<Reminder['rule'], InboxItem['type']> = {
-  expiry_upcoming: 'key_expiry_upcoming',
-  expiry_expired: 'key_expiry_expired',
-  insecure_endpoint: 'insecure_endpoint',
-  never_probed: 'never_tested',
-  probe_failed: 'connection_failed',
-  probe_stale: 'stale_test',
-};
 
 export function buildSettings(
   file: KeyaFile,
@@ -125,10 +115,9 @@ export function buildInbox(input: ViewInput): InboxItem[] {
 
     items.push({
       id: `${reminder.rule}:${reminder.key_id}`,
-      type: TYPE_OF_RULE[reminder.rule],
+      rule: reminder.rule,
       entity_id: reminder.key_id,
       status: dismissed ? 'archived' : 'open',
-      archive_reason: dismissed ? 'user' : null,
       created_at: stamp ?? input.now.toISOString(),
       updated_at: stamp ?? input.now.toISOString(),
       archived_at: dismissed ? input.now.toISOString() : null,

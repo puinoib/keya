@@ -659,7 +659,7 @@ export const useStore = create<AppState>()((set, get) => {
         .find((entry) => entry.id === id);
       if (!item) return;
 
-      const rule = toRule(item.type);
+      const rule = item.rule;
       if (item.status === 'open') {
         const reminder = get()
           .db?.getInboxItems()
@@ -867,23 +867,6 @@ function isBusinessRule(
     rule === 'expiry_expired' ||
     rule === 'insecure_endpoint'
   );
-}
-
-function toRule(type: string): BusinessRule | ObservationRule {
-  switch (type) {
-    case 'key_expiry_upcoming':
-      return 'expiry_upcoming';
-    case 'key_expiry_expired':
-      return 'expiry_expired';
-    case 'insecure_endpoint':
-      return 'insecure_endpoint';
-    case 'connection_failed':
-      return 'probe_failed';
-    case 'never_tested':
-      return 'never_probed';
-    default:
-      return 'probe_stale';
-  }
 }
 
 async function applyProviders(

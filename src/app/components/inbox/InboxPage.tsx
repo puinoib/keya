@@ -11,7 +11,7 @@ import {
   CaretDown,
   X,
 } from '@phosphor-icons/react';
-import type { InboxItem, InboxItemType } from '@/app/view/types';
+import type { InboxItem, InboxRule } from '@/app/view/types';
 import { Button } from '@/components/ui/button';
 import { useStore } from '../../store/useStore';
 import { cn } from '@/lib/utils';
@@ -26,30 +26,27 @@ const SEVERITY_ORDER: Record<Severity, number> = {
   info: 2,
 };
 
-function getSeverity(item: InboxItem): Severity {
-  switch (item.type) {
-    case 'key_expiry_expired':
-    case 'connection_failed':
+function getSeverity(rule: InboxRule): Severity {
+  switch (rule) {
+    case 'expiry_expired':
+    case 'probe_failed':
     case 'insecure_endpoint':
       return 'critical';
-    case 'key_expiry_upcoming':
-    case 'never_tested':
+    case 'expiry_upcoming':
+    case 'never_probed':
       return 'warning';
-    case 'stale_test':
+    case 'probe_stale':
       return 'info';
   }
 }
 
-const TYPE_BADGE: Record<
-  InboxItemType,
-  { label: string; icon: typeof Warning }
-> = {
-  key_expiry_expired: { label: 'Expired', icon: Warning },
-  key_expiry_upcoming: { label: 'Upcoming', icon: ClockAfternoon },
-  connection_failed: { label: 'Failed', icon: Lightning },
-  never_tested: { label: 'Untested', icon: Question },
+const TYPE_BADGE: Record<InboxRule, { label: string; icon: typeof Warning }> = {
+  expiry_expired: { label: 'Expired', icon: Warning },
+  expiry_upcoming: { label: 'Upcoming', icon: ClockAfternoon },
+  probe_failed: { label: 'Failed', icon: Lightning },
+  never_probed: { label: 'Untested', icon: Question },
   insecure_endpoint: { label: 'Insecure', icon: ShieldWarning },
-  stale_test: { label: 'Stale', icon: Timer },
+  probe_stale: { label: 'Stale', icon: Timer },
 };
 
 const SEVERITY_BADGE_CLASS: Record<Severity, string> = {
@@ -65,32 +62,30 @@ function getTitle(item: InboxItem): string {
 function getContextSuffix(item: InboxItem): string {
   const { days_until_expiry, error_message, endpoint, days_since_test } =
     item.metadata;
-  switch (item.type) {
-    case 'key_expiry_expired': {
+  switch (item.rule) {
+    case 'expiry_expired': {
       const overdue = Math.abs(days_until_expiry ?? 0);
       return overdue === 1
         ? 'expired yesterday'
         : `expired ${overdue} days ago`;
     }
-    case 'key_expiry_upcoming': {
+    case 'expiry_upcoming': {
       const days = days_until_expiry ?? 0;
       return days === 0 ? 'expires today' : `expires in ${days} days`;
     }
-    case 'connection_failed':
+    case 'probe_failed':
       return error_message ?? 'connection failed';
-    case 'never_tested':
+    case 'never_probed':
       return 'never tested';
     case 'insecure_endpoint':
       return endpoint ?? 'insecure endpoint';
-    case 'stale_test':
+    case 'probe_stale':
       return `last tested ${days_since_test ?? 0} days ago`;
   }
 }
 
 function getArchivedContext(item: InboxItem): string {
-  const label = TYPE_BADGE[item.type].label;
-  const reason = item.archive_reason === 'resolved' ? 'Resolved' : 'Archived';
-  return `${label} · ${reason}`;
+  return `${TYPE_BADGE[item.rule].label} · Archived`;
 }
 
 export function InboxPage() {
@@ -110,8 +105,8 @@ export function InboxPage() {
   const openItems = useMemo(() => {
     const open = items.filter((item) => item.status === 'open');
     return open.sort((a, b) => {
-      const sa = SEVERITY_ORDER[getSeverity(a)];
-      const sb = SEVERITY_ORDER[getSeverity(b)];
+      const sa = SEVERITY_ORDER[getSeverity(a.rule)];
+      const sb = SEVERITY_ORDER[getSeverity(b.rule)];
       if (sa !== sb) return sa - sb;
       return (
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -160,8 +155,8 @@ export function InboxPage() {
       ) : (
         <div className="rounded-lg border border-line-subtle bg-surface-2/40 overflow-hidden divide-y divide-line-subtle">
           {openItems.map((item) => {
-            const severity = getSeverity(item);
-            const badge = TYPE_BADGE[item.type];
+            const severity = getSeverity(item.rule);
+            const badge = TYPE_BADGE[item.rule];
             const BadgeIcon = badge.icon;
             return (
               <div key={item.id} className="px-4 py-3">

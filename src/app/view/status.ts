@@ -29,7 +29,7 @@ export function getExpiryStatusLabel(status: ExpiryStatus): string {
 
 export function getConnectionStatusLabel(
   status: 'success' | 'failed' | 'untested',
-  kind?: 'credential' | 'request' | 'reachability' | 'unverifiable'
+  kind?: 'credential' | 'request' | 'unverifiable'
 ): ConnectionStatusLabel {
   if (status === 'untested') return 'Untested';
   if (status === 'failed') return 'Failed';
