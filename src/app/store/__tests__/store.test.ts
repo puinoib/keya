@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneFile, IDS } from '../../../core/__tests__/fixtures';
 import { createAppStore } from '../create-store';
 import { readUsageCache, writeUsageSnapshot } from '../../lib/usage-cache';
+import { providerToDraft } from '../../state/providers';
 
 const RECENT = new Date().toISOString();
 import { FIXED_NOW, openHarness, type Harness } from './fixtures';
@@ -425,5 +426,75 @@ describe('a check that is still in flight', () => {
 
     await expect(pending).resolves.toMatchObject({ kind: 'request' });
     expect(store.useStore.getState().workspaceState).toBe('welcome');
+  });
+
+  it('keeps a failing daily run from rejecting out of unlock', async () => {
+    const h = await openHarness();
+    await h.local.setPreferences({ auto_probe_daily: true });
+    // The exact failure a lock produces: the session's payload is gone.
+    const probe = vi
+      .spyOn(h.session, 'probe')
+      .mockRejectedValue(new Error('vault is locked'));
+    const store = makeStore(h);
+
+    await expect(
+      store.useStore.getState().unlock(h.opened, 'pw', 'work.keya', 'folder')
+    ).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(probe).toHaveBeenCalled());
+    // Give an escaping rejection a turn to surface.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(store.useStore.getState().workspaceState).toBe('unlocked');
+  });
+
+  it('keeps sweeping the remaining keys when one of them fails', async () => {
+    const payload = cloneFile();
+    payload.keys.push({
+      ...payload.keys[0],
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Second key',
+      secret: 'sk-synthetic-second',
+    });
+
+    const h = await openHarness({ payload });
+    await h.local.setPreferences({ auto_probe_daily: true });
+    const probe = vi
+      .spyOn(h.session, 'probe')
+      .mockRejectedValueOnce(new Error('this one broke'))
+      .mockResolvedValue({ status: 'no_key' });
+    const store = makeStore(h);
+
+    await store.useStore
+      .getState()
+      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await vi.waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
+
+    expect(store.useStore.getState().workspaceState).toBe('unlocked');
+  });
+});
+
+describe('provider edits', () => {
+  it('saves the payload and marks the change like any other edit', async () => {
+    const { store, h } = await unlocked();
+    const view = store.useStore.getState().view;
+    if (!view) throw new Error('the vault should be unlocked');
+
+    const drafts = [
+      ...view.file.providers.map(providerToDraft),
+      { name: 'Acme', endpoint: 'https://api.acme.test' },
+    ];
+
+    store.useStore.getState().updateSettings({ providers: drafts });
+    // Providers are payload, not preferences: an edit has to be unsaved until
+    // the write lands, otherwise a reload loses it without a warning.
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
+
+    await vi.waitFor(() => expect(h.file.writes).toBe(1));
+    await vi.waitFor(() =>
+      expect(store.useStore.getState().hasUnsavedChanges).toBe(false)
+    );
+    expect(h.vault.getPayload().providers.map((it) => it.name)).toContain(
+      'Acme'
+    );
   });
 });

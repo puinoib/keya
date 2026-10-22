@@ -340,7 +340,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         inboxBaseline = { vaultId, open: openReminderIds(get().view) };
         set({ usage: readUsageCache(vaultId) });
 
-        void runDailyProbe();
+        // Fire and forget: the daily run must never reject out of `unlock`.
+        void runDailyProbe().catch(() => undefined);
       },
 
       lock: async () => {
@@ -689,7 +690,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
         runtime.preferences = preferences;
         void deps.local.setPreferences(preferences);
 
-        if (patch.providers) void applyProviders(runtime, patch.providers);
+        if (patch.providers) {
+          // Providers live in the payload, so editing them is a vault change:
+          // it has to be marked unsaved and scheduled like any other edit.
+          applyProviders(runtime, patch.providers);
+          void afterChange();
+          return;
+        }
 
         void get().refresh();
       },
@@ -909,7 +916,12 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
     for (const keyId of keys) {
       if (runtime !== active) return;
-      await active.session.probe(keyId, 'automatic');
+      try {
+        await active.session.probe(keyId, 'automatic');
+      } catch {
+        // One key's failure must not end the sweep. A lock or switch tears the
+        // session down instead, which the runtime check above stops.
+      }
     }
 
     if (runtime === active) await getState().refresh();
@@ -971,10 +983,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
    * Write the custom providers the settings page shows. Matching is by id first,
    * so renaming a provider keeps the references keys already point at.
    */
-  async function applyProviders(
-    state: Runtime,
-    drafts: ProviderDraft[]
-  ): Promise<void> {
+  function applyProviders(state: Runtime, drafts: ProviderDraft[]): void {
     const file = state.vault.getPayload();
     const existing = file.providers;
 
