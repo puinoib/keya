@@ -142,6 +142,15 @@ describe('opening a vault', () => {
 });
 
 describe('saving', () => {
+  it('verifies a password by re-deriving it, without keeping it', async () => {
+    const { vault } = await openedFile();
+
+    await expect(vault.verifyPassword(PASSWORD)).resolves.toBe(true);
+    await expect(vault.verifyPassword('not the passphrase')).resolves.toBe(
+      false
+    );
+  });
+
   it('copies version, kdf and salt verbatim and only rotates the nonce', async () => {
     const { file, clock, vault } = await openedFile();
     const before = inspectContainer(file.bytes!);

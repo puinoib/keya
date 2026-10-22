@@ -56,7 +56,7 @@ describe('save scheduling', () => {
   it('waits for the configured delay before writing', async () => {
     const h = await openHarness();
     const store = storeOn(h, 5_000);
-    await store.useStore.getState().unlock(h.opened, 'pw', 'w.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'w.keya', 'folder');
 
     store.useStore.getState().addKey(NEW_KEY);
     await sleep(150);
@@ -72,7 +72,7 @@ describe('save scheduling', () => {
   it('coalesces a burst of edits into one write', async () => {
     const h = await openHarness();
     const store = storeOn(h, 0);
-    await store.useStore.getState().unlock(h.opened, 'pw', 'w.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'w.keya', 'folder');
 
     store.useStore.getState().addKey({ ...NEW_KEY, name: 'One' });
     store.useStore.getState().addKey({ ...NEW_KEY, name: 'Two' });
@@ -89,9 +89,7 @@ describe('save scheduling', () => {
   it('does not schedule a write for a download-mode vault', async () => {
     const h = await openHarness();
     const store = storeOn(h, 0);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'w.keya', 'download');
+    await store.useStore.getState().unlock(h.opened, 'w.keya', 'download');
 
     store.useStore.getState().addKey(NEW_KEY);
     await sleep(100);

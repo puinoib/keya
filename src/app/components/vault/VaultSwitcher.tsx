@@ -59,7 +59,7 @@ export function VaultSwitcher() {
     // A failed save must keep the user on the vault that owns the changes.
     if (!(await flushSave())) return;
     const newDb = await FileStorage.openVault(fileName, password);
-    await useStore.getState().unlock(newDb, password, fileName);
+    await useStore.getState().unlock(newDb, fileName);
     setSwitchTarget(null);
   };
 
@@ -67,7 +67,7 @@ export function VaultSwitcher() {
     if (!(await flushSave())) return;
     const fileName = `vault-${Date.now()}.keya`;
     const newDb = await FileStorage.createVault(fileName, password);
-    await useStore.getState().unlock(newDb, password, fileName);
+    await useStore.getState().unlock(newDb, fileName);
     setShowNewVault(false);
   };
 

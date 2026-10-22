@@ -5,9 +5,9 @@
  * routes every action to the vault's edit transactions, the device-local store
  * or the probe pipeline.
  *
- * The password is kept for the length of the session and only so biometric
- * enrollment can wrap it; nothing reads it to save or to unlock, and `lock`
- * drops it with the vault.
+ * The master password is never part of this state (I16). It is used for the
+ * unlock derivation and for the two gestures that need it again (enabling
+ * biometric unlock, changing the password), then dropped.
  */
 
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
@@ -115,7 +115,6 @@ type WorkspaceState = 'welcome' | 'unlocked';
 
 interface Runtime {
   vault: Vault;
-  password: string;
   session: VaultSession;
   local: LocalState;
   fileName: string;
@@ -125,8 +124,6 @@ interface Runtime {
 
 export interface AppState {
   workspaceState: WorkspaceState;
-  /** Session-only, so biometric enrollment can wrap it. Saves never use it. */
-  password: string | null;
   view: VaultView | null;
   activeVaultFileName: string | null;
   storageMode: VaultStorageMode;
@@ -159,10 +156,11 @@ export interface AppState {
   lock: () => Promise<void>;
   unlock: (
     opened: OpenedVault,
-    password: string,
     fileName: string,
     storageMode?: VaultStorageMode
   ) => Promise<void>;
+  /** Re-derive and compare, without retaining the password. */
+  verifyPassword: (password: string) => Promise<boolean>;
   markExported: () => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   updateKeyboardShortcuts: (shortcuts: ShortcutMap) => void;
@@ -284,7 +282,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
     return {
       workspaceState: 'welcome',
-      password: null,
       view: null,
       activeVaultFileName: null,
       storageMode: 'folder',
@@ -310,11 +307,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
       lastInboxSyncAt: null,
       lastInboxSyncResult: null,
 
-      unlock: async (opened, _password, fileName, storageMode = 'folder') => {
+      unlock: async (opened, fileName, storageMode = 'folder') => {
         const preferences = await deps.local.getPreferences();
         runtime = {
           vault: opened.vault,
-          password: _password,
           session: opened.session,
           local: deps.local,
           fileName,
@@ -323,7 +319,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         };
         set({
           workspaceState: 'unlocked',
-          password: _password,
           activeVaultFileName: fileName,
           storageMode,
           hasUnsavedChanges: false,
@@ -344,6 +339,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
         void runDailyProbe().catch(() => undefined);
       },
 
+      verifyPassword: async (password) => {
+        if (!runtime) return false;
+        return runtime.vault.verifyPassword(password);
+      },
+
       lock: async () => {
         const saved = await flushSave().catch(() => false);
         if (saved === false) {
@@ -354,7 +354,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         runtime = null;
         set({
           workspaceState: 'welcome',
-          password: null,
           view: null,
           activeVaultFileName: null,
           hasUnsavedChanges: false,
@@ -741,9 +740,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         );
 
         runtime.fingerprint = runtime.vault.containerInfo.fingerprint;
-        // Biometric enrollment wraps whatever is held here, so it must follow.
-        runtime.password = newPassword;
-        set({ hasUnsavedChanges: false, password: newPassword });
+        set({ hasUnsavedChanges: false });
         await get().refresh();
         toast.success('Password changed.');
       },

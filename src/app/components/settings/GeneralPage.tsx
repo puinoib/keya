@@ -61,7 +61,7 @@ const STRENGTH_CONFIG = {
 } as const;
 
 export function GeneralPage() {
-  const { view, password, updateMeta, updateSettings, changePassword } =
+  const { view, updateMeta, updateSettings, changePassword, verifyPassword } =
     useStore();
   const preferences = view?.preferences;
   const data = view?.file.vault;
@@ -69,6 +69,9 @@ export function GeneralPage() {
   const [bioRegistered, setBioRegistered] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
   const [bioError, setBioError] = useState('');
+  // Enrollment re-asks for the password instead of keeping it in the session.
+  const [enrollOpen, setEnrollOpen] = useState(false);
+  const [enrollPw, setEnrollPw] = useState('');
 
   // Change password state
   const [showPwForm, setShowPwForm] = useState(false);
@@ -207,24 +210,84 @@ export function GeneralPage() {
                     checked={bioRegistered}
                     disabled={bioLoading}
                     onChange={async () => {
-                      if (!password) return;
+                      if (bioLoading) return;
+                      setBioError('');
+                      if (bioRegistered) {
+                        setBioLoading(true);
+                        try {
+                          await removeBiometric(vaultId);
+                          setBioRegistered(false);
+                        } catch (e) {
+                          setBioError(
+                            e instanceof Error ? e.message : 'Failed'
+                          );
+                        } finally {
+                          setBioLoading(false);
+                        }
+                        return;
+                      }
+                      // Enabling needs the password again; it is used for this
+                      // gesture only and never written to the store.
+                      setEnrollPw('');
+                      setEnrollOpen(true);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            {enrollOpen && !bioRegistered && (
+              <div className="p-3 space-y-2">
+                <p className="text-xs text-ink-secondary">
+                  Confirm the master password to enable biometric unlock.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="password"
+                    autoComplete="off"
+                    value={enrollPw}
+                    onChange={(e) => setEnrollPw(e.target.value)}
+                    placeholder="Master password"
+                    className="h-7 text-xs"
+                  />
+                  <button
+                    type="button"
+                    disabled={!enrollPw || bioLoading}
+                    onClick={async () => {
+                      if (!vaultId || !enrollPw) return;
                       setBioLoading(true);
                       setBioError('');
                       try {
-                        if (bioRegistered) {
-                          await removeBiometric(vaultId);
-                          setBioRegistered(false);
-                        } else {
-                          await registerBiometric(vaultId, password);
-                          setBioRegistered(true);
+                        if (!(await verifyPassword(enrollPw))) {
+                          setBioError(
+                            'That is not the current master password.'
+                          );
+                          return;
                         }
+                        await registerBiometric(vaultId, enrollPw);
+                        setBioRegistered(true);
+                        setEnrollOpen(false);
+                        setEnrollPw('');
                       } catch (e) {
                         setBioError(e instanceof Error ? e.message : 'Failed');
                       } finally {
                         setBioLoading(false);
                       }
                     }}
-                  />
+                    className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
+                  >
+                    Enable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEnrollOpen(false);
+                      setEnrollPw('');
+                      setBioError('');
+                    }}
+                    className="rounded-md px-3 py-1.5 text-xs text-ink-quaternary hover:text-ink-secondary transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}

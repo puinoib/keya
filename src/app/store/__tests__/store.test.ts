@@ -49,7 +49,7 @@ const FIRST_GENERATED_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001';
 async function unlocked(harness?: Harness) {
   const h = harness ?? (await openHarness());
   const store = makeStore(h);
-  await store.useStore.getState().unlock(h.opened, 'pw', 'work.keya', 'folder');
+  await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
   return { store, h };
 }
 
@@ -130,9 +130,7 @@ describe('updateKey', () => {
       ],
     });
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
     expect(store.useStore.getState().usage[IDS.key]).toBeDefined();
 
     store.useStore.getState().updateKey(IDS.key, { secret: 'sk-rotated' });
@@ -151,9 +149,7 @@ describe('updateKey', () => {
       ],
     });
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     store.useStore.getState().updateKey(IDS.key, { name: 'Renamed only' });
 
@@ -222,9 +218,7 @@ describe('flushSave', () => {
   it('treats an exported download-mode vault as saved, and guards pending edits', async () => {
     const h = await openHarness();
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'download');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'download');
 
     await expect(store.flushSave()).resolves.toBe(true);
 
@@ -261,21 +255,20 @@ describe('unlock', () => {
     });
 
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     expect(Object.keys(store.useStore.getState().usage)).toEqual([IDS.key]);
     expect(readUsageCache(h.payload.vault.id)['deleted-key']).toBeUndefined();
   });
 
-  it('drops the password and the view when locked', async () => {
+  it('does not keep the master password in the store', async () => {
     const { store } = await unlocked();
+
+    expect('password' in store.useStore.getState()).toBe(false);
 
     await store.useStore.getState().lock();
 
     expect(store.useStore.getState().workspaceState).toBe('welcome');
-    expect(store.useStore.getState().password).toBeNull();
     expect(store.useStore.getState().view).toBeNull();
   });
 
@@ -286,9 +279,7 @@ describe('unlock', () => {
     const firstProbe = vi.spyOn(first.session, 'probe');
     const store = makeStore(first);
 
-    await store.useStore
-      .getState()
-      .unlock(first.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(first.opened, 'work.keya', 'folder');
     await vi.waitFor(async () =>
       expect((await first.local.getPreferences()).last_daily_probe_day).toBe(
         '2026-03-01'
@@ -303,7 +294,7 @@ describe('unlock', () => {
     const reopened = makeStore(second);
     await reopened.useStore
       .getState()
-      .unlock(second.opened, 'pw', 'work.keya', 'folder');
+      .unlock(second.opened, 'work.keya', 'folder');
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(secondProbe).not.toHaveBeenCalled();
@@ -314,9 +305,7 @@ describe('reminder announcements', () => {
   it('announces only the reminders that appeared during the session', async () => {
     const h = await openHarness();
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     // Unlocking is a baseline, not an announcement.
     expect(store.useStore.getState().lastInboxSyncAt).toBeNull();
@@ -345,9 +334,7 @@ describe('reminder announcements', () => {
     const payload = cloneFile();
     const h = await openHarness({ payload });
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
     store.useStore.getState().addKey({
       name: 'First',
       secret: 'sk-synthetic-first',
@@ -367,7 +354,7 @@ describe('reminder announcements', () => {
     const next = makeStore(reopened);
     await next.useStore
       .getState()
-      .unlock(reopened.opened, 'pw', 'work.keya', 'folder');
+      .unlock(reopened.opened, 'work.keya', 'folder');
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(next.useStore.getState().lastInboxSyncAt).toBeNull();
@@ -416,9 +403,7 @@ describe('a check that is still in flight', () => {
       },
     });
     const store = makeStore(h);
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     const pending = store.runManualCheck(IDS.key);
     await new Promise((resolve) => setTimeout(resolve, 5));
@@ -438,7 +423,7 @@ describe('a check that is still in flight', () => {
     const store = makeStore(h);
 
     await expect(
-      store.useStore.getState().unlock(h.opened, 'pw', 'work.keya', 'folder')
+      store.useStore.getState().unlock(h.opened, 'work.keya', 'folder')
     ).resolves.toBeUndefined();
     await vi.waitFor(() => expect(probe).toHaveBeenCalled());
     // Give an escaping rejection a turn to surface.
@@ -464,9 +449,7 @@ describe('a check that is still in flight', () => {
       .mockResolvedValue({ status: 'no_key' });
     const store = makeStore(h);
 
-    await store.useStore
-      .getState()
-      .unlock(h.opened, 'pw', 'work.keya', 'folder');
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
     await vi.waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
 
     expect(store.useStore.getState().workspaceState).toBe('unlocked');

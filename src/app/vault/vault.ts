@@ -241,6 +241,23 @@ export class Vault {
     return this.locked;
   }
 
+  /**
+   * Confirm a password without retaining it. Used by flows that must prove the
+   * user still knows it (enabling biometric unlock) but must not keep it.
+   */
+  async verifyPassword(password: string): Promise<boolean> {
+    this.assertUnlocked();
+    const derived = await deriveFileKey({
+      password,
+      salt: this.container.salt,
+      kdf: this.container.kdf,
+    }).catch(() => null);
+    if (!derived) return false;
+    const matches = constantTimeEqual(derived, this.fileKey);
+    derived.fill(0);
+    return matches;
+  }
+
   /** Apply an edit transaction result and mark the payload dirty. */
   applyEdit(
     result: EditResult

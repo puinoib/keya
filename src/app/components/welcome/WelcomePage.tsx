@@ -160,7 +160,7 @@ export function WelcomePage() {
   const handleUnlockVault = async (fileName: string, password: string) => {
     const db = await FileStorage.openVault(fileName, password);
     const vaultId = db.vault.getPayload().vault.id;
-    await useStore.getState().unlock(db, password, fileName);
+    await useStore.getState().unlock(db, fileName);
     setBiometricPrompt({ vaultId, password });
   };
 
@@ -172,7 +172,7 @@ export function WelcomePage() {
       name: newVaultName || undefined,
       icon: newVaultIcon || undefined,
     });
-    await useStore.getState().unlock(db, password, fileName);
+    await useStore.getState().unlock(db, fileName);
   };
 
   const handleSwitchFolder = async () => {
@@ -217,7 +217,7 @@ export function WelcomePage() {
       new Uint8Array(buffer),
       password
     );
-    await useStore.getState().unlock(opened, password, file.name, 'download');
+    await useStore.getState().unlock(opened, file.name, 'download');
   };
 
   // ── Render ──

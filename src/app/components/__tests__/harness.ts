@@ -8,11 +8,7 @@
 
 import { createAppStore, type AppStore } from '../../store/create-store';
 import type { ViewInput } from '../../state/view';
-import {
-  PASSWORD,
-  type Harness,
-  openHarness,
-} from '../../store/__tests__/fixtures';
+import { type Harness, openHarness } from '../../store/__tests__/fixtures';
 import type { KeyaFile } from '../../../core/payload/types';
 
 export interface ComponentHarness {
@@ -39,12 +35,7 @@ export async function buildComponentStore(
 
   await api.useStore
     .getState()
-    .unlock(
-      vault.opened,
-      PASSWORD,
-      'work.keya',
-      options.storageMode ?? 'folder'
-    );
+    .unlock(vault.opened, 'work.keya', options.storageMode ?? 'folder');
 
   return { api, vault };
 }
