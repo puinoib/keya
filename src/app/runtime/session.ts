@@ -59,6 +59,8 @@ export class VaultSession {
   /** One-shot approvals for this unlock only; never persisted. */
   private approvals: Approval[] = [];
   private requestSeq = 0;
+  /** Highest adopted `request_seq` per key, so an older result cannot win. */
+  private readonly adoptedSeq = new Map<string, number>();
   /** Aborted when the session ends, so no request outlives the unlock. */
   private readonly controller = new AbortController();
 
@@ -312,6 +314,10 @@ export class VaultSession {
         sessionId: this.sessionId,
         signal: this.signal,
         isActive: () => !this.signal.aborted,
+        lastAdoptedSeq: (id) => this.adoptedSeq.get(id) ?? -1,
+        adoptSeq: (id, seq) => {
+          this.adoptedSeq.set(id, seq);
+        },
       },
       { keyId, mode }
     );
@@ -324,6 +330,7 @@ export class VaultSession {
   lock(): void {
     this.controller.abort();
     this.approvals = [];
+    this.adoptedSeq.clear();
   }
 
   private async hasGrantFor(fingerprint: string): Promise<boolean> {

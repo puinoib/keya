@@ -14,6 +14,7 @@ import {
 } from '../../core/presets/classify';
 import { observationBinding, sendFingerprint } from '../../core/fingerprint';
 import type { Observation } from '../../core/runtime/observations';
+import { shouldAdopt } from '../../core/runtime/observations';
 import type { KeyaFile, Key } from '../../core/payload/types';
 import type { LocalState } from '../storage/local/state';
 import { runProbe, type ProbeFetch } from './execute';
@@ -40,6 +41,10 @@ export interface CheckDependencies {
   signal?: AbortSignal;
   /** False once the session that started this check has ended. */
   isActive?: () => boolean;
+  /** Highest `request_seq` already adopted for a key, or -1. */
+  lastAdoptedSeq?: (keyId: string) => number;
+  /** Records that a result was adopted, so an older one can be dropped. */
+  adoptSeq?: (keyId: string, requestSeq: number) => void;
 }
 
 export interface CheckRequest {
@@ -171,25 +176,44 @@ export async function runCheck(
   // configuration that no longer exists must not be stored.
   const after = dependencies.payload();
   const current = findKey(after, key.id);
-  const stillValid =
-    current !== undefined &&
-    current.archived_at === null &&
-    (
-      await describeSend({
-        artifact: {
-          keyId: current.id,
-          resolvedHref: state.plan.resolvedHref,
-          auth: state.plan.auth,
-          headers: state.plan.headers,
-        },
-        secret: current.secret,
-        interpreterId: state.plan.interpreterId,
-        deviceKey: dependencies.deviceKey,
-      })
-    ).binding === binding;
+  if (!current) return { status: 'discarded', observation };
 
-  if (!stillValid) return { status: 'discarded', observation };
+  const currentState = classifyRecipe(
+    { provider_id: current.provider_id, endpoint: current.endpoint },
+    after.providers
+  );
+  const currentBinding =
+    currentState.kind === 'not_executable'
+      ? null
+      : (
+          await describeSend({
+            artifact: {
+              keyId: current.id,
+              resolvedHref: currentState.plan.resolvedHref,
+              auth: currentState.plan.auth,
+              headers: currentState.plan.headers,
+            },
+            secret: current.secret,
+            interpreterId: currentState.plan.interpreterId,
+            deviceKey: dependencies.deviceKey,
+          })
+        ).binding;
 
+  // §10.1: session, key, archive state, binding and the monotonic sequence all
+  // have to agree. "Last started wins", never `finished_at`.
+  const adoption = shouldAdopt(
+    { sessionId: dependencies.sessionId, requestSeq, binding },
+    {
+      sessionId: dependencies.sessionId,
+      keyExists: true,
+      keyArchived: current.archived_at !== null,
+      binding: currentBinding ?? '',
+      lastAdoptedSeq: dependencies.lastAdoptedSeq?.(key.id) ?? -1,
+    }
+  );
+  if (adoption === 'discard') return { status: 'discarded', observation };
+
+  dependencies.adoptSeq?.(key.id, requestSeq);
   await dependencies.local.recordObservation(observation);
 
   if (observation.outcome === 'ok') {

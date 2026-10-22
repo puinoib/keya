@@ -709,3 +709,37 @@ describe('a manual check asks about the destination', () => {
     expect(await h.local.listGrants()).toHaveLength(0);
   });
 });
+
+describe('two overlapping checks', () => {
+  it('keeps the result of the later-started one', async () => {
+    let call = 0;
+    const h = await openHarness({
+      fetch: async () => {
+        call += 1;
+        const mine = call;
+        // The first request started first and answers last.
+        await new Promise((resolve) =>
+          setTimeout(resolve, mine === 1 ? 40 : 5)
+        );
+        return {
+          status: mine === 1 ? 500 : 200,
+          contentType: 'application/json',
+        };
+      },
+    });
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const first = store.runManualCheck(IDS.key);
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    const second = store.runManualCheck(IDS.key);
+    await Promise.all([first, second]);
+
+    const observations = await h.local.listObservations(
+      h.payload.vault.id,
+      IDS.key
+    );
+    expect(observations).toHaveLength(1);
+    expect(observations[0].outcome).toBe('ok');
+  }, 30_000);
+});
