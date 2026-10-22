@@ -10,7 +10,6 @@ import {
   describeTestResult,
   getTestActionHint,
   getTestActionLabel,
-  toConnectionCheck,
 } from '../../lib/test-feedback';
 import type { ApiKey } from '../../view/types';
 import {
@@ -642,9 +641,6 @@ export function EditKeyDialog({
       description: form.description,
       group_id: form.group_id,
       expires_at: form.expires_at ? form.expires_at.toISOString() : null,
-      ...(testState.result && {
-        connection_check: toConnectionCheck(testState.result),
-      }),
     });
 
     // Auto-test on save: the edit is stored now, so the check records itself.

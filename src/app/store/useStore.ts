@@ -18,6 +18,8 @@ import type {
   ObservationRule,
 } from '../../core/runtime/dismissals';
 import type { Observation } from '../../core/runtime/observations';
+import { expiryCondition } from '../../core/time/expiry';
+import { insecureEndpointCondition } from '../../core/payload/url';
 import type { ProbeAuth, Provider } from '../../core/payload/types';
 import { providerIdForLabel } from '../view/catalog';
 import { buildDatabase, type ViewDatabase } from '../view/build';
@@ -46,6 +48,21 @@ import {
 import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
 
 export type VaultStorageMode = 'folder' | 'download';
+
+/** Fields a caller may change; everything else is derived or immutable. */
+export type KeyUpdate = Partial<
+  Pick<
+    ApiKey,
+    | 'name'
+    | 'description'
+    | 'provider'
+    | 'endpoint'
+    | 'key'
+    | 'group_id'
+    | 'expires_at'
+    | 'archived_at'
+  >
+>;
 type WorkspaceState = 'welcome' | 'unlocked';
 
 interface Runtime {
@@ -108,7 +125,7 @@ interface AppState {
   refresh: () => Promise<void>;
 
   addKey: (key: NewApiKey) => ApiKey | undefined;
-  updateKey: (id: string, updates: Partial<ApiKey>) => void;
+  updateKey: (id: string, updates: KeyUpdate) => void;
   deleteKey: (id: string) => void;
   archiveKey: (id: string) => void;
   restoreKey: (id: string) => void;
@@ -347,7 +364,6 @@ export const useStore = create<AppState>()((set, get) => {
       const existing = file.keys.find((key) => key.id === id);
       if (!existing) return;
 
-      const view = get().db?.getApiKey(id);
       const next = {
         ...existing,
         name: updates.name ?? existing.name,
@@ -375,7 +391,6 @@ export const useStore = create<AppState>()((set, get) => {
         content_updated_at: new Date().toISOString(),
       };
 
-      void view;
       const result = runtime.vault.saveKey(next);
       if (!result.ok) {
         toast.error(result.reason);
@@ -835,28 +850,22 @@ async function businessCondition(
   rule: BusinessRule
 ): Promise<string | null> {
   if (!runtime) return null;
-  const db = await buildView(runtime);
-  const item = db.getInboxItems().find((entry) => entry.entity_id === keyId);
-  if (!item) return null;
+  const key = runtime.vault
+    .getPayload()
+    .keys.find((entry) => entry.id === keyId);
+  if (!key) return null;
 
+  // The dismissal is bound to the same fact string the reminder carries.
   if (rule === 'insecure_endpoint') {
-    const key = runtime.vault
-      .getPayload()
-      .keys.find((entry) => entry.id === keyId);
-    if (!key?.endpoint) return null;
+    if (!key.endpoint) return null;
     try {
-      return `http:${new URL(key.endpoint).origin}`;
+      return insecureEndpointCondition(new URL(key.endpoint));
     } catch {
       return null;
     }
   }
 
-  const key = runtime.vault
-    .getPayload()
-    .keys.find((entry) => entry.id === keyId);
-  const expiry = key?.expiry;
-  if (!expiry) return null;
-  return `${expiry.kind === 'date' ? 'date' : 'instant'}:${expiry.value}`;
+  return expiryCondition(key.expiry);
 }
 
 function isBusinessRule(
