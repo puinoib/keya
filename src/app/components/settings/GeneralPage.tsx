@@ -468,10 +468,24 @@ export function GeneralPage() {
                         setPwLoading(true);
                         setPwError('');
                         try {
-                          await changePassword(oldPw, newPw);
-                          // Re-register biometrics if previously registered
+                          const changed = await changePassword(oldPw, newPw);
+                          if (!changed.ok) {
+                            setPwError(changed.reason);
+                            return;
+                          }
+                          // The record wrapped the old password, so the store
+                          // dropped it. Re-register with the new one, and treat
+                          // a cancel as "biometrics off" rather than an error
+                          // in the password change.
                           if (bioRegistered && vaultId) {
-                            await registerBiometric(vaultId, newPw);
+                            try {
+                              await registerBiometric(vaultId, newPw);
+                            } catch {
+                              setBioRegistered(false);
+                              setBioError(
+                                'Password changed. Enable biometric unlock again to use it.'
+                              );
+                            }
                           }
                           toast.success('Password changed');
                           setShowPwForm(false);

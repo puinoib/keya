@@ -76,6 +76,7 @@ export type SaveFailure =
 
 export type PasswordFailure =
   | 'locked'
+  | 'busy'
   | 'wrong_password'
   | 'kdf_busy'
   | 'kdf_cancelled'
@@ -128,6 +129,8 @@ export class Vault {
    */
   private revision = 0;
   private locked = false;
+  /** Set while a password change owns the container; locking waits it out. */
+  private changingPassword = false;
   private queue: Promise<void> = Promise.resolve();
   private readonly ports: VaultPorts;
 
@@ -400,7 +403,20 @@ export class Vault {
     newPassword: string
   ): Promise<{ ok: true } | { ok: false; failure: PasswordFailure }> {
     this.assertUnlocked();
+    if (this.changingPassword) return { ok: false, failure: 'busy' };
 
+    this.changingPassword = true;
+    try {
+      return await this.changePasswordLocked(oldPassword, newPassword);
+    } finally {
+      this.changingPassword = false;
+    }
+  }
+
+  private async changePasswordLocked(
+    oldPassword: string,
+    newPassword: string
+  ): Promise<{ ok: true } | { ok: false; failure: PasswordFailure }> {
     let verified: Uint8Array;
     try {
       verified = await deriveFileKey({
@@ -418,7 +434,9 @@ export class Vault {
       throw error;
     }
 
-    if (!constantTimeEqual(verified, this.fileKey)) {
+    const matches = constantTimeEqual(verified, this.fileKey);
+    verified.fill(0);
+    if (!matches) {
       return { ok: false, failure: 'wrong_password' };
     }
 
@@ -438,16 +456,27 @@ export class Vault {
       throw error;
     }
 
+    // The flag keeps a fresh lock from starting, but one may have finished
+    // before this call set it.
+    if (this.locked) return { ok: false, failure: 'locked' };
+
     // Stage 2: everything pending must land with the old container first.
     const flushed = await this.flush();
     if (!flushed.ok) return { ok: false, failure: flushed.failure };
+    if (this.locked) {
+      nextKey.fill(0);
+      return { ok: false, failure: 'locked' };
+    }
 
     const performed = await this.rewriteWith({
       fileKey: nextKey,
       container: { version: VERSION, kdf: next, salt },
     });
 
-    if (!performed.ok) return { ok: false, failure: performed.failure };
+    if (!performed.ok) {
+      nextKey.fill(0);
+      return { ok: false, failure: performed.failure };
+    }
 
     this.fileKey = nextKey;
     this.container = { version: VERSION, kdf: next, salt };
@@ -562,7 +591,8 @@ export class Vault {
   }
 
   /** Drop the key material and refuse further operations. */
-  lock(): { ok: true } | { ok: false; failure: 'unsaved_changes' } {
+  lock(): { ok: true } | { ok: false; failure: 'unsaved_changes' | 'busy' } {
+    if (this.changingPassword) return { ok: false, failure: 'busy' };
     if (this.dirty) return { ok: false, failure: 'unsaved_changes' };
     this.locked = true;
     this.fileKey.fill(0);

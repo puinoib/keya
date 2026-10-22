@@ -5,7 +5,13 @@ import { readUsageCache, writeUsageSnapshot } from '../../lib/usage-cache';
 import { providerToDraft } from '../../state/providers';
 
 const RECENT = new Date().toISOString();
-import { FIXED_NOW, openHarness, type Harness } from './fixtures';
+import { FIXED_NOW, PASSWORD, openHarness, type Harness } from './fixtures';
+import { Vault } from '../../vault/vault';
+import {
+  MemoryFile,
+  fixedClock,
+  memoryPorts,
+} from '../../vault/__tests__/memory-port';
 
 /** Minimal sessionStorage, since the node test environment has none. */
 class MemoryStorage {
@@ -553,4 +559,55 @@ describe('provider edits', () => {
       'Acme'
     );
   });
+});
+
+describe('changing the password', () => {
+  const NEW_PASSWORD = 'another long synthetic passphrase 2';
+
+  it('rejects a wrong current password without touching the file', async () => {
+    const { store, h } = await unlocked();
+    const before = h.file.bytes!.slice();
+
+    const result = await store.useStore
+      .getState()
+      .changePassword('not the passphrase', NEW_PASSWORD);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'The current password is not correct.',
+    });
+    expect(h.file.bytes).toEqual(before);
+  }, 30_000);
+
+  it('writes a container that opens with the new password', async () => {
+    const { store, h } = await unlocked();
+
+    const result = await store.useStore
+      .getState()
+      .changePassword(PASSWORD, NEW_PASSWORD);
+    expect(result.ok).toBe(true);
+
+    const reopened = await Vault.open(
+      memoryPorts(new MemoryFile(h.file.bytes), fixedClock()),
+      { password: NEW_PASSWORD }
+    );
+    expect(reopened.ok).toBe(true);
+  }, 30_000);
+
+  it('marks a download-mode vault unsaved so the export is required', async () => {
+    const h = await openHarness();
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'download');
+
+    const result = await store.useStore
+      .getState()
+      .changePassword(PASSWORD, NEW_PASSWORD);
+    expect(result.ok).toBe(true);
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
+
+    // The in-memory file is the only copy of the new container; locking would
+    // discard it, so the lock must be refused until the user exports.
+    await store.useStore.getState().lock();
+    expect(store.useStore.getState().workspaceState).toBe('unlocked');
+  }, 30_000);
 });

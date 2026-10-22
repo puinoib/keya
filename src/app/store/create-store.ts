@@ -51,6 +51,7 @@ import {
   type ShortcutMap,
 } from '../lib/shortcuts';
 import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
+import { isBiometricRegistered, removeBiometric } from '../lib/biometric';
 
 export type VaultStorageMode = 'folder' | 'download';
 
@@ -203,7 +204,10 @@ export interface AppState {
   deleteGroup: (id: string) => void;
 
   updateSettings: (patch: SettingsPatch) => void;
-  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  changePassword: (
+    oldPassword: string,
+    newPassword: string
+  ) => Promise<{ ok: true } | { ok: false; reason: string }>;
   setReminderDismissed: (row: ReminderRow, dismissed: boolean) => void;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
 }
@@ -376,7 +380,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
         // vault is still dirty and locking must be cancelled, not forced.
         const locked = active.vault.lock();
         if (!locked.ok) {
-          toast.error('Could not save. The vault stays unlocked.');
+          toast.error(
+            locked.failure === 'busy'
+              ? 'A password change is running. The vault stays unlocked.'
+              : 'Could not save. The vault stays unlocked.'
+          );
           return;
         }
         generation += 1;
@@ -769,33 +777,36 @@ export function createAppStore(deps: StoreDeps): AppStore {
       },
 
       changePassword: async (oldPassword, newPassword) => {
-        if (!runtime) return;
+        const active = runtime;
+        if (!active) return { ok: false, reason: 'The vault is locked.' };
 
         const verdict = await judgePassword(newPassword);
         if (!verdict.ok) {
-          toast.error(describePasswordVerdict(verdict));
-          return;
+          return { ok: false, reason: describePasswordVerdict(verdict) };
         }
 
-        const before = runtime.vault.containerInfo.fingerprint;
-        const result = await runtime.vault.changePassword(
+        const before = active.vault.containerInfo.fingerprint;
+        const result = await active.vault.changePassword(
           oldPassword,
           newPassword
         );
         if (!result.ok) {
-          toast.error(
+          const reason =
             result.failure === 'wrong_password'
               ? 'The current password is not correct.'
-              : result.failure
-          );
-          return;
+              : result.failure === 'locked'
+                ? 'The vault locked while the password was changing.'
+                : result.failure === 'busy'
+                  ? 'Another password change is already running.'
+                  : result.failure;
+          return { ok: false, reason };
         }
 
-        const payload = runtime.vault.getPayload();
+        const payload = active.vault.getPayload();
         await deps.local.moveContainer(
           {
-            fingerprint: runtime.vault.containerInfo.fingerprint,
-            file_name: runtime.fileName,
+            fingerprint: active.vault.containerInfo.fingerprint,
+            file_name: active.fileName,
             vault_id: payload.vault.id,
             name: payload.vault.name,
             icon: payload.vault.icon,
@@ -806,10 +817,24 @@ export function createAppStore(deps: StoreDeps): AppStore {
           before
         );
 
-        runtime.fingerprint = runtime.vault.containerInfo.fingerprint;
-        set({ hasUnsavedChanges: false });
+        active.fingerprint = active.vault.containerInfo.fingerprint;
+
+        // Biometric records wrap the old password. Drop the stale record here,
+        // not on a later unlock that would silently fail.
+        try {
+          if (await isBiometricRegistered(payload.vault.id)) {
+            await removeBiometric(payload.vault.id);
+          }
+        } catch {
+          // Best effort: the password change itself already succeeded.
+        }
+
+        // Download mode has no writable copy: the new container only reaches
+        // disk when the user exports it.
+        const download = getState().storageMode === 'download';
+        set({ hasUnsavedChanges: download, saveFailure: null });
         await get().refresh();
-        toast.success('Password changed.');
+        return { ok: true as const };
       },
 
       setReminderDismissed: (row, dismissed) => {

@@ -142,6 +142,17 @@ describe('opening a vault', () => {
 });
 
 describe('saving', () => {
+  it('refuses to lock while a password change is running', async () => {
+    const { vault } = await openedFile();
+
+    const changing = vault.changePassword(
+      PASSWORD,
+      'another long synthetic passphrase 2'
+    );
+    expect(vault.lock()).toEqual({ ok: false, failure: 'busy' });
+    await changing;
+  }, 30_000);
+
   it('verifies a password by re-deriving it, without keeping it', async () => {
     const { vault } = await openedFile();
 
