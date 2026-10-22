@@ -61,8 +61,8 @@ function toViewStatus(status: ReturnType<typeof expiryStatus>): ExpiryStatus {
 
 /**
  * A calendar day is presented as local midnight, which is what the date picker
- * and the old `expires_at` field expected. The stored form stays a day, so the
- * timezone-dependent expiry rule is preserved.
+ * works in. The stored form stays a day, so the timezone-dependent expiry rule
+ * is preserved.
  */
 export function expiryToIso(expiry: Expiry | null): string | null {
   if (!expiry) return null;

@@ -5,10 +5,9 @@
  * is computed from, so editing a target or a header here invalidates existing
  * grants exactly like editing a custom provider would.
  *
- * Migrated from the pre-rewrite tables with three corrections: targets no
- * longer start with `/` (that would make them root-relative), Azure keeps its
- * `api-version` in the target query, and Anthropic carries its two protocol
- * headers as static headers.
+ * Three constraints shape the table: a target never starts with `/` (that would
+ * make it root-relative), Azure keeps its `api-version` in the target query, and
+ * Anthropic carries its two protocol headers as static headers.
  *
  * `verifies` records what a successful probe is allowed to claim:
  * - `credential`: the endpoint requires the credential, so 2xx means accepted;
