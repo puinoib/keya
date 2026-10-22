@@ -95,6 +95,12 @@ export function Sidebar() {
   const archivedCount = archivedKeys(view).length;
   const groups = sortedGroups(view);
   const ungroupedCount = liveKeys.filter((key) => !key.group_id).length;
+  // One pass instead of filtering the whole list once per group.
+  const groupCounts = new Map<string, number>();
+  for (const key of liveKeys) {
+    if (!key.group_id) continue;
+    groupCounts.set(key.group_id, (groupCounts.get(key.group_id) ?? 0) + 1);
+  }
 
   return (
     <aside className="w-56 shrink-0 flex flex-col bg-canvas-panel">
@@ -161,9 +167,7 @@ export function Sidebar() {
 
           {/* Groups */}
           {groups.map((group) => {
-            const count = liveKeys.filter(
-              (key) => key.group_id === group.id
-            ).length;
+            const count = groupCounts.get(group.id) ?? 0;
             return (
               <SidebarFilterButton
                 key={group.id}

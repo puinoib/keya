@@ -77,8 +77,13 @@ export function GroupsPage() {
     setIsAdding(false);
   };
 
-  const getKeyCount = (groupId: string) =>
-    keys.filter((k) => k.group_id === groupId).length;
+  // One pass instead of filtering the whole key list once per group.
+  const keyCounts = new Map<string, number>();
+  for (const key of keys) {
+    if (!key.group_id) continue;
+    keyCounts.set(key.group_id, (keyCounts.get(key.group_id) ?? 0) + 1);
+  }
+  const getKeyCount = (groupId: string) => keyCounts.get(groupId) ?? 0;
 
   return (
     <>

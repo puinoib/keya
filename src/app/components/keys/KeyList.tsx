@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
@@ -108,36 +108,49 @@ export function KeyList() {
   const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
   const keyItemRefs = useRef(new Map<string, HTMLDivElement>());
 
-  const baseKeys = !view
-    ? []
-    : showArchived
-      ? archivedKeys(view)
-      : activeKeys(view);
-
-  let keys = baseKeys;
-  if (view && searchQuery) keys = searchKeys(view, keys, searchQuery);
-  if (filterGroupId) {
-    keys =
-      filterGroupId === '__ungrouped__'
-        ? keys.filter((key) => !key.group_id)
-        : keys.filter((key) => key.group_id === filterGroupId);
-  }
-  if (view && filterProvider)
-    keys = keys.filter(
-      (key) => providerLabel(key.provider_id, providers) === filterProvider
-    );
-  if (view && filterTestStatus)
-    keys = keys.filter((key) => checkOf(view, key).status === filterTestStatus);
-  if (view && filterExpiryStatus) {
-    keys = keys.filter((key) => {
-      const status = expiryOf(view, key).status;
-      if (filterExpiryStatus === 'expired') return status === 'expired';
-      if (filterExpiryStatus === 'expiring') return status === 'expiring_soon';
-      if (filterExpiryStatus === 'valid')
-        return status === 'valid' || status === 'none';
-      return true;
-    });
-  }
+  // Derive the visible rows once per input change. Recomputing them on every
+  // render (and rebuilding the array identity) re-ran the effect below and
+  // re-created the list on every unrelated store update.
+  const keys = useMemo(() => {
+    if (!view) return [];
+    let visible = showArchived ? archivedKeys(view) : activeKeys(view);
+    if (searchQuery) visible = searchKeys(view, visible, searchQuery);
+    if (filterGroupId) {
+      visible =
+        filterGroupId === '__ungrouped__'
+          ? visible.filter((key) => !key.group_id)
+          : visible.filter((key) => key.group_id === filterGroupId);
+    }
+    if (filterProvider)
+      visible = visible.filter(
+        (key) => providerLabel(key.provider_id, providers) === filterProvider
+      );
+    if (filterTestStatus)
+      visible = visible.filter(
+        (key) => checkOf(view, key).status === filterTestStatus
+      );
+    if (filterExpiryStatus) {
+      visible = visible.filter((key) => {
+        const status = expiryOf(view, key).status;
+        if (filterExpiryStatus === 'expired') return status === 'expired';
+        if (filterExpiryStatus === 'expiring')
+          return status === 'expiring_soon';
+        if (filterExpiryStatus === 'valid')
+          return status === 'valid' || status === 'none';
+        return true;
+      });
+    }
+    return visible;
+  }, [
+    view,
+    providers,
+    showArchived,
+    searchQuery,
+    filterGroupId,
+    filterProvider,
+    filterTestStatus,
+    filterExpiryStatus,
+  ]);
 
   // Deselect if the selected key is filtered out
   useEffect(() => {

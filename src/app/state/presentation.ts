@@ -16,19 +16,32 @@ export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
 const DAY = 24 * 60 * 60 * 1000;
 const EXPIRY_REMINDER_DAYS = 7;
 
-/** The local calendar day an instant falls on, as `YYYY-MM-DD`. */
-function localDayOf(input: Date | string, timeZone: string): string {
-  const date = typeof input === 'string' ? new Date(input) : input;
+/** One formatter per zone: constructing `Intl.DateTimeFormat` is not cheap. */
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dayFormatter(timeZone: string): Intl.DateTimeFormat | null {
+  const cached = dayFormatters.get(timeZone);
+  if (cached) return cached;
   try {
-    return new Intl.DateTimeFormat('en-CA', {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(date);
+    });
+    dayFormatters.set(timeZone, formatter);
+    return formatter;
   } catch {
-    return date.toISOString().slice(0, 10);
+    return null;
   }
+}
+
+/** The local calendar day an instant falls on, as `YYYY-MM-DD`. */
+function localDayOf(input: Date | string, timeZone: string): string {
+  const date = typeof input === 'string' ? new Date(input) : input;
+  const formatter = dayFormatter(timeZone);
+  if (!formatter) return date.toISOString().slice(0, 10);
+  return formatter.format(date);
 }
 
 /** A calendar day is a local day, so the picker and the file agree. */
