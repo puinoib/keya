@@ -156,12 +156,22 @@ export function GroupsPage() {
                     setEditingIcon('');
                     setEditingId(g.id);
                   }}
+                  aria-label={`Rename ${g.name}`}
                   className="text-ink-quaternary transition-colors hover:text-ink-primary"
                 >
                   <PencilSimple className="size-3.5" />
                 </button>
                 <button
-                  onClick={() => deleteGroup(g.id)}
+                  onClick={() => {
+                    const count = getKeyCount(g.id);
+                    const confirmed = window.confirm(
+                      count > 0
+                        ? `Delete "${g.name}"? ${count} key(s) will become ungrouped.`
+                        : `Delete "${g.name}"?`
+                    );
+                    if (confirmed) deleteGroup(g.id);
+                  }}
+                  aria-label={`Delete ${g.name}`}
                   className="text-ink-quaternary transition-colors hover:text-danger"
                 >
                   <Trash className="size-3.5" />

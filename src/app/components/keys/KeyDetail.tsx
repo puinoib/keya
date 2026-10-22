@@ -197,6 +197,7 @@ export function KeyDetail() {
             </div>
             <button
               onClick={() => setSelectedKeyId(null)}
+              aria-label="Close the key details"
               className="inline-flex items-center justify-center size-6 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100 shrink-0"
             >
               <X className="size-3.5" />
@@ -275,6 +276,7 @@ export function KeyDetail() {
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setShowKey(!showKey)}
+                  aria-label={showKey ? 'Hide credential' : 'Show credential'}
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
                   {showKey ? (
@@ -285,6 +287,7 @@ export function KeyDetail() {
                 </button>
                 <button
                   onClick={handleCopy}
+                  aria-label="Copy the credential"
                   className="inline-flex items-center justify-center size-5 rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
                 >
                   {copied ? (

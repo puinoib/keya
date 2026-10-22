@@ -12,11 +12,13 @@ interface GroupSelectProps {
   groups: Group[];
   value: string | null;
   onChange: (value: string | null) => void;
+  /** Lets a `<Label htmlFor>` point at the trigger. */
+  id?: string;
 }
 
 const UNGROUPED_VALUE = '__ungrouped__';
 
-export function GroupSelect({ groups, value, onChange }: GroupSelectProps) {
+export function GroupSelect({ groups, value, onChange, id }: GroupSelectProps) {
   const currentGroup = useMemo(
     () => groups.find((group) => group.id === value) ?? null,
     [groups, value]
@@ -29,7 +31,7 @@ export function GroupSelect({ groups, value, onChange }: GroupSelectProps) {
         onChange(groupId === UNGROUPED_VALUE ? null : groupId)
       }
     >
-      <SelectTrigger>
+      <SelectTrigger id={id}>
         <SelectValue>
           {currentGroup ? (
             <span className="flex min-w-0 items-center gap-2 truncate">

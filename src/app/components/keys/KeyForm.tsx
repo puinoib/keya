@@ -304,6 +304,7 @@ export function KeyForm({
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
+                aria-label={showKey ? 'Hide credential' : 'Show credential'}
                 className="absolute right-2 top-2 size-6 flex items-center justify-center
                            rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >

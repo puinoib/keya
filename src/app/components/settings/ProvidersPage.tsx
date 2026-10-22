@@ -239,6 +239,7 @@ export function ProvidersPage() {
 
   const removeCustom = (name: string) => {
     if (!preferences) return;
+    if (!window.confirm(`Remove the custom provider "${name}"?`)) return;
     updateSettings({
       providers: customs.filter((cp) => cp.name !== name),
       hidden_presets: preferences.hidden_presets.filter(

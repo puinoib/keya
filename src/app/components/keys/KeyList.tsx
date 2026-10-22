@@ -391,16 +391,8 @@ export function KeyList() {
                 if (node) keyItemRefs.current.set(key.id, node);
                 else keyItemRefs.current.delete(key.id);
               }}
-              role="button"
-              tabIndex={0}
-              aria-pressed={isSelected}
+              data-keya-row={key.id}
               onClick={() => setSelectedKeyId(isSelected ? null : key.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setSelectedKeyId(isSelected ? null : key.id);
-                }
-              }}
               onMouseEnter={() => setHoveredKeyId(key.id)}
               onMouseLeave={() => setHoveredKeyId(null)}
               className={`group flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5
@@ -420,15 +412,22 @@ export function KeyList() {
                       className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
                     />
                   )}
-                  <span
-                    className={`truncate text-sm font-medium ${
+                  <button
+                    type="button"
+                    aria-pressed={isSelected}
+                    aria-label={`Select ${key.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedKeyId(isSelected ? null : key.id);
+                    }}
+                    className={`truncate text-left text-sm font-medium ${
                       key.archived_at
                         ? 'text-ink-secondary'
                         : 'text-ink-primary'
                     }`}
                   >
                     {key.name}
-                  </span>
+                  </button>
                   {expiryLabel && !key.archived_at && (
                     <>
                       <span className="hidden text-divider sm:inline">·</span>
@@ -710,8 +709,11 @@ export function EditKeyDialog({
         >
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Name</Label>
+            <Label htmlFor="edit-key-name" className="text-xs">
+              Name
+            </Label>
             <Input
+              id="edit-key-name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Key name"
@@ -721,9 +723,12 @@ export function EditKeyDialog({
 
           {/* Key Value */}
           <div className="space-y-1.5">
-            <Label className="text-xs">API Key or Token</Label>
+            <Label htmlFor="edit-key-secret" className="text-xs">
+              API Key or Token
+            </Label>
             <div className="relative">
               <AutoResizeTextarea
+                id="edit-key-secret"
                 value={form.secret}
                 masked={!showKey}
                 onChange={(e) =>
@@ -738,6 +743,7 @@ export function EditKeyDialog({
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
+                aria-label={showKey ? 'Hide credential' : 'Show credential'}
                 className="absolute right-2 top-2 size-6 flex items-center justify-center rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
               >
                 {showKey ? (
@@ -751,7 +757,9 @@ export function EditKeyDialog({
 
           {/* Provider */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Service / Provider</Label>
+            <Label htmlFor="edit-key-provider" className="text-xs">
+              Service / Provider
+            </Label>
             <Select
               value={form.provider}
               onValueChange={(v) => {
@@ -761,7 +769,7 @@ export function EditKeyDialog({
                 setForm((f) => ({ ...f, provider: v, endpoint }));
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger id="edit-key-provider">
                 <span className="inline-flex items-center gap-1.5 truncate">
                   <ProviderLogo provider={form.provider} className="size-3.5" />
                   {form.provider}
@@ -787,8 +795,10 @@ export function EditKeyDialog({
 
           {/* Endpoint */}
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5">
-              Endpoint
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="edit-key-endpoint" className="text-xs">
+                Endpoint
+              </Label>
               {defaultEndpoint && (
                 <button
                   type="button"
@@ -797,12 +807,14 @@ export function EditKeyDialog({
                   }
                   className="text-ink-quaternary hover:text-accent-bright transition-colors"
                   title="Reset to default"
+                  aria-label="Reset to the default endpoint"
                 >
                   <ArrowCounterClockwise className="size-3" />
                 </button>
               )}
-            </Label>
+            </div>
             <Input
+              id="edit-key-endpoint"
               value={form.endpoint}
               onChange={(e) =>
                 setForm((f) => ({ ...f, endpoint: e.target.value }))
@@ -814,35 +826,38 @@ export function EditKeyDialog({
 
           {/* Expiration */}
           <div className="relative" ref={calendarRef}>
-            <Label className="text-xs">Expiration</Label>
-            <button
-              type="button"
-              onClick={() => setShowCalendar(!showCalendar)}
-              className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
-            >
-              <Calendar className="size-3.5 shrink-0" />
-              <span
-                className={
-                  !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
-                }
+            <Label htmlFor="edit-key-expiry" className="text-xs">
+              Expiration
+            </Label>
+            <div className="relative mt-1.5">
+              <button
+                type="button"
+                id="edit-key-expiry"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="w-full inline-flex items-center gap-1.5 h-9 px-3 pr-8 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
               >
-                {form.expiry
-                  ? format(form.expiry, 'MMM d, yyyy')
-                  : 'Pick a date'}
-              </span>
-              {form.expiry && (
+                <Calendar className="size-3.5 shrink-0" />
                 <span
-                  role="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setForm((f) => ({ ...f, expiry: undefined }));
-                  }}
-                  className="ml-auto text-ink-quaternary hover:text-ink-secondary"
+                  className={
+                    !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
+                  }
+                >
+                  {form.expiry
+                    ? format(form.expiry, 'MMM d, yyyy')
+                    : 'Pick a date'}
+                </span>
+              </button>
+              {form.expiry && (
+                <button
+                  type="button"
+                  aria-label="Clear the expiry date"
+                  onClick={() => setForm((f) => ({ ...f, expiry: undefined }))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-quaternary hover:text-ink-secondary"
                 >
                   <X className="size-3" />
-                </span>
+                </button>
               )}
-            </button>
+            </div>
             {showCalendar && (
               <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
                 <DayPicker
@@ -858,8 +873,11 @@ export function EditKeyDialog({
 
           {/* Group */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Group</Label>
+            <Label htmlFor="edit-key-group" className="text-xs">
+              Group
+            </Label>
             <GroupSelect
+              id="edit-key-group"
               groups={view ? sortedGroups(view) : []}
               value={form.groupId}
               onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
@@ -868,8 +886,11 @@ export function EditKeyDialog({
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Description</Label>
+            <Label htmlFor="edit-key-description" className="text-xs">
+              Description
+            </Label>
             <Input
+              id="edit-key-description"
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))

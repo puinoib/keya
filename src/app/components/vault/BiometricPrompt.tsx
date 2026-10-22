@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Fingerprint, Spinner, X } from '@phosphor-icons/react';
 import {
   registerBiometric,
@@ -20,6 +20,7 @@ export function BiometricPrompt({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [visible, setVisible] = useState(true);
+  const enableRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!isBiometricSupported()) {
@@ -30,6 +31,21 @@ export function BiometricPrompt({
       if (registered) onDone();
     });
   }, [vaultId, onDone]);
+
+  // Focus the primary action and let Escape dismiss, so the overlay behaves
+  // like the dialogs it looks like.
+  useEffect(() => {
+    if (!visible) return;
+    enableRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setVisible(false);
+        onDone();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [visible, onDone]);
 
   if (!visible) return null;
 
@@ -57,17 +73,26 @@ export function BiometricPrompt({
   };
 
   return (
-    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/40 animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="biometric-prompt-title"
+      className="fixed inset-0 z-[85] flex items-center justify-center bg-black/40 animate-fade-in"
+    >
       <div className="bg-canvas-panel border border-line rounded-lg p-5 w-80 shadow-dialog">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Fingerprint className="size-5 text-accent" />
-            <h3 className="text-sm font-medium text-ink-primary">
+            <h3
+              id="biometric-prompt-title"
+              className="text-sm font-medium text-ink-primary"
+            >
               Enable Biometric Unlock
             </h3>
           </div>
           <button
             onClick={handleSkip}
+            aria-label="Close"
             className="text-ink-quaternary hover:text-ink-secondary transition-colors"
           >
             <X className="size-4" />
@@ -90,6 +115,7 @@ export function BiometricPrompt({
             Skip
           </button>
           <button
+            ref={enableRef}
             onClick={handleEnable}
             disabled={loading}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"

@@ -75,11 +75,7 @@ beforeEach(async () => {
 });
 
 function rowElements(): HTMLElement[] {
-  return screen
-    .queryAllByRole('button')
-    .filter((element) =>
-      element.className.includes('group flex cursor-pointer')
-    ) as HTMLElement[];
+  return Array.from(document.querySelectorAll('[data-keya-row]'));
 }
 
 function rowNames(): string[] {
@@ -160,12 +156,7 @@ describe('KeyList', () => {
   it('selects a key when its row is clicked', async () => {
     render(<KeyList />);
 
-    const row = screen
-      .getAllByRole('button')
-      .find((element) =>
-        element.className.includes('group flex cursor-pointer')
-      );
-    fireEvent.click(row!);
+    fireEvent.click(rowElements()[0]);
 
     expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
   });
@@ -181,16 +172,26 @@ describe('KeyList', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(
-      'sk-... or your API token'
+    const input = screen.getByLabelText(
+      'API Key or Token'
     ) as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: 'sk-rotated' } });
     expect(input.value).toBe('sk-rotated');
+    // Every field is reachable by its label, not just by placeholder.
+    expect(screen.getByLabelText('Name')).toBeTruthy();
+    expect(screen.getByLabelText('Endpoint')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
     expect(onSave).toHaveBeenCalledWith(
       key.id,
       expect.objectContaining({ secret: 'sk-rotated' })
     );
+  });
+
+  it('exposes the row selector by name', () => {
+    render(<KeyList />);
+    expect(
+      screen.getByRole('button', { name: 'Select Edge key' })
+    ).toBeTruthy();
   });
 });

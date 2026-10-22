@@ -205,6 +205,7 @@ export function InboxPage() {
                     </Button>
                     <button
                       onClick={() => setReminderDismissed(row, true)}
+                      aria-label="Dismiss this reminder"
                       className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
                     >
                       <X className="size-3.5" />
