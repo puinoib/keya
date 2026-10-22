@@ -29,27 +29,52 @@ async function openDb(): Promise<IDBDatabase> {
 
 async function readHandle(): Promise<FileSystemDirectoryHandle | null> {
   const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const request = db
-      .transaction(STORE, 'readonly')
-      .objectStore(STORE)
-      .get(KEY);
-    request.onsuccess = () =>
-      resolve(
-        (request.result as FileSystemDirectoryHandle | undefined) ?? null
-      );
-    request.onerror = () => reject(request.error);
-  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db
+        .transaction(STORE, 'readonly')
+        .objectStore(STORE)
+        .get(KEY);
+      request.onsuccess = () =>
+        resolve(
+          (request.result as FileSystemDirectoryHandle | undefined) ?? null
+        );
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    // Connections are opened per operation, so they must be closed per
+    // operation: a leaked one blocks a future schema upgrade forever.
+    db.close();
+  }
 }
 
 async function writeHandle(handle: FileSystemDirectoryHandle): Promise<void> {
   const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE, 'readwrite');
-    transaction.objectStore(STORE).put(handle, KEY);
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE, 'readwrite');
+      transaction.objectStore(STORE).put(handle, KEY);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+/** Drop the remembered folder. The next restore() finds nothing. */
+async function deleteHandle(): Promise<void> {
+  const db = await openDb();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE, 'readwrite');
+      transaction.objectStore(STORE).delete(KEY);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
 }
 
 export type PermissionState = 'granted' | 'prompt' | 'denied';
@@ -77,6 +102,11 @@ export class Workspace {
   static async restore(): Promise<Workspace | null> {
     const handle = await readHandle();
     return handle ? new Workspace(handle) : null;
+  }
+
+  /** Forget the remembered folder, so a reload does not reconnect to it. */
+  static async forget(): Promise<void> {
+    await deleteHandle();
   }
 
   get name(): string {

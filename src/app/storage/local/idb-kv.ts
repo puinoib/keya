@@ -16,7 +16,7 @@ export class IndexedDbKeyValue implements KeyValuePort {
   private db: Promise<IDBDatabase> | null = null;
 
   private open(): Promise<IDBDatabase> {
-    this.db ??= new Promise((resolve, reject) => {
+    this.db ??= new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
         if (!request.result.objectStoreNames.contains(STORE)) {
@@ -27,6 +27,11 @@ export class IndexedDbKeyValue implements KeyValuePort {
       request.onerror = () => reject(request.error);
       request.onblocked = () =>
         reject(new Error('Close other Keya tabs to upgrade local storage.'));
+    }).catch((error: unknown) => {
+      // Never cache a rejection: one blocked open would otherwise fail every
+      // later operation for the lifetime of the page.
+      this.db = null;
+      throw error;
     });
     return this.db;
   }

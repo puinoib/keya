@@ -87,6 +87,8 @@ export class LocalState {
   private readonly retention: number;
   private readonly newId: () => string;
   private readonly now: () => string;
+  /** Shared in-flight creation of the device HMAC key. */
+  private deviceKeyPromise: Promise<CryptoKey> | null = null;
 
   constructor(kv: KeyValuePort, options: LocalStateOptions = {}) {
     this.kv = kv;
@@ -302,16 +304,48 @@ export class LocalState {
    * The HMAC key behind `observation_binding`. Non-extractable, so a copy of
    * local storage cannot be used to verify guessed secrets offline. Losing it
    * invalidates every stored binding, which is the fail-closed outcome.
+   *
+   * Concurrent callers share one creation: two unlocks racing would otherwise
+   * each generate a key and the loser's bindings would stop verifying.
    */
   async ensureDeviceKey(): Promise<CryptoKey> {
+    this.deviceKeyPromise ??= this.loadOrCreateDeviceKey().catch(
+      (error: unknown) => {
+        // A failed read or write must not poison every later attempt.
+        this.deviceKeyPromise = null;
+        throw error;
+      }
+    );
+    return this.deviceKeyPromise;
+  }
+
+  private async loadOrCreateDeviceKey(): Promise<CryptoKey> {
     const existing = await this.kv.get<CryptoKey>(DEVICE_KEY);
     if (existing) return existing;
 
-    const raw = new Uint8Array(32);
-    crypto.getRandomValues(raw);
-    const key = await importDeviceKey(raw);
-    await this.kv.set(DEVICE_KEY, key);
-    return key;
+    // A second tab can create the key between the read and the write, so the
+    // creation runs under a cross-tab lock where one exists.
+    const locks = (
+      globalThis as unknown as {
+        navigator?: { locks?: Pick<LockManager, 'request'> };
+      }
+    ).navigator?.locks;
+
+    const create = async (): Promise<CryptoKey> => {
+      const raced = await this.kv.get<CryptoKey>(DEVICE_KEY);
+      if (raced) return raced;
+      const raw = new Uint8Array(32);
+      crypto.getRandomValues(raw);
+      const key = await importDeviceKey(raw);
+      await this.kv.set(DEVICE_KEY, key);
+      return key;
+    };
+
+    return locks
+      ? (((await locks.request(DEVICE_KEY, { mode: 'exclusive' }, create)) as
+          | CryptoKey
+          | undefined) ?? create())
+      : create();
   }
 
   async hasDeviceKey(): Promise<boolean> {

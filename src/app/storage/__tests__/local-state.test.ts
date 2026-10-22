@@ -252,3 +252,19 @@ describe('device key', () => {
     expect(second).toBe(first);
   });
 });
+
+describe('the device key', () => {
+  it('is created once when two callers race', async () => {
+    const kv = new MemoryKv();
+    const local = new LocalState(kv);
+
+    const [first, second] = await Promise.all([
+      local.ensureDeviceKey(),
+      local.ensureDeviceKey(),
+    ]);
+
+    // Same CryptoKey object: the loser did not overwrite the stored key.
+    expect(first).toBe(second);
+    expect(await local.hasDeviceKey()).toBe(true);
+  });
+});

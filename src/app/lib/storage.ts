@@ -54,6 +54,9 @@ export class FileStorage {
 
   static async clearWorkspace(): Promise<void> {
     workspace = null;
+    // The handle lives in IndexedDB; without this, a reload restores the folder
+    // the user just disconnected from.
+    await Workspace.forget();
   }
 
   static async hasWorkspace(): Promise<boolean> {
