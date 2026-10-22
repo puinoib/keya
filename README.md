@@ -89,6 +89,11 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the pipeline, the required secrets, the b
 
 These articles are also available in the running app at `/docs`.
 
+## Design docs
+
+- [`docs/keya-format.md`](docs/keya-format.md) — the `.keya` bytes, payload model, validation and fingerprints, plus a one-page overview in appendix D.
+- [`docs/keya-runtime.md`](docs/keya-runtime.md) — what the app does with that data: probing, reminders, device state, save/lock, biometrics.
+
 ## License
 
 [MIT](LICENSE)
