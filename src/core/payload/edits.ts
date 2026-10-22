@@ -91,6 +91,16 @@ function sameIgnoringTimestamp<T extends { content_updated_at: string }>(
 
 /** Create or replace a key. Timestamps move only when something changed. */
 export function upsertKey(file: KeyaFile, key: Key, now: string): EditResult {
+  // A group reference is checked for both branches: the reader rejects a
+  // dangling `group_id` at write time, so accepting one here would leave the
+  // vault permanently dirty and unflushable (P4).
+  if (
+    key.group_id !== null &&
+    !file.groups.some((group) => group.id === key.group_id)
+  ) {
+    return { ok: false, reason: 'unknown_group' };
+  }
+
   const index = file.keys.findIndex((entry) => entry.id === key.id);
 
   if (index === -1) {
@@ -104,13 +114,6 @@ export function upsertKey(file: KeyaFile, key: Key, now: string): EditResult {
 
   const existing = file.keys[index];
   if (sameIgnoringTimestamp(existing, key)) return unchanged(file);
-
-  if (
-    key.group_id !== null &&
-    !file.groups.some((group) => group.id === key.group_id)
-  ) {
-    return { ok: false, reason: 'unknown_group' };
-  }
 
   const next = [...file.keys];
   next[index] = {

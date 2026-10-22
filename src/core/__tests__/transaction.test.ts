@@ -115,6 +115,24 @@ describe('§16.3 edit transactions', () => {
     expect(roundTrip(file).result.ok).toBe(true);
   });
 
+  it('a new key cannot reference a group the file does not have', () => {
+    const file = cloneFile();
+    const added = upsertKey(
+      file,
+      {
+        ...file.keys[0],
+        id: '99999999-0000-4000-8000-000000000000',
+        group_id: '88888888-0000-4000-8000-000000000000',
+      },
+      LATER
+    );
+
+    // Accepting it would leave the vault dirty and unflushable: the reader
+    // rejects a dangling group reference (P4).
+    expect(added).toEqual({ ok: false, reason: 'unknown_group' });
+    expect(roundTrip(file).result.ok).toBe(true);
+  });
+
   it('the group cap rejects the edit', () => {
     const file = cloneFile();
     file.groups = Array.from({ length: MAX_GROUPS }, (_, index) => ({
