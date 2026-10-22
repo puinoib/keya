@@ -280,12 +280,12 @@ export function KeyForm({
 
           {/* Key Value */}
           <div className="space-y-1.5">
-            <Label htmlFor="key_value" className="text-xs">
+            <Label htmlFor="secret" className="text-xs">
               API Key or Token <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
               <AutoResizeTextarea
-                id="key_value"
+                id="secret"
                 name="api-key-secret"
                 autoComplete="off"
                 data-form-type="other"
@@ -403,7 +403,7 @@ export function KeyForm({
                   role="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setForm((f) => ({ ...f, expires_at: undefined }));
+                    setForm((f) => ({ ...f, expiry: undefined }));
                   }}
                   className="ml-auto text-ink-quaternary hover:text-ink-secondary"
                 >
@@ -416,7 +416,7 @@ export function KeyForm({
                 <DayPicker
                   value={form.expiry}
                   onChange={(d) => {
-                    setForm((f) => ({ ...f, expires_at: d }));
+                    setForm((f) => ({ ...f, expiry: d }));
                     setShowCalendar(false);
                   }}
                 />
