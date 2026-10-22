@@ -1,4 +1,3 @@
-import type { ConnectionCheck, ConnectionKind } from '../view/types';
 import type { TestKind, TestResult } from './api-tester';
 
 /** Label and hint for the action that triggers a check. */
@@ -40,9 +39,4 @@ export function describeTestResult(
     title: 'Connection test succeeded',
     description: `${forSubject}${latency}`,
   };
-}
-
-/** Stored checks written before the kind field existed were credential checks. */
-export function getStoredCheckKind(check: ConnectionCheck): ConnectionKind {
-  return check.kind ?? 'credential';
 }
