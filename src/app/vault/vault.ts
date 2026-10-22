@@ -84,6 +84,7 @@ export type PasswordFailure =
   | 'wrong_password'
   | 'kdf_busy'
   | 'kdf_cancelled'
+  | 'target_exists'
   | SaveFailure;
 
 /** Why an edit never reached memory: a transaction rule or class A. */
@@ -93,6 +94,8 @@ export interface OpenOptions {
   password: string;
   signal?: AbortSignal;
   lockTimeoutMs?: number;
+  /** Already-derived key for a file this process just wrote (vault creation). */
+  fileKey?: Uint8Array;
 }
 
 export type OpenResult =
@@ -100,6 +103,9 @@ export type OpenResult =
   | { ok: false; failure: OpenFailure; issues?: Issue[]; message?: string };
 
 const WRITE_LOCK = 'keya-vault-writes';
+
+/** The same lock the vault takes for every write, so creation is serialized. */
+export const VAULT_WRITE_LOCK = WRITE_LOCK;
 
 function toHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (byte) =>
@@ -179,23 +185,29 @@ export class Vault {
     if (!inspected.ok) return { ok: false, failure: inspected.failure };
 
     let fileKey: Uint8Array;
-    try {
-      fileKey = await deriveFileKey(
-        {
-          password: options.password,
-          salt: inspected.preamble.salt,
-          kdf: inspected.preamble.kdf,
-        },
-        { signal: options.signal, lockTimeoutMs: options.lockTimeoutMs }
-      );
-    } catch (error) {
-      if (error instanceof KdfError) {
-        return {
-          ok: false,
-          failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
-        };
+    if (options.fileKey) {
+      // The caller just derived this key for the file it wrote, so deriving it
+      // a second time would only double the Argon2 cost of creating a vault.
+      fileKey = options.fileKey;
+    } else {
+      try {
+        fileKey = await deriveFileKey(
+          {
+            password: options.password,
+            salt: inspected.preamble.salt,
+            kdf: inspected.preamble.kdf,
+          },
+          { signal: options.signal, lockTimeoutMs: options.lockTimeoutMs }
+        );
+      } catch (error) {
+        if (error instanceof KdfError) {
+          return {
+            ok: false,
+            failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
+          };
+        }
+        throw error;
       }
-      throw error;
     }
 
     const opened = await openContainer(bytes, fileKey);
@@ -604,21 +616,30 @@ export class Vault {
     const validated = validateKeyaFile(copy);
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
 
-    const nonce = freshNonce(await this.nonceOn(file));
-    const bytes = await sealContainer({
-      payload: serializePayload(validated.value),
-      fileKey,
-      container: { version: VERSION, kdf, salt },
-      nonce,
-    });
+    // The clone is a write like any other: serialize it against the same lock,
+    // and refuse to replace a file that is already there.
+    try {
+      const written = await this.ports.locks.run(WRITE_LOCK, async () => {
+        const existing = await file.read();
+        if (existing) {
+          return { ok: false as const, failure: 'target_exists' as const };
+        }
+        const nonce = freshNonce(previousNonceOf(existing));
+        const bytes = await sealContainer({
+          payload: serializePayload(validated.value),
+          fileKey,
+          container: { version: VERSION, kdf, salt },
+          nonce,
+        });
+        await file.write(bytes);
+        return { ok: true as const };
+      });
+      if (!written.ok) return written;
+    } catch {
+      return { ok: false, failure: 'io_failed' };
+    }
 
-    await file.write(bytes);
     return { ok: true, fingerprint: await containerFingerprint(salt) };
-  }
-
-  private async nonceOn(file: FilePort): Promise<Uint8Array | null> {
-    const existing = await file.read();
-    return previousNonceOf(existing);
   }
 
   /** Drop the key material and refuse further operations. */

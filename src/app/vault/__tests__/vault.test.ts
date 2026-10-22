@@ -431,6 +431,16 @@ describe('changing the password', () => {
 });
 
 describe('cloning', () => {
+  it('refuses to write over a file that already exists', async () => {
+    const { vault } = await openedFile();
+    const target = new MemoryFile(new Uint8Array([1, 2, 3]));
+
+    const result = await vault.cloneTo(target, PASSWORD);
+
+    expect(result).toEqual({ ok: false, failure: 'target_exists' });
+    expect(target.writes).toBe(0);
+  });
+
   it('creates a new identity, a new salt and a new fingerprint', async () => {
     const { file, clock, vault } = await openedFile();
     const originalBytes = file.bytes!.slice();

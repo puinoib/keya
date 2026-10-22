@@ -172,4 +172,9 @@ export class Workspace {
     }
     return this.filePort(fileName, { create: true });
   }
+
+  /** Remove a file, so a failed creation does not leave a blocker behind. */
+  async remove(fileName: string): Promise<void> {
+    await this.handle.removeEntry(fileName);
+  }
 }

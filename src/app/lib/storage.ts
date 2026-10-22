@@ -156,19 +156,6 @@ export class FileStorage {
 
     return finishOpen(fileName, result.vault);
   }
-
-  /** Keep a copy of the current bytes next to the vault. */
-  static async backupVault(fileName: string): Promise<void> {
-    const folder = await current();
-    if (!folder) return;
-
-    const bytes = await (await folder.filePort(fileName)).read();
-    if (!bytes) return;
-
-    await (await folder.filePort(`${fileName}.bak`, { create: true })).write(
-      bytes
-    );
-  }
 }
 
 async function finishOpen(
