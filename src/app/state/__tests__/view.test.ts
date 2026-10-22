@@ -17,6 +17,7 @@ import {
   type ViewInput,
 } from '../view';
 import {
+  checkStateHint,
   checkStatusLabel,
   dateToExpiry,
   daysUntilExpiry,
@@ -52,6 +53,7 @@ function input(overrides: Partial<ViewInput> = {}): ViewInput {
     timeZone: 'UTC',
     checks: new Map(),
     bindings: bindingsFor(),
+    grants: new Set(['send-fingerprint']),
     dismissals: { business: [], observation: [] },
     ...overrides,
   };
@@ -336,5 +338,44 @@ describe('check status', () => {
 
     expect(check.status).toBe('failed');
     expect(checkStatusLabel(check.status, check.kind)).toBe('Failed');
+  });
+});
+
+describe('recipe state in the view', () => {
+  it('reports whether standing consent is missing', () => {
+    const allowed = buildVaultView(input());
+    expect(checkOf(allowed, allowed.file.keys[0])).toMatchObject({
+      checkable: true,
+      manualOnly: false,
+      needsAuthorization: false,
+    });
+
+    const noGrant = buildVaultView(input({ grants: new Set() }));
+    expect(checkOf(noGrant, noGrant.file.keys[0]).needsAuthorization).toBe(
+      true
+    );
+  });
+
+  it('marks a plain http recipe as manual only, never needing a grant', () => {
+    const plain = cloneFile();
+    plain.keys[0].endpoint = 'http://edge.example.com/v1';
+    const view = buildVaultView(input({ file: plain, grants: new Set() }));
+
+    const check = checkOf(view, view.file.keys[0]);
+    expect(check.manualOnly).toBe(true);
+    expect(check.needsAuthorization).toBe(false);
+    expect(checkStateHint(check)).toContain('Plain http');
+  });
+
+  it('names why a recipe cannot run at all', () => {
+    const noEndpoint = cloneFile();
+    noEndpoint.keys[0].endpoint = null;
+    const view = buildVaultView(
+      input({ file: noEndpoint, bindings: new Map() })
+    );
+
+    const check = checkOf(view, view.file.keys[0]);
+    expect(check.checkable).toBe(false);
+    expect(checkStateHint(check)).toBe('Add an endpoint to check this key');
   });
 });

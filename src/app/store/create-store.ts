@@ -251,6 +251,10 @@ async function buildView(state: {
     if (latest) checks.set(keyId, latest);
   }
 
+  const grants = new Set(
+    (await state.local.listGrants()).map((grant) => grant.fingerprint)
+  );
+
   return buildVaultView({
     file,
     preferences: state.preferences,
@@ -258,6 +262,7 @@ async function buildView(state: {
     timeZone: state.timeZone,
     checks,
     bindings,
+    grants,
     dismissals: await state.session.dismissed(),
   });
 }

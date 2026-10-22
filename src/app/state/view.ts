@@ -18,6 +18,8 @@ import type {
 import type { Reminder } from '../../core/reminders';
 import { businessAlerts, observationAlerts } from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
+import type { RecipeState } from '../../core/presets/classify';
+import { classifyRecipe } from '../../core/presets/classify';
 import { providerLabel } from './providers';
 import {
   checkStatus,
@@ -39,6 +41,10 @@ export interface VaultView {
   checks: Map<string, Observation>;
   /** Current binding and plan per key whose provider can be checked at all. */
   bindings: Map<string, KeyBinding>;
+  /** Recipe state per key, including the ones that cannot run at all. */
+  recipes: Map<string, RecipeState>;
+  /** `send_fingerprint` values this device has approved permanently. */
+  grants: Set<string>;
   /** Every reminder the current state produces, dismissed or not. */
   reminders: ReminderRow[];
 }
@@ -70,6 +76,7 @@ export interface ViewInput {
   timeZone: string;
   checks: Map<string, Observation>;
   bindings: Map<string, KeyBinding>;
+  grants: Set<string>;
   dismissals: {
     business: BusinessDismissal[];
     observation: ObservationDismissal[];
@@ -79,6 +86,16 @@ export interface ViewInput {
 export function buildVaultView(input: ViewInput): VaultView {
   const { file } = input;
   const byId = new Map(file.keys.map((key) => [key.id, key]));
+  const recipes = new Map<string, RecipeState>();
+  for (const key of file.keys) {
+    recipes.set(
+      key.id,
+      classifyRecipe(
+        { provider_id: key.provider_id, endpoint: key.endpoint },
+        file.providers
+      )
+    );
+  }
 
   const dismissedBusiness = new Set(
     input.dismissals.business.map(
@@ -150,6 +167,8 @@ export function buildVaultView(input: ViewInput): VaultView {
     timeZone: input.timeZone,
     checks: input.checks,
     bindings: input.bindings,
+    recipes,
+    grants: input.grants,
     reminders,
   };
 }
@@ -223,18 +242,30 @@ export interface KeyCheck {
   /** Whether the provider can be checked from a browser at all. */
   checkable: boolean;
   kind: 'credential' | 'request' | 'unverifiable';
+  /** The recipe's own state, including why it cannot run. */
+  recipe: RecipeState | undefined;
+  /** `http:` targets can only ever be approved one request at a time (I7). */
+  manualOnly: boolean;
+  /** Executable, but this device has no standing consent for the request. */
+  needsAuthorization: boolean;
 }
 
 export function checkOf(view: VaultView, key: Key): KeyCheck {
   const observation = view.checks.get(key.id);
   const binding = view.bindings.get(key.id);
   const checkable = binding !== undefined;
+  const recipe = view.recipes.get(key.id);
+  const manualOnly = recipe?.kind === 'manual_only';
 
   return {
     status: checkStatus(observation),
     observation,
     checkable,
     kind: binding ? binding.plan.verifies : 'unverifiable',
+    recipe,
+    manualOnly,
+    needsAuthorization:
+      binding !== undefined && !manualOnly && !view.grants.has(binding.send),
   };
 }
 

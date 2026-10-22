@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
-import { checkStatusLabel } from '../../state/presentation';
+import { checkStatusLabel, checkStateHint } from '../../state/presentation';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -79,6 +79,7 @@ export function KeyDetail() {
   const observed = check.observation;
   const connectionStatus = check.status;
   const connectionLabel = checkStatusLabel(check.status, check.kind);
+  const stateHint = checkStateHint(check);
   const plannedKind = check.kind;
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
@@ -248,11 +249,17 @@ export function KeyDetail() {
                     <Warning className="size-3" /> {expiryLabel}
                   </span>
                 )}
+                {stateHint &&
+                  (check.manualOnly || check.needsAuthorization) && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                      <Warning className="size-3" /> {stateHint}
+                    </span>
+                  )}
               </div>
 
               {check.kind === 'unverifiable' && (
                 <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
-                  {checkError ?? unverifiableReason(provider)}
+                  {stateHint ?? checkError ?? unverifiableReason(provider)}
                 </p>
               )}
             </>

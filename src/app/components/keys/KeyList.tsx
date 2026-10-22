@@ -26,6 +26,7 @@ import {
   sortedGroups,
 } from '../../state/view';
 import {
+  checkStateHint,
   dateToExpiry,
   expiryToDate,
   expiryStatusLabel,
@@ -359,6 +360,7 @@ export function KeyList() {
           const isTesting = testing === key.id;
           const isSelected = selectedKeyId === key.id;
           const check = view ? checkOf(view, key) : null;
+          const stateHint = check ? checkStateHint(check) : null;
           const expiryStatus = view ? expiryOf(view, key).status : 'none';
           const status =
             check?.status === 'success'
@@ -457,6 +459,14 @@ export function KeyList() {
                       <span className="text-divider">·</span>
                       <span className="hidden truncate md:inline">
                         {key.description}
+                      </span>
+                    </>
+                  )}
+                  {stateHint && !key.archived_at && (
+                    <>
+                      <span className="text-divider">·</span>
+                      <span className="hidden shrink-0 md:inline">
+                        {stateHint}
                       </span>
                     </>
                   )}

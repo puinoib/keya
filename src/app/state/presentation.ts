@@ -10,6 +10,10 @@
 import type { Expiry } from '../../core/time/expiry';
 import { expiryStatus } from '../../core/time/expiry';
 import type { Observation } from '../../core/runtime/observations';
+import type {
+  NotExecutableReason,
+  RecipeState,
+} from '../../core/presets/classify';
 
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
 
@@ -134,6 +138,35 @@ export function checkStatusLabel(
   if (status === 'untested') return 'Untested';
   if (status === 'failed') return 'Failed';
   return kind === 'credential' ? 'Verified' : 'Reachable';
+}
+
+/** Why a recipe cannot run at all, in the words the screens share. */
+export function notExecutableLabel(reason: NotExecutableReason): string {
+  switch (reason) {
+    case 'missing_endpoint':
+      return 'Add an endpoint to check this key';
+    case 'invalid_target':
+      return 'The check recipe is not a usable request';
+    case 'unknown_preset':
+      return 'This build does not know the provider preset';
+    case 'capability_missing':
+      return 'This provider cannot be checked from a browser';
+  }
+}
+
+/** The one-line state a screen shows beside a key's check result. */
+export function checkStateHint(check: {
+  checkable: boolean;
+  manualOnly: boolean;
+  needsAuthorization: boolean;
+  recipe: RecipeState | undefined;
+}): string | null {
+  if (check.manualOnly) return 'Plain http — approved one request at a time';
+  if (check.needsAuthorization) return 'Needs approval before the first check';
+  if (!check.checkable && check.recipe?.kind === 'not_executable') {
+    return notExecutableLabel(check.recipe.reason);
+  }
+  return null;
 }
 
 /** Controlled copy for an observed failure; provider text is never stored. */
