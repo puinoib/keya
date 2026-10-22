@@ -167,6 +167,18 @@ function clampPercent(value: number): number {
 }
 
 /**
+ * Measured in 2026-10 with `Origin: https://keya.app`. A browser can only read
+ * an endpoint when the *preflight* passes — status, Allow-Origin, Allow-Methods
+ * and Allow-Headers together. A GET that returns `Access-Control-Allow-Origin`
+ * proves nothing on its own: `opencode.ai/zen/go/v1/usage` answers `*` but 404s
+ * its preflight, so the GET never happens.
+ *
+ * Only OpenCode Go is usable today. Checked and rejected: OpenAI
+ * `/v1/organization/costs` (needs an admin key), Anthropic `usage_report` (no
+ * ACAO), `api.exa.ai/*` (no ACAO), `opencode.ai/zen/v1/usage` (404 — Zen has no
+ * balance API). Prepaid balances (OpenRouter credits, DeepSeek, Moonshot,
+ * SiliconFlow) look readable but are not implemented.
+ *
  * Providers whose allowance Keya can read from a browser. Each entry must be a
  * read-only metadata endpoint that answers the CORS preflight and needs nothing
  * beyond the stored key.
