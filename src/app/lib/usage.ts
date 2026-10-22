@@ -169,7 +169,7 @@ function clampPercent(value: number): number {
 }
 
 /**
- * Measured in 2026-10 with `Origin: https://keya.app`. A browser can only read
+ * Measured in 2026-10 with `Origin: https://keya.one`. A browser can only read
  * an endpoint when the *preflight* passes — status, Allow-Origin, Allow-Methods
  * and Allow-Headers together. A GET that returns `Access-Control-Allow-Origin`
  * proves nothing on its own: `opencode.ai/zen/go/v1/usage` answers `*` but 404s

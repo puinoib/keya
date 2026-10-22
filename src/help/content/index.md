@@ -5,7 +5,7 @@ updated: 2026-03-01
 order: 1
 ---
 
-Keya stores API keys and tokens in encrypted `.keya` files inside a folder you choose. There is no account system and no application backend: your cloud drive may synchronize the folder, and nothing else leaves the device except the provider requests you approve.
+Keya stores API keys and tokens in encrypted `.keya` files inside a folder you choose. There is no account system and no application backend: your cloud drive may synchronize the folder, and apart from the site analytics described in Security, nothing leaves the device except the provider requests you approve.
 
 AI providers are the default focus, but Keya is not limited to them. Search, scraping, email, payments, cloud, and internal API credentials fit the same model; any service can be added as a custom provider with its own endpoint and check recipe.
 

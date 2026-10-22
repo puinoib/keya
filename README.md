@@ -16,7 +16,7 @@ Keya is a static web application with no application backend or account system. 
 - Optional clipboard detection when adding keys
 - PRF-based WebAuthn biometric unlock where supported
 - Inactivity locking, keyboard shortcuts, and light/dark themes
-- Encrypted `.keya` import/export and plaintext JSON import/export
+- Encrypted `.keya` export and plaintext JSON export (importing either is not available yet)
 - Built-in help at `/docs`
 
 ## Run locally
@@ -36,12 +36,12 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 
 ## Security and persistence
 
-- Vault payloads use **Argon2id** and **XChaCha20-Poly1305** through libsodium. The current format is implemented in [`src/core/schema.ts`](src/core/schema.ts); see the [security article](src/help/content/security.md) for details and limitations.
+- Vault payloads use **Argon2id** and **XChaCha20-Poly1305** through libsodium. The format lives in [`src/core/format/`](src/core/format) and the payload model in [`src/core/payload/`](src/core/payload); see the [security article](src/help/content/security.md) for details and limitations.
 - Passwords are not persisted for session restoration. **Reloading requires unlocking again** with the master password or enrolled PRF authentication.
 - Biometric enrollment requires PRF; there is no stored-key fallback for unsupported authenticators.
 - Edits are auto-saved after a debounce. Locking and switching flush pending changes. If saving fails, locking is refused to preserve unsaved data; **the vault remains unlocked** until the problem is resolved.
 - Writes are coordinated between same-origin tabs and checked for external file changes. Cloud clients and other devices do not share that lock. Use one device at a time per vault, and keep independent backups.
-- Preset provider tests send the key to a metadata endpoint. A custom provider uses the check you configure in Settings → Providers; without one, Keya only probes whether the endpoint responds and **does not send the key**. Providers that block browser requests are reported as unverifiable instead of failed. Automatic testing is optional and disabled by default. Custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
+- Preset provider tests send the key to a metadata endpoint. A custom provider uses the check you configure in Settings → Providers; without one, Keya cannot check it and sends nothing. A provider that blocks browser requests fails with a network error, which is not proof the credential is invalid. Automatic testing is optional and disabled by default. Custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.

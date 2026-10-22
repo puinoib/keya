@@ -35,6 +35,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Read-only: `pnpm check` would rewrite files instead of failing.
+      - name: Lint
+        run: pnpm exec biome check .
+
       - name: Test
         run: pnpm test
 
