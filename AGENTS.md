@@ -29,7 +29,8 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Task | Starting points |
 |---|---|
 | Encryption, byte layout, KDF | `src/core/format/{constants,preamble,container,kdf}.ts`, frozen vector in `src/core/__tests__/container.test.ts` |
-| Payload model and validation | `src/core/payload/{types,limits,validate,normalize,serialize}.ts`; the spec is `docs/keya-format.md` (not in git) |
+| Payload model and validation | `src/core/payload/{types,limits,validate,normalize,serialize}.ts`; the spec is `docs/keya-format.md` (§1–§7, §14–§17, appendices) |
+| Runtime rules: probe, reminders, save, device state | `docs/keya-runtime.md` (§8–§13, §16.4–16.8); § numbers are continuous across the two files |
 | Derived keys (consent, freshness) | `src/core/fingerprint/index.ts`; vectors in `src/core/__tests__/appendix-c-fingerprints.test.ts` |
 | Edits, timestamps, ordering | `src/core/payload/edits.ts` (pure transactions) and `src/app/vault/vault.ts` (who applies them) |
 | Save, lock, password change, clone | `src/app/vault/vault.ts`; write matrix and I17 in the spec §3.6 |
@@ -42,9 +43,15 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 | Store behaviour and tests | `src/app/store/create-store.ts` is the factory; `useStore.ts` only supplies the real adapters. Tests build a store with in-memory dependencies |
 | Component tests | `@testing-library/react` under jsdom (`/* @vitest-environment jsdom */`). `src/test/setup.ts` supplies the browser APIs jsdom lacks, and `src/test/fake-sodium.ts` stands in for libsodium because its typed-array checks reject jsdom's realm |
 | Screen data | `src/app/state/{view,presentation,providers}.ts`: one derived snapshot over the payload plus device state, and the copy/label rules the screens share. Screens read this; nothing here is written back |
-| JSON export | `src/app/lib/export-json.ts` and `docs/export-json.md`; it uses the payload's own field names and never carries device state |
+| JSON export | `src/app/lib/export-json.ts`; it uses the payload's own field names and never carries device state |
+| Allowance endpoints | `src/app/lib/usage.ts` carries the measured list: which endpoints a browser can read, and why the others cannot |
 | Deployed response headers or caching | `worker/index.ts`, `wrangler.toml`; the CSP keeps `'wasm-unsafe-eval'` for libsodium and allows user-supplied endpoints in `connect-src` |
 | Help content | `src/help/lib/manifest.ts`, `src/help/content/*.md` and help tests |
+
+## Known gaps
+
+- **Import is disabled.** The menu items exist and say so. `docs/keya-format.md` §14 describes the format work this needs; nothing imports a `.keya` or a JSON export yet.
+- **Biometric records wrap the password, not the file key.** `src/app/lib/biometric.ts` stores a PRF-wrapped password keyed by `vault_id`, with no AAD; the spec (§13.2, and appendix D.4) asks for a wrapped `file_key` bound to `container_fingerprint`. Both paths require PRF, so neither downgrades, but the blast radius differs. Pick one before changing biometrics.
 
 ## Branches and deployment
 
