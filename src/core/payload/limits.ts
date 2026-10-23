@@ -34,8 +34,8 @@ export const MAX_KEYS = 1000;
 export const MAX_GROUPS = 500;
 export const MAX_PROVIDERS = 200;
 
-/** Days before expiry that the `expiry_upcoming` reminder starts. */
+/** Days before expiry at which the Inbox starts reporting an expiry. */
 export const EXPIRY_UPCOMING_DAYS = 7;
 
-/** Days after which an observation is considered stale. */
+/** Days after which a check is old enough to be offered again (never announced). */
 export const OBSERVATION_STALE_DAYS = 30;

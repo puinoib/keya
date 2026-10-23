@@ -10,12 +10,7 @@
  * behaviour is testable in one process.
  */
 
-import {
-  type CalendarDay,
-  isCalendarDay,
-  isTimestamp,
-  parseCalendarDay,
-} from './timestamps';
+import { type CalendarDay, isTimestamp, parseCalendarDay } from './timestamps';
 
 export type Expiry =
   | { kind: 'date'; value: string }
@@ -164,16 +159,43 @@ export function expiryStatus(
   return 'ok';
 }
 
-/**
- * The fact fingerprint a dismissal is bound to: only an unchanged fact keeps a
- * dismissal effective (`BusinessDismissal.condition`).
- */
-export function expiryCondition(
-  expiry: Expiry | null | undefined
-): string | null {
-  if (!expiry) return null;
-  if (expiry.kind === 'instant') {
-    return isTimestamp(expiry.value) ? `instant:${expiry.value}` : null;
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function localDayOf(input: Date | string, timeZone: string): string {
+  const date = typeof input === 'string' ? new Date(input) : input;
+  let formatter = dayFormatters.get(timeZone);
+  if (!formatter) {
+    try {
+      formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return date.toISOString().slice(0, 10);
+    }
+    dayFormatters.set(timeZone, formatter);
   }
-  return isCalendarDay(expiry.value) ? `date:${expiry.value}` : null;
+  return formatter.format(date);
+}
+
+/**
+ * Calendar days from today to the expiry's own day; negative once passed.
+ * A `date` expiry names its own day, an `instant` is read in `timeZone`.
+ */
+export function daysUntilExpiry(
+  expiry: Expiry | null | undefined,
+  now: Date,
+  timeZone: string
+): number | null {
+  if (!expiry) return null;
+  const to =
+    expiry.kind === 'date' ? expiry.value : localDayOf(expiry.value, timeZone);
+  const from = localDayOf(now, timeZone);
+  const days = Math.round(
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
+      (24 * HOUR)
+  );
+  return Number.isNaN(days) ? null : days;
 }

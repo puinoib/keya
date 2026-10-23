@@ -3,7 +3,7 @@
  *
  * This is the vault's own model, not a second one: the same keys, providers and
  * groups the file holds, with the same names. Device-local state (preferences,
- * check results, dismissals, grants) is not part of it, because none of it
+ * check results, grants) is not part of it, because none of it
  * belongs to the vault.
  *
  * The output contains secrets in clear text; the caller warns before writing it.

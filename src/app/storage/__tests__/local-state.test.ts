@@ -115,98 +115,10 @@ describe('observations', () => {
     await local.recordObservation(
       observation('obs-1', '2026-06-01T00:00:00.000Z')
     );
-    await local.putBusinessDismissal({
-      vault_id: VAULT,
-      key_id: KEY,
-      rule: 'expiry_upcoming',
-      condition: 'date:2026-03-01',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
-    await local.putObservationDismissal({
-      vault_id: VAULT,
-      key_id: KEY,
-      rule: 'probe_failed',
-      binding: 'binding-1',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
 
     await local.forgetKey(VAULT, KEY);
 
     expect(await local.listObservations(VAULT, KEY)).toEqual([]);
-    expect(await local.listBusinessDismissals(VAULT)).toEqual([]);
-    expect(await local.listObservationDismissals(VAULT)).toEqual([]);
-  });
-});
-
-describe('dismissals', () => {
-  it('retains records whose fact changed, so reverting can revive them', async () => {
-    const local = state();
-    await local.putBusinessDismissal({
-      vault_id: VAULT,
-      key_id: KEY,
-      rule: 'expiry_upcoming',
-      condition: 'date:2026-03-01',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
-    await local.putObservationDismissal({
-      vault_id: VAULT,
-      key_id: KEY,
-      rule: 'probe_failed',
-      binding: 'binding-old',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
-
-    const kept = await local.pruneDismissals(
-      VAULT,
-      [
-        {
-          vault_id: VAULT,
-          key_id: KEY,
-          rule: 'expiry_upcoming',
-          condition: 'date:2026-04-01',
-        },
-      ],
-      [
-        {
-          vault_id: VAULT,
-          key_id: KEY,
-          rule: 'probe_failed',
-          binding: 'binding-new',
-        },
-      ]
-    );
-
-    // They no longer apply (the view compares the current fact), but the
-    // records survive so changing the fact back revives the decision.
-    expect(kept.business).toHaveLength(1);
-    expect(kept.observation).toHaveLength(1);
-    expect(await local.listBusinessDismissals(VAULT)).toHaveLength(1);
-    expect(await local.listObservationDismissals(VAULT)).toHaveLength(1);
-  });
-
-  it('keeps a record whose fact still matches', async () => {
-    const local = state();
-    await local.putBusinessDismissal({
-      vault_id: VAULT,
-      key_id: KEY,
-      rule: 'insecure_endpoint',
-      condition: 'http:http://192.168.1.5:8080',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
-
-    const kept = await local.pruneDismissals(
-      VAULT,
-      [
-        {
-          vault_id: VAULT,
-          key_id: KEY,
-          rule: 'insecure_endpoint',
-          condition: 'http:http://192.168.1.5:8080',
-        },
-      ],
-      []
-    );
-    expect(kept.business).toHaveLength(1);
   });
 });
 

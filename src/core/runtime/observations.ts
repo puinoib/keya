@@ -69,15 +69,44 @@ export function shouldAdopt(
   return 'adopt';
 }
 
-/** Outcomes that describe a failed check rather than a working one. */
-export const FAILED_OUTCOMES: readonly ObservationOutcome[] = [
+/** Outcomes in which the service judged the credential itself. */
+export const REJECTED_OUTCOMES = [
   'auth_failed',
   'forbidden',
+] as const satisfies readonly ObservationOutcome[];
+
+export type RejectedOutcome = (typeof REJECTED_OUTCOMES)[number];
+
+/**
+ * Failures that say nothing about the credential: the request never reached a
+ * verdict, or the service refused for a reason that is not the secret.
+ */
+export const UNVERIFIED_OUTCOMES = [
+  'rate_limited',
   'server_error',
   'failed',
   'timeout',
   'network',
+] as const satisfies readonly ObservationOutcome[];
+
+export const FAILED_OUTCOMES: readonly ObservationOutcome[] = [
+  ...REJECTED_OUTCOMES,
+  ...UNVERIFIED_OUTCOMES,
 ];
+
+/** The service answered, and its answer was about the credential. */
+export function isRejected(
+  observation: Observation
+): observation is Observation & { outcome: RejectedOutcome } {
+  return (REJECTED_OUTCOMES as readonly string[]).includes(observation.outcome);
+}
+
+/** The check could not establish anything about the credential. */
+export function isUnverified(observation: Observation): boolean {
+  return (UNVERIFIED_OUTCOMES as readonly string[]).includes(
+    observation.outcome
+  );
+}
 
 export function isFailure(observation: Observation): boolean {
   return FAILED_OUTCOMES.includes(observation.outcome);

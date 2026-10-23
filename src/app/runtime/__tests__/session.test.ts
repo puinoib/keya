@@ -1,5 +1,5 @@
 /**
- * The session facade: reminders, dismissals, grants and probes for one vault.
+ * The session facade: bindings, grants and probes for one vault.
  *
  * These tests exercise what the UI will actually call, with fakes for the file,
  * the network and local storage.
@@ -90,7 +90,6 @@ async function session(
     deviceKey,
     fetch: fetchImpl,
     clock: () => new Date(NOW),
-    timeZone: 'UTC',
   });
 
   // Seed a grant through the public API when the test needs one.
@@ -101,84 +100,6 @@ async function session(
 
   return { session: value, payload, requests, grants, local };
 }
-
-describe('reminders', () => {
-  it('combines expiry, destination and never-probed facts', async () => {
-    const payload = cloneFile();
-    payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
-    const { session: value } = await session({ payload });
-
-    const reminders = await value.reminders();
-    const rules = reminders.map((entry) => entry.reminder.rule).sort();
-    expect(rules).toEqual(['expiry_upcoming', 'never_probed']);
-  });
-
-  it('omits observation reminders for a recipe that cannot run', async () => {
-    const payload = cloneFile();
-    payload.providers[0].probe = null;
-    const { session: value } = await session({ payload });
-
-    const reminders = await value.reminders();
-    expect(
-      reminders.some((entry) => entry.reminder.kind === 'observation')
-    ).toBe(false);
-  });
-
-  it('hides a reminder once dismissed and keeps it inspectable', async () => {
-    const payload = cloneFile();
-    payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
-    const { session: value } = await session({ payload });
-
-    const before = await value.reminders();
-    const target = before.find(
-      (entry) => entry.reminder.rule === 'expiry_upcoming'
-    )!;
-    await value.dismiss(target.reminder);
-
-    const after = await value.reminders();
-    expect(
-      after.some((entry) => entry.reminder.rule === 'expiry_upcoming')
-    ).toBe(false);
-
-    const silenced = await value.dismissed();
-    expect(silenced.business).toHaveLength(1);
-    expect(silenced.business[0].condition).toBe('date:2026-03-05');
-
-    await value.restore(target.reminder);
-    const restored = await value.reminders();
-    expect(
-      restored.some((entry) => entry.reminder.rule === 'expiry_upcoming')
-    ).toBe(true);
-  });
-
-  it('brings the reminder back when the fact changes', async () => {
-    const payload = cloneFile();
-    payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
-    const { session: value } = await session({ payload });
-
-    const target = (await value.reminders()).find(
-      (entry) => entry.reminder.rule === 'expiry_upcoming'
-    )!;
-    await value.dismiss(target.reminder);
-
-    // Editing the payload changes the fact. The record stays, but it no longer
-    // matches, so the reminder is visible again.
-    value.payload.keys[0].expiry = { kind: 'date', value: '2026-03-06' };
-    const reminders = await value.reminders();
-
-    expect(
-      reminders.some((entry) => entry.reminder.rule === 'expiry_upcoming')
-    ).toBe(true);
-    expect((await value.dismissed()).business).toHaveLength(1);
-
-    // Reverting the fact revives the decision (§16.7).
-    value.payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
-    const reverted = await value.reminders();
-    expect(
-      reverted.some((entry) => entry.reminder.rule === 'expiry_upcoming')
-    ).toBe(false);
-  });
-});
 
 describe('probes', () => {
   it('needs authorization, then runs after a grant', async () => {

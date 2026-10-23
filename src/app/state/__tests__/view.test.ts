@@ -11,7 +11,7 @@ import {
   expiryOf,
   hasDuplicateSecret,
   keyById,
-  reminderDisplay,
+  plaintextTargetOf,
   searchKeys,
   sortedGroups,
   type ViewInput,
@@ -54,7 +54,6 @@ function input(overrides: Partial<ViewInput> = {}): ViewInput {
     checks: new Map(),
     bindings: bindingsFor(),
     grants: new Set(['send-fingerprint']),
-    dismissals: { business: [], observation: [] },
     ...overrides,
   };
 }
@@ -119,97 +118,115 @@ describe('expiry verdicts', () => {
   });
 });
 
-describe('reminder rows', () => {
-  it('derives the core rules for the key', () => {
+describe('inbox attention', () => {
+  it('reports one expiry fact and no device chore as attention', () => {
     const file = cloneFile();
     file.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
 
-    const rows = buildVaultView(input({ file })).reminders;
+    const view = buildVaultView(input({ file }));
 
-    expect(rows.map((row) => row.reminder.rule).sort()).toEqual([
-      'expiry_upcoming',
-      'never_probed',
-    ]);
-    expect(rows.every((row) => row.key.id === IDS.key)).toBe(true);
-    expect(rows.every((row) => !row.dismissed)).toBe(true);
+    expect(view.attention.map((row) => row.fact.kind)).toEqual(['expiry']);
+    expect(view.attention[0].fact).toMatchObject({
+      phase: 'due',
+      days_left: 4,
+    });
+    expect(view.attention[0].key.id).toBe(IDS.key);
   });
 
-  it('marks a dismissed fact as archived without dropping the row', () => {
+  it('carries a rejection from the current binding only', () => {
+    const rejected = buildVaultView(
+      input({
+        checks: new Map([
+          [
+            IDS.key,
+            observation({
+              outcome: 'forbidden',
+              binding: 'observation-binding',
+            }),
+          ],
+        ]),
+      })
+    );
+    expect(rejected.attention[0].fact).toMatchObject({
+      kind: 'rejected',
+      outcome: 'forbidden',
+    });
+
+    const oldBinding = buildVaultView(
+      input({
+        checks: new Map([
+          [
+            IDS.key,
+            observation({
+              outcome: 'auth_failed',
+              binding: 'an-older-binding',
+            }),
+          ],
+        ]),
+      })
+    );
+    expect(
+      oldBinding.attention.some((row) => row.fact.kind === 'rejected')
+    ).toBe(false);
+    expect(oldBinding.device[0].never_verified).toBe(true);
+  });
+
+  it('keeps an unverifiable result out of both attention and the device list', () => {
     const file = cloneFile();
-    file.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
+    file.providers[0].probe = null;
 
     const view = buildVaultView(
       input({
         file,
-        dismissals: {
-          business: [
-            {
-              vault_id: IDS.vault,
-              key_id: IDS.key,
-              rule: 'expiry_upcoming',
-              condition: 'date:2026-03-05',
-              dismissed_at: '2026-03-01T12:00:00.000Z',
-            },
-          ],
-          observation: [],
-        },
-      })
-    );
-
-    const upcoming = view.reminders.find(
-      (row) => row.reminder.rule === 'expiry_upcoming'
-    );
-    expect(upcoming?.dismissed).toBe(true);
-  });
-
-  it('drops an observation row for a result that is no longer current', () => {
-    const view = buildVaultView(
-      input({
-        checks: new Map([
-          [IDS.key, observation({ binding: 'an-older-binding' })],
-        ]),
-      })
-    );
-
-    expect(
-      view.reminders.some((row) => row.reminder.rule === 'never_probed')
-    ).toBe(true);
-  });
-
-  it('prints the key, provider and check facts', () => {
-    const unchecked = buildVaultView(input());
-    const row = unchecked.reminders[0];
-
-    const display = reminderDisplay(unchecked, row, () => 'Edge Gateway');
-    expect(display.keyName).toBe('Edge key');
-    expect(display.provider).toBe('Edge Gateway');
-    expect(display.checkedAt).toBeNull();
-    expect(display.failureText).toBeNull();
-    expect(display.endpoint).toBeNull();
-  });
-
-  it('carries the failure text and the endpoint of a live row', () => {
-    const failed = buildVaultView(
-      input({
+        bindings: new Map(),
         checks: new Map([[IDS.key, observation({ outcome: 'auth_failed' })]]),
       })
     );
-    const failedRow = failed.reminders.find(
-      (entry) => entry.reminder.rule === 'probe_failed'
-    )!;
-    expect(reminderDisplay(failed, failedRow, () => 'Edge').failureText).toBe(
-      'the service rejected the credential'
-    );
 
-    const insecure = cloneFile();
-    insecure.keys[0].endpoint = 'http://edge.example.com/v1';
-    const insecureView = buildVaultView(input({ file: insecure }));
-    const insecureRow = insecureView.reminders.find(
-      (entry) => entry.reminder.rule === 'insecure_endpoint'
-    )!;
-    expect(
-      reminderDisplay(insecureView, insecureRow, () => 'Edge').endpoint
-    ).toBe('http://edge.example.com/v1');
+    expect(view.attention).toEqual([]);
+    expect(view.device).toEqual([]);
+  });
+
+  it('keeps device verification separate from attention', () => {
+    const fresh = buildVaultView(
+      input({ checks: new Map([[IDS.key, observation()]]) })
+    );
+    expect(fresh.attention).toEqual([]);
+    expect(fresh.device[0]).toMatchObject({
+      never_verified: false,
+      stale: false,
+    });
+
+    const never = buildVaultView(input());
+    expect(never.attention).toEqual([]);
+    expect(never.device[0].never_verified).toBe(true);
+  });
+
+  it('treats a plaintext destination as a key property, not a reminder', () => {
+    const file = cloneFile();
+    file.keys[0].endpoint = 'http://edge.example.com/v1';
+
+    const view = buildVaultView(input({ file }));
+    expect(view.attention).toEqual([]);
+    expect(plaintextTargetOf(view, view.file.keys[0])?.origin).toBe(
+      'http://edge.example.com'
+    );
+  });
+
+  it('sorts attention by urgency, not by insertion order', () => {
+    const file = cloneFile();
+    const second = structuredClone(file.keys[0]);
+    second.id = '66666666-6666-4666-8666-666666666666';
+    second.name = 'Second';
+    second.expiry = { kind: 'date', value: '2026-03-02' };
+    file.keys[0].expiry = { kind: 'date', value: '2026-03-07' };
+    file.keys.push(second);
+
+    const view = buildVaultView(input({ file }));
+    expect(view.attention.map((row) => row.key.name)).toEqual([
+      'Second',
+      'Edge key',
+    ]);
   });
 });
 

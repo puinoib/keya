@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizeKeyaFile, checkIconForWriter } from '../payload/normalize';
 import { validateKeyaFile } from '../payload/validate';
 import { cloneFile } from './fixtures';
-import { expiryCondition, expiryPoint, expiryStatus } from '../time/expiry';
+import { expiryPoint, expiryStatus } from '../time/expiry';
 import {
   formatTimestamp,
   isTimestamp,
@@ -147,14 +147,6 @@ describe('§5.3 expiry semantics', () => {
     expect(
       expiryPoint({ kind: 'date', value: '0050-01-01' }, 'UTC')?.toISOString()
     ).toBe('0050-01-02T00:00:00.000Z');
-  });
-
-  it('builds the condition string a dismissal binds to', () => {
-    expect(expiryCondition(day)).toBe('date:2026-03-01');
-    expect(
-      expiryCondition({ kind: 'instant', value: '2026-03-01T10:00:00.000Z' })
-    ).toBe('instant:2026-03-01T10:00:00.000Z');
-    expect(expiryCondition(null)).toBeNull();
   });
 });
 

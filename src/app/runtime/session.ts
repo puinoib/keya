@@ -2,9 +2,8 @@
  * One unlocked vault, as the UI sees it.
  *
  * Owns the pieces that must agree with each other: the payload, the device
- * facts, the probes and the reminder decisions. Everything here returns data
- * ready to render — no component computes a fingerprint or decides whether a
- * grant exists.
+ * facts and the probes. Everything here returns data ready to render — no
+ * component computes a fingerprint or decides whether a grant exists.
  */
 
 import type { CheckOutcome, CheckMode } from '../probe/check';
@@ -12,12 +11,6 @@ import { runCheck, type AuthorizationPort } from '../probe/check';
 import type { ProbeFetch } from '../probe/execute';
 import type { LocalState } from '../storage/local/state';
 import type { Vault } from '../vault/vault';
-import {
-  businessAlerts,
-  observationAlerts,
-  visibleReminders,
-  type Reminder,
-} from '../../core/reminders';
 import { currentBindings, type KeyBinding } from './binding';
 import type { Approval } from '../../core/runtime/grants';
 import {
@@ -26,10 +19,6 @@ import {
 } from '../../core/runtime/grants';
 import { isPlaintextRequest } from '../../core/payload/url';
 import { sendFingerprint } from '../../core/fingerprint';
-import type {
-  BusinessDismissal,
-  ObservationDismissal,
-} from '../../core/runtime/dismissals';
 import type { Grant } from '../../core/runtime/grants';
 
 export interface SessionOptions {
@@ -38,14 +27,6 @@ export interface SessionOptions {
   deviceKey: CryptoKey;
   fetch: ProbeFetch;
   clock: () => Date;
-  timeZone: string;
-}
-
-export interface ReminderView {
-  reminder: Reminder;
-  keyId: string;
-  /** Human-readable condition summary, e.g. `2026-03-01`. */
-  fact: string;
 }
 
 export class VaultSession {
@@ -54,7 +35,6 @@ export class VaultSession {
   private readonly deviceKey: CryptoKey;
   private readonly fetch: ProbeFetch;
   private readonly clock: () => Date;
-  private readonly timeZone: string;
 
   /** One-shot approvals for this unlock only; never persisted. */
   private approvals: Approval[] = [];
@@ -70,7 +50,6 @@ export class VaultSession {
     this.deviceKey = options.deviceKey;
     this.fetch = options.fetch;
     this.clock = options.clock;
-    this.timeZone = options.timeZone;
   }
 
   /** Pass to every request this session starts. */
@@ -88,93 +67,6 @@ export class VaultSession {
 
   bindings(): Promise<Map<string, KeyBinding>> {
     return currentBindings(this.payload, this.deviceKey);
-  }
-
-  /**
-   * Everything the user should see right now: computed facts, minus what they
-   * dismissed. Reading also prunes dismissals whose fact changed, which is the
-   * only invalidation mechanism.
-   */
-  async reminders(): Promise<ReminderView[]> {
-    const payload = this.payload;
-    const bindings = await this.bindings();
-    const context = { now: this.clock(), timeZone: this.timeZone };
-
-    const business = businessAlerts(payload, context);
-    const observation = observationAlerts(
-      payload,
-      (key) => bindings.get(key.id)?.binding ?? null,
-      await this.allObservations(),
-      context
-    );
-
-    const pruned = await this.local.pruneDismissals(
-      payload.vault.id,
-      business,
-      observation
-    );
-
-    const visible = visibleReminders(
-      [...business, ...observation],
-      pruned.business,
-      pruned.observation
-    );
-
-    return visible.map((reminder) => ({
-      reminder,
-      keyId: reminder.key_id,
-      fact:
-        reminder.kind === 'business'
-          ? reminder.condition
-          : reminder.binding.slice(0, 8),
-    }));
-  }
-
-  /** Summaries of what is currently silenced, so dismissals stay inspectable. */
-  async dismissed(): Promise<{
-    business: BusinessDismissal[];
-    observation: ObservationDismissal[];
-  }> {
-    return this.local.listDismissals(this.payload.vault.id);
-  }
-
-  async dismiss(reminder: Reminder): Promise<void> {
-    const now = this.clock().toISOString();
-    if (reminder.kind === 'business') {
-      await this.local.putBusinessDismissal({
-        vault_id: reminder.vault_id,
-        key_id: reminder.key_id,
-        rule: reminder.rule,
-        condition: reminder.condition,
-        dismissed_at: now,
-      });
-      return;
-    }
-
-    await this.local.putObservationDismissal({
-      vault_id: reminder.vault_id,
-      key_id: reminder.key_id,
-      rule: reminder.rule,
-      binding: reminder.binding,
-      dismissed_at: now,
-    });
-  }
-
-  /** Undo a dismissal; the reminder returns immediately. */
-  async restore(reminder: Reminder): Promise<void> {
-    if (reminder.kind === 'business') {
-      await this.local.removeBusinessDismissal(
-        reminder.vault_id,
-        reminder.key_id,
-        reminder.rule
-      );
-      return;
-    }
-    await this.local.removeObservationDismissal(
-      reminder.vault_id,
-      reminder.key_id,
-      reminder.rule
-    );
   }
 
   /**
@@ -322,15 +214,6 @@ export class VaultSession {
 
   private async hasGrantFor(fingerprint: string): Promise<boolean> {
     return this.local.hasGrant(fingerprint);
-  }
-
-  private async allObservations() {
-    const vaultId = this.payload.vault.id;
-    const all = [];
-    for (const key of this.payload.keys) {
-      all.push(...(await this.local.listObservations(vaultId, key.id)));
-    }
-    return all;
   }
 }
 

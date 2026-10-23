@@ -7,7 +7,7 @@
  * as a change, when `content_updated_at` moves, and which operations are
  * refused outright.
  *
- * They deliberately know nothing about dismissals or observations: those live
+ * They deliberately know nothing about observations: those live
  * on the device and expire by comparing a stored fact fingerprint (§10.3).
  */
 

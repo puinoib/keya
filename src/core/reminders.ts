@@ -1,63 +1,98 @@
 /**
- * Reminder evaluation (§10.3).
+ * Inbox attention (§10.3).
  *
- * Reminders are computed, never stored. The only persisted decisions are the
- * dismissal records, and they are compared by fact fingerprint, so nothing here
- * writes anything.
+ * The Inbox shows only facts that can change on their own and that a real
+ * action clears: an expiry that is close or past, and a check the service
+ * answered by rejecting the credential. Everything else is a property of the
+ * configuration (plain http, an unrunnable recipe) or of this device's own
+ * history (never verified, verified long ago), and belongs on the key, not in
+ * a list of things to do.
+ *
+ * Nothing here is stored. The list is a pure function of the payload, this
+ * device's observations, the clock and the time zone, so the same file yields
+ * the same attention list on every device.
  */
 
-import { classifyRecipe, type RecipeState } from './presets/classify';
 import type { Key, KeyaFile } from './payload/types';
-import { expiryCondition, expiryStatus } from './time/expiry';
-import { isPlaintextRequest, insecureEndpointCondition } from './payload/url';
-import {
-  isFailure,
-  isStale,
-  relevantObservations,
-  type Observation,
-} from './runtime/observations';
-import type { BusinessFact, ObservationFact } from './runtime/dismissals';
+import { daysUntilExpiry, expiryStatus } from './time/expiry';
 import { EXPIRY_UPCOMING_DAYS, OBSERVATION_STALE_DAYS } from './payload/limits';
+import { isRejected, type Observation } from './runtime/observations';
 
-export interface BusinessAlert extends BusinessFact {
-  kind: 'business';
+/** The only two facts that can ask for a decision. */
+export type InboxRule = 'expiry' | 'rejected';
+
+export type ExpiryPhase = 'expired' | 'due';
+
+export interface ExpiryFact {
+  kind: 'expiry';
+  key_id: string;
+  phase: ExpiryPhase;
+  /** Calendar days from today to the expiry day; negative once passed. */
+  days_left: number;
 }
 
-export interface ObservationAlert extends ObservationFact {
-  kind: 'observation';
+export interface RejectedFact {
+  kind: 'rejected';
+  key_id: string;
+  observation_id: string;
+  finished_at: string;
+  /** Only the two outcomes in which the service judged the credential. */
+  outcome: 'auth_failed' | 'forbidden';
+  detail_code: string | null;
 }
 
-export type Reminder = BusinessAlert | ObservationAlert;
+export type AttentionFact = ExpiryFact | RejectedFact;
 
-export interface ReminderContext {
+export interface InboxContext {
   now: Date;
   timeZone: string;
   upcomingDays?: number;
 }
 
+/** What the key itself says about how much the fact matters. */
+export interface AttentionSignals {
+  /** The key belongs to a group, so it is organized rather than a stray. */
+  grouped: boolean;
+  /** The newest result under the current binding succeeded. */
+  verified: boolean;
+}
+
+/** One key's standing on this device, independent of any inbox decision. */
+export interface DeviceVerification {
+  key_id: string;
+  observation: Observation | null;
+  days_since: number | null;
+  never_verified: boolean;
+  /** Long enough ago to be worth offering a fresh check. */
+  stale: boolean;
+}
+
 const activeKeys = (file: KeyaFile): Key[] =>
   file.keys.filter((key) => key.archived_at === null);
 
-/** The recipe state for a key, resolved against the file's own providers. */
-export function recipeStateFor(file: KeyaFile, key: Key): RecipeState {
-  return classifyRecipe(
-    { provider_id: key.provider_id, endpoint: key.endpoint },
-    file.providers
-  );
+const DAY = 24 * 60 * 60 * 1000;
+
+function daysSinceTimestamp(finishedAt: string, now: Date): number | null {
+  const finished = Date.parse(finishedAt);
+  if (Number.isNaN(finished)) return null;
+  return Math.floor((now.getTime() - finished) / DAY);
 }
 
 /**
- * Business reminders: expiry and plaintext destinations.
+ * The facts that need a decision now.
  *
- * `condition` is part of the alert because a dismissal is bound to the fact it
- * dismissed — without it, "changed the date" and "changed it back" would look
- * identical.
+ * A key whose recipe cannot run never reports a rejection: there is no request
+ * to be rejected, and a permanent "failed" message would be meaningless.
+ * Observation results are matched by binding, so a result recorded for an older
+ * secret or destination cannot speak for the current one.
  */
-export function businessAlerts(
+export function attentionFacts(
   file: KeyaFile,
-  context: ReminderContext
-): BusinessAlert[] {
-  const reminders: BusinessAlert[] = [];
+  bindingOf: (key: Key) => string | null,
+  checks: ReadonlyMap<string, Observation>,
+  context: InboxContext
+): AttentionFact[] {
+  const facts: AttentionFact[] = [];
   const upcomingDays = context.upcomingDays ?? EXPIRY_UPCOMING_DAYS;
 
   for (const key of activeKeys(file)) {
@@ -67,149 +102,136 @@ export function businessAlerts(
       context.timeZone,
       upcomingDays
     );
-    const condition = expiryCondition(key.expiry);
+    const days = daysUntilExpiry(key.expiry, context.now, context.timeZone);
 
-    if (status === 'expired' && condition) {
-      reminders.push({
-        kind: 'business',
-        vault_id: file.vault.id,
+    if (status === 'expired' && days !== null) {
+      facts.push({
+        kind: 'expiry',
         key_id: key.id,
-        rule: 'expiry_expired',
-        condition,
+        phase: 'expired',
+        days_left: days,
       });
-    } else if (status === 'upcoming' && condition) {
-      reminders.push({
-        kind: 'business',
-        vault_id: file.vault.id,
+    } else if (status === 'upcoming' && days !== null) {
+      facts.push({
+        kind: 'expiry',
         key_id: key.id,
-        rule: 'expiry_upcoming',
-        condition,
+        phase: 'due',
+        days_left: days,
       });
     }
 
-    const state = recipeStateFor(file, key);
-    if (state.kind !== 'not_executable') {
-      const resolved = new URL(state.plan.resolvedHref);
-      if (isPlaintextRequest(resolved)) {
-        reminders.push({
-          kind: 'business',
-          vault_id: file.vault.id,
-          key_id: key.id,
-          rule: 'insecure_endpoint',
-          condition: insecureEndpointCondition(resolved),
-        });
-      }
-    } else if (key.endpoint !== null) {
-      const endpoint = safeUrl(key.endpoint);
-      if (endpoint && isPlaintextRequest(endpoint)) {
-        reminders.push({
-          kind: 'business',
-          vault_id: file.vault.id,
-          key_id: key.id,
-          rule: 'insecure_endpoint',
-          condition: insecureEndpointCondition(endpoint),
-        });
-      }
-    }
+    const binding = bindingOf(key);
+    if (binding === null) continue;
+
+    const latest = checks.get(key.id);
+    if (!latest || latest.binding !== binding) continue;
+    if (!isRejected(latest)) continue;
+
+    facts.push({
+      kind: 'rejected',
+      key_id: key.id,
+      observation_id: latest.observation_id,
+      finished_at: latest.finished_at,
+      outcome: latest.outcome,
+      detail_code: latest.detail_code,
+    });
   }
 
-  return reminders;
-}
-
-function safeUrl(value: string): URL | null {
-  try {
-    return new URL(value);
-  } catch {
-    return null;
-  }
+  return facts;
 }
 
 /**
- * Observation reminders. The gate is executability: a key whose recipe cannot
- * run must never report "never checked", or the message is permanent and
- * meaningless.
+ * This device's verification standing for every key whose recipe can run.
+ *
+ * Not reminders: the result says "this device has not asked the provider
+ * lately", which is true on a new device even when the same key was verified
+ * elsewhere five minutes earlier. It is offered as a batch, never announced.
  */
-export function observationAlerts(
+export function deviceVerifications(
   file: KeyaFile,
   bindingOf: (key: Key) => string | null,
-  observations: readonly Observation[],
-  context: ReminderContext
-): ObservationAlert[] {
-  const reminders: ObservationAlert[] = [];
+  checks: ReadonlyMap<string, Observation>,
+  context: InboxContext
+): DeviceVerification[] {
+  const rows: DeviceVerification[] = [];
 
   for (const key of activeKeys(file)) {
     const binding = bindingOf(key);
     if (binding === null) continue;
 
-    const relevant = relevantObservations(observations, binding, 1);
-    const latest = relevant[0];
+    const latest = checks.get(key.id);
+    const observation = latest && latest.binding === binding ? latest : null;
+    const days =
+      observation === null
+        ? null
+        : daysSinceTimestamp(observation.finished_at, context.now);
 
-    if (!latest) {
-      reminders.push({
-        kind: 'observation',
-        vault_id: file.vault.id,
-        key_id: key.id,
-        rule: 'never_probed',
-        binding,
-      });
-      continue;
-    }
-
-    if (isFailure(latest)) {
-      reminders.push({
-        kind: 'observation',
-        vault_id: file.vault.id,
-        key_id: key.id,
-        rule: 'probe_failed',
-        binding,
-      });
-      continue;
-    }
-
-    if (isStale(latest, context.now, OBSERVATION_STALE_DAYS)) {
-      reminders.push({
-        kind: 'observation',
-        vault_id: file.vault.id,
-        key_id: key.id,
-        rule: 'probe_stale',
-        binding,
-      });
-    }
+    rows.push({
+      key_id: key.id,
+      observation,
+      days_since: days,
+      never_verified: observation === null,
+      stale: days !== null && days >= OBSERVATION_STALE_DAYS,
+    });
   }
 
-  return reminders;
+  return rows;
 }
 
 /**
- * Drop the reminders the user has already dismissed. Everything else is shown,
- * which is why "dismissed" must stay inspectable: a hidden reminder with no
- * visible record is unrecoverable.
+ * How far up the list a fact belongs. Higher is more urgent.
+ *
+ * The order encodes a single judgement: an expired or rejected key is already
+ * broken, a key whose expiry is days away is about to break, and a key the user
+ * has organized and verified before matters more than a stray one. It is a pure
+ * function of the fact, the key's signals and the clock so it can be tested.
  */
-export function visibleReminders(
-  reminders: readonly Reminder[],
-  businessDismissals: readonly BusinessFact[],
-  observationDismissals: readonly ObservationFact[]
-): Reminder[] {
-  const businessKeys = new Set(
-    businessDismissals.map(
-      (dismissal) =>
-        `${dismissal.vault_id}|${dismissal.key_id}|${dismissal.rule}|${dismissal.condition}`
-    )
-  );
-  const observationKeys = new Set(
-    observationDismissals.map(
-      (dismissal) =>
-        `${dismissal.vault_id}|${dismissal.key_id}|${dismissal.rule}|${dismissal.binding}`
-    )
-  );
+export function attentionPriority(
+  fact: AttentionFact,
+  signals: AttentionSignals,
+  now: Date
+): number {
+  const consequence = (signals.grouped ? 6 : 0) + (signals.verified ? 4 : 0);
 
-  return reminders.filter((reminder) =>
-    reminder.kind === 'business'
-      ? !businessKeys.has(
-          `${reminder.vault_id}|${reminder.key_id}|${reminder.rule}|${reminder.condition}`
-        )
-      : !observationKeys.has(
-          `${reminder.vault_id}|${reminder.key_id}|${reminder.rule}|${reminder.binding}`
-        )
-  );
+  if (fact.kind === 'rejected') {
+    const days = daysSinceTimestamp(fact.finished_at, now);
+    const recent = days !== null && days <= 7 ? 20 : 0;
+    return 80 + recent + consequence;
+  }
+
+  if (fact.phase === 'expired') {
+    const overdue = Math.min(10, Math.abs(fact.days_left));
+    return 70 + 30 + overdue + consequence;
+  }
+
+  return 50 + (fact.days_left <= 3 ? 20 : 0) + consequence;
+}
+
+/**
+ * Most urgent first. Ties fall back to the fact itself so the order is stable
+ * across devices: the earliest expiry, then the most recent rejection, then the
+ * key id.
+ */
+export function sortAttention(
+  facts: readonly AttentionFact[],
+  priorityOf: (fact: AttentionFact) => number
+): AttentionFact[] {
+  return [...facts].sort((left, right) => {
+    const byPriority = priorityOf(right) - priorityOf(left);
+    if (byPriority !== 0) return byPriority;
+
+    const byDays = daysOf(left) - daysOf(right);
+    if (byDays !== 0) return byDays;
+
+    if (left.kind === 'rejected' && right.kind === 'rejected') {
+      const byTime = right.finished_at.localeCompare(left.finished_at);
+      if (byTime !== 0) return byTime;
+    }
+
+    return left.key_id < right.key_id ? -1 : left.key_id > right.key_id ? 1 : 0;
+  });
+}
+
+function daysOf(fact: AttentionFact): number {
+  return fact.kind === 'expiry' ? fact.days_left : Number.MAX_SAFE_INTEGER;
 }

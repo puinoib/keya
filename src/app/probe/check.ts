@@ -216,15 +216,5 @@ export async function runCheck(
   dependencies.adoptSeq?.(key.id, requestSeq);
   await dependencies.local.recordObservation(observation);
 
-  if (observation.outcome === 'ok') {
-    // A success clears the previous failure dismissal so a later failure is
-    // reported again instead of staying silent.
-    await dependencies.local.removeObservationDismissal(
-      payload.vault.id,
-      key.id,
-      'probe_failed'
-    );
-  }
-
   return { status: 'observed', observation };
 }

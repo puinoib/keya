@@ -30,15 +30,15 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 |---|---|
 | Encryption, byte layout, KDF | `src/core/format/{constants,preamble,container,kdf}.ts`, frozen vector in `src/core/__tests__/container.test.ts` |
 | Payload model and validation | `src/core/payload/{types,limits,validate,normalize,serialize}.ts`; the spec is `docs/keya-format.md` (§1–§7, §14–§17, appendices) |
-| Runtime rules: probe, reminders, save, device state | `docs/keya-runtime.md` (§8–§13, §16.4–16.8); § numbers are continuous across the two files |
+| Runtime rules: probe, Inbox facts, save, device state | `docs/keya-runtime.md` (§8–§13, §16.4–16.8); § numbers are continuous across the two files |
 | Derived keys (consent, freshness) | `src/core/fingerprint/index.ts`; vectors in `src/core/__tests__/appendix-c-fingerprints.test.ts` |
 | Edits, timestamps, ordering | `src/core/payload/edits.ts` (pure transactions) and `src/app/vault/vault.ts` (who applies them) |
 | Save, lock, password change, clone | `src/app/vault/vault.ts`; write matrix and I17 in the spec §3.6 |
 | Workspace folder and file access | `src/app/storage/{workspace,browser,platform}.ts` |
-| Device-local state | `src/app/storage/local/{state,idb-kv}.ts` (containers, observations, dismissals, grants, prefs, device key) |
+| Device-local state | `src/app/storage/local/{state,idb-kv}.ts` (containers, observations, grants, prefs, device key) |
 | Probe request and interpretation | `src/core/probe/request.ts`, `src/app/probe/{execute,check}.ts`; a generic recipe may only claim `request/ok`, never credential validity |
 | Presets | `src/core/presets/{data,classify}.ts`; presets are data, so changing a target invalidates grants |
-| Reminders | `src/core/reminders.ts`, `src/core/runtime/*`; dismissals are device-local and bound to a fact fingerprint |
+| Inbox facts | `src/core/reminders.ts`, `src/core/runtime/*`; facts are computed, never stored, and must clear through a real action |
 | UI | `src/app/components/*` and `src/app/store/useStore.ts` (the browser binding) |
 | Store behaviour and tests | `src/app/store/create-store.ts` is the factory; `useStore.ts` only supplies the real adapters. Tests build a store with in-memory dependencies |
 | Component tests | `@testing-library/react` under jsdom (`/* @vitest-environment jsdom */`). `src/test/setup.ts` supplies the browser APIs jsdom lacks, and `src/test/fake-sodium.ts` stands in for libsodium because its typed-array checks reject jsdom's realm |

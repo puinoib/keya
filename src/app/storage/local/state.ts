@@ -2,7 +2,7 @@
  * Device-local state (§11).
  *
  * Nothing here is encrypted and nothing here is part of the file: containers,
- * observations, dismissals, grants and preferences describe *this device*.
+ * observations, grants and preferences describe *this device*.
  * Losing them costs a re-check and a few preferences, which is why they are
  * allowed to live in plain browser storage.
  *
@@ -10,14 +10,6 @@
  * without IndexedDB; the browser adapter is a thin translation layer.
  */
 
-import type {
-  BusinessDismissal,
-  ObservationDismissal,
-} from '../../../core/runtime/dismissals';
-import type {
-  BusinessFact,
-  ObservationFact,
-} from '../../../core/runtime/dismissals';
 import type { Grant } from '../../../core/runtime/grants';
 import type { Observation } from '../../../core/runtime/observations';
 import { importDeviceKey } from '../../../core/fingerprint';
@@ -72,8 +64,6 @@ export interface LocalStateOptions {
 
 const CONTAINER = 'containers';
 const OBSERVATION = 'observations';
-const BUSINESS_DISMISSAL = 'dismissals/business';
-const OBSERVATION_DISMISSAL = 'dismissals/observation';
 const GRANT = 'grants';
 const PREFERENCE = 'prefs';
 const DEVICE_KEY = 'device/hmacKey';
@@ -165,92 +155,6 @@ export class LocalState {
       .sort((left, right) => right.finished_at.localeCompare(left.finished_at));
   }
 
-  // ── dismissals ──
-
-  async listBusinessDismissals(vaultId: string): Promise<BusinessDismissal[]> {
-    return this.collect<BusinessDismissal>(keyOf(BUSINESS_DISMISSAL, vaultId));
-  }
-
-  async putBusinessDismissal(dismissal: BusinessDismissal): Promise<void> {
-    await this.kv.set(
-      keyOf(
-        BUSINESS_DISMISSAL,
-        dismissal.vault_id,
-        dismissal.key_id,
-        dismissal.rule
-      ),
-      dismissal
-    );
-  }
-
-  async removeBusinessDismissal(
-    vaultId: string,
-    keyId: string,
-    rule: string
-  ): Promise<void> {
-    await this.kv.delete(keyOf(BUSINESS_DISMISSAL, vaultId, keyId, rule));
-  }
-
-  async listObservationDismissals(
-    vaultId: string
-  ): Promise<ObservationDismissal[]> {
-    return this.collect<ObservationDismissal>(
-      keyOf(OBSERVATION_DISMISSAL, vaultId)
-    );
-  }
-
-  async putObservationDismissal(
-    dismissal: ObservationDismissal
-  ): Promise<void> {
-    await this.kv.set(
-      keyOf(
-        OBSERVATION_DISMISSAL,
-        dismissal.vault_id,
-        dismissal.key_id,
-        dismissal.rule
-      ),
-      dismissal
-    );
-  }
-
-  async removeObservationDismissal(
-    vaultId: string,
-    keyId: string,
-    rule: string
-  ): Promise<void> {
-    await this.kv.delete(keyOf(OBSERVATION_DISMISSAL, vaultId, keyId, rule));
-  }
-
-  /**
-   * Read both dismissal tables.
-   *
-   * A record only *applies* while its fact matches, but it is deliberately not
-   * deleted on mismatch: moving the fact back revives the user's decision
-   * (§16.7). Records are removed when the Key is deleted (`forgetKey`) or when
-   * the user restores the reminder.
-   */
-  async pruneDismissals(
-    vaultId: string,
-    _businessFacts: readonly BusinessFact[],
-    _observationFacts: readonly ObservationFact[]
-  ): Promise<{
-    business: BusinessDismissal[];
-    observation: ObservationDismissal[];
-  }> {
-    return this.listDismissals(vaultId);
-  }
-
-  /** Both tables for one vault, without recomputing reminder facts. */
-  async listDismissals(vaultId: string): Promise<{
-    business: BusinessDismissal[];
-    observation: ObservationDismissal[];
-  }> {
-    return {
-      business: await this.listBusinessDismissals(vaultId),
-      observation: await this.listObservationDismissals(vaultId),
-    };
-  }
-
   // ── grants ──
 
   async listGrants(): Promise<Grant[]> {
@@ -339,24 +243,13 @@ export class LocalState {
 
   // ── key removal ──
 
-  /** Deleting a key removes its observations and both dismissal kinds. */
+  /** Deleting a key removes this device's observations of it. */
   async forgetKey(vaultId: string, keyId: string): Promise<void> {
     const observations = await this.listObservations(vaultId, keyId);
     for (const observation of observations) {
       await this.kv.delete(
         keyOf(OBSERVATION, vaultId, keyId, observation.observation_id)
       );
-    }
-
-    for (const dismissal of await this.listBusinessDismissals(vaultId)) {
-      if (dismissal.key_id === keyId) {
-        await this.removeBusinessDismissal(vaultId, keyId, dismissal.rule);
-      }
-    }
-    for (const dismissal of await this.listObservationDismissals(vaultId)) {
-      if (dismissal.key_id === keyId) {
-        await this.removeObservationDismissal(vaultId, keyId, dismissal.rule);
-      }
     }
   }
 

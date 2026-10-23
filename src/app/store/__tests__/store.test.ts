@@ -348,47 +348,19 @@ describe('unlock', () => {
   });
 });
 
-describe('reminder dismissals', () => {
-  it('writes device state without dirtying or saving the vault', async () => {
-    const { store, h } = await unlocked();
-    const row = store.useStore
-      .getState()
-      .view?.reminders.find((entry) => !entry.dismissed);
-    expect(row).toBeDefined();
-    if (!row) return;
-    const before = h.file.writes;
-
-    store.useStore.getState().setReminderDismissed(row, true);
-
-    expect(store.useStore.getState().hasUnsavedChanges).toBe(false);
-    expect(h.vault.hasUnsavedChanges).toBe(false);
-    await vi.waitFor(() =>
-      expect(
-        store.useStore
-          .getState()
-          .view?.reminders.find(
-            (entry) =>
-              entry.key.id === row.key.id &&
-              entry.reminder.rule === row.reminder.rule
-          )?.dismissed
-      ).toBe(true)
-    );
-    expect(h.file.writes).toBe(before);
-  });
-});
-
-describe('reminder announcements', () => {
-  it('announces only the reminders that appeared during the session', async () => {
+describe('inbox attention', () => {
+  it('does not report a new key as attention, and clears its own chore', async () => {
     const h = await openHarness();
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
-    // Unlocking is a baseline, not an announcement.
-    expect(store.useStore.getState().lastInboxSyncAt).toBeNull();
+    expect(store.useStore.getState().view?.attention).toEqual([]);
+    // A key that was never verified is housekeeping, not an alert.
+    expect(store.useStore.getState().view?.device).toHaveLength(1);
 
     store.useStore.getState().addKey({
-      name: 'Adds a never-checked reminder',
-      secret: 'sk-synthetic-reminder',
+      name: 'Never verified',
+      secret: 'sk-synthetic-attention',
       providerId: 'preset:openai',
       endpoint: 'https://api.openai.com/v1',
       description: '',
@@ -397,43 +369,28 @@ describe('reminder announcements', () => {
     });
 
     await vi.waitFor(() =>
-      expect(store.useStore.getState().lastInboxSyncResult).toEqual({
-        added: 1,
-        updated: 0,
-        archived: 0,
-      })
+      expect(store.useStore.getState().view?.device).toHaveLength(2)
     );
-    expect(store.useStore.getState().lastInboxSyncAt).toBe(FIXED_NOW);
+    expect(store.useStore.getState().view?.attention).toEqual([]);
   });
 
-  it('starts from a clean baseline after a lock and unlock', async () => {
+  it('reports an expiry and clears it by editing the date', async () => {
     const payload = cloneFile();
+    payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
     const h = await openHarness({ payload });
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
-    store.useStore.getState().addKey({
-      name: 'First',
-      secret: 'sk-synthetic-first',
-      providerId: 'preset:openai',
-      endpoint: 'https://api.openai.com/v1',
-      description: '',
-      groupId: null,
-      expiry: null,
-    });
-    await vi.waitFor(() =>
-      expect(store.useStore.getState().lastInboxSyncResult?.added).toBe(1)
+
+    expect(store.useStore.getState().view?.attention).toHaveLength(1);
+    expect(store.useStore.getState().view?.attention[0].fact.kind).toBe(
+      'expiry'
     );
 
-    // Unlocking again (a fresh session on the same content) is a baseline, not
-    // an announcement: the backlog that is already open is not news.
-    const reopened = await openHarness({ payload });
-    const next = makeStore(reopened);
-    await next.useStore
-      .getState()
-      .unlock(reopened.opened, 'work.keya', 'folder');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    store.useStore.getState().updateKey(IDS.key, { expiry: null });
 
-    expect(next.useStore.getState().lastInboxSyncAt).toBeNull();
+    await vi.waitFor(() =>
+      expect(store.useStore.getState().view?.attention).toEqual([])
+    );
   });
 });
 

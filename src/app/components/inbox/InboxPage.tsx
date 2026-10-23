@@ -1,183 +1,212 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
-  Archive,
-  Warning,
-  ClockAfternoon,
-  ShieldWarning,
-  Lightning,
-  Question,
-  Timer,
   CaretDown,
-  X,
+  CheckCircle,
+  ClockAfternoon,
+  Lightning,
+  Warning,
 } from '@phosphor-icons/react';
+import { toast } from 'sonner';
 import type { Key } from '../../../core/payload/types';
+import type { Expiry } from '../../../core/time/expiry';
 import {
-  reminderDisplay,
-  type InboxRule,
-  type ReminderRow,
+  attentionCount,
+  attentionSeverity,
+  deviceBacklog,
+  rejectionText,
+  type AttentionRow,
 } from '../../state/view';
 import { providerLabel } from '../../state/providers';
+import { daysSince, expiryToDate } from '../../state/presentation';
 import { Button } from '@/components/ui/button';
-import { useStore } from '../../store/useStore';
+import { useStore, runManualCheck } from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
-import { toast } from 'sonner';
 
-type Severity = 'critical' | 'warning' | 'info';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-const SEVERITY_ORDER: Record<Severity, number> = {
-  critical: 0,
-  warning: 1,
-  info: 2,
-};
+/** Thirty days past whichever is later: the current expiry or today. */
+function extendExpiry(expiry: Expiry, now: Date): Expiry {
+  const current = expiryToDate(expiry);
+  const base =
+    current && current.getTime() > now.getTime() ? current : new Date(now);
+  const next = new Date(base.getTime() + 30 * DAY_MS);
 
-function getSeverity(rule: InboxRule): Severity {
-  switch (rule) {
-    case 'expiry_expired':
-    case 'probe_failed':
-    case 'insecure_endpoint':
-      return 'critical';
-    case 'expiry_upcoming':
-    case 'never_probed':
-      return 'warning';
-    case 'probe_stale':
-      return 'info';
+  if (expiry.kind === 'instant') {
+    return { kind: 'instant', value: next.toISOString() };
   }
+  return {
+    kind: 'date',
+    value: `${String(next.getFullYear()).padStart(4, '0')}-${String(
+      next.getMonth() + 1
+    ).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`,
+  };
 }
 
-const TYPE_BADGE: Record<InboxRule, { label: string; icon: typeof Warning }> = {
-  expiry_expired: { label: 'Expired', icon: Warning },
-  expiry_upcoming: { label: 'Upcoming', icon: ClockAfternoon },
-  probe_failed: { label: 'Failed', icon: Lightning },
-  never_probed: { label: 'Untested', icon: Question },
-  insecure_endpoint: { label: 'Insecure', icon: ShieldWarning },
-  probe_stale: { label: 'Stale', icon: Timer },
-};
-
-const SEVERITY_BADGE_CLASS: Record<Severity, string> = {
-  critical: 'bg-danger/10 text-danger',
-  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  info: 'bg-ink-quaternary/10 text-ink-tertiary',
-};
-
-function getContextSuffix(
-  row: ReminderRow,
-  display: ReturnType<typeof reminderDisplay>
-): string {
-  switch (row.reminder.rule) {
-    case 'expiry_expired': {
-      const overdue = Math.abs(display.daysUntilExpiry ?? 0);
-      return overdue === 1
-        ? 'expired yesterday'
-        : `expired ${overdue} days ago`;
-    }
-    case 'expiry_upcoming': {
-      const days = display.daysUntilExpiry ?? 0;
-      return days === 0 ? 'expires today' : `expires in ${days} days`;
-    }
-    case 'probe_failed':
-      return display.failureText ?? 'connection failed';
-    case 'never_probed':
-      return 'never tested';
-    case 'insecure_endpoint':
-      return display.endpoint ?? 'insecure endpoint';
-    case 'probe_stale':
-      return `last tested ${display.daysSinceCheck ?? 0} days ago`;
+function expiryLine(row: AttentionRow): string {
+  if (row.fact.kind !== 'expiry') return '';
+  const days = row.fact.days_left;
+  if (row.fact.phase === 'expired') {
+    return Math.abs(days) === 1
+      ? 'expired yesterday'
+      : `expired ${Math.abs(days)} days ago`;
   }
+  return days <= 0
+    ? 'expires today'
+    : `expires in ${days} day${days === 1 ? '' : 's'}`;
 }
 
-function getArchivedContext(row: ReminderRow): string {
-  return `${TYPE_BADGE[row.reminder.rule].label} · Archived`;
+function whyLine(row: AttentionRow): string {
+  if (row.fact.kind === 'expiry') {
+    const fact = row.key.expiry?.value ?? 'no date';
+    return `Rule: expiry · fact: ${fact}. This clears when you move the date or archive the key.`;
+  }
+  const when = new Date(row.fact.finished_at).toLocaleString();
+  const detail = row.fact.detail_code ?? row.fact.outcome;
+  return `Rule: rejected · fact: ${detail} at ${when}. This clears when a later check succeeds, or when you archive the key.`;
 }
 
 export function InboxPage() {
   const navigate = useNavigate();
   const view = useStore((s) => s.view);
-  const inboxVersion = useStore((s) => s.inboxVersion);
-  const setReminderDismissed = useStore((s) => s.setReminderDismissed);
+  const updateKey = useStore((s) => s.updateKey);
+  const archiveKey = useStore((s) => s.archiveKey);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
   const setShowArchived = useStore((s) => s.setShowArchived);
-  const [archivedExpanded, setArchivedExpanded] = useState(false);
 
-  const rows = useMemo(
-    () => view?.reminders ?? [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, inboxVersion]
-  );
-  const openItems = useMemo(() => {
-    const open = rows.filter((row) => !row.dismissed);
-    return open.sort((a, b) => {
-      const sa = SEVERITY_ORDER[getSeverity(a.reminder.rule)];
-      const sb = SEVERITY_ORDER[getSeverity(b.reminder.rule)];
-      if (sa !== sb) return sa - sb;
-      return Date.parse(b.stamp) - Date.parse(a.stamp);
-    });
-  }, [rows]);
-  const archivedItems = useMemo(
-    () => rows.filter((row) => row.dismissed),
-    [rows]
-  );
+  const [housekeepingOpen, setHousekeepingOpen] = useState(false);
+  const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
+  const [busyKeyId, setBusyKeyId] = useState<string | null>(null);
+
+  const attention = useMemo(() => view?.attention ?? [], [view]);
+  const backlog = useMemo(() => (view ? deviceBacklog(view) : []), [view]);
 
   const providerOf = (key: Key) =>
     providerLabel(key.provider_id, view?.file.providers ?? []);
 
-  const handleViewKey = (key: Key) => {
-    if (view && !view.file.keys.some((entry) => entry.id === key.id)) {
-      toast('This credential no longer exists');
-      return;
-    }
+  const openKey = (key: Key) => {
     setShowArchived(Boolean(key.archived_at));
     setSelectedKeyId(key.id);
     navigate({ to: '/keys' });
   };
 
+  const check = async (keyId: string, announce: boolean): Promise<boolean> => {
+    setBusyKeyId(keyId);
+    const result = await runManualCheck(keyId);
+    setBusyKeyId(null);
+    const success = Boolean(result?.success);
+    if (!success && announce) {
+      toast.error('The check did not pass', {
+        description:
+          result?.error ??
+          'The provider did not accept this check. The key is unchanged.',
+      });
+    }
+    return success;
+  };
+
+  const extend = (row: AttentionRow) => {
+    if (!view || !row.key.expiry) return;
+    updateKey(row.key.id, {
+      expiry: extendExpiry(row.key.expiry, view.now),
+    });
+  };
+
+  const checkAll = async () => {
+    let failed = 0;
+    for (const row of backlog) {
+      const success = await check(row.key.id, false);
+      if (!success) failed += 1;
+    }
+    if (failed > 0) {
+      toast.error(
+        failed === 1
+          ? 'One check did not pass'
+          : `${failed} checks did not pass`,
+        {
+          description:
+            'The provider rejected or could not confirm those keys. Nothing was changed.',
+        }
+      );
+      return;
+    }
+    toast.success(
+      backlog.length === 1 ? 'Key checked' : `${backlog.length} keys checked`
+    );
+  };
+
+  if (!view) return null;
+
+  const needsAttention = attentionCount(view);
+  const rowId = (row: AttentionRow) => `${row.fact.kind}:${row.key.id}`;
+
   return (
     <div className="w-full px-6 py-6">
       <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-4">
         Inbox
-        {openItems.length > 0 && (
+        {needsAttention > 0 && (
           <span className="ml-1.5 text-xs font-normal text-ink-quaternary tabular-nums">
-            {openItems.length}
+            {needsAttention}
           </span>
         )}
       </h1>
 
-      {openItems.length === 0 ? (
+      {needsAttention === 0 ? (
         <div className="py-14 text-center">
           <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-surface-3 text-ink-quaternary">
-            <Archive className="size-5" />
+            <CheckCircle className="size-5" />
           </div>
           <p className="mt-4 text-sm font-medium text-ink-primary">
-            Inbox is clear
+            Nothing needs attention
           </p>
           <p className="mt-1 text-xs text-ink-quaternary">
-            No reminders need attention right now.
+            Expiries and rejected checks appear here. Nothing else does.
           </p>
         </div>
       ) : (
         <div className="rounded-lg border border-line-subtle bg-surface-2/40 overflow-hidden divide-y divide-line-subtle">
-          {openItems.map((row) => {
-            const rule = row.reminder.rule;
-            const severity = getSeverity(rule);
-            const badge = TYPE_BADGE[rule];
-            const BadgeIcon = badge.icon;
-            const display = view
-              ? reminderDisplay(view, row, providerOf)
-              : null;
+          {attention.map((row) => {
+            const severity = attentionSeverity(row.fact);
+            const BadgeIcon =
+              row.fact.kind === 'rejected'
+                ? Lightning
+                : row.fact.phase === 'expired'
+                  ? Warning
+                  : ClockAfternoon;
+            const label =
+              row.fact.kind === 'rejected'
+                ? row.fact.outcome === 'auth_failed'
+                  ? 'Rejected'
+                  : 'Forbidden'
+                : row.fact.phase === 'expired'
+                  ? 'Expired'
+                  : 'Due soon';
+            const context =
+              row.fact.kind === 'expiry'
+                ? expiryLine(row)
+                : `${rejectionText(row)}${
+                    attentionAge(row, view.now)
+                      ? ` · ${attentionAge(row, view.now)}`
+                      : ''
+                  }`;
+            const busy = busyKeyId === row.key.id;
+
             return (
-              <div key={`${rule}:${row.key.id}`} className="px-4 py-3">
+              <div key={rowId(row)} className="px-4 py-3">
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
-                          SEVERITY_BADGE_CLASS[severity]
+                          severity === 'critical'
+                            ? 'bg-danger/10 text-danger'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                         )}
                       >
                         <BadgeIcon className="size-3" />
-                        {badge.label}
+                        {label}
                       </span>
                       <span className="text-sm font-medium text-ink-primary truncate">
                         {row.key.name}
@@ -185,82 +214,151 @@ export function InboxPage() {
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-ink-quaternary truncate">
                       <ProviderLogo
-                        provider={display?.provider ?? ''}
+                        provider={providerOf(row.key)}
                         className="size-3"
                       />
                       <span className="truncate">
-                        {display?.provider} ·{' '}
-                        {display ? getContextSuffix(row, display) : ''}
+                        {providerOf(row.key)} · {context}
                       </span>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
+                    {row.fact.kind === 'expiry' ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => extend(row)}
+                        >
+                          Extend 30 days
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() =>
+                            updateKey(row.key.id, { expiry: null })
+                          }
+                        >
+                          Clear date
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        disabled={busy}
+                        onClick={() => void check(row.key.id, true)}
+                      >
+                        {busy ? 'Checking…' : 'Check now'}
+                      </Button>
+                    )}
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       className="h-7 text-xs"
-                      onClick={() => handleViewKey(row.key)}
+                      onClick={() => openKey(row.key)}
                     >
-                      View
+                      Open
                     </Button>
-                    <button
-                      onClick={() => setReminderDismissed(row, true)}
-                      aria-label="Dismiss this reminder"
-                      className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
-                    >
-                      <X className="size-3.5" />
-                    </button>
                   </div>
                 </div>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <button
+                    onClick={() =>
+                      setExpandedWhy(
+                        expandedWhy === rowId(row) ? null : rowId(row)
+                      )
+                    }
+                    className="text-[11px] text-ink-quaternary hover:text-ink-secondary transition-colors"
+                  >
+                    Why am I seeing this?
+                  </button>
+                  <button
+                    onClick={() => archiveKey(row.key.id)}
+                    className="text-[11px] text-ink-quaternary hover:text-ink-secondary transition-colors"
+                  >
+                    Archive key
+                  </button>
+                </div>
+                {expandedWhy === rowId(row) && (
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-ink-tertiary">
+                    {whyLine(row)}
+                  </p>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {archivedItems.length > 0 && (
+      {backlog.length > 0 && (
         <div className="mt-4">
           <button
-            onClick={() => setArchivedExpanded(!archivedExpanded)}
+            onClick={() => setHousekeepingOpen(!housekeepingOpen)}
             className="flex items-center gap-1.5 text-xs text-ink-quaternary hover:text-ink-secondary transition-colors"
           >
             <CaretDown
               className={cn(
                 'size-3 transition-transform',
-                !archivedExpanded && '-rotate-90'
+                !housekeepingOpen && '-rotate-90'
               )}
             />
-            Archived
-            <span className="tabular-nums">({archivedItems.length})</span>
+            Housekeeping
+            <span className="tabular-nums">({backlog.length})</span>
+            <span className="text-ink-quaternary/70">
+              — this device has not verified these lately
+            </span>
           </button>
-          {archivedExpanded && (
+          {housekeepingOpen && (
             <div className="mt-2 rounded-lg border border-line-subtle bg-surface-2/20 overflow-hidden divide-y divide-line-subtle">
-              {archivedItems.map((row) => (
+              <div className="flex items-center justify-between gap-2 px-4 py-2 text-[11px] text-ink-quaternary">
+                <span>
+                  Nothing here is broken. A check is offered, never assumed.
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => void checkAll()}
+                  disabled={busyKeyId !== null}
+                >
+                  Check all
+                </Button>
+              </div>
+              {backlog.map((row) => (
                 <div
-                  key={`${row.reminder.rule}:${row.key.id}`}
+                  key={row.key.id}
                   className="px-4 py-2.5 flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0 text-sm text-ink-tertiary truncate">
                     {row.key.name}
                     <span className="ml-2 text-xs text-ink-quaternary">
-                      {getArchivedContext(row)}
+                      {row.never_verified
+                        ? 'never verified on this device'
+                        : `verified ${row.days_since} days ago`}
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 text-xs text-ink-quaternary">
-                    <span>
-                      {row.dismissedAt
-                        ? new Intl.DateTimeFormat('en', {
-                            month: 'short',
-                            day: 'numeric',
-                          }).format(new Date(row.dismissedAt))
-                        : ''}
-                    </span>
-                    <button
-                      onClick={() => setReminderDismissed(row, false)}
-                      className="rounded px-1.5 py-0.5 text-accent-bright hover:bg-surface-3 hover:text-accent transition-colors"
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={busyKeyId === row.key.id}
+                      onClick={() => void check(row.key.id, true)}
                     >
-                      Restore
-                    </button>
+                      {busyKeyId === row.key.id ? 'Checking…' : 'Check'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => openKey(row.key)}
+                    >
+                      Open
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -270,4 +368,12 @@ export function InboxPage() {
       )}
     </div>
   );
+}
+
+function attentionAge(row: AttentionRow, now: Date): string | null {
+  if (row.fact.kind !== 'rejected') return null;
+  const days = daysSince(row.fact.finished_at, now);
+  if (days === null) return null;
+  if (days === 0) return 'today';
+  return days === 1 ? 'yesterday' : `${days} days ago`;
 }

@@ -124,12 +124,7 @@ function finish(resolved: URL): ResolveResult {
   return { ok: true, url: resolved, reason: 'ok' };
 }
 
-/** Plaintext request: what the `insecure_endpoint` reminder keys on. */
+/** Plaintext request: the destination the key would actually reach is `http:`. */
 export function isPlaintextRequest(url: URL | null): boolean {
   return url !== null && url.protocol === 'http:';
-}
-
-/** `http:<origin>` — the fact a dismissal for a plaintext target binds to. */
-export function insecureEndpointCondition(url: URL): string {
-  return `http:${url.origin}`;
 }

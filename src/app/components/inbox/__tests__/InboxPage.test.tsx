@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cloneFile } from '../../../../core/__tests__/fixtures';
+import { cloneFile, IDS } from '../../../../core/__tests__/fixtures';
 import {
   buildComponentStore,
   type ComponentHarness,
@@ -30,14 +30,6 @@ vi.mock('../../../store/useStore', () => ({
   get useStore() {
     return holder.store;
   },
-  exportVaultBytes: (...args: unknown[]) =>
-    (
-      holder.api as { exportVaultBytes: (...a: unknown[]) => unknown }
-    ).exportVaultBytes(...args),
-  flushSave: (...args: unknown[]) =>
-    (holder.api as { flushSave: (...a: unknown[]) => unknown }).flushSave(
-      ...args
-    ),
   runManualCheck: (...args: unknown[]) =>
     (
       holder.api as { runManualCheck: (...a: unknown[]) => unknown }
@@ -59,54 +51,83 @@ beforeEach(async () => {
 });
 
 describe('InboxPage', () => {
-  it('lists the reminders with their badge and context', () => {
+  it('shows an upcoming expiry with its fact, and no chores as attention', () => {
     render(<InboxPage />);
 
-    expect(screen.getByText('Upcoming')).toBeTruthy();
-    expect(screen.getByText('Untested')).toBeTruthy();
-    expect(screen.getAllByText('Edge key')).toHaveLength(2);
+    expect(screen.getByText('Due soon')).toBeTruthy();
     expect(screen.getByText(/expires in 4 days/)).toBeTruthy();
-    expect(screen.getByText(/never tested/)).toBeTruthy();
+    // Never verified is housekeeping, not an alert.
+    expect(screen.queryByText('Untested')).toBeNull();
+    expect(screen.getByRole('button', { name: /Housekeeping/ })).toBeTruthy();
   });
 
-  it('archives a reminder and moves it to the archived list', async () => {
-    const archive = vi.spyOn(
-      harness.api.useStore.getState(),
-      'setReminderDismissed'
-    );
+  it('extending the date clears the row on its own', async () => {
     render(<InboxPage />);
-    const openBefore = screen.queryAllByText('View').length;
 
-    const archiveButtons = screen
-      .getAllByRole('button')
-      .filter(
-        (button) => !button.textContent?.trim() && button.querySelector('svg')
-      );
-    fireEvent.click(archiveButtons[archiveButtons.length - 1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Extend 30 days' }));
 
     await waitFor(() =>
-      expect(
-        harness.api.useStore
-          .getState()
-          .view?.reminders.every((row) => !row.dismissed)
-      ).toBe(false)
+      expect(harness.api.useStore.getState().view?.attention).toEqual([])
     );
-    expect(archive).toHaveBeenCalledWith(
-      expect.objectContaining({ dismissed: false }),
-      true
-    );
-    expect(screen.queryAllByText('View').length).toBe(openBefore - 1);
-
-    fireEvent.click(screen.getByRole('button', { name: /Archived/ }));
-    await waitFor(() => expect(screen.getByText(/· Archived/)).toBeTruthy());
+    const key = harness.api.useStore
+      .getState()
+      .view?.file.keys.find((entry) => entry.id === IDS.key);
+    expect(key?.expiry?.value).toBe('2026-04-04');
   });
 
-  it('opens the key a reminder is about', async () => {
+  it('listing housekeeping is quiet and offers a check', () => {
     render(<InboxPage />);
 
-    fireEvent.click(screen.getAllByText('View')[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Housekeeping/ }));
 
-    expect(harness.api.useStore.getState().selectedKeyId).toBeTruthy();
+    expect(screen.getByText(/never verified on this device/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Check all' })).toBeTruthy();
+  });
+
+  it('opens the key the row is about', () => {
+    render(<InboxPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+
+    expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
     expect(navigate).toHaveBeenCalledWith({ to: '/keys' });
+  });
+
+  it('shows a rejection only for a result the service answered', async () => {
+    const bindings = await harness.vault.opened.session.bindings();
+    const binding = bindings.get(IDS.key);
+    expect(binding).toBeDefined();
+
+    await harness.vault.local.recordObservation({
+      observation_id: 'obs-rejected',
+      vault_id: IDS.vault,
+      key_id: IDS.key,
+      binding: binding!.binding,
+      kind: 'request',
+      outcome: 'auth_failed',
+      detail_code: 'credential_rejected',
+      http_status: 401,
+      latency_ms: 12,
+      started_at: '2026-03-01T11:00:00.000Z',
+      finished_at: '2026-03-01T11:00:00.012Z',
+    });
+    await harness.api.useStore.getState().refresh();
+
+    render(<InboxPage />);
+
+    expect(screen.getByText('Rejected')).toBeTruthy();
+    expect(screen.getByText(/rejected the credential/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Check now' })).toBeTruthy();
+  });
+
+  it('explains why a row is shown and what clears it', () => {
+    render(<InboxPage />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Why am I seeing this?' })
+    );
+
+    expect(screen.getByText(/Rule: expiry · fact: 2026-03-05/)).toBeTruthy();
+    expect(screen.getByText(/archive the key/)).toBeTruthy();
   });
 });

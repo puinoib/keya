@@ -1,5 +1,5 @@
 /**
- * §9.2 / §9.3 / §10.3 — request construction, interpretation, reminders.
+ * §9.2 / §9.3 / §10.3 — request construction, interpretation, Inbox facts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -11,11 +11,13 @@ import {
   outcomeForStatus,
 } from '../probe/request';
 import {
-  businessAlerts,
-  observationAlerts,
-  visibleReminders,
+  attentionFacts,
+  attentionPriority,
+  deviceVerifications,
+  sortAttention,
 } from '../reminders';
 import { classifyRecipe, type RecipePlan } from '../presets/classify';
+import type { Observation } from '../runtime/observations';
 import type { KeyaFile } from '../payload/types';
 import { cloneFile, IDS } from './fixtures';
 
@@ -153,7 +155,7 @@ describe('§9.3 interpretation', () => {
   });
 });
 
-describe('§10.3 reminders', () => {
+describe('§10.3 inbox attention', () => {
   const file = (): KeyaFile => {
     const base = cloneFile();
     base.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
@@ -171,40 +173,94 @@ describe('§10.3 reminders', () => {
     timeZone: 'UTC',
   };
 
-  it('produces expiry and plaintext reminders for active keys', () => {
-    const data = file();
-    const reminders = businessAlerts(data, context);
-    expect(reminders.map((reminder) => reminder.rule)).toEqual([
-      'expiry_upcoming',
-    ]);
+  const binding = () => 'binding-1';
 
-    data.keys[0].endpoint = 'http://192.168.1.5:8080/v1';
-    const insecure = businessAlerts(data, context).find(
-      (reminder) => reminder.rule === 'insecure_endpoint'
-    );
-    expect(insecure?.condition).toBe('http:http://192.168.1.5:8080');
+  const observation = (overrides: Partial<Observation> = {}): Observation => ({
+    observation_id: 'a',
+    vault_id: IDS.vault,
+    key_id: IDS.key,
+    binding: 'binding-1',
+    kind: 'request',
+    outcome: 'ok',
+    detail_code: null,
+    http_status: 200,
+    latency_ms: 10,
+    started_at: TS,
+    finished_at: TS,
+    ...overrides,
   });
 
-  it('sees a plaintext absolute target even when the endpoint is https', () => {
+  const checks = (entry: Observation) => new Map([[IDS.key, entry]]);
+
+  it('reports a due expiry as one fact with its day count', () => {
+    const facts = attentionFacts(file(), binding, new Map(), context);
+    expect(facts).toEqual([
+      { kind: 'expiry', key_id: IDS.key, phase: 'due', days_left: 4 },
+    ]);
+  });
+
+  it('reports an expired key once, with a negative day count', () => {
     const data = file();
-    data.providers[0].probe = {
-      target: 'http://192.168.1.5:8080/models',
-      auth: { mode: 'bearer' },
-      headers: [],
-    };
-    const reminders = businessAlerts(data, context);
-    expect(
-      reminders.some((reminder) => reminder.rule === 'insecure_endpoint')
-    ).toBe(true);
+    data.keys[0].expiry = { kind: 'date', value: '2026-02-25' };
+
+    expect(attentionFacts(data, binding, new Map(), context)).toEqual([
+      { kind: 'expiry', key_id: IDS.key, phase: 'expired', days_left: -4 },
+    ]);
+  });
+
+  it('does not report a plaintext endpoint: that is a property of the key', () => {
+    const data = file();
+    data.keys[0].expiry = null;
+    data.keys[0].endpoint = 'http://192.168.1.5:8080/v1';
+
+    expect(attentionFacts(data, binding, new Map(), context)).toEqual([]);
   });
 
   it('ignores archived keys entirely', () => {
     const data = file();
     data.keys[0].archived_at = TS;
-    expect(businessAlerts(data, context)).toEqual([]);
+    expect(attentionFacts(data, binding, new Map(), context)).toEqual([]);
   });
 
-  it('never reports "never probed" for a recipe that cannot run', () => {
+  it('reports only a service verdict about the credential', () => {
+    const rejected = attentionFacts(
+      file(),
+      binding,
+      checks(observation({ outcome: 'auth_failed' })),
+      context
+    ).filter((fact) => fact.kind === 'rejected');
+    expect(rejected).toHaveLength(1);
+
+    for (const outcome of [
+      'forbidden',
+      'rate_limited',
+      'server_error',
+      'failed',
+      'timeout',
+      'network',
+      'ok',
+    ] as const) {
+      const facts = attentionFacts(
+        file(),
+        binding,
+        checks(observation({ outcome })),
+        context
+      ).filter((fact) => fact.kind === 'rejected');
+      expect(facts, outcome).toHaveLength(outcome === 'forbidden' ? 1 : 0);
+    }
+  });
+
+  it('ignores a result recorded under another binding', () => {
+    const facts = attentionFacts(
+      file(),
+      binding,
+      checks(observation({ outcome: 'auth_failed', binding: 'old' })),
+      context
+    );
+    expect(facts.some((fact) => fact.kind === 'rejected')).toBe(false);
+  });
+
+  it('never reports a rejection for a recipe that cannot run', () => {
     const data = file();
     data.providers[0].probe = null;
     const state = classifyRecipe(
@@ -216,62 +272,94 @@ describe('§10.3 reminders', () => {
     );
     expect(state.kind).toBe('not_executable');
 
-    const reminders = observationAlerts(data, () => null, [], context);
-    expect(reminders).toEqual([]);
+    const facts = attentionFacts(
+      data,
+      () => null,
+      checks(observation({ outcome: 'auth_failed' })),
+      context
+    );
+    expect(facts.some((fact) => fact.kind === 'rejected')).toBe(false);
   });
 
-  it('reports never probed, failure and staleness per binding', () => {
+  it('ranks a broken key above a due one and keeps the order stable', () => {
     const data = file();
-    const binding = () => 'binding-1';
+    const second = structuredClone(data.keys[0]);
+    second.id = '99999999-9999-4999-8999-999999999999';
+    second.name = 'Second';
+    second.expiry = { kind: 'date', value: '2026-03-02' };
+    data.keys.push(second);
 
-    expect(observationAlerts(data, binding, [], context)[0].rule).toBe(
-      'never_probed'
+    const facts = attentionFacts(data, binding, new Map(), context);
+    const priorities = new Map(
+      facts.map((fact) => [
+        fact,
+        attentionPriority(
+          fact,
+          { grouped: false, verified: false },
+          context.now
+        ),
+      ])
     );
+    const ordered = sortAttention(facts, (fact) => priorities.get(fact) ?? 0);
 
-    const failed = [
-      {
-        observation_id: 'a',
-        vault_id: data.vault.id,
-        key_id: data.keys[0].id,
-        binding: 'binding-1',
-        kind: 'request' as const,
-        outcome: 'auth_failed' as const,
-        detail_code: 'credential_rejected',
-        http_status: 401,
-        latency_ms: 10,
-        started_at: TS,
-        finished_at: TS,
-      },
-    ];
-    expect(observationAlerts(data, binding, failed, context)[0].rule).toBe(
-      'probe_failed'
+    // Four days away is more urgent than six, and both stay above nothing.
+    expect(ordered.map((fact) => fact.key_id)).toEqual([second.id, IDS.key]);
+
+    const broken = attentionFacts(
+      data,
+      binding,
+      new Map([
+        [
+          IDS.key,
+          observation({
+            outcome: 'auth_failed',
+            finished_at: '2026-03-01T11:00:00.000Z',
+          }),
+        ],
+      ]),
+      context
     );
+    const brokenOrder = sortAttention(broken, (fact) =>
+      attentionPriority(fact, { grouped: false, verified: false }, context.now)
+    );
+    expect(brokenOrder[0].kind).toBe('rejected');
+  });
 
-    const ok = [{ ...failed[0], outcome: 'ok' as const }];
-    const stale = observationAlerts(data, binding, ok, {
-      now: new Date('2026-12-01T00:00:00.000Z'),
-      timeZone: 'UTC',
+  it('keeps device verification quiet: never, fresh and stale stay distinct', () => {
+    const fresh = deviceVerifications(
+      file(),
+      binding,
+      checks(observation()),
+      context
+    )[0];
+    expect(fresh).toMatchObject({
+      never_verified: false,
+      stale: false,
+      days_since: 0,
     });
-    expect(stale[0].rule).toBe('probe_stale');
+
+    const never = deviceVerifications(file(), binding, new Map(), context)[0];
+    expect(never).toMatchObject({
+      never_verified: true,
+      stale: false,
+      days_since: null,
+    });
+
+    const stale = deviceVerifications(
+      file(),
+      binding,
+      checks(observation({ finished_at: '2025-12-01T00:00:00.000Z' })),
+      context
+    )[0];
+    expect(stale.never_verified).toBe(false);
+    expect(stale.stale).toBe(true);
   });
 
-  it('hides dismissed reminders and shows the rest', () => {
+  it('leaves keys that cannot be checked out of the device list', () => {
     const data = file();
-    const reminders = businessAlerts(data, context);
-    const dismissed = [
-      {
-        vault_id: data.vault.id,
-        key_id: data.keys[0].id,
-        rule: 'expiry_upcoming' as const,
-        condition: reminders[0].condition,
-      },
-    ];
-
-    expect(visibleReminders(reminders, dismissed, [])).toHaveLength(0);
-
-    // A different fact (a new expiry date) is not covered by that dismissal.
-    data.keys[0].expiry = { kind: 'date', value: '2026-03-06' };
-    const changed = businessAlerts(data, context);
-    expect(visibleReminders(changed, dismissed, [])).toHaveLength(1);
+    data.providers[0].probe = null;
+    expect(deviceVerifications(data, () => null, new Map(), context)).toEqual(
+      []
+    );
   });
 });

@@ -29,7 +29,6 @@ import {
   buildVaultView,
   hasDuplicateSecret,
   keyById,
-  type ReminderRow,
   type VaultView,
 } from '../state/view';
 import { describeSaveFailure } from '../state/presentation';
@@ -60,7 +59,7 @@ export type VaultStorageMode = 'folder' | 'download';
 
 /** Everything the store needs from the outside world, so tests can supply it. */
 export interface StoreDeps {
-  /** Device-local state: preferences, observations, dismissals, grants. */
+  /** Device-local state: preferences, observations, grants. */
   local: LocalState;
   clock?: () => Date;
   timeZone?: () => string;
@@ -159,13 +158,6 @@ export interface AppState {
   selectedKeyId: string | null;
   usage: Record<string, UsageEntry>;
   biometricPrompt: { vaultId: string } | null;
-  inboxVersion: number;
-  lastInboxSyncAt: string | null;
-  lastInboxSyncResult: {
-    added: number;
-    updated: number;
-    archived: number;
-  } | null;
 
   lock: () => Promise<void>;
   unlock: (
@@ -216,7 +208,6 @@ export interface AppState {
     oldPassword: string,
     newPassword: string
   ) => Promise<{ ok: true } | { ok: false; reason: string }>;
-  setReminderDismissed: (row: ReminderRow, dismissed: boolean) => void;
   /** Standing approvals for this device, so they can be inspected and revoked. */
   listGrants: () => Promise<Grant[]>;
   revokeGrant: (fingerprint: string) => Promise<void>;
@@ -261,7 +252,6 @@ async function buildView(state: {
     checks,
     bindings,
     grants,
-    dismissals: await state.session.dismissed(),
   });
 }
 
@@ -317,7 +307,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
   /** Key deletions whose local records may go once the file write lands. */
   const pendingLocalCleanup: { vaultId: string; keyId: string }[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let inboxBaseline: { vaultId: string; open: string[] } | null = null;
   let setState!: StoreApi<AppState>['setState'];
   let getState!: StoreApi<AppState>['getState'];
 
@@ -331,7 +320,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
       saveTimer = null;
 
       // A download-mode vault has no writable copy: the export is the save, so
-      // there is nothing to debounce and the reminder belongs to leaving, not
+      // there is nothing to debounce and the export belongs to leaving, not
       // to every edit.
       if (getState().storageMode === 'download') return;
 
@@ -383,9 +372,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
       selectedKeyId: null,
       usage: {},
       biometricPrompt: null,
-      inboxVersion: 0,
-      lastInboxSyncAt: null,
-      lastInboxSyncResult: null,
 
       unlock: async (opened, fileName, storageMode = 'folder') => {
         // Switching vaults must end the previous session first: its in-flight
@@ -441,7 +427,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
           hasUnsavedChanges: false,
           saveFailure: null,
           biometricPrompt: null,
-          inboxVersion: get().inboxVersion + 1,
           // Filters belong to the vault that was open when they were set.
           selectedKeyId: null,
           searchQuery: '',
@@ -452,13 +437,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
         });
         await get().refresh();
 
-        // A cached allowance only describes keys this vault still has, and the
-        // reminder baseline must start from what is already open so unlocking
-        // does not announce a backlog the user has seen.
+        // A cached allowance only describes keys this vault still has.
         const vaultId = opened.vault.getPayload().vault.id;
         const keyIds = opened.vault.getPayload().keys.map((key) => key.id);
         pruneUsageCache(vaultId, keyIds);
-        inboxBaseline = { vaultId, open: openReminderIds(get().view) };
         set({ usage: readUsageCache(vaultId) });
 
         // Fire and forget: the daily run must never reject out of `unlock`.
@@ -568,8 +550,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         // next session with the previous vault.
         if (runtime !== active || generation !== run || viewSeq !== refreshId)
           return;
-        set({ view, inboxVersion: get().inboxVersion + 1 });
-        announceNewReminders(view);
+        set({ view });
       },
 
       addKey: (input) => {
@@ -681,7 +662,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (!active) return;
         const vaultId = active.vault.getPayload().vault.id;
         // §8: the file must no longer contain the key before its observations
-        // and dismissals are removed, or a failed save strands them.
+        // are removed, or a failed save strands them.
         pendingLocalCleanup.push({ vaultId, keyId: id });
         dropUsageSnapshot(vaultId, id);
         set((state) => ({ usage: withoutKey(state.usage, id) }));
@@ -1027,15 +1008,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         await runtime.local.removeGrant(fingerprint);
       },
 
-      setReminderDismissed: (row, dismissed) => {
-        if (!runtime) return;
-        // A dismissal is device-local: refresh the view, but never mark the
-        // payload dirty or schedule a file write (§8).
-        void (dismissed ? dismissReminder(row) : restoreReminder(row)).then(
-          () => get().refresh()
-        );
-      },
-
       updateMeta: (updates) => {
         if (!runtime) return;
         const result = runtime.vault.updateMeta(updates);
@@ -1171,39 +1143,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
     return next;
   }
 
-  /** The open reminder ids of one view, used to spot what appeared later. */
-  function openReminderIds(view: VaultView | null): string[] {
-    if (!view) return [];
-    return view.reminders
-      .filter((row) => !row.dismissed)
-      .map((row) => `${row.reminder.rule}:${row.key.id}`);
-  }
-
-  /**
-   * Announce reminders that appeared while the vault was open. The list itself is
-   * computed, so "new" means new to this device since the last refresh.
-   */
-  const announceNewReminders = (view: VaultView): void => {
-    const vaultId = view.vaultId;
-    const open = openReminderIds(view);
-    const previous = inboxBaseline;
-
-    inboxBaseline = { vaultId, open };
-
-    if (!previous || previous.vaultId !== vaultId) return;
-
-    const before = new Set(previous.open);
-    const now = new Set(open);
-    const added = open.filter((id) => !before.has(id)).length;
-    const archived = previous.open.filter((id) => !now.has(id)).length;
-    if (added === 0 && archived === 0) return;
-
-    setState({
-      lastInboxSyncAt: clock().toISOString(),
-      lastInboxSyncResult: { added, updated: 0, archived },
-    });
-  };
-
   /** Local `YYYY-MM-DD`, so "once a day" follows the device's clock. */
   function localDay(now: Date, timeZone: string): string {
     try {
@@ -1249,58 +1188,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
     if (runtime === active) await getState().refresh();
   };
-
-  /**
-   * Put a reminder away. The reminder already carries the fact it was computed
-   * from — a condition or a binding — so the dismissal is written for exactly
-   * that fact and stops applying once the fact changes.
-   */
-  async function dismissReminder(row: ReminderRow): Promise<void> {
-    if (!runtime) return;
-    const { reminder } = row;
-    const vaultId = runtime.vault.getPayload().vault.id;
-    const now = clock().toISOString();
-
-    if (reminder.kind === 'business') {
-      await runtime.local.putBusinessDismissal({
-        vault_id: vaultId,
-        key_id: reminder.key_id,
-        rule: reminder.rule,
-        condition: reminder.condition,
-        dismissed_at: now,
-      });
-      return;
-    }
-
-    await runtime.local.putObservationDismissal({
-      vault_id: vaultId,
-      key_id: reminder.key_id,
-      rule: reminder.rule,
-      binding: reminder.binding,
-      dismissed_at: now,
-    });
-  }
-
-  async function restoreReminder(row: ReminderRow): Promise<void> {
-    if (!runtime) return;
-    const { reminder } = row;
-    const vaultId = runtime.vault.getPayload().vault.id;
-
-    if (reminder.kind === 'business') {
-      await runtime.local.removeBusinessDismissal(
-        vaultId,
-        reminder.key_id,
-        reminder.rule
-      );
-      return;
-    }
-
-    await runtime.local.removeObservationDismissal(
-      vaultId,
-      reminder.key_id,
-      reminder.rule
-    );
-  }
 
   /**
    * Write the custom providers the settings page shows. Matching is by id first,
@@ -1369,9 +1256,9 @@ export function createAppStore(deps: StoreDeps): AppStore {
   };
 
   /**
-   * Local observations and dismissals owed a delete. They are removed only
-   * after the file write that dropped the key succeeded, and a failure puts the
-   * item back so a later successful save retries it.
+   * Local observations owed a delete. They are removed only after the file
+   * write that dropped the key succeeded, and a failure puts the item back so a
+   * later successful save retries it.
    */
   const drainLocalCleanup = async (): Promise<void> => {
     if (pendingLocalCleanup.length === 0) return;

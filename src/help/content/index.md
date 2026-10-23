@@ -15,14 +15,14 @@ AI providers are the default focus, but Keya is not limited to them. Search, scr
 - Organize credentials with groups, and archive the ones you have retired.
 - Track an expiry per credential: a calendar day, an exact instant, or nothing.
 - Check a credential against its provider, with an explicit approval before anything is sent.
-- Review the Inbox for expiring keys, plaintext destinations, and checks that failed or went stale.
+- Review the Inbox for expiring keys and checks the provider rejected.
 
 Refreshing the page requires the master password again: Keya does not keep a warm session, and it does not store the password anywhere.
 
 ## Guides
 
 - [Quick Start](/docs/quick-start) — choose a folder, create a vault, add a credential.
-- [Inbox](/docs/inbox) — what triggers an alert, and what archiving one means.
+- [Inbox](/docs/inbox) — what appears, what does not, and how an item goes away.
 - [Security](/docs/security) — the file format, the key derivation, and the limits.
 - [Backup & Restore](/docs/backup) — copies, conflicts, and password changes.
 - [FAQ](/docs/faq) — browsers, recovery, and known gaps.

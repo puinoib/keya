@@ -1,6 +1,6 @@
 # `.keya` File Format Specification
 
-> Status: final. Two documents make up the `.keya` spec. This one covers **bytes, payload, validation, fingerprints, versions and appendices**; [keya-runtime.md](keya-runtime.md) covers **probing, reminders, device state, saving and biometrics**. Section numbers run continuously across both, so `§9.2` lives in the runtime file and `§6.2` here.
+> Status: final. Two documents make up the `.keya` spec. This one covers **bytes, payload, validation, fingerprints, versions and appendices**; [keya-runtime.md](keya-runtime.md) covers **probing, Inbox facts, device state, saving and biometrics**. Section numbers run continuously across both, so `§9.2` lives in the runtime file and `§6.2` here.
 >
 > Subject: a Keya vault file. One file = one vault = one password.
 >
@@ -401,14 +401,14 @@ Two meta-constraints decide everything else:
 | `keys[].created_at` / `content_updated_at` | Detail page; a device cannot reconstruct "how long since this credential was rotated" | — |
 | `groups[].order` | User-defined ordering | An array index changes on any array operation and cannot express a tie |
 
-Admission test for presentation fields, to stop UI state leaking in later: "used for display" is not enough — answer **"can a device reconstruct this by itself"**. Reconstructable values (sort, filters, expansion, selection, reminder bars) never enter the file; non-reconstructable ones (creation time, icon) may. `default_endpoint` is the one field admitted as convenience, which is why it is flagged above.
+Admission test for presentation fields, to stop UI state leaking in later: "used for display" is not enough — answer **"can a device reconstruct this by itself"**. Reconstructable values (sort, filters, expansion, selection, Inbox state) never enter the file; non-reconstructable ones (creation time, icon) may. `default_endpoint` is the one field admitted as convenience, which is why it is flagged above.
 
 Two annotated exceptions:
 
 - **`icon` spells "no icon" as `""`, not `null`.** This is the explicit exception to "one state, one encoding": `null` and `""` would mean the same thing, so only one survives, and `""` wins because it has no second reading (`null` already means "field missing").
 - **`Provider` has no `icon`.** Preset brand marks are app constants; custom providers have names. Icons for custom providers would be a new field, hence a version bump; out of scope.
 
-Not in the file, and not to be added back: `schema_version`, `key.revision`, `provider.check_revision`, `tester_version`, any "the user dismissed this reminder" record, observations, usage snapshots, preferences such as auto-lock, network grants, biometric bindings. Because: revision numbers only served the device observation cache, now replaced by computed fingerprints (§7.3); observations and usage are device facts; device preferences are usually wrong to sync; grants are bound to this device, this browser and the user's current consent; `condition` duplicates what the edit transaction clears (§8).
+Not in the file, and not to be added back: `schema_version`, `key.revision`, `provider.check_revision`, `tester_version`, any "the user dismissed this reminder" record, observations, usage snapshots, preferences such as auto-lock, network grants, biometric bindings. Because: revision numbers only served the device observation cache, now replaced by computed fingerprints (§7.3); observations and usage are device facts; device preferences are usually wrong to sync; grants are bound to this device, this browser and the user's current consent; an Inbox decision is derived from the file plus the current time, so there is nothing to store (runtime §10.3).
 
 ### 5.3 Identity, time, ordering
 
@@ -444,7 +444,7 @@ Not in the file, and not to be added back: `schema_version`, `key.revision`, `pr
   Years are `0000`–`9999`. Implementation note: `Date.UTC(50, …)` maps 0–99 to 1900–1999, so `setUTCFullYear` is mandatory; otherwise step 4 returns a "legal" wrong answer.
 - **`created_at` / `content_updated_at` are display-only.** The writer sets them to now on a best-effort basis and guarantees nothing about ordering, conflict detection or causality; the reader infers nothing from them. They exist only where something displays them: `vault` and `keys[]`, not `groups[]` or `providers[]`.
 - **No cross-field temporal constraints.** Nothing is guaranteed between `vault.content_updated_at` and `keys[].content_updated_at` — a password change does not touch timestamps, and clock skew makes the vault older. So never infer a child's state from the vault's timestamp, and never add "the vault must not predate its keys" to class A: that turns legal skew into a refusal to open.
-- **`expiry` is a decision input, not a presentation field** (§10.3 computes reminders from it):
+- **`expiry` is a decision input, not a presentation field** (§10.3 derives Inbox facts from it):
   - `kind === 'instant'`: an absolute Timestamp, device-independent.
   - `kind === 'date'`: `YYYY-MM-DD`, meaning the end of that calendar day **in the zone of the device making the judgment**, i.e. local `00:00` the next day. No zone is stored, so the same file **may legally expire at different instants on different devices** — semantics, not inconsistency. The spread is up to ~26 hours (`UTC+14` vs `UTC−12`).
   - If that local midnight does not exist (DST transitions at midnight in a few zones), take the first legal instant of the day.
@@ -671,7 +671,7 @@ Deletions do not propagate. With the same `vault.id`, the target wins: existing 
 
 Custom providers are compared by configuration content (`name` + `default_endpoint` + `probe`). Same name with different configuration is asked about, never silently overwritten. Duplicate credentials (identical `secret`) offer "skip / keep both", and that comparison happens only in memory — never persist a hash of a secret for it.
 
-Dismissals, observations and grants are not imported; they were never in the file. Import brings assets and dependencies only. Report added, skipped, conflicting and unmigrated items.
+Observations and grants are not imported; they were never in the file. Import brings assets and dependencies only. Report added, skipped, conflicting and unmigrated items.
 
 Since `key.id` is newly allocated, `send_fingerprint` changes, so no Key sends anything until it is confirmed (§10.2).
 
@@ -688,7 +688,7 @@ interface KeyaExchange {
 }
 ```
 
-- No dismissals, observations, preferences or grants, for the same reason as above.
+- No observations, preferences or grants, for the same reason as above.
 - Must be labelled **"contains plaintext secrets; this is not an encrypted backup"**.
 - Parsing is stricter than the container path because the input is untrusted text: reject duplicate keys, nesting deeper than 8, and invalid UTF-8. **Check the input size ≤ 33 554 432 B (32 MiB) before parsing** — the only place that can refuse before class A validation, and the alternative is a strict parser eating all available memory first.
 - The strict parser is needed only here (§4.2). Take it from a mature implementation if you like, but do not swap it into the container path to save a dependency, and do not relax the checks here either.
@@ -738,7 +738,7 @@ interface KeyaExchange {
 
 15. Invalid UTF-8 and encoded lone surrogates → rejected.
 16. Unknown top-level field, unknown nested field, missing field → rejected with a path.
-17. Duplicate UUID → rejected. The uniqueness of `(key_id, rule)` now belongs to the device dismissal tables, not to class A.
+17. Duplicate UUID → rejected.
 18. Dangling `group_id` or `custom:` provider → rejected.
 19. `auth.name = "x-api-key\r\nX-Evil: 1"`, and names containing a space or `:` → rejected by the token rule.
 20. Static headers, one rejection each: name `authorization`, `host`, `cookie`, `sec-foo`, `proxy-x`; value with edge whitespace, with `\r\n`, with non-printable ASCII; two headers with the same name; a static header sharing the `auth` name; nine headers.
@@ -781,7 +781,7 @@ interface KeyaExchange {
 | `flags` / capability negotiation | A "must be 0" placeholder is not a capability; bump the version when one is needed |
 | Envelope encryption | Overlaps with "per-file salt plus a session-cached key" and doubles the state |
 | `key.revision` / `check_revision` | Replaced by computed fingerprints (§7) |
-| User decisions in the file (`dismissals[]`) | One UI action would rewrite the whole file, create a conflict window on the cloud drive, and silently lose the dismissal if the save failed. The cost of device-only is "reminders reappear once on a new device", accepted |
+| User decisions in the file (`dismissals[]`) | One UI action would rewrite the whole file, create a conflict window on the cloud drive, and silently lose the decision if the save failed. Storing the decision on one device instead makes the list differ per device, so the current design stores none and derives every Inbox fact from the file (runtime §10.3) |
 | `tester_version` | Folded into `observation_binding` |
 | Reachability probing (`no-cors` liveness) | The status is unreadable, so it cannot be distinguished from a 500 or from "already left the network"; it is a beacon that does not need a status. `probe: null` already means "cannot check" |
 | `unverifiable` as an observation outcome | A missing capability (class C), not a probe result; no request is sent |
@@ -820,8 +820,7 @@ This table only aligns current code names with the spec so a rewrite can land in
 | `check.auth: 'x-api-key'` | `auth: {mode:'header', name:'x-api-key'}` | Removes two encodings of one send |
 | (none) | `auth: {mode:'basic'}` | New: `Authorization: Basic base64(secret)` |
 | (none) | `probe.headers[]` | New: constant headers a real request needs but cannot template |
-| No counterpart (device) | `BusinessDismissal` / `ObservationDismissal` | Different shapes, so different names; neither is in the file |
-| `inbox[]` | Business reminders computed; decisions in `business_dismissals` (with `condition`) | Observation reminders likewise device-only |
+| `inbox[]` | Computed Inbox facts: one `expiry` fact per Key and one `rejected` fact per failed credential check | No decision is stored, on the file or the device (runtime §10.3) |
 | `settings` | Local preferences | Not in the file |
 | `connection_check` | Local observations | Not in the file |
 | `vault_id` (preamble) | Not public; `container_fingerprint` locally | — |
@@ -917,14 +916,13 @@ These values pin the three easiest mistakes: ① C′ must equal C, so sorting r
 - `containers`: the registration table behind the locked view, keyed by `container_fingerprint`.
 - Biometric records: PRF-wrapped unlock material (see D.4 for the current deviation).
 - `observations`: check results, the latest 10 per Key.
-- `business_dismissals` / `observation_dismissals`: dismissal decisions with `condition` / `binding`.
 - `grants`: persistent authorizations keyed by `send_fingerprint`.
 - `preferences`: auto-lock, post-write check, daily check, clipboard detection, hidden presets, the daily check date.
 - Usage snapshots: a tab-level `sessionStorage` cache, dropped when stale.
 
 **Computed (never persisted)**
 
-- Reminders (3 business rules, 3 observation rules), expiry decisions in the device's zone, the six recipe states.
+- Inbox facts (one expiry fact with a phase, one rejected-credential fact), expiry decisions in the device's zone, the six recipe states.
 - `send_fingerprint`, `observation_binding`, `container_fingerprint`.
 
 ### D.2 What each fingerprint decides
@@ -944,7 +942,6 @@ These values pin the three easiest mistakes: ① C′ must equal C, so sorting r
 | `keys[]` → `groups[]` / `providers[]` | 0..1 (`null` means uncategorized; presets have no entity) |
 | `providers[]` → `keys[]` | 0..N; a referenced provider cannot be deleted |
 | Observations per Key (device) | 10, evicted by the retention window on write |
-| Dismissals per Key (device) | 3 business + 3 observation, keyed `(key_id, rule)` |
 | `container_fingerprint` → `containers` / biometric record | 0..1 each |
 
 ### D.4 Known deviation from the implementation

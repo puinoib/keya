@@ -9,7 +9,11 @@
 
 import type { Expiry } from '../../core/time/expiry';
 import { expiryStatus } from '../../core/time/expiry';
-import type { Observation } from '../../core/runtime/observations';
+import { EXPIRY_UPCOMING_DAYS } from '../../core/payload/limits';
+import type {
+  Observation,
+  RejectedOutcome,
+} from '../../core/runtime/observations';
 import type { OpenFailure } from '../vault/vault';
 import type { Issue } from '../../core/payload/validate';
 import { summarizeIssues } from '../../core/payload/validate';
@@ -21,35 +25,8 @@ import type {
 export type ExpiryStatus = 'expired' | 'expiring_soon' | 'valid' | 'none';
 
 const DAY = 24 * 60 * 60 * 1000;
-const EXPIRY_REMINDER_DAYS = 7;
 
-/** One formatter per zone: constructing `Intl.DateTimeFormat` is not cheap. */
-const dayFormatters = new Map<string, Intl.DateTimeFormat>();
-
-function dayFormatter(timeZone: string): Intl.DateTimeFormat | null {
-  const cached = dayFormatters.get(timeZone);
-  if (cached) return cached;
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    dayFormatters.set(timeZone, formatter);
-    return formatter;
-  } catch {
-    return null;
-  }
-}
-
-/** The local calendar day an instant falls on, as `YYYY-MM-DD`. */
-function localDayOf(input: Date | string, timeZone: string): string {
-  const date = typeof input === 'string' ? new Date(input) : input;
-  const formatter = dayFormatter(timeZone);
-  if (!formatter) return date.toISOString().slice(0, 10);
-  return formatter.format(date);
-}
+export { daysUntilExpiry } from '../../core/time/expiry';
 
 /** A calendar day is a local day, so the picker and the file agree. */
 export function expiryToDate(expiry: Expiry | null): Date | undefined {
@@ -83,26 +60,12 @@ export function dateToExpiry(date: Date | undefined): Expiry | null {
 }
 
 /** Calendar days from today to the expiry's own day; negative once passed. */
-export function daysUntilExpiry(
-  expiry: Expiry | null,
-  now: Date,
-  timeZone: string
-): number | null {
-  if (!expiry) return null;
-  const to =
-    expiry.kind === 'date' ? expiry.value : localDayOf(expiry.value, timeZone);
-  const from = localDayOf(now, timeZone);
-  return Math.round(
-    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY
-  );
-}
-
 export function expiryVerdict(
   expiry: Expiry | null,
   now: Date,
   timeZone: string
 ): ExpiryStatus {
-  switch (expiryStatus(expiry, now, timeZone, EXPIRY_REMINDER_DAYS)) {
+  switch (expiryStatus(expiry, now, timeZone, EXPIRY_UPCOMING_DAYS)) {
     case 'expired':
       return 'expired';
     case 'upcoming':
@@ -215,9 +178,8 @@ export function describeFailure(
   if (!observation) return null;
   switch (observation.outcome) {
     case 'auth_failed':
-      return 'the service rejected the credential';
     case 'forbidden':
-      return 'the credential lacks permission';
+      return rejectionReason(observation.outcome);
     case 'rate_limited':
       return 'the service is rate limiting requests';
     case 'server_error':
@@ -233,6 +195,13 @@ export function describeFailure(
     default:
       return null;
   }
+}
+
+/** What a rejection means, in the words the inbox and the key share. */
+export function rejectionReason(outcome: RejectedOutcome): string {
+  return outcome === 'auth_failed'
+    ? 'the service rejected the credential'
+    : 'the credential lacks permission';
 }
 
 export function daysSince(date: string | null, now: Date): number | null {

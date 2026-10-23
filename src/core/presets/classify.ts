@@ -2,7 +2,7 @@
  * Recipe classification (§10.3).
  *
  * A key's probe recipe is in exactly one of six states, and the state decides
- * which reminders and which authorization UI are possible. The two interesting
+ * which Inbox facts and which authorization UI are possible. The two interesting
  * distinctions:
  *
  * - "not executable" has four different causes, three of which the user can
@@ -168,7 +168,7 @@ export function classifyRecipe(
 
 /**
  * Whether observations may exist for this key at all. Non-executable recipes
- * produce none, which is why they must also produce no observation reminders.
+ * produce none, which is why they must also produce no Inbox facts.
  */
 export function isExecutable(state: RecipeState): boolean {
   return state.kind !== 'not_executable';

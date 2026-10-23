@@ -25,9 +25,11 @@ A `GET` that returns 2xx only proves the service answered. Unless the preset kno
 
 Probably not. The browser cannot distinguish a missing CORS header, a DNS failure, a TLS problem, or being offline, so all of them are reported the same way. A timeout is also not a verdict on the credential. Configure the exact final endpoint — Keya does not follow redirects, so a `301` to a trailing slash looks like a network failure.
 
-## Why do reminders come back on a new device?
+## Why does the Inbox look the same on every device?
 
-Dismissals are stored on the device, not in the vault: they describe a decision about what you wanted to be told, and clearing site data is allowed to lose them. The reminders themselves are computed from the file, so they are always current.
+Because it is computed from the file, this device's checks and the current time — there is no "dismissed" record anywhere. An item goes away when you fix the fact behind it (change the date, pass a check) or archive the key.
+
+The one thing that differs between devices is Housekeeping: each device knows only about the checks it ran itself, so a new device offers to check everything once.
 
 ## What is not in this build?
 

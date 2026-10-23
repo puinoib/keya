@@ -38,9 +38,9 @@ Biometric unlock wraps the password with a key derived by the authenticator thro
 
 ## Local data
 
-The browser stores, unencrypted: the folder handle, the container registry (vault name, icon, key count), the check results for each key, the dismissals you made, approved destinations, and preferences. Clearing site data loses them; the vault file is unaffected.
+The browser stores, unencrypted: the folder handle, the container registry (vault name, icon, key count), the check results for each key, approved destinations, and preferences. Clearing site data loses them; the vault file is unaffected.
 
-Check results never contain the request, the headers, the response body, or the provider's own error text. They record an outcome and a controlled code, which is what the reminder text is generated from.
+Check results never contain the request, the headers, the response body, or the provider's own error text. They record an outcome and a controlled code, which is what the Inbox and key copy are generated from.
 
 ## Saving and synchronization
 
@@ -56,6 +56,6 @@ Destinations you approve are stored on this device; importing a vault never gran
 
 ## Backups and exports
 
-An encrypted `.keya` copy is the backup format. **Export JSON** writes the vault's keys, providers and groups as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. It carries no device state — no preferences, check results, dismissals or approvals. Importing either format is not available yet.
+An encrypted `.keya` copy is the backup format. **Export JSON** writes the vault's keys, providers and groups as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. It carries no device state — no preferences, check results or approvals. Importing either format is not available yet.
 
 If you change a password, older copies keep opening with the old one. Keya cannot revoke a copy that left the device.

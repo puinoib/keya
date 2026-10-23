@@ -107,7 +107,6 @@ export async function openSession(
         deviceKey,
         fetch: browserFetch,
         clock: () => new Date(),
-        timeZone: deviceTimeZone(),
       }),
     },
   };

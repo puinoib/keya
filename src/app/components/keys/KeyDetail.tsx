@@ -1,7 +1,13 @@
 import { useStore } from '../../store/useStore';
 import { useNavigate } from '@tanstack/react-router';
 import { ApiTester, unverifiableReason } from '../../lib/api-tester';
-import { checkOf, expiryOf, keyById, sortedGroups } from '../../state/view';
+import {
+  checkOf,
+  expiryOf,
+  keyById,
+  plaintextTargetOf,
+  sortedGroups,
+} from '../../state/view';
 import { keysSearch } from '../../state/keys-search';
 import { expiryToDate, expiryStatusLabel } from '../../state/presentation';
 import { providerLabel } from '../../state/providers';
@@ -16,6 +22,7 @@ import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import { checkStateHint, describeFailure } from '../../state/presentation';
+import { isUnverified } from '../../../core/runtime/observations';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -91,6 +98,11 @@ export function KeyDetail() {
   const plannedKind = check.kind;
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
+  // A rejection is about the credential; a network or timeout failure is not.
+  const testUnverified =
+    connectionStatus === 'failed' && observed !== undefined
+      ? isUnverified(observed)
+      : false;
   const checkError =
     check.kind === 'unverifiable'
       ? unverifiableReason(provider)
@@ -163,9 +175,11 @@ export function KeyDetail() {
   // badge. Colour alone is never the only carrier: the tooltip says the rest.
   const statusDot = testOk
     ? 'bg-success-bright'
-    : testFail
-      ? 'bg-danger'
-      : 'bg-ink-quaternary/35';
+    : testUnverified
+      ? 'bg-amber-500'
+      : testFail
+        ? 'bg-danger'
+        : 'bg-ink-quaternary/35';
   const verdictHint =
     check.kind === 'unverifiable'
       ? (checkError ??
@@ -176,8 +190,11 @@ export function KeyDetail() {
           ? 'Verified: the provider accepted this credential.'
           : 'Reachable: the endpoint answered. This does not prove the credential is valid.'
         : testFail
-          ? `Failed: ${describeFailure(observed) ?? 'the last request did not succeed'}.`
+          ? testUnverified
+            ? `Could not verify: ${describeFailure(observed) ?? 'the last request did not finish'}. This says nothing about the credential.`
+            : `Rejected: ${describeFailure(observed) ?? 'the provider did not accept this credential'}.`
           : 'Untested: no check has run from this device yet.';
+  const plaintextTarget = plaintextTargetOf(view, key);
   const showStatusChips = Boolean(
     expiryLabel || (stateHint && (check.manualOnly || check.needsAuthorization))
   );
@@ -325,14 +342,27 @@ export function KeyDetail() {
                 Archived {formatDate(key.archived_at)}
               </p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-quaternary">
-                Archived credentials are excluded from tests and Inbox alerts.
+                Archived credentials are excluded from tests and from the Inbox.
               </p>
             </div>
           )}
 
           {testFail && !key.archived_at && checkError && (
-            <p className="mb-4 text-xs text-danger/80 break-words">
+            <p
+              className={`mb-4 text-xs break-words ${
+                testUnverified ? 'text-ink-quaternary' : 'text-danger/80'
+              }`}
+            >
               {checkError}
+            </p>
+          )}
+
+          {plaintextTarget && !key.archived_at && (
+            <p className="mb-4 rounded-md border border-amber-500/25 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+              <Warning className="mr-1 inline size-3 align-[-2px]" />
+              This key travels in clear text to {plaintextTarget.origin}. A
+              check is approved one request at a time; a plain http destination
+              never keeps standing consent.
             </p>
           )}
 

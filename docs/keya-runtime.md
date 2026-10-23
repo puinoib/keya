@@ -6,18 +6,17 @@
 
 ## 8. Edit transactions (class B)
 
-Every write runs through one transaction, which owns timestamps, dismissals and dirty state. These rules hold while editing only; opening a file infers nothing and back-fills nothing.
+Every write runs through one transaction, which owns timestamps and dirty state. These rules hold while editing only; opening a file infers nothing and back-fills nothing.
 
 | Edit | Required effect |
 |---|---|
 | `secret` | Normalize per §8.1, then store. A normalized empty value → **reject the edit** with "the credential cannot be empty". Do not let the write path reject it later as class A: the user would see "saving keeps failing" with no visible cause. Update `key.content_updated_at` and `vault.content_updated_at` |
-| `endpoint` | Normalize and store; update both timestamps. Touch no device dismissals: they hold the `condition` from their own moment, so a changed fact simply stops matching (§10.3) |
-| `provider_id`, or the `probe` of a referenced provider | Update both timestamps. Same reason: dismissal invalidation belongs to the `condition` comparison, not to the transaction |
+| `endpoint` | Normalize and store; update both timestamps. Touch no device state: the new value recomputes the `binding`, so old observations simply stop matching (§10.1) |
+| `provider_id`, or the `probe` of a referenced provider | Update both timestamps. Same reason: the `binding` comparison invalidates old observations, not the transaction |
 | `name` / `description` / `group_id` | Update both timestamps |
 | `expiry` | Update both timestamps |
-| Archive / restore | Write `archived_at`; update both timestamps; **keep** that Key's dismissals and observations |
-| Dismiss a reminder | Write to the **device**. Business: replace the `BusinessDismissal` keyed `(key_id, rule)`, carrying the moment's `condition`. Observation: replace the `ObservationDismissal` keyed `(key_id, rule)`, carrying the `binding`. **No file write, no dirty state** (§10.3) |
-| Delete a Key | Update `vault.content_updated_at`; clear the device's dismissals and observations only **after the file write succeeds**. Done the other way round, one failed save discards the local knowledge that the file still contains that Key |
+| Archive / restore | Write `archived_at`; update both timestamps; **keep** that Key's observations |
+| Delete a Key | Update `vault.content_updated_at`; clear the device's observations only **after the file write succeeds**. Done the other way round, one failed save discards the local knowledge that the file still contains that Key |
 | Provider / group fields | Update `vault.content_updated_at`; neither type has timestamps of its own (§5.1) |
 | Delete a referenced custom provider | **Refused**; re-point or delete the references first |
 | Delete a group | Set references to `null`; update the affected Keys' `content_updated_at` and `vault.content_updated_at` |
@@ -41,7 +40,7 @@ Every write runs through one transaction, which owns timestamps, dismissals and 
 
 Two design decisions worth stating:
 
-1. **Dismissals carry the fact they were decided about.** The record is kept when the fact changes and simply stops matching, so reverting the fact revives the same decision (test 94). Deleting on mismatch would make "change the date and change it back" permanently different from "never changed it", which is why the record is retained; it is removed when the Key is deleted or the user restores the reminder.
+1. **Inbox facts are computed, never stored.** Expiry and rejection decisions come from the payload, the current time and this device's observations. There is no decision record to keep in sync, so the same file yields the same Inbox on every device and no edit has to clean up device state. A fact clears when the user fixes it (a new date, a successful check) or archives the Key — that is the only way an item leaves the Inbox (§10.3).
 2. **Secret rotation needs no extra field surgery.** Observation invalidation comes from the computed `observation_binding`; grant preservation comes from `send_fingerprint` excluding the secret.
 
 ## 9. Probing (class C)
@@ -119,7 +118,7 @@ Redirects deserve their own sentence: `redirect: 'error'` turns `301/302` into `
   2. `azure openai`'s `?api-version=…` belongs in `probe.target`'s query, which is exactly why §6.2 allows a query there. The current code appends it to the end of the URL, and the new model has nowhere else to put it.
 - Evidence for the shape of all this: `anthropic` needs three headers (`x-api-key`, `anthropic-version: 2023-06-01`, `anthropic-dangerous-direct-browser-access: true`), which is why `probe.headers` exists and why a preset's send policy must be data. `google` uses `?key=` (`auth.mode: query`) while `azure openai` uses `?api-version=` (a constant target query, not a secret): two uses of a query that the implementation must keep apart.
 
-## 10. Observations, authorization, reminders
+## 10. Observations, authorization, Inbox facts
 
 ### 10.1 Observation records
 
@@ -150,9 +149,9 @@ Adoption order, "the latest started wins":
 2. On return, check in order: `session_id` is still current → the Key exists → it is not archived → `binding` matches. Any failure → **discard**, writing no cache and changing no UI.
 3. For one Key accept only a `request_seq` greater than the adopted one; equal or lower is discarded. `finished_at` is not compared, so changing the system clock has no effect.
 4. Across unlocks, results from an old `session_id` are discarded even if every identity field matches.
-5. Keep the latest 10 per Key; delete them with the Key. Archiving keeps history but removes it from reminders and automatic probing.
+5. Keep the latest 10 per Key; delete them with the Key. Archiving keeps history but removes it from the Inbox and automatic probing.
 
-Staleness: `finished_at` older than 30 days → `probe_stale`. A mismatched `binding` → "not yet checked on this device", with the record kept so the UI can say the last check happened under a different configuration.
+Staleness: `finished_at` older than 30 days → the Key is offered a fresh check in the quiet device list. A mismatched `binding` → "not yet verified on this device", with the record kept so the UI can say the last check happened under a different configuration. Neither is an Inbox fact.
 
 ### 10.2 Network authorization
 
@@ -180,77 +179,62 @@ Rules:
 - **Grants are per (key, request).** Probing and usage are different URLs and `send_fingerprint` includes `resolved_url`, so one grant mathematically cannot cover both. Every new request type computes its own fingerprint and earns its own approval.
 - **Usage and balance queries are preset-only.** The format has no `Provider.usage` (§17). Supporting them for custom providers later means adding that recipe and reusing this fingerprint mechanism, not reusing the probe grant.
 
-### 10.3 Reminders, recipe states, dismissals
+### 10.3 Inbox facts, device verification, recipe states
 
-Business reminders come from the payload plus the current time; the dismissal decision is device-local.
+The Inbox is a pure function of the payload, this device's observations, `now` and the device zone. Nothing is stored and nothing is announced; the sidebar count is the number of facts below, and it can reach zero.
 
-| Rule | Trigger | `condition` |
+| Fact | Trigger | Clears when |
 |---|---|---|
-| `expiry_upcoming` | `expiry` set, ≤ 7 days away and not passed | `date:YYYY-MM-DD` or `instant:<RFC3339>` |
-| `expiry_expired` | Past the expiry point | same |
-| `insecure_endpoint` | **The outgoing request is plaintext**: if the recipe is executable, `resolved_url`'s scheme; otherwise `endpoint`'s scheme, with `null` plus a relative target meaning no trigger | `http:<origin>`, host and port included |
+| `expiry`, `phase: expired` | `expiry` set and past the expiry point (§5.3) | the date moves into the future, is cleared, or the Key is archived |
+| `expiry`, `phase: due` | `expiry` set, ≤ 7 days away and not passed | same; a date past the window removes it immediately |
+| `rejected` | the latest adopted observation under the current `binding` has `outcome ∈ {auth_failed, forbidden}` | a later check under the same `binding` succeeds, or the Key is archived |
 
-`insecure_endpoint`'s condition carries the origin, not just `http`: what the user accepted is "plaintext is fine for this intranet address", which must not incidentally cover a different new target.
+- **One expiry fact per Key.** Phase, not rule, carries the difference; `days_left` is the calendar-day distance and goes negative once passed, so ordering and copy come from one number.
+- **`rejected` excludes `rate_limited`, `server_error`, `failed`, `timeout` and `network`.** Those are not evidence about the credential (§9.3): they are shown on the Key as "could not verify" and never enter the Inbox. `request/ok` still does not prove validity.
+- **Results match by `binding`.** A result recorded for an older secret or destination cannot ask for a decision about the current one.
+- **A Key whose recipe cannot run produces no fact at all.** Nothing is reported as "failed" where no request could have been made.
 
-It must also judge the **request that will actually be sent**, not just `endpoint`. `probe.target` may be an absolute `http:` URL (§9.1) while `endpoint` is `null` or `https:`, and the credential still leaves in the clear. Judging by `endpoint` alone leaves a permanent blind spot; an intranet absolute target on a custom provider is the example.
+**Priority.** `attentionPriority` is a pure function of the fact, two signals from the Key, and `now`:
 
-`expiry_*` computes the expiry point per §5.3 using **the deciding device's zone**, so the `date` kind may differ across devices — that is the semantics, not a bug. Implement the decision as a pure function taking `now` and a zone identifier explicitly, defaulting to the device zone; otherwise two zones cannot be tested in one process (§16.7). Computing and displaying it never writes the file (§16.6).
+| Fact | Base | Adjustments |
+|---|---|---|
+| `rejected` | 80 | +20 when the result is ≤ 7 days old |
+| `expiry`, expired | 100 | + `min(10, |days_left|)` |
+| `expiry`, due | 50 | +20 when ≤ 3 days away |
 
-Observation reminders come from device observations, also with device-local dismissals:
+Both add +6 when the Key is grouped and +4 when its newest check succeeded. Ties fall back to the earliest expiry, then the newest rejection, then `key_id`, so the order is stable across devices. The order is an explicit judgement and must stay testable, never an artifact of insertion order.
 
-| Rule | Trigger |
-|---|---|
-| `never_probed` | No observation for this Key under its current `binding` |
-| `probe_failed` | The latest adopted observation's `outcome ∈ {auth_failed, forbidden, server_error, failed, timeout, network}` |
-| `probe_stale` | The latest adopted observation's `finished_at` is over 30 days old |
+**Device verification is not an Inbox fact.** For every Key whose recipe can run, the view exposes the newest observation under the current `binding`: `never_verified`, `days_since`, and `stale` (≥ 30 days). It appears as a quiet, collapsible list with "check all" — never as a sidebar count, never as a notification. It is expected to differ across devices: it says "this device has not asked lately", not "this credential is bad". `never_probed` and `probe_stale` are gone as rules because they were never facts the user could fix.
 
-**Recipe states.** A Key's recipe sits in exactly one state, which decides its reminders and its copy. "Not executable" is four states, not one: three are fixable by the user and one is not.
+**Recipe states.** A Key's recipe sits in exactly one state, which decides whether the Inbox can report anything and what the Key says. "Not executable" is four states, not one: three are fixable by the user and one is not.
 
-| State | Criterion | Reminders | Copy and entry point |
+| State | Criterion | Inbox facts | Copy and entry point |
 |---|---|---|---|
 | **Not executable · no capability** | `probe === null`, or the preset is marked unverifiable in a browser | none | "This Provider does not support checking" / "This Provider cannot be verified in a browser" (§9.3). No edit entry point: the provider has no usable recipe |
 | **Not executable · no address** | `probe !== null`, relative `target`, `Key.endpoint === null` | none | "**The recipe cannot run: this Key has no server address**"; fix: fill in `endpoint`, or make `target` absolute |
 | **Not executable · bad target** | `probe !== null`, an absolute `target` that will not parse, a non-http(s) result, or `userinfo` | none | "**The recipe cannot run: the target address is invalid**"; fix: edit `target` |
 | **Not executable · unknown preset** | `provider_id = preset:<slug>` the current version does not know | none | "**This version does not recognize this Provider**"; fix: update the app, or re-point to a custom provider |
-| **Manual only** | executable, `resolved_url` is `http:` | all three | "Manual checks only (plaintext transport)"; **never "needs re-authorization"** |
-| **Auto-capable** | executable, `https:` | all three | "Needs re-authorization" plus bulk approval when the grant is missing |
+| **Manual only** | executable, `resolved_url` is `http:` | expiry, rejected | "Manual checks only (plaintext transport)"; **never "needs re-authorization"** |
+| **Auto-capable** | executable, `https:` | expiry, rejected | "Needs re-authorization" plus bulk approval when the grant is missing |
 
-Measured occupancy over the 50 existing presets: 46 auto-capable, 4 with no capability (`amazon bedrock`, `nvidia nim`, `baseten`, `exa`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table. The model is not over-designed — intranet `http:` addresses are real for this product — but do not expect every state to have presets landing in it.
+Measured occupancy over the 50 existing presets: 46 auto-capable, 4 with no capability (`amazon bedrock`, `nvidia nim`, `baseten`, `exa`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
+
+**A plaintext destination is a property, not a fact.** `http:` never keeps a grant (§10.2), so the Key shows a standing warning that its requests travel in clear text, and the Inbox stays silent. Judging by the resolved request rather than `endpoint` alone is still required: `probe.target` may be an absolute `http:` URL while `endpoint` is `null` or `https:`, and the credential still leaves in the clear.
 
 Two distinctions that must not collapse:
 
-- **"Needs re-authorization" excludes "manual only."** `http:` targets never hold a grant (§10.2), so on those Keys the hint is structurally impossible to clear; clicking never removes it. This is the same bug as `never_probed` under `probe: null`, in two costumes: treating "structurally unsatisfiable" as "missing". Conversely `never_probed` **is** legitimate under manual only, because one manual check resolves it.
-- **"No address" and "bad target" are not "no capability."** Both arise from entirely legal edits — give a custom provider `target: "models"`, then create a Key without an `endpoint` — and the file passes class A while §8 happily saves. Calling them "this Provider does not support checking" produces a self-contradictory screen: under the same provider, the Key that has an endpoint clearly can be checked. Describing a fixable state as unfixable walls the user off from the only repair path.
+- **"Needs re-authorization" excludes "manual only."** `http:` targets never hold a grant, so on those Keys the hint is structurally impossible to clear. Do not present an unsatisfiable state as a missing one.
+- **"No address" and "bad target" are not "no capability."** Both arise from entirely legal edits — give a custom provider `target: "models"`, then create a Key without an `endpoint` — and the file passes class A while §8 happily saves. Calling them "this Provider does not support checking" produces a self-contradictory screen.
 
-#### 10.3.1 Dismissals
+**No stored decisions.** Earlier revisions kept device-local dismissal records bound to a fact fingerprint (`condition` / `binding`). They are gone, for three reasons:
 
-```ts
-interface BusinessDismissal {          // business reminders
-  vault_id: string;
-  key_id: string;
-  rule: 'expiry_upcoming' | 'expiry_expired' | 'insecure_endpoint';
-  condition: string;                   // the fact fingerprint at this moment
-  dismissed_at: string;
-}
+1. A decision that exists on one device makes the same file show different lists elsewhere, and every re-review on a second device is invisible.
+2. A fact that is expected and permanent — an intranet `http:` destination — must not live in a todo list at all. It is a property of the Key, shown on the Key.
+3. "I no longer care about this Key" already has an expression: `archived_at`.
 
-interface ObservationDismissal {       // observation reminders
-  vault_id: string;
-  key_id: string;
-  rule: 'never_probed' | 'probe_failed' | 'probe_stale';
-  binding: string;                     // the observation_binding when the decision was made
-  dismissed_at: string;
-}
-```
+Removing them also removes the whole class of revocation bugs: no record can be orphaned, replayed, or revived by reverting a value, because there is no record. The cost is deliberate and must be stated in copy: **the Inbox cannot be muted; it can only be fixed.**
 
-- Both tables are keyed `(vault_id, key_id, rule)`. `condition` and `binding` are values, not part of the key, so each `(key, rule)` has at most one record and cannot orphan.
-- **A dismissal applies only while it matches.** Reading a reminder compares the current fact or `binding` against the record; a mismatch means "do not suppress this reminder", not "delete the decision". The record is kept so reverting the fact revives it (test 94), and is deleted when the Key is deleted or the user restores the reminder. The file never changes because of a read. This is the sole invalidation mechanism — edit transactions do not clean up (§8).
-- **Without the recorded fact there is no correctness.** With only `(key, rule)`, "revert the date to its old value" and "change it to another date" look identical in the table, and nothing decides whether the suppression still holds.
-- Say the consequence out loud rather than let users find it: **business reminders reappear once on a new device**, and again after clearing site data.
-- Adopting an `ok` observation **deletes that Key's `probe_failed` dismissal**, so failure → success → failure reminds again.
-- The archive button writes a dismissal. There is no implicit permanent mute.
-- **Dismissals must be listable and reversible.** The reminders page needs a dismissed group showing every record that still matches — rule, fact, timestamp — with "restore reminder" (delete the record). An unreversible mute is data corruption: the reminder is suppressed, no longer findable, and only a side effect such as editing the expiry date can bring it back.
-- Observation outcomes are not credential conclusions: `timeout` and `network` do not mean invalid, `request/ok` does not mean valid. This constrains copy and ordering.
-
+## 11. Device-local state
 ## 11. Device-local state
 
 Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock only `containers` is read.
@@ -260,8 +244,6 @@ Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock
 | Device key | IndexedDB `device` | singleton | Lost when site data is cleared | non-extractable HMAC `CryptoKey` |
 | Container registrations | IndexedDB `containers` | `container_fingerprint` (§13.1) | Overwritten; after a password change write the new row and delete the old (§12.5) | name, icon, counts, timestamps only |
 | Observations | IndexedDB `observations` | `observation_id`, indexed by `vault_id,key_id` | 10 per Key | structured, with an irreversible `binding` |
-| Business dismissals | IndexedDB `business_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; kept while the Key exists, deleted with it or on restore | no |
-| Observation dismissals | IndexedDB `observation_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; kept while the Key exists, deleted with it or on restore | no |
 | Biometrics | IndexedDB `biometrics` | `container_fingerprint` | Deleted on unbind | a PRF-wrapped `file_key` |
 | Grants | `localStorage` | `send_fingerprint`, not partitioned by `vault_id` | §10.2 | no: origin and path |
 | Preferences | `localStorage` | — | never expire | no: auto-lock, clipboard, theme, filters, selection |
@@ -291,7 +273,7 @@ Its boundaries, stated because this will otherwise be misread:
 - Exactly one queue. Each task takes **the current payload snapshot and the current container generation at execution time** and never enqueues a snapshot that may have gone stale. Coalescing follows: any number of pending changes produce one write.
 - Edits enqueue after a 500 ms debounce. An edit arriving during a write only sets dirty and is enqueued once more when that write finishes.
 - `flushSave()` cancels the debounce, enqueues one write and waits until not dirty, with bounded retries (at most 5).
-- Dirty state has one source: the edit transaction of §8. Unlocking, browsing, crossing midnight, viewing reminders, probing, usage queries, preference changes and UI state changes never set it.
+- Dirty state has one source: the edit transaction of §8. Unlocking, browsing, crossing midnight, viewing the Inbox, probing, usage queries, preference changes and UI state changes never set it.
 - Edits that change nothing do not write (compare business state, not bytes; the ciphertext differs every time).
 - **State the cost plainly**: one AEAD message means every save rewrites the whole file — re-read to compute the digest (§12.2), re-encrypt, write back. A 26 MB vault costs about **52 MB of local IO per save**, and cloud clients usually re-upload the blob. This is deliberate: chunking brings back fragment consistency, revision numbers and partial writes, all of which conflict with the format's goals. Practical advice: raise the debounce for large vaults (2 s, say), and treat sync storms as a known cost rather than a bug.
 
@@ -391,23 +373,23 @@ Renaming or moving the file does not invalidate the registration, since the fing
 ### 16.5 Observations and privacy
 
 62. Persisted records contain no raw URL, request headers, response body or provider copy.
-63. After a refresh, `probe_failed` copy is generated entirely from `outcome` + `detail_code`.
-64. A mismatched `binding` → UI says "not yet checked on this device" and the matching `ObservationDismissal` is deleted.
+63. After a refresh, rejected copy is generated entirely from `outcome` + `detail_code`.
+64. A mismatched `binding` → UI says "not yet verified on this device", and the Key is neither rejected nor listed in the Inbox.
 65. Clearing site data discards observations with no error.
 66. Out-of-order concurrent returns → the larger `request_seq` wins; system clock changes do not matter.
 67. Lock and unlock → late results from the previous session are discarded.
 68. A custom recipe receiving 2xx → `request/ok` only, never `credential/ok`, `basic` mode included.
 69. `timeout` and `network` copy never says "invalid credential" or "CORS error"; a static header whose preflight the server rejects is also `network`, with copy hinting the server may not allow that header.
-70. Archive → no automatic probing, no reminders, history kept. Delete → observations and both dismissal kinds cleared.
-71. `probe: null` → no observation reminders; copy is "this Provider does not support checking".
-72. **Fixable and unfixable stay apart**: `probe !== null`, `endpoint === null`, relative `target` → no observation reminders, copy says "the recipe cannot run: this Key has no server address", not "does not support checking". Filling in `endpoint` flips it to auto-capable with "needs re-authorization".
+70. Archive → no automatic probing, no Inbox facts, history kept. Delete → observations cleared.
+71. `probe: null` → no Inbox fact and no device row; copy is "this Provider does not support checking".
+72. **Fixable and unfixable stay apart**: `probe !== null`, `endpoint === null`, relative `target` → no Inbox fact and no device row, copy says "the recipe cannot run: this Key has no server address", not "does not support checking". Filling in `endpoint` flips it to auto-capable with "needs re-authorization".
 73. Two Keys under one custom provider, one with an `endpoint` and one without → different copy, so a Key-level problem is never described as a provider-level one.
-74. `provider_id = preset:<unknown slug>` → "this version does not recognize this Provider", no observation reminders, no "needs re-authorization".
-75. An absolute `target` resolving to `ftp:`, or containing `userinfo` → "the target address is invalid", no observation reminders.
+74. `provider_id = preset:<unknown slug>` → "this version does not recognize this Provider", no Inbox fact, no "needs re-authorization".
+75. An absolute `target` resolving to `ftp:`, or containing `userinfo` → "the target address is invalid", no Inbox fact.
 
 ### 16.6 Save discipline and lifecycle
 
-76. Unlocking, browsing, crossing midnight, viewing reminders, probing and usage queries leave the digest unchanged.
+76. Unlocking, browsing, crossing midnight, viewing the Inbox, probing and usage queries leave the digest unchanged.
 77. Plaintext JSON import above 32 MiB → rejected **before parsing**, never reaching the strict parser.
 78. No-op edits (same name; a `secret` with added edge spaces) write nothing.
 79. A failed save leaves the edits in memory with both exports available.
@@ -425,16 +407,19 @@ Renaming or moving the file does not invalidate the registration, since the fing
 91. `visibilitychange → hidden` flushes.
 92. Two tabs unlocking at once → the later writer fails with a message instead of overwriting silently.
 
-### 16.7 Reminders
+### 16.7 Inbox facts
 
-93. Failure → success → failure reminds again.
-94. **`condition` decides everything**: dismissing `date:2026-03-01` then moving to `2026-04-01` brings the reminder back; moving the date **back** to `2026-03-01` revives the old dismissal. That is the expected behavior of a device-local condition, and the opposite of the previous version.
-95. Dismissing `expiry_upcoming` does not suppress a later `expiry_expired`.
-96. `insecure_endpoint`: dismissing `http:192.168.1.5:8080` then switching to another plaintext host brings the reminder back; reverting to the original host revives the dismissal; `http:` → `https:` makes the reminder stop holding at all; rotating `secret` changes nothing.
-97. **`insecure_endpoint` judges the real request**: `endpoint = null` with an absolute `target = http://192.168.1.1/x` → triggers; target changed to `https://…` → does not; `endpoint = https://…` with an absolute `http:` target → **still triggers**, which the old criterion missed.
-98. Changing `provider_id` or the referenced provider's `probe` invalidates old `insecure_endpoint` dismissals, since the criterion depends on `resolved_url`, which `endpoint + target` determine together.
+93. Rejection → success → rejection shows again: the fact comes from the newest observation under the current `binding`, not from a stored decision.
+94. **Nothing to revoke**: clearing `expiry`, moving it past the 7-day window, or archiving the Key removes the fact immediately; moving the date back re-derives it from the file, so the list is identical on every device.
+95. An expired Key and a due Key never both appear; `phase` is the difference, and `days_left` orders the list.
+96. `auth_failed` and `forbidden` are Inbox facts; `rate_limited`, `server_error`, `failed`, `timeout` and `network` are not — they show as "could not verify" on the Key.
+97. A result recorded under an older `binding` is not a rejection; that Key is `never_verified` on this device and produces no Inbox fact.
+98. `probe: null` and every non-executable recipe produce no Inbox fact and no device row, so "never verified" can never be a permanent complaint.
 99. **Time-zone semantics of the `date` kind**: with `expiry = {kind:'date', value:'2026-03-01'}` and `now = 2026-03-01T20:00:00.000Z`, zone `Pacific/Kiritimati` (UTC+14, expiry point `03-01T10:00Z`) → expired; zone `Etc/GMT+12` (UTC−12, expiry point `03-02T12:00Z`) → not expired. Opposite verdicts for one `now` are the expected behavior. Under the same two zones an `instant` expiry gives the **same** verdict, proving it is device-independent.
-100. Neither expiry decision writes the file or changes any dismissal record, consistent with the unchanged-digest assertion of §16.6.
+100. Neither an expiry nor a rejection fact writes the file, consistent with the unchanged-digest assertion of §16.6.
+101. **Priority is deterministic**: the same fact, signals and `now` produce the same score and the same order in two processes; a soon-expiring grouped Key outranks an ungrouped one with the same date.
+102. **A plaintext destination is a property**: an intranet `http:` Key shows a standing warning on the Key and produces no Inbox fact, before and after a successful check.
+103. **Cross-device equality**: two devices with the same file, the same `now` and the same zone produce byte-identical Inbox fact lists; only the device verification list may differ.
 
 ### 16.8 Locked state and biometrics
 

@@ -2,31 +2,34 @@
  * The vault as the screens read it.
  *
  * One snapshot per refresh: the v2 payload, this device's latest observation
- * per key, the reminder rows derived from both, and the preferences that decide
- * what a screen offers. Nothing here is written back, and nothing is stored in
- * a second shape: the fields are the payload's own, and only the verdicts and
- * labels a screen shows are computed.
+ * per key, the attention facts derived from both, and the preferences that
+ * decide what a screen offers. Nothing here is written back, and nothing is
+ * stored in a second shape: the fields are the payload's own, and only the
+ * verdicts and labels a screen shows are computed.
  */
 
 import type { Group, Key, KeyaFile, Provider } from '../../core/payload/types';
 import type { Observation } from '../../core/runtime/observations';
 import type { KeyBinding } from '../runtime/binding';
-import type {
-  BusinessDismissal,
-  ObservationDismissal,
-} from '../../core/runtime/dismissals';
-import type { Reminder } from '../../core/reminders';
-import { businessAlerts, observationAlerts } from '../../core/reminders';
+import {
+  attentionFacts,
+  attentionPriority,
+  deviceVerifications,
+  sortAttention,
+  type AttentionFact,
+  type AttentionSignals,
+  type DeviceVerification,
+} from '../../core/reminders';
 import type { Preferences } from '../storage/local/state';
 import type { RecipeState } from '../../core/presets/classify';
 import { classifyRecipe } from '../../core/presets/classify';
+import { isPlaintextRequest } from '../../core/payload/url';
 import { providerLabel } from './providers';
 import {
   checkStatus,
-  daysSince,
   daysUntilExpiry,
-  describeFailure,
   expiryVerdict,
+  rejectionReason,
   type CheckStatus,
   type ExpiryStatus,
 } from './presentation';
@@ -45,28 +48,22 @@ export interface VaultView {
   recipes: Map<string, RecipeState>;
   /** `send_fingerprint` values this device has approved permanently. */
   grants: Set<string>;
-  /** Every reminder the current state produces, dismissed or not. */
-  reminders: ReminderRow[];
+  /** Facts that need a decision now, most urgent first. Empty when all is well. */
+  attention: AttentionRow[];
+  /** This device's verification standing, for every key that can be checked. */
+  device: DeviceVerificationRow[];
 }
 
-/** The rules an Inbox row can carry, in the order the list knows them. */
-export type InboxRule =
-  | 'expiry_upcoming'
-  | 'expiry_expired'
-  | 'insecure_endpoint'
-  | 'never_probed'
-  | 'probe_failed'
-  | 'probe_stale';
-
-/** A reminder plus the key it is about and whether it was put away. */
-export interface ReminderRow {
-  reminder: Reminder;
+/** One attention fact plus the key it is about and its computed priority. */
+export interface AttentionRow {
+  fact: AttentionFact;
   key: Key;
-  dismissed: boolean;
-  /** When the dismissal was recorded, for the archived list. */
-  dismissedAt: string | null;
-  /** The check result behind the row, or the refresh time for business rows. */
-  stamp: string;
+  priority: number;
+}
+
+/** A device verification row with the key it describes. */
+export interface DeviceVerificationRow extends DeviceVerification {
+  key: Key;
 }
 
 export interface ViewInput {
@@ -77,10 +74,6 @@ export interface ViewInput {
   checks: Map<string, Observation>;
   bindings: Map<string, KeyBinding>;
   grants: Set<string>;
-  dismissals: {
-    business: BusinessDismissal[];
-    observation: ObservationDismissal[];
-  };
 }
 
 export function buildVaultView(input: ViewInput): VaultView {
@@ -97,67 +90,65 @@ export function buildVaultView(input: ViewInput): VaultView {
     );
   }
 
-  const dismissedBusiness = new Set(
-    input.dismissals.business.map(
-      (entry) => `${entry.key_id}|${entry.rule}|${entry.condition}`
-    )
-  );
-  const dismissedObservation = new Set(
-    input.dismissals.observation.map(
-      (entry) => `${entry.key_id}|${entry.rule}|${entry.binding}`
-    )
-  );
+  const bindingOf = (key: Key) => input.bindings.get(key.id)?.binding ?? null;
+  const context = { now: input.now, timeZone: input.timeZone };
 
-  const business = businessAlerts(file, {
-    now: input.now,
-    timeZone: input.timeZone,
-  });
-  const observation = observationAlerts(
-    file,
-    (key) => input.bindings.get(key.id)?.binding ?? null,
-    [...input.checks.values()],
-    { now: input.now, timeZone: input.timeZone }
-  );
-
-  const reminders: ReminderRow[] = [];
-  for (const reminder of [...business, ...observation]) {
-    const key = byId.get(reminder.key_id);
-    if (!key) continue;
-
-    const businessKey = `${reminder.key_id}|${reminder.rule}|${
-      reminder.kind === 'business' ? reminder.condition : reminder.binding
-    }`;
-    const dismissed =
-      reminder.kind === 'business'
-        ? dismissedBusiness.has(businessKey)
-        : dismissedObservation.has(businessKey);
-    const dismissedAt = dismissed
-      ? ((reminder.kind === 'business'
-          ? input.dismissals.business.find(
-              (entry) =>
-                entry.key_id === reminder.key_id &&
-                entry.rule === reminder.rule &&
-                entry.condition === reminder.condition
-            )?.dismissed_at
-          : input.dismissals.observation.find(
-              (entry) =>
-                entry.key_id === reminder.key_id &&
-                entry.rule === reminder.rule &&
-                entry.binding === reminder.binding
-            )?.dismissed_at) ?? null)
-      : null;
-
-    reminders.push({
-      reminder,
-      key,
-      dismissed,
-      dismissedAt,
-      stamp:
-        reminder.kind === 'observation'
-          ? (input.checks.get(key.id)?.finished_at ?? input.now.toISOString())
-          : input.now.toISOString(),
+  const signals = new Map<string, AttentionSignals>();
+  for (const key of file.keys) {
+    const observation = input.checks.get(key.id);
+    const binding = bindingOf(key);
+    signals.set(key.id, {
+      grouped: key.group_id !== null,
+      verified:
+        observation !== undefined &&
+        binding !== null &&
+        observation.binding === binding &&
+        observation.outcome === 'ok',
     });
   }
+
+  const facts = attentionFacts(file, bindingOf, input.checks, context);
+  const priorities = new Map(
+    facts.map((fact) => [
+      fact,
+      attentionPriority(
+        fact,
+        signals.get(fact.key_id) ?? { grouped: false, verified: false },
+        input.now
+      ),
+    ])
+  );
+
+  const attention: AttentionRow[] = [];
+  for (const fact of sortAttention(
+    facts,
+    (fact) => priorities.get(fact) ?? 0
+  )) {
+    const key = byId.get(fact.key_id);
+    if (!key) continue;
+    attention.push({ fact, key, priority: priorities.get(fact) ?? 0 });
+  }
+
+  const device: DeviceVerificationRow[] = [];
+  for (const row of deviceVerifications(
+    file,
+    bindingOf,
+    input.checks,
+    context
+  )) {
+    const key = byId.get(row.key_id);
+    if (!key) continue;
+    device.push({ ...row, key });
+  }
+  device.sort((left, right) => {
+    if (left.never_verified !== right.never_verified) {
+      return left.never_verified ? -1 : 1;
+    }
+    const leftDays = left.days_since ?? Number.MAX_SAFE_INTEGER;
+    const rightDays = right.days_since ?? Number.MAX_SAFE_INTEGER;
+    if (leftDays !== rightDays) return rightDays - leftDays;
+    return left.key.name.localeCompare(right.key.name);
+  });
 
   return {
     file,
@@ -169,7 +160,8 @@ export function buildVaultView(input: ViewInput): VaultView {
     bindings: input.bindings,
     recipes,
     grants: input.grants,
-    reminders,
+    attention,
+    device,
   };
 }
 
@@ -207,6 +199,24 @@ export function sortedGroups(view: VaultView): Group[] {
 
 export function providers(view: VaultView): Provider[] {
   return view.file.providers;
+}
+
+/** The count the sidebar badge shows: only facts that need a decision. */
+export function attentionCount(view: VaultView | null): number {
+  return view?.attention.length ?? 0;
+}
+
+/** Device rows worth offering a check for, quiet and batchable. */
+export function deviceBacklog(view: VaultView): DeviceVerificationRow[] {
+  return view.device.filter((row) => row.never_verified || row.stale);
+}
+
+/** The highest severity an attention fact carries, for colour and icon. */
+export type AttentionSeverity = 'critical' | 'warning';
+
+export function attentionSeverity(fact: AttentionFact): AttentionSeverity {
+  if (fact.kind === 'rejected') return 'critical';
+  return fact.phase === 'expired' ? 'critical' : 'warning';
 }
 
 export function searchKeys(
@@ -285,34 +295,41 @@ export function expiryOf(view: VaultView, key: Key): KeyExpiry {
   };
 }
 
-export interface ReminderDisplay {
-  keyName: string;
-  provider: string;
-  expiryDay: string | null;
-  daysUntilExpiry: number | null;
-  checkedAt: string | null;
-  failureText: string | null;
-  endpoint: string | null;
-  daysSinceCheck: number | null;
+/**
+ * The plaintext destination this key would actually reach, if any.
+ *
+ * Judged from the resolved request rather than the endpoint alone, so an
+ * absolute `http:` target is caught even when `endpoint` is https or null. This
+ * is a property of the configuration, shown on the key, never an inbox item.
+ */
+export function plaintextTargetOf(
+  view: VaultView,
+  key: Key
+): { href: string; origin: string } | null {
+  const recipe = view.recipes.get(key.id);
+  const candidates: string[] = [];
+
+  if (recipe && recipe.kind !== 'not_executable') {
+    candidates.push(recipe.plan.resolvedHref);
+  }
+  if (key.endpoint !== null) candidates.push(key.endpoint);
+
+  for (const candidate of candidates) {
+    let url: URL;
+    try {
+      url = new URL(candidate);
+    } catch {
+      continue;
+    }
+    if (isPlaintextRequest(url)) {
+      return { href: url.href, origin: url.origin };
+    }
+  }
+
+  return null;
 }
 
-/** The values a reminder row prints, derived once so rows stay dumb. */
-export function reminderDisplay(
-  view: VaultView,
-  row: ReminderRow,
-  providerOf: (key: Key) => string
-): ReminderDisplay {
-  const observation = view.checks.get(row.key.id);
-
-  return {
-    keyName: row.key.name,
-    provider: providerOf(row.key),
-    expiryDay: row.key.expiry?.value ?? null,
-    daysUntilExpiry: daysUntilExpiry(row.key.expiry, view.now, view.timeZone),
-    checkedAt: observation?.finished_at ?? null,
-    failureText: describeFailure(observation),
-    endpoint:
-      row.reminder.rule === 'insecure_endpoint' ? row.key.endpoint : null,
-    daysSinceCheck: daysSince(observation?.finished_at ?? null, view.now),
-  };
+/** The one-line fact behind a rejected row, using the shared failure copy. */
+export function rejectionText(row: AttentionRow): string {
+  return row.fact.kind === 'rejected' ? rejectionReason(row.fact.outcome) : '';
 }

@@ -203,19 +203,4 @@ describe('adoption and persistence', () => {
     expect(result.status).toBe('discarded');
     expect(await local.listObservations(payload.vault.id, IDS.key)).toEqual([]);
   });
-
-  it('clears a previous failure dismissal after a success', async () => {
-    const { dependencies, local, payload } = await setup({ grant: true });
-    await local.putObservationDismissal({
-      vault_id: payload.vault.id,
-      key_id: IDS.key,
-      rule: 'probe_failed',
-      binding: 'binding-old',
-      dismissed_at: '2026-06-01T00:00:00.000Z',
-    });
-
-    await runCheck(dependencies, { keyId: IDS.key, mode: 'automatic' });
-
-    expect(await local.listObservationDismissals(payload.vault.id)).toEqual([]);
-  });
 });

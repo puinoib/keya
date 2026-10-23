@@ -17,7 +17,6 @@ import type { ContainerRecord } from '../storage/local/state';
 import {
   browserFetch,
   createVault as createVaultFile,
-  deviceTimeZone,
   localState,
 } from '../storage/platform';
 
@@ -234,7 +233,6 @@ async function finishOpen(
     deviceKey,
     fetch: browserFetch,
     clock: () => new Date(),
-    timeZone: deviceTimeZone(),
   });
 
   await localState.putContainer({

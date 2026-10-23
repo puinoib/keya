@@ -104,7 +104,6 @@ export async function openHarness(
     deviceKey,
     fetch: fetchImpl,
     clock: () => new Date(overrides.now ?? FIXED_NOW),
-    timeZone: 'UTC',
   });
 
   return {

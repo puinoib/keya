@@ -20,7 +20,6 @@ import { useStore } from '../../store/useStore';
 import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
 import { KeyboardShortcutsDialog } from '@/app/components/KeyboardShortcutsDialog';
 import { BiometricPromptLayer } from '@/app/components/BiometricPromptLayer';
-import { InboxSyncNotifier } from '@/app/components/InboxSyncNotifier';
 
 export type AppLayoutTopbar = 'full' | 'minimal';
 
@@ -107,7 +106,6 @@ export function AppLayout({
         onClose={() => setShowShortcuts(false)}
       />
       <BiometricPromptLayer />
-      <InboxSyncNotifier />
     </div>
   );
 }

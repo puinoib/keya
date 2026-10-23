@@ -1,7 +1,12 @@
 import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
-import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
+import {
+  activeKeys,
+  archivedKeys,
+  attentionCount,
+  sortedGroups,
+} from '../../state/view';
 import { keysSearch } from '../../state/keys-search';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { SidebarSection } from './SidebarSection';
@@ -73,9 +78,7 @@ export function Sidebar() {
     clearSmartFilters,
   } = useStore();
 
-  const openInboxCount = view
-    ? view.reminders.filter((row) => !row.dismissed).length
-    : 0;
+  const openInboxCount = attentionCount(view);
   const isInboxActive = pathname === '/inbox';
   const isKeysActive =
     pathname === '/keys' &&

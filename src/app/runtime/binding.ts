@@ -4,7 +4,7 @@
  * Both derived values depend on the same send description, so they are computed
  * in one pass: `send` for consent, `binding` for observation freshness. Keys
  * whose recipe cannot run get no entry, which is what keeps "never checked"
- * reminders from appearing for providers that cannot be checked at all.
+ * Inbox facts from appearing for providers that cannot be checked at all.
  */
 
 import { observationBinding, sendFingerprint } from '../../core/fingerprint';
