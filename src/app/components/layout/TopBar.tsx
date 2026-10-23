@@ -18,34 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-
-function downloadBytes(data: Uint8Array, filename: string) {
-  const blob = new Blob([new Uint8Array(data)], {
-    type: 'application/octet-stream',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function downloadJSON(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+import { downloadBytes, downloadJSON } from '../../lib/download';
 
 export function TopBar() {
   const {
@@ -68,7 +41,7 @@ export function TopBar() {
   const handleExportKeya = async () => {
     if (!view) return;
     try {
-      const bytes = await exportVaultBytes();
+      const bytes = await exportVaultBytes(storageMode === 'download');
       if (!bytes) {
         toast.error('Export failed');
         return;
@@ -76,7 +49,8 @@ export function TopBar() {
 
       const date = new Date().toISOString().slice(0, 10);
       downloadBytes(bytes, `keya-${date}.keya`);
-      markExported();
+      // In folder mode this is a copy, not the save: keep the unsaved flag.
+      if (storageMode === 'download') markExported();
       toast.success('Exported .keya file');
     } catch {
       toast.error('Export failed', {
@@ -86,7 +60,7 @@ export function TopBar() {
   };
 
   /* ──── Export JSON ──── */
-  const handleExportJson = () => {
+  const handleExportJson = async () => {
     if (!view) return;
     const confirmed = window.confirm(
       'Export JSON writes every key in this vault as plain text, including the secrets.\n\n' +
@@ -94,10 +68,21 @@ export function TopBar() {
         'Export the plaintext JSON file?'
     );
     if (!confirmed) return;
-    downloadJSON(buildJsonExport(view.file), jsonExportFileName());
-    toast.success('Exported JSON file', {
-      description: 'Plain text: delete it once the keys have been moved.',
-    });
+    try {
+      // The view lags a debounced edit; refresh before snapshotting so the
+      // export cannot silently omit the key that was just saved.
+      await useStore.getState().refresh();
+      const current = useStore.getState().view;
+      if (!current) return;
+      downloadJSON(buildJsonExport(current.file), jsonExportFileName());
+      toast.success('Exported JSON file', {
+        description: 'Plain text: delete it once the keys have been moved.',
+      });
+    } catch {
+      toast.error('Export failed', {
+        description: 'The vault could not be read for export.',
+      });
+    }
   };
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">

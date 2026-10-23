@@ -11,19 +11,16 @@
 
 import type { Group, Key, KeyaFile, Provider } from '../../core/payload/types';
 
-export const JSON_EXPORT_FORMAT = 'keya-export';
-export const JSON_EXPORT_VERSION = 2;
+export const JSON_EXPORT_FORMAT = 'keya-exchange';
+export const JSON_EXPORT_VERSION = 1;
 
+/** The §14.3 exchange shape; it carries assets, never device state. */
 export interface KeyaJsonExport {
   format: typeof JSON_EXPORT_FORMAT;
   version: typeof JSON_EXPORT_VERSION;
-  exported_at: string;
   vault: {
-    id: string;
     name: string;
     icon: string;
-    created_at: string;
-    content_updated_at: string;
   };
   providers: Provider[];
   groups: Group[];
@@ -31,20 +28,13 @@ export interface KeyaJsonExport {
 }
 
 /** A copy of the vault's content, in the payload's own shape. */
-export function buildJsonExport(
-  file: KeyaFile,
-  now: Date = new Date()
-): KeyaJsonExport {
+export function buildJsonExport(file: KeyaFile): KeyaJsonExport {
   return {
     format: JSON_EXPORT_FORMAT,
     version: JSON_EXPORT_VERSION,
-    exported_at: now.toISOString(),
     vault: {
-      id: file.vault.id,
       name: file.vault.name,
       icon: file.vault.icon,
-      created_at: file.vault.created_at,
-      content_updated_at: file.vault.content_updated_at,
     },
     providers: file.providers.map((provider) => structuredClone(provider)),
     groups: file.groups.map((group) => structuredClone(group)),

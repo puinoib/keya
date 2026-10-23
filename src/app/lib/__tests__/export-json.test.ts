@@ -10,20 +10,13 @@ import {
 describe('JSON export', () => {
   it('writes the payload in its own shape', () => {
     const file = cloneFile();
-    const exported = buildJsonExport(
-      file,
-      new Date('2026-03-02T09:00:00.000Z')
-    );
+    const exported = buildJsonExport(file);
 
     expect(exported.format).toBe(JSON_EXPORT_FORMAT);
     expect(exported.version).toBe(JSON_EXPORT_VERSION);
-    expect(exported.exported_at).toBe('2026-03-02T09:00:00.000Z');
     expect(exported.vault).toEqual({
-      id: IDS.vault,
       name: 'Work',
       icon: '🔑',
-      created_at: file.vault.created_at,
-      content_updated_at: file.vault.content_updated_at,
     });
     expect(exported.keys).toHaveLength(1);
     expect(exported.providers).toHaveLength(1);
