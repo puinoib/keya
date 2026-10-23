@@ -121,6 +121,20 @@ describe('UsageCard', () => {
     expect(view.textContent).toContain('88% used');
     // A stale figure keeps no fresh colour claim, even before expanding.
     expect(view.innerHTML).not.toContain('text-danger');
+    // The warning is a tooltip trigger, not a native title attribute.
+    const trigger = view.querySelector(
+      '[data-usage-stale]'
+    ) as HTMLButtonElement | null;
+    expect(trigger).toBeTruthy();
+    expect(trigger?.getAttribute('title')).toBeNull();
+
+    await act(async () => {
+      trigger?.focus();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(document.body.textContent).toContain('Last checked 3h ago');
 
     await expand(view);
     expect(view.textContent).toContain('Last checked 3h ago');

@@ -11,6 +11,11 @@ import {
   type UsageWindow,
 } from '../../lib/usage';
 import { isStaleSnapshot } from '../../lib/usage-cache';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 /**
  * Allowance read from the provider on demand.
@@ -73,48 +78,51 @@ export function UsageCard({
     <>
       <Gauge className="size-3" />
       Usage
-      {stale && snapshot && (
-        <span
-          data-usage-stale
-          title={`Not current — last checked ${describeAge(
-            snapshot.checked_at,
-            currentTime
-          )}. Refresh for current numbers.`}
-          className="inline-flex"
-        >
-          <Warning
-            className="size-3 text-[#d97706] dark:text-[#fbbf24]"
-            aria-label="This figure is not current"
-          />
-        </span>
-      )}
     </>
   );
 
   return (
     <div className="rounded-lg bg-surface-2 border border-line-subtle mb-4 animate-stagger-in">
       <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-        {canExpand ? (
-          <button
-            ref={headerToggleRef}
-            type="button"
-            aria-expanded={expanded}
-            onClick={() => setExpanded((open) => !open)}
-            title={expanded ? 'Hide usage details' : 'Show usage details'}
-            className="flex items-center gap-1.5 rounded text-xs text-ink-quaternary transition-colors hover:text-ink-secondary"
-          >
-            {label}
-            <CaretDown
-              className={`size-3 transition-transform duration-150 ${
-                expanded ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-ink-quaternary">
-            {label}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {canExpand ? (
+            <button
+              ref={headerToggleRef}
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((open) => !open)}
+              className="flex items-center gap-1.5 rounded text-xs text-ink-quaternary transition-colors hover:text-ink-secondary"
+            >
+              {label}
+              <CaretDown
+                className={`size-3 transition-transform duration-150 ${
+                  expanded ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-ink-quaternary">
+              {label}
+            </span>
+          )}
+          {stale && snapshot && (
+            <Tooltip>
+              <TooltipTrigger
+                data-usage-stale
+                type="button"
+                delay={200}
+                aria-label="This usage figure is not current"
+                className="inline-flex size-4 items-center justify-center rounded text-[#d97706] transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright/40 dark:text-[#fbbf24]"
+              >
+                <Warning className="size-3" />
+              </TooltipTrigger>
+              <TooltipContent sideOffset={6} className="max-w-56">
+                Last checked {describeAge(snapshot.checked_at, currentTime)}.
+                The provider may have moved since — refresh for current numbers.
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         <button
           onClick={onRefresh}
           disabled={loading}
