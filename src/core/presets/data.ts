@@ -179,7 +179,7 @@ export const PRESETS: readonly Preset[] = [
     defaultEndpoint: 'https://bedrock-runtime.us-east-1.amazonaws.com',
     probe: null,
     unverifiable:
-      'Amazon Bedrock uses AWS request signing and cannot be tested from the browser.',
+      "Amazon Bedrock API keys are regional, and the only read-only model listing is on the control plane, so a browser check with a fixed target cannot follow the key's region.",
     verifies: 'request',
   },
   {
