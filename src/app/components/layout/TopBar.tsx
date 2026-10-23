@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { exportVaultBytes, flushSave, useStore } from '../../store/useStore';
 import { buildJsonExport, jsonExportFileName } from '../../lib/export-json';
 import { describeSaveFailure } from '../../state/presentation';
@@ -16,6 +17,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { downloadBytes, downloadJSON } from '../../lib/download';
+import {
+  formatShortcut,
+  formatShortcutCompact,
+  getShortcutKeys,
+} from '../../lib/shortcuts';
+import { Kbd } from '@/components/ui/kbd';
 import { ThemeMenu } from './ThemeMenu';
 
 export function TopBar() {
@@ -28,7 +35,16 @@ export function TopBar() {
     hasUnsavedChanges,
     saveFailure,
     markExported,
+    keyboardShortcuts,
   } = useStore();
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  const searchKeys = getShortcutKeys(keyboardShortcuts, 'search.focus');
+  const searchHint = formatShortcutCompact(searchKeys);
+  // The hint explains how to get into the field, so it is noise once you are in
+  // it or once there is a query to read.
+  const showSearchHint =
+    !searchQuery && !searchFocused && searchHint !== 'Disabled';
 
   /* ──── Export .keya ──── */
   const handleExportKeya = async () => {
@@ -93,6 +109,8 @@ export function TopBar() {
           placeholder="Search all keys..."
           value={searchQuery}
           data-keya-search="true"
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -100,12 +118,20 @@ export function TopBar() {
               else e.currentTarget.blur();
             }
           }}
-          className="w-full h-7 pl-8 pr-3 rounded-md bg-surface-2 border border-transparent
+          className="w-full h-7 pl-8 pr-10 rounded-md bg-surface-2 border border-transparent
                           text-xs text-ink-primary placeholder:text-ink-quaternary
                           hover:bg-surface-3 hover:border-line-subtle
                           focus:outline-none focus:bg-surface-2 focus:border-line focus:ring-1 focus:ring-accent-bright/40
                           transition-all duration-150"
         />
+        {showSearchHint && (
+          <Kbd
+            label={formatShortcut(searchKeys)}
+            className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2"
+          >
+            {searchHint}
+          </Kbd>
+        )}
       </div>
 
       <div className="flex-1" />
