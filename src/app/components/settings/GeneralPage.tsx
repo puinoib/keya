@@ -23,6 +23,7 @@ import {
   type PasswordVerdict,
 } from '@/app/lib/password-policy';
 import type { Grant } from '@/core/runtime/grants';
+import { MAX_VAULT_NAME } from '@/core/payload/limits';
 
 function Toggle({
   checked,
@@ -74,6 +75,11 @@ export function GeneralPage() {
   const preferences = view?.preferences;
   const data = view?.file.vault;
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  // The view is rebuilt asynchronously, so binding the field straight to
+  // `data.name` re-renders it with the previous name after every keystroke and
+  // the caret jumps to the end. Keep the text local while it is being typed.
+  const [nameDraft, setNameDraft] = useState('');
+  const editingName = useRef(false);
   const [bioRegistered, setBioRegistered] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
   const [bioError, setBioError] = useState('');
@@ -97,10 +103,17 @@ export function GeneralPage() {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
   const vaultId = data?.id;
+  const vaultName = data?.name ?? '';
   const estimate = verdict?.estimate ?? null;
   const strength = estimate
     ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
     : null;
+
+  // Outside an edit, the field follows the payload: a different vault, a
+  // refused rename, or an edit made elsewhere all land here.
+  useEffect(() => {
+    if (!editingName.current) setNameDraft(vaultName);
+  }, [vaultName]);
 
   const deferredNewPw = useDeferredValue(newPw);
   useEffect(() => {
@@ -196,8 +209,26 @@ export function GeneralPage() {
               )}
             </div>
             <Input
-              value={data.name}
-              onChange={(e) => updateMeta({ name: e.target.value })}
+              value={nameDraft}
+              onChange={(event) => {
+                const next = event.target.value;
+                setNameDraft(next);
+                // An empty name is refused by the payload (min length 1). Keep
+                // the text in the field; blur shows what actually landed.
+                if (next.trim().length === 0) return;
+                updateMeta({ name: next });
+              }}
+              onFocus={() => {
+                editingName.current = true;
+              }}
+              onBlur={() => {
+                editingName.current = false;
+                // The payload keeps the name trimmed, and only an empty one is
+                // refused; show the form that actually landed.
+                const trimmed = nameDraft.trim();
+                setNameDraft(trimmed.length === 0 ? vaultName : trimmed);
+              }}
+              maxLength={MAX_VAULT_NAME}
               placeholder="My Vault"
               className="h-8 text-xs"
             />
