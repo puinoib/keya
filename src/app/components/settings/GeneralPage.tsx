@@ -219,6 +219,10 @@ export function GeneralPage() {
                   <p className="text-xs font-medium text-ink-primary">
                     Biometric Unlock
                   </p>
+                  <p className="text-xs text-ink-quaternary mt-0.5">
+                    Unlock this vault with your device's biometrics instead of
+                    typing the master password.
+                  </p>
                   {bioError && (
                     <p className="text-xs text-danger mt-0.5">{bioError}</p>
                   )}
@@ -387,6 +391,10 @@ export function GeneralPage() {
                 <div>
                   <p className="text-xs font-medium text-ink-primary">
                     Master Password
+                  </p>
+                  <p className="text-xs text-ink-quaternary mt-0.5">
+                    Change the password that encrypts this vault file. Every
+                    device needs the new password.
                   </p>
                 </div>
                 {!showPwForm && (
