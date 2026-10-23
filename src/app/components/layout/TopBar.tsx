@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { downloadBytes, downloadJSON } from '../../lib/download';
+import { ThemeMenu } from './ThemeMenu';
 
 export function TopBar() {
   const {
@@ -126,6 +127,8 @@ export function TopBar() {
           </span>
         )
       )}
+
+      <ThemeMenu />
 
       {/* Export menu. Keya has no importer: another vault is opened from the
           welcome screen, not merged into this one. */}

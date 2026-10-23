@@ -1,7 +1,7 @@
 ---
 title: Quick Start
 description: Choose a folder, create a vault, and add a credential.
-updated: 2026-03-01
+updated: 2026-10-23
 order: 2
 ---
 
@@ -10,6 +10,8 @@ order: 2
 Open the app and select **Choose folder**. Keya remembers the folder handle, but browsers still ask for permission again after a reload or a restart.
 
 Every `.keya` file in that folder is a vault. Nested folders are not scanned.
+
+To point Keya at another folder later, use **Change sync folder** in the vault menu at the top of the sidebar. It saves and locks the current vault first, then the welcome screen asks for the new folder; the `.keya` files stay where they are.
 
 ## 2. Create a vault
 

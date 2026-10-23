@@ -189,11 +189,16 @@ export function getResolvedShortcuts(
   );
 }
 
+export function detectMacPlatform(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    /Mac|iPhone|iPad/.test(navigator.platform)
+  );
+}
+
 export function formatShortcut(keys: string): string {
   if (!keys) return 'Disabled';
-  const isMac =
-    typeof navigator !== 'undefined' &&
-    /Mac|iPhone|iPad/.test(navigator.platform);
+  const isMac = detectMacPlatform();
 
   return keys
     .split(',')
@@ -206,6 +211,29 @@ export function formatShortcut(keys: string): string {
         .join(' + ');
     })
     .join(' / ');
+}
+
+/**
+ * Compact form for menu hints, where "Cmd + Shift + L" does not fit:
+ * "⌘⇧L" on Apple platforms, "Ctrl+Shift+L" elsewhere. The first binding wins
+ * because a hint describes one key to press, not every alternative.
+ */
+export function formatShortcutCompact(
+  keys: string,
+  isMac = detectMacPlatform()
+): string {
+  if (!keys) return 'Disabled';
+  const first = keys.split(',')[0].trim();
+  if (first === 'shift+slash') return '?';
+
+  const symbols: Record<string, string> = isMac
+    ? { mod: '⌘', meta: '⌘', ctrl: '⌃', alt: '⌥', shift: '⇧' }
+    : { mod: 'Ctrl', meta: 'Meta', ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift' };
+
+  return first
+    .split('+')
+    .map((part) => symbols[part] ?? formatShortcutPart(part, isMac))
+    .join(isMac ? '' : '+');
 }
 
 function formatShortcutPart(part: string, isMac: boolean): string {
