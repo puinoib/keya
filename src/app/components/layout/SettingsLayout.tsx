@@ -18,10 +18,12 @@ export function SettingsLayout() {
 
       <div className="flex flex-1 flex-col min-w-0 p-3 pl-0">
         <div className="flex flex-1 flex-col min-h-0 rounded-xl bg-canvas-base border border-line-subtle overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-          <header className="h-12 flex items-center px-6 shrink-0">
-            <h1 className="text-base font-semibold tracking-tight text-ink-primary">
-              {settingsTitle(pathname)}
-            </h1>
+          <header className="h-12 shrink-0">
+            <div className="mx-auto flex h-full w-full max-w-2xl items-center px-6">
+              <h1 className="text-base font-semibold tracking-tight text-ink-primary">
+                {settingsTitle(pathname)}
+              </h1>
+            </div>
           </header>
 
           <div className="flex-1 overflow-auto scrollbar-hidden">
