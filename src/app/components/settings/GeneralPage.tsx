@@ -1,5 +1,11 @@
 import { useStore } from '../../store/useStore';
-import { Palette, Spinner, Shield, Eye, EyeSlash } from '@phosphor-icons/react';
+import {
+  FolderSimple,
+  Palette,
+  Spinner,
+  Shield,
+  Warning,
+} from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -8,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState, useEffect, useRef, useDeferredValue } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
 import { toast } from 'sonner';
 import {
@@ -17,13 +23,21 @@ import {
   registerBiometric,
   removeBiometric,
 } from '@/app/lib/biometric';
+import { FileStorage } from '@/app/lib/storage';
+import { describeAge } from '@/app/state/presentation';
 import {
-  describePasswordVerdict,
-  judgePassword,
-  type PasswordVerdict,
-} from '@/app/lib/password-policy';
+  AlertDialogRoot,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import type { Grant } from '@/core/runtime/grants';
 import { MAX_VAULT_NAME } from '@/core/payload/limits';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 
 function Toggle({
   checked,
@@ -54,14 +68,6 @@ function Toggle({
   );
 }
 
-const STRENGTH_CONFIG = {
-  0: { label: 'Very Weak', color: 'bg-red-500' },
-  1: { label: 'Weak', color: 'bg-red-500' },
-  2: { label: 'Fair', color: 'bg-orange-500' },
-  3: { label: 'Good', color: 'bg-yellow-500' },
-  4: { label: 'Strong', color: 'bg-emerald-500' },
-} as const;
-
 export function GeneralPage() {
   const {
     view,
@@ -71,6 +77,9 @@ export function GeneralPage() {
     verifyPassword,
     listGrants,
     revokeGrant,
+    forgetDeviceState,
+    activeVaultFileName,
+    storageMode,
   } = useStore();
   const preferences = view?.preferences;
   const data = view?.file.vault;
@@ -88,26 +97,16 @@ export function GeneralPage() {
   const [enrollPw, setEnrollPw] = useState('');
   const [grants, setGrants] = useState<Grant[]>([]);
 
-  // Change password state
-  const [showPwForm, setShowPwForm] = useState(false);
-  const [oldPw, setOldPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [pwError, setPwError] = useState('');
-  const [pwLoading, setPwLoading] = useState(false);
-  const [showOldPw, setShowOldPw] = useState(false);
-  const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [verdict, setVerdict] = useState<PasswordVerdict | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
+  const [forgetting, setForgetting] = useState(false);
+  // The folder's name is all a browser exposes; the path is not readable.
+  const [folderName, setFolderName] = useState<string | null>(null);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bioSupported = isBiometricSupported();
   const vaultId = data?.id;
   const vaultName = data?.name ?? '';
-  const estimate = verdict?.estimate ?? null;
-  const strength = estimate
-    ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
-    : null;
 
   // Outside an edit, the field follows the payload: a different vault, a
   // refused rename, or an edit made elsewhere all land here.
@@ -115,23 +114,22 @@ export function GeneralPage() {
     if (!editingName.current) setNameDraft(vaultName);
   }, [vaultName]);
 
-  const deferredNewPw = useDeferredValue(newPw);
+  // A vault that was opened from bytes has no folder to name.
   useEffect(() => {
-    if (!deferredNewPw || !showPwForm) {
-      setVerdict(null);
+    if (storageMode !== 'folder') {
+      setFolderName(null);
       return;
     }
     let cancelled = false;
-    judgePassword(deferredNewPw).then((result) => {
-      if (!cancelled) setVerdict(result);
-    });
+    FileStorage.getWorkspaceName()
+      .then((name) => {
+        if (!cancelled) setFolderName(name);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [deferredNewPw, showPwForm]);
-
-  const canChangePw =
-    oldPw.length > 0 && newPw === confirmPw && verdict?.ok === true;
+  }, [storageMode, activeVaultFileName]);
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -169,6 +167,8 @@ export function GeneralPage() {
   }, [vaultId, listGrants]);
 
   if (!data) return null;
+
+  const now = new Date();
 
   return (
     <>
@@ -232,6 +232,27 @@ export function GeneralPage() {
               placeholder="My Vault"
               className="h-8 text-xs"
             />
+          </div>
+          {/* A browser exposes the folder's name and nothing more, so this is
+              deliberately not a path and carries no click target. */}
+          <div className="mt-3 space-y-1 text-[11px] text-ink-quaternary">
+            <p className="flex items-center gap-1.5">
+              <FolderSimple className="size-3.5 shrink-0" />
+              {storageMode === 'folder' ? (
+                <span className="truncate font-mono">
+                  {folderName ? `${folderName} / ` : ''}
+                  {activeVaultFileName ?? 'unnamed file'}
+                </span>
+              ) : (
+                <span>
+                  Not saved to a folder — export a .keya copy to keep one
+                </span>
+              )}
+            </p>
+            <p>
+              Created {describeAge(data.created_at, now)}, last changed{' '}
+              {describeAge(data.content_updated_at, now)}
+            </p>
           </div>
         </section>
 
@@ -417,215 +438,114 @@ export function GeneralPage() {
               </Select>
             </div>
             {/* Change Master Password */}
-            <div className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-ink-primary">
-                    Master Password
-                  </p>
-                  <p className="text-xs text-ink-quaternary mt-0.5">
-                    Change the password that encrypts this vault file. Every
-                    device needs the new password.
-                  </p>
-                </div>
-                {!showPwForm && (
-                  <button
-                    onClick={() => setShowPwForm(true)}
-                    className="text-xs text-accent-bright hover:text-accent transition-colors"
-                  >
-                    Change
-                  </button>
-                )}
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="text-xs font-medium text-ink-primary">
+                  Master Password
+                </p>
+                <p className="text-xs text-ink-quaternary mt-0.5">
+                  Change the password that encrypts this vault file. Every
+                  device needs the new password.
+                </p>
               </div>
-              {showPwForm && (
-                <div className="mt-3 space-y-2">
-                  <div className="relative">
-                    <Input
-                      type={showOldPw ? 'text' : 'password'}
-                      placeholder="Current password"
-                      value={oldPw}
-                      onChange={(e) => {
-                        setOldPw(e.target.value);
-                        setPwError('');
-                      }}
-                      className="h-7 pr-8 text-xs"
-                      autoComplete="off"
-                      data-lpignore="true"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOldPw((visible) => !visible)}
-                      className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-                      aria-label={showOldPw ? 'Hide password' : 'Show password'}
-                    >
-                      {showOldPw ? (
-                        <EyeSlash className="size-3.5" />
-                      ) : (
-                        <Eye className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="relative">
-                      <Input
-                        type={showNewPw ? 'text' : 'password'}
-                        placeholder="New password (min 12 characters)"
-                        value={newPw}
-                        onChange={(e) => {
-                          setNewPw(e.target.value);
-                          setPwError('');
-                        }}
-                        className="h-7 pr-8 text-xs"
-                        autoComplete="off"
-                        data-lpignore="true"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPw((visible) => !visible)}
-                        className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-                        aria-label={
-                          showNewPw ? 'Hide password' : 'Show password'
-                        }
-                      >
-                        {showNewPw ? (
-                          <EyeSlash className="size-3.5" />
-                        ) : (
-                          <Eye className="size-3.5" />
-                        )}
-                      </button>
-                    </div>
-                    {newPw && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 flex gap-1">
-                            {[0, 1, 2, 3, 4].map((i) => (
-                              <div
-                                key={i}
-                                className={`h-1 flex-1 rounded-full transition-colors ${
-                                  estimate && i <= estimate.score
-                                    ? STRENGTH_CONFIG[
-                                        estimate.score as keyof typeof STRENGTH_CONFIG
-                                      ].color
-                                    : 'bg-surface-3'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          {strength && (
-                            <span className="text-xs text-ink-quaternary">
-                              {strength.label}
-                            </span>
-                          )}
-                        </div>
-                        {verdict && !verdict.ok && (
-                          <p className="text-xs text-danger">
-                            {describePasswordVerdict(verdict)}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPw ? 'text' : 'password'}
-                      placeholder="Confirm new password"
-                      value={confirmPw}
-                      onChange={(e) => {
-                        setConfirmPw(e.target.value);
-                        setPwError('');
-                      }}
-                      className={`h-7 pr-8 text-xs ${confirmPw && newPw !== confirmPw ? 'border-red-500/50' : ''}`}
-                      autoComplete="off"
-                      data-lpignore="true"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPw((visible) => !visible)}
-                      className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
-                      aria-label={
-                        showConfirmPw ? 'Hide password' : 'Show password'
-                      }
-                    >
-                      {showConfirmPw ? (
-                        <EyeSlash className="size-3.5" />
-                      ) : (
-                        <Eye className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                  {confirmPw && newPw !== confirmPw && (
-                    <p className="text-xs text-danger">Passwords don't match</p>
-                  )}
-                  {pwError && <p className="text-xs text-danger">{pwError}</p>}
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={async () => {
-                        if (!canChangePw) return;
-                        setPwLoading(true);
-                        setPwError('');
-                        try {
-                          const changed = await changePassword(oldPw, newPw);
-                          if (!changed.ok) {
-                            setPwError(changed.reason);
-                            return;
-                          }
-                          // The record wrapped the old password, so the store
-                          // dropped it. Re-register with the new one, and treat
-                          // a cancel as "biometrics off" rather than an error
-                          // in the password change.
-                          if (bioRegistered && vaultId) {
-                            try {
-                              await registerBiometric(vaultId, newPw);
-                            } catch {
-                              setBioRegistered(false);
-                              setBioError(
-                                'Password changed. Enable biometric unlock again to use it.'
-                              );
-                            }
-                          }
-                          toast.success('Password changed');
-                          setShowPwForm(false);
-                          setOldPw('');
-                          setNewPw('');
-                          setConfirmPw('');
-                        } catch (e) {
-                          setPwError(
-                            e instanceof Error
-                              ? e.message
-                              : 'Failed to change password'
-                          );
-                        } finally {
-                          setPwLoading(false);
-                        }
-                      }}
-                      disabled={pwLoading || !canChangePw}
-                      className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
-                    >
-                      {pwLoading ? (
-                        <Spinner className="size-3.5 animate-spin" />
-                      ) : (
-                        'Save'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowPwForm(false);
-                        setOldPw('');
-                        setNewPw('');
-                        setConfirmPw('');
-                        setPwError('');
-                      }}
-                      className="text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => setPasswordOpen(true)}
+                className="text-xs text-accent-bright hover:text-accent transition-colors"
+              >
+                Change
+              </button>
             </div>
           </div>
         </section>
+
+        {/* Device state only: the file is not touched, so the wording is
+            careful not to read as "delete this vault". */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Warning className="size-3.5 text-ink-quaternary" />
+            <span className="text-xs font-medium text-ink-secondary">
+              This device
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 p-3">
+            <div>
+              <p className="text-xs font-medium text-ink-primary">
+                Forget this device's data
+              </p>
+              <p className="text-xs text-ink-quaternary mt-0.5">
+                Deletes this device's check results, approved destinations,
+                cached allowances and biometric binding for this vault. The
+                .keya file is not touched.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfirmForget(true)}
+              disabled={forgetting}
+              className="shrink-0 rounded-md border border-danger/30 px-2.5 py-1.5 text-xs text-danger transition-colors hover:bg-danger/5 disabled:opacity-50"
+            >
+              Forget
+            </button>
+          </div>
+        </section>
       </div>
+
+      <ChangePasswordDialog
+        open={passwordOpen}
+        onOpenChange={setPasswordOpen}
+        changePassword={changePassword}
+        onChanged={async (newPassword) => {
+          // The biometric record wrapped the old password, so the store dropped
+          // it. Re-register with the new one; a cancel means "biometrics off"
+          // rather than a failed password change.
+          if (!bioRegistered || !vaultId) return;
+          try {
+            await registerBiometric(vaultId, newPassword);
+          } catch {
+            setBioRegistered(false);
+            setBioError(
+              'Password changed. Enable biometric unlock again to use it.'
+            );
+          }
+        }}
+      />
+
+      <AlertDialogRoot open={confirmForget} onOpenChange={setConfirmForget}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Forget this device's data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Check results, approved destinations, cached allowances and the
+              biometric binding for this vault are deleted from this device. The
+              .keya file stays exactly as it is, and nothing is sent anywhere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setForgetting(true);
+                try {
+                  await forgetDeviceState();
+                  setGrants([]);
+                  setBioRegistered(false);
+                  toast.success('Device data forgotten');
+                } catch (error) {
+                  toast.error('Could not forget this device\u2019s data', {
+                    description:
+                      error instanceof Error ? error.message : undefined,
+                  });
+                } finally {
+                  setForgetting(false);
+                }
+              }}
+              className="bg-danger text-white hover:bg-danger/90"
+            >
+              Forget device data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogRoot>
     </>
   );
 }

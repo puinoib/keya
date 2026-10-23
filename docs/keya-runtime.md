@@ -251,6 +251,8 @@ Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock
 
 "Not in `.keya`" is not "safe to store in the clear". All of the above must be described in copy as data that clearing browser storage would destroy. The file owes them nothing.
 
+Because none of this is in the file, it can also be dropped without touching the file. The app offers one per-vault action that deletes the vault's observations, the grants whose audit field names it, its cached allowance snapshots and its biometric binding — everything above except the device key, preferences and the container registration. It is a device cleanup, not a delete: the file stays byte-identical and nothing is sent.
+
 **Container fingerprint**, computable before unlock and the stable primary key for local state:
 
 ```

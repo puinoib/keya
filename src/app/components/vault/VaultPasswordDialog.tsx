@@ -13,11 +13,8 @@ import {
   isBiometricRegistered,
   unlockWithBiometric,
 } from '@/app/lib/biometric';
-import {
-  describePasswordVerdict,
-  judgePassword,
-  type PasswordVerdict,
-} from '@/app/lib/password-policy';
+import { judgePassword, type PasswordVerdict } from '@/app/lib/password-policy';
+import { PasswordStrengthMeter } from '@/app/components/ui/password-strength';
 import { VaultOpenError } from '@/app/lib/storage';
 import { describeOpenFailure } from '@/app/state/presentation';
 import { downloadBytes } from '@/app/lib/download';
@@ -37,14 +34,6 @@ interface VaultPasswordDialogProps {
   /** Focus the password field on mount (off when another field comes first). */
   autoFocus?: boolean;
 }
-
-const STRENGTH_CONFIG = {
-  0: { label: 'Very Weak', color: 'bg-red-500' },
-  1: { label: 'Weak', color: 'bg-red-500' },
-  2: { label: 'Fair', color: 'bg-orange-500' },
-  3: { label: 'Good', color: 'bg-yellow-500' },
-  4: { label: 'Strong', color: 'bg-emerald-500' },
-} as const;
 
 const EYE_BUTTON =
   'absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-ink-quaternary transition-colors hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright';
@@ -96,11 +85,6 @@ export function VaultPasswordDialog({
       cancelled = true;
     };
   }, [deferredPassword, isCreate]);
-
-  const estimate = verdict?.estimate ?? null;
-  const strength = estimate
-    ? STRENGTH_CONFIG[estimate.score as keyof typeof STRENGTH_CONFIG]
-    : null;
 
   useEffect(() => {
     if (isCreate || !vaultId) return;
@@ -262,45 +246,7 @@ export function VaultPasswordDialog({
             )}
           </button>
         </div>
-        {isCreate && password && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <div className="flex flex-1 gap-1">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      estimate && i <= estimate.score
-                        ? STRENGTH_CONFIG[
-                            estimate.score as keyof typeof STRENGTH_CONFIG
-                          ].color
-                        : 'bg-surface-3'
-                    }`}
-                  />
-                ))}
-              </div>
-              {strength && (
-                <span className="text-xs text-ink-quaternary">
-                  {strength.label}
-                </span>
-              )}
-            </div>
-            {verdict && !verdict.ok && (
-              <p className="text-xs text-danger">
-                {describePasswordVerdict(verdict)}
-              </p>
-            )}
-            {estimate?.feedback.warning && (
-              <p className="text-xs text-danger">{estimate.feedback.warning}</p>
-            )}
-            {estimate?.feedback.suggestions &&
-              estimate.feedback.suggestions.length > 0 && (
-                <p className="text-xs text-ink-quaternary">
-                  {estimate.feedback.suggestions[0]}
-                </p>
-              )}
-          </div>
-        )}
+        {isCreate && password && <PasswordStrengthMeter verdict={verdict} />}
       </div>
 
       {isCreate && (

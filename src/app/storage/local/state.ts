@@ -251,6 +251,27 @@ export class LocalState {
     }
   }
 
+  /**
+   * Forget this device's knowledge of one vault: every observation of its keys,
+   * and the grants whose audit field names it.
+   *
+   * Grants are deliberately not partitioned by `vault_id` (§10.2), so that a
+   * clone keeps them; the audit field is only how a cleanup finds the rows that
+   * belong to this vault. It is not a matching rule.
+   */
+  async forgetVault(vaultId: string): Promise<void> {
+    const observations = await this.kv.keys(keyOf(OBSERVATION, vaultId));
+    for (const key of observations) {
+      await this.kv.delete(key);
+    }
+
+    for (const grant of await this.listGrants()) {
+      if (grant.vault_id === vaultId) {
+        await this.kv.delete(keyOf(GRANT, grant.fingerprint));
+      }
+    }
+  }
+
   newObservationId(): string {
     return this.newId();
   }

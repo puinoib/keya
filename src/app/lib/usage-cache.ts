@@ -193,6 +193,11 @@ export function dropUsageSnapshot(vaultId: string, keyId: string): void {
   writeVault(vaultId, vault);
 }
 
+/** Forget every snapshot cached for this vault. */
+export function clearUsageVault(vaultId: string): void {
+  writeVault(vaultId, { entries: {} });
+}
+
 /** Drop entries for keys that are no longer in the vault. */
 export function pruneUsageCache(
   vaultId: string,

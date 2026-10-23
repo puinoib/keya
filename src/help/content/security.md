@@ -42,6 +42,8 @@ The browser stores, unencrypted: the folder handle, the container registry (vaul
 
 Check results never contain the request, the headers, the response body, or the provider's own error text. They record an outcome and a controlled code, which is what the Inbox and key copy are generated from.
 
+**Forget this device's data** (Settings › General) deletes what this machine knows about the open vault: its check results, its approved destinations, cached usage numbers and the biometric binding. The `.keya` file is untouched — only this device's copy of that knowledge goes, nothing is sent anywhere, and the file still opens with its password.
+
 ## Saving and synchronization
 
 Writes are serialized across tabs, and each save is rejected if the file changed since it was read. Creating a vault with an existing name is rejected rather than overwriting.

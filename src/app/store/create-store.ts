@@ -29,6 +29,7 @@ import { buildVaultView, keyById, type VaultView } from '../state/view';
 import { describeSaveFailure } from '../state/presentation';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import {
+  clearUsageVault,
   dropUsageSnapshot,
   pruneUsageCache,
   readUsageCache,
@@ -206,6 +207,12 @@ export interface AppState {
   /** Standing approvals for this device, so they can be inspected and revoked. */
   listGrants: () => Promise<Grant[]>;
   revokeGrant: (fingerprint: string) => Promise<void>;
+  /**
+   * Drop this device's knowledge of the open vault: check results, standing
+   * approvals, cached allowances and the biometric binding. The file is never
+   * touched — it is the only durable copy and this is not a delete.
+   */
+  forgetDeviceState: () => Promise<void>;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
 }
 
@@ -934,6 +941,22 @@ export function createAppStore(deps: StoreDeps): AppStore {
       revokeGrant: async (fingerprint) => {
         if (!runtime) return;
         await runtime.local.removeGrant(fingerprint);
+      },
+
+      forgetDeviceState: async () => {
+        const active = runtime;
+        if (!active) return;
+        const vaultId = active.vault.getPayload().vault.id;
+
+        await active.local.forgetVault(vaultId);
+        await removeBiometric(vaultId);
+        clearUsageVault(vaultId);
+
+        // A lock or a switch during the awaits owns the state now; its device
+        // data is not ours to clear.
+        if (runtime !== active) return;
+        set({ usage: {} });
+        await get().refresh();
       },
 
       updateMeta: (updates) => {

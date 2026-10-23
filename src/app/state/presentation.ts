@@ -211,6 +211,37 @@ export function daysSince(date: string | null, now: Date): number | null {
   return Math.floor((now.getTime() - parsed.getTime()) / DAY);
 }
 
+const RELATIVE = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+const AGE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 31_536_000],
+  ['month', 2_592_000],
+  ['week', 604_800],
+  ['day', 86_400],
+  ['hour', 3_600],
+  ['minute', 60],
+];
+
+/**
+ * A timestamp as the sentence a screen shows. Coarse on purpose: these are
+ * trust signals ("the file was written two minutes ago"), not a clock.
+ */
+export function describeAge(timestamp: string, now: Date): string {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) return 'at an unknown time';
+
+  const seconds = Math.round((parsed - now.getTime()) / 1000);
+  const magnitude = Math.abs(seconds);
+  if (magnitude < 60) return 'just now';
+
+  for (const [unit, size] of AGE_UNITS) {
+    if (magnitude >= size) {
+      return RELATIVE.format(Math.round(seconds / size), unit);
+    }
+  }
+  return RELATIVE.format(seconds, 'second');
+}
+
 /**
  * Why the last save failed, in the words the top bar and the toast share.
  * `locked` is included because flush can race a lock.
