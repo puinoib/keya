@@ -9,6 +9,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -17,6 +18,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.unstubAllGlobals();
 });
 
 function entry(overrides: Partial<UsageEntry> = {}): UsageEntry {
@@ -45,12 +47,25 @@ async function render(
   return { view: container, onRefresh };
 }
 
+async function expand(view: HTMLElement) {
+  const toggle = view.querySelector('button[aria-expanded]');
+  expect(toggle).toBeTruthy();
+  expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+  await act(async () => {
+    toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+}
+
 describe('UsageCard', () => {
   it('offers a query instead of guessing when nothing was asked yet', async () => {
     const { view } = await render();
 
     expect(view.textContent).toContain('Check usage');
     expect(view.textContent).not.toMatch(/% used/);
+    expect(view.textContent).toContain('Nothing read yet');
+
+    await expand(view);
     expect(view.textContent).toMatch(/Nothing is stored in this vault/);
   });
 
@@ -77,8 +92,10 @@ describe('UsageCard', () => {
     expect(view.textContent).toContain('7 days');
     expect(view.textContent).toContain('62% used');
     expect(view.textContent).toContain('resets in 2h');
-    expect(view.textContent).toContain('Read from OpenCode Go just now');
     expect(view.textContent).toContain('Refresh');
+
+    await expand(view);
+    expect(view.textContent).toContain('Read from OpenCode Go just now');
   });
 
   it('shows a cached figure as history once it is old', async () => {
@@ -103,10 +120,12 @@ describe('UsageCard', () => {
     });
 
     expect(view.textContent).toContain('88% used');
+    // A stale figure keeps no fresh colour claim, even before expanding.
+    expect(view.innerHTML).not.toContain('text-danger');
+
+    await expand(view);
     expect(view.textContent).toContain('Last checked 3h ago');
     expect(view.textContent).toMatch(/may have moved since/);
-    // A stale figure keeps no fresh colour claim.
-    expect(view.innerHTML).not.toContain('text-danger');
   });
 
   it('shows why a reply could not be used rather than zero usage', async () => {
@@ -121,8 +140,10 @@ describe('UsageCard', () => {
     });
 
     expect(view.textContent).toContain('This key cannot read usage');
-    expect(view.textContent).toContain('OpenCode Go subscription required.');
     expect(view.textContent).not.toMatch(/% used/);
+
+    await expand(view);
+    expect(view.textContent).toContain('OpenCode Go subscription required.');
   });
 
   it('asks the provider only when the query button is pressed', async () => {
@@ -155,5 +176,41 @@ describe('UsageCard', () => {
   it('stays out of the way for providers Keya knows nothing about', async () => {
     const { view } = await render({ provider: 'OpenAI' });
     expect(view.textContent).toBe('');
+  });
+});
+
+describe('UsageCard disclosure', () => {
+  it('keeps the per-window detail behind the summary', async () => {
+    const { view } = await render({
+      now: new Date('2026-10-20T12:00:00.000Z'),
+      entry: entry({
+        checked_at: '2026-10-20T12:00:00.000Z',
+        snapshot: {
+          provider: 'OpenCode Go',
+          checked_at: '2026-10-20T12:00:00.000Z',
+          windows: [
+            {
+              id: 'weekly',
+              label: '7 days',
+              percent_used: 62,
+              resets_at: '2026-10-20T14:00:00.000Z',
+            },
+            {
+              id: 'monthly',
+              label: 'Month',
+              percent_used: 10,
+              resets_at: null,
+            },
+          ],
+        },
+      }),
+    });
+
+    // One summary line, not one row per window.
+    expect(view.textContent).not.toContain('10% used');
+
+    await expand(view);
+    expect(view.textContent).toContain('10% used');
+    expect(view.textContent).toContain('7 days is closest to its limit');
   });
 });

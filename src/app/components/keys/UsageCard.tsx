@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Gauge, Warning } from '@phosphor-icons/react';
+import { CaretDown, Clock, Gauge, Warning } from '@phosphor-icons/react';
 import {
   describeAge,
   describeReset,
@@ -8,6 +8,7 @@ import {
   unsupportedUsageReason,
   type UsageEntry,
   type UsageFailure,
+  type UsageWindow,
 } from '../../lib/usage';
 import { isStaleSnapshot } from '../../lib/usage-cache';
 
@@ -18,6 +19,10 @@ import { isStaleSnapshot } from '../../lib/usage-cache';
  * the vault. A snapshot may be cached for this tab for a short while, so the
  * card always says how old it is and shows a stale one as history rather than
  * as current: a number Keya cannot keep current must not look live.
+ *
+ * The default state is one summary line, because this is the only block in the
+ * detail panel whose height depends on the provider. The full per-window
+ * breakdown is one click away.
  */
 export function UsageCard({
   provider,
@@ -32,6 +37,7 @@ export function UsageCard({
   now?: Date;
 }) {
   const currentTime = useNow(now);
+  const [expanded, setExpanded] = useState(false);
   const snapshot = entry?.state === 'ok' ? entry.snapshot : undefined;
   const stale = isStaleSnapshot(snapshot?.checked_at, currentTime);
 
@@ -56,11 +62,17 @@ export function UsageCard({
   const tightest = tightestWindow(snapshot);
 
   return (
-    <div className="rounded-lg bg-surface-2 border border-line-subtle p-3 mb-4 animate-stagger-in">
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="rounded-lg bg-surface-2 border border-line-subtle mb-4 animate-stagger-in">
+      <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
         <span className="flex items-center gap-1.5 text-xs text-ink-quaternary">
           <Gauge className="size-3" />
           Usage
+          {stale && (
+            <Warning
+              className="size-3 text-[#d97706] dark:text-[#fbbf24]"
+              aria-label="This figure is not current"
+            />
+          )}
         </span>
         <button
           onClick={onRefresh}
@@ -81,62 +93,167 @@ export function UsageCard({
         </button>
       </div>
 
-      {failure && <UsageFailureNote failure={failure} />}
-
-      {!entry && (
-        <p className="text-[11px] leading-relaxed text-ink-quaternary">
-          Ask {provider} for its allowance windows. Nothing is stored in this
-          vault.
-        </p>
-      )}
-
-      {snapshot && (
-        <div className="space-y-2">
-          {snapshot.windows.map((window) => {
-            const reset = describeReset(window.resets_at, currentTime);
-            const used = Math.round(window.percent_used);
-            return (
-              <div key={window.id}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[11px] text-ink-tertiary">
-                    {window.label}
-                  </span>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((open) => !open)}
+        className="flex w-full items-center justify-between gap-2 px-3 pt-1 pb-2.5 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
+          >
+            {summaryLine({
+              loading,
+              failure,
+              snapshot,
+              tightest,
+              provider,
+              currentTime,
+              stale,
+            })}
+          </span>
+          {snapshot && (
+            <span className="mt-1.5 flex gap-1" aria-hidden="true">
+              {snapshot.windows.map((window) => (
+                <span
+                  key={window.id}
+                  className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3"
+                >
                   <span
-                    className={`text-[11px] font-medium ${percentTone(used, stale)}`}
-                  >
-                    {used}% used
-                  </span>
-                </div>
-                <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-3">
-                  <div
-                    className={`h-full rounded-full ${barTone(used, stale)}`}
-                    style={{ width: `${used}%` }}
+                    className={`block h-full rounded-full ${barTone(Math.round(window.percent_used), stale)}`}
+                    style={{ width: `${Math.round(window.percent_used)}%` }}
                   />
-                </div>
-                {reset && (
-                  <p className="mt-0.5 text-[10px] text-ink-quaternary">
-                    {reset}
-                  </p>
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+        <CaretDown
+          className={`size-3 shrink-0 text-ink-quaternary transition-transform duration-150 ${
+            expanded ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="space-y-2 border-t border-line-subtle px-3 py-2.5">
+          {failure && <UsageFailureNote failure={failure} />}
+
+          {!entry && (
+            <p className="text-[11px] leading-relaxed text-ink-quaternary">
+              Ask {provider} for its allowance windows. Nothing is stored in
+              this vault.
+            </p>
+          )}
+
+          {snapshot && (
+            <>
+              {snapshot.windows.map((window) => (
+                <WindowRow
+                  key={window.id}
+                  window={window}
+                  stale={stale}
+                  now={currentTime}
+                />
+              ))}
+              <p className="text-[10px] leading-relaxed text-ink-quaternary">
+                {stale ? (
+                  <>
+                    <Warning className="mr-1 inline size-2.5 align-[-1px]" />
+                    Last checked {describeAge(snapshot.checked_at, currentTime)}
+                    . The provider may have moved since.
+                  </>
+                ) : (
+                  <>
+                    {tightest
+                      ? `${tightest.label} is closest to its limit. `
+                      : ''}
+                    Read from {provider}{' '}
+                    {describeAge(snapshot.checked_at, currentTime)}.
+                  </>
                 )}
-              </div>
-            );
-          })}
-          <p className="text-[10px] leading-relaxed text-ink-quaternary">
-            {stale ? (
-              <>
-                <Warning className="mr-1 inline size-2.5 align-[-1px]" />
-                Last checked {describeAge(snapshot.checked_at, currentTime)}.
-                The provider may have moved since.
-              </>
-            ) : (
-              <>
-                {tightest ? `${tightest.label} is closest to its limit. ` : ''}
-                Read from {provider}{' '}
-                {describeAge(snapshot.checked_at, currentTime)}.
-              </>
-            )}
-          </p>
+              </p>
+            </>
+          )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** The single line the collapsed card shows. */
+function summaryLine({
+  loading,
+  failure,
+  snapshot,
+  tightest,
+  provider,
+  currentTime,
+  stale,
+}: {
+  loading: boolean;
+  failure: UsageFailure | undefined;
+  snapshot: UsageEntry['snapshot'] | undefined;
+  tightest: UsageWindow | null;
+  provider: string;
+  currentTime: Date;
+  stale: boolean;
+}): string {
+  if (loading) return `Asking ${provider}…`;
+  if (failure) return failureTitle(failure);
+  if (snapshot && tightest) {
+    const reset = describeReset(tightest.resets_at, currentTime);
+    // The age only earns space when the figure is not current; the fresh case
+    // already fits in one line at 288px.
+    const age = stale ? describeAge(snapshot.checked_at, currentTime) : null;
+    return [
+      tightest.label,
+      `${Math.round(tightest.percent_used)}% used`,
+      reset,
+      age,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+  return 'Nothing read yet — the provider’s own numbers, nothing stored.';
+}
+
+function summaryTone(entry: UsageEntry | undefined, stale: boolean): string {
+  if (entry?.state === 'failed') return 'text-danger';
+  if (stale) return 'text-ink-tertiary';
+  if (entry?.state === 'ok') return 'text-ink-secondary';
+  return 'text-ink-quaternary';
+}
+
+function WindowRow({
+  window,
+  stale,
+  now,
+}: {
+  window: UsageWindow;
+  stale: boolean;
+  now: Date;
+}) {
+  const reset = describeReset(window.resets_at, now);
+  const used = Math.round(window.percent_used);
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] text-ink-tertiary">{window.label}</span>
+        <span className={`text-[11px] font-medium ${percentTone(used, stale)}`}>
+          {used}% used
+        </span>
+      </div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-3">
+        <div
+          className={`h-full rounded-full ${barTone(used, stale)}`}
+          style={{ width: `${used}%` }}
+        />
+      </div>
+      {reset && (
+        <p className="mt-0.5 text-[10px] text-ink-quaternary">{reset}</p>
       )}
     </div>
   );
@@ -175,25 +292,29 @@ function useNow(now?: Date): Date {
   return now ?? time;
 }
 
-function UsageFailureNote({ failure }: { failure: UsageFailure }) {
-  const title =
-    failure.kind === 'auth'
-      ? 'The provider rejected this key'
-      : failure.kind === 'forbidden'
-        ? 'This key cannot read usage'
-        : failure.kind === 'shape'
-          ? 'Unrecognized reply'
-          : failure.kind === 'rate_limited'
-            ? 'Rate limited'
-            : failure.kind === 'timeout'
-              ? 'No reply in time'
-              : 'Could not read usage';
+function failureTitle(failure: UsageFailure): string {
+  switch (failure.kind) {
+    case 'auth':
+      return 'The provider rejected this key';
+    case 'forbidden':
+      return 'This key cannot read usage';
+    case 'shape':
+      return 'Unrecognized reply';
+    case 'rate_limited':
+      return 'Rate limited';
+    case 'timeout':
+      return 'No reply in time';
+    default:
+      return 'Could not read usage';
+  }
+}
 
+function UsageFailureNote({ failure }: { failure: UsageFailure }) {
   return (
     <div className="rounded border border-line-subtle bg-surface-3 p-2">
       <p className="flex items-center gap-1 text-[11px] font-medium text-ink-tertiary">
         <Warning className="size-3 shrink-0" />
-        {title}
+        {failureTitle(failure)}
       </p>
       <p className="mt-0.5 text-[11px] leading-relaxed text-ink-quaternary">
         {failure.message}

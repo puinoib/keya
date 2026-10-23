@@ -158,10 +158,11 @@ export function KeyDetail() {
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >
-        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 scrollbar-thin">
+        {/* Identity and status stay put while the details scroll. */}
+        <div className="shrink-0 px-4 pt-4">
           {/* Identity */}
           <div
-            className="flex items-start justify-between gap-3 mb-3 animate-stagger-in"
+            className="flex items-start justify-between gap-3 animate-stagger-in"
             style={{ animationDelay: '40ms' }}
           >
             <div className="min-w-0 flex-1">
@@ -178,23 +179,6 @@ export function KeyDetail() {
                 )}
                 <span className="truncate">{provider}</span>
               </p>
-              {key.archived_at && (
-                <div className="mt-2 rounded-md border border-line-subtle bg-surface-2 px-2 py-1.5">
-                  <p className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
-                    <Archive className="size-3" />
-                    Archived {formatDate(key.archived_at)}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-ink-quaternary">
-                    Archived credentials are excluded from tests and Inbox
-                    alerts.
-                  </p>
-                </div>
-              )}
-              {testFail && !key.archived_at && checkError && (
-                <p className="mt-1.5 text-xs text-danger/80 break-words">
-                  {checkError}
-                </p>
-              )}
             </div>
             <button
               onClick={() => setSelectedKeyId(null)}
@@ -206,70 +190,80 @@ export function KeyDetail() {
           </div>
 
           {!key.archived_at && (
-            <>
-              {/* Status */}
-              <div
-                className="mb-4 flex flex-wrap items-center gap-1.5 animate-stagger-in"
-                style={{ animationDelay: '120ms' }}
-              >
-                {testOk && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
-                    <CheckCircle className="size-3" />
-                    {connectionLabel}
-                  </span>
-                )}
-                {testFail && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-                    <XCircle className="size-3" /> Failed
-                  </span>
-                )}
-                {connectionStatus === 'untested' &&
-                  check.kind === 'unverifiable' && (
-                    <span
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary"
-                      title={checkError ?? undefined}
-                    >
-                      <MinusCircle className="size-3" /> Cannot verify
-                    </span>
-                  )}
-                {connectionStatus === 'untested' &&
-                  check.kind !== 'unverifiable' && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
-                      <MinusCircle className="size-3" /> Untested
-                    </span>
-                  )}
-                {expiryLabel && (
-                  <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      expiryStatus === 'expired'
-                        ? 'bg-danger/10 text-danger'
-                        : 'bg-[#d97706]/10 text-[#d97706] dark:bg-[#fbbf24]/10 dark:text-[#fbbf24]'
-                    }`}
-                  >
-                    <Warning className="size-3" /> {expiryLabel}
-                  </span>
-                )}
-                {stateHint &&
-                  (check.manualOnly || check.needsAuthorization) && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
-                      <Warning className="size-3" /> {stateHint}
-                    </span>
-                  )}
-              </div>
-
-              {check.kind === 'unverifiable' && (
-                <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
-                  {stateHint ?? checkError ?? unverifiableReason(provider)}
-                </p>
+            <div
+              className="mt-3 flex flex-wrap items-center gap-1.5 animate-stagger-in"
+              style={{ animationDelay: '120ms' }}
+            >
+              {testOk && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
+                  <CheckCircle className="size-3" />
+                  {connectionLabel}
+                </span>
               )}
-            </>
+              {testFail && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                  <XCircle className="size-3" /> Failed
+                </span>
+              )}
+              {connectionStatus === 'untested' &&
+                check.kind === 'unverifiable' && (
+                  <span
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary"
+                    title={checkError ?? undefined}
+                  >
+                    <MinusCircle className="size-3" /> Cannot verify
+                  </span>
+                )}
+              {connectionStatus === 'untested' &&
+                check.kind !== 'unverifiable' && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                    <MinusCircle className="size-3" /> Untested
+                  </span>
+                )}
+              {expiryLabel && (
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    expiryStatus === 'expired'
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-[#d97706]/10 text-[#d97706] dark:bg-[#fbbf24]/10 dark:text-[#fbbf24]'
+                  }`}
+                >
+                  <Warning className="size-3" /> {expiryLabel}
+                </span>
+              )}
+              {stateHint && (check.manualOnly || check.needsAuthorization) && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
+                  <Warning className="size-3" /> {stateHint}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 scrollbar-thin">
+          {key.archived_at && (
+            <div className="mb-4 rounded-md border border-line-subtle bg-surface-2 px-2 py-1.5">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary">
+                <Archive className="size-3" />
+                Archived {formatDate(key.archived_at)}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-quaternary">
+                Archived credentials are excluded from tests and Inbox alerts.
+              </p>
+            </div>
           )}
 
-          <UsageCard
-            provider={provider}
-            entry={usage[key.id]}
-            onRefresh={() => void refreshUsage(key.id)}
-          />
+          {testFail && !key.archived_at && checkError && (
+            <p className="mb-4 text-xs text-danger/80 break-words">
+              {checkError}
+            </p>
+          )}
+
+          {!key.archived_at && check.kind === 'unverifiable' && (
+            <p className="mb-4 rounded-md border border-line-subtle bg-surface-2 p-2.5 text-[11px] leading-relaxed text-ink-quaternary">
+              {stateHint ?? checkError ?? unverifiableReason(provider)}
+            </p>
+          )}
 
           {/* Key Value */}
           <div
@@ -377,6 +371,17 @@ export function KeyDetail() {
                 value={formatDate(key.content_updated_at)}
               />
             </div>
+          </div>
+
+          {/* The only provider-specific block, so it goes last: everything
+              above it has the same place in every key's panel. */}
+          <div className="mt-4">
+            <UsageCard
+              key={key.id}
+              provider={provider}
+              entry={usage[key.id]}
+              onRefresh={() => void refreshUsage(key.id)}
+            />
           </div>
         </div>
 
