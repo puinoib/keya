@@ -91,15 +91,12 @@ export function DataPage() {
                 Export JSON
               </button>
             </div>
-            <div className="flex items-center justify-between gap-3 p-3">
-              <p className="text-xs text-ink-quaternary">
-                Last export from this device
-              </p>
-              <p className="text-xs text-ink-quaternary">
-                {lastExport ? describeExportedAt(lastExport) : 'Never'}
-              </p>
-            </div>
           </div>
+          <p className="mt-2 text-right text-[11px] text-ink-quaternary">
+            {lastExport
+              ? `Last export from this device: ${describeExportedAt(lastExport)}`
+              : 'No export from this device yet'}
+          </p>
         </section>
 
         <section>
