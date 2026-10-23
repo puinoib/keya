@@ -750,7 +750,7 @@ interface KeyaExchange {
 26. **Timestamp algorithm**: `2026-02-29`, `2026-01-01T24:00:00.000Z`, missing milliseconds, a `+00:00` offset, `2026-1-1T00:00:00.000Z` → rejected; `0050-01-01T00:00:00.000Z` → accepted, which also proves `setUTCFullYear` is used instead of `Date.UTC`.
 27. **UUID**: version nibble ≠ 4, variant nibble `c`/`d`/`e`/`f`, uppercase, non-canonical length → rejected.
 28. One boundary per length and count limit (limit + 1 → rejected).
-29. **`condition` normalization**: the same fact yields the same string (`date:2026-03-01`, `instant:…`, `http:192.168.1.5:8080`). Move the expiry date elsewhere and back: the first dismissal does not apply, the second does. Comparison is by `condition`, not by key.
+29. **`condition` normalization**: the same fact yields the same string (`date:2026-03-01`, `instant:…`, `http:192.168.1.5:8080`). Move the expiry date elsewhere and back: the record stops applying while the fact differs and applies again when it returns. Comparison is by `condition`, not by key.
 30. An `icon` with two grapheme clusters or over 64 bytes → the edit is rejected and nothing is stored truncated.
 31. `icon: null` → rejected; "no icon" is `""` only.
 32. A whitespace-only `secret` → the edit is rejected, file bytes unchanged, nothing marked dirty.

@@ -275,7 +275,12 @@ function readBaseUrl(
   path: string,
   ctx: Ctx
 ): string | undefined {
-  const string = readString(value, path, { max: MAX_URL, freeText: true }, ctx);
+  const string = readString(
+    value,
+    path,
+    { max: MAX_URL, freeText: true, trimmed: true },
+    ctx
+  );
   if (string === undefined) return undefined;
   const problem = checkBaseUrl(string);
   if (problem) {
@@ -287,7 +292,12 @@ function readBaseUrl(
 
 function readIcon(value: unknown, path: string, ctx: Ctx): string | undefined {
   // Readers validate bytes only: grapheme segmentation varies by engine.
-  return readString(value, path, { max: MAX_ICON, freeText: true }, ctx);
+  return readString(
+    value,
+    path,
+    { max: MAX_ICON, freeText: true, trimmed: true },
+    ctx
+  );
 }
 
 function readProbeAuth(
@@ -427,7 +437,7 @@ function readProbe(
   const target = readString(
     object.target,
     `${path}.target`,
-    { min: 1, max: MAX_TARGET, freeText: true },
+    { min: 1, max: MAX_TARGET, freeText: true, trimmed: true },
     ctx
   );
   if (target !== undefined) {
@@ -494,7 +504,7 @@ function readProvider(
   const name = readString(
     object.name,
     `${path}.name`,
-    { min: 1, max: MAX_PROVIDER_NAME, freeText: true },
+    { min: 1, max: MAX_PROVIDER_NAME, freeText: true, trimmed: true },
     ctx
   );
   const description = readString(
@@ -539,7 +549,7 @@ function readGroup(value: unknown, path: string, ctx: Ctx): Group | undefined {
   const name = readString(
     object.name,
     `${path}.name`,
-    { min: 1, max: MAX_GROUP_NAME, freeText: true },
+    { min: 1, max: MAX_GROUP_NAME, freeText: true, trimmed: true },
     ctx
   );
   const icon = readIcon(object.icon, `${path}.icon`, ctx);
@@ -609,7 +619,7 @@ function readKey(value: unknown, path: string, ctx: Ctx): Key | undefined {
   const name = readString(
     object.name,
     `${path}.name`,
-    { min: 1, max: MAX_KEY_NAME, freeText: true },
+    { min: 1, max: MAX_KEY_NAME, freeText: true, trimmed: true },
     ctx
   );
   const description = readString(
@@ -628,7 +638,7 @@ function readKey(value: unknown, path: string, ctx: Ctx): Key | undefined {
       `${path}.provider_id`,
       {
         min: 1,
-        max: 64,
+        max: 70,
       },
       ctx
     );
@@ -657,7 +667,7 @@ function readKey(value: unknown, path: string, ctx: Ctx): Key | undefined {
   const secret = readString(
     object.secret,
     `${path}.secret`,
-    { min: MIN_SECRET, max: MAX_SECRET, freeText: true },
+    { min: MIN_SECRET, max: MAX_SECRET, freeText: true, trimmed: true },
     ctx
   );
 
@@ -762,7 +772,7 @@ export function validateKeyaFile(input: unknown): ValidationResult {
     const name = readString(
       vaultObject.name,
       'vault.name',
-      { min: 1, max: MAX_VAULT_NAME, freeText: true },
+      { min: 1, max: MAX_VAULT_NAME, freeText: true, trimmed: true },
       ctx
     );
     const icon = readIcon(vaultObject.icon, 'vault.icon', ctx);

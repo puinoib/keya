@@ -27,7 +27,7 @@ export interface DeriveControl {
   lockTimeoutMs?: number;
 }
 
-export type KdfFailure = 'cancelled' | 'busy' | 'failed';
+export type KdfFailure = 'cancelled' | 'busy' | 'failed' | 'memory';
 
 export class KdfError extends Error {
   readonly failure: KdfFailure;
@@ -39,6 +39,12 @@ export class KdfError extends Error {
   }
 }
 
+/** Argon2 allocation failures must not look like a wrong password (§3.3.1). */
+function classifyFailure(error: unknown): KdfFailure {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /memory|alloc|out of memory/i.test(message) ? 'memory' : 'failed';
+}
+
 const KEY_LENGTH = 32;
 const LOCK_NAME = 'keya-kdf';
 const DEFAULT_LOCK_TIMEOUT_MS = 5000;
@@ -48,14 +54,18 @@ export async function deriveFileKeyInline(
   options: DeriveOptions
 ): Promise<Uint8Array> {
   const sodium = await loadSodium();
-  return sodium.crypto_pwhash(
-    KEY_LENGTH,
-    sodium.from_string(options.password),
-    options.salt,
-    options.kdf.ops,
-    options.kdf.mem,
-    sodium.crypto_pwhash_ALG_ARGON2ID13
-  );
+  try {
+    return sodium.crypto_pwhash(
+      KEY_LENGTH,
+      sodium.from_string(options.password),
+      options.salt,
+      options.kdf.ops,
+      options.kdf.mem,
+      sodium.crypto_pwhash_ALG_ARGON2ID13
+    );
+  } catch (error) {
+    throw new KdfError(classifyFailure(error));
+  }
 }
 
 let workerInstance: Worker | null = null;
@@ -100,7 +110,7 @@ async function deriveInWorker(
     const onError = (event: ErrorEvent) => {
       cleanup();
       discardWorker();
-      reject(new KdfError('failed', event.message));
+      reject(new KdfError(classifyFailure(event.message), event.message));
     };
 
     const onMessage = (event: MessageEvent) => {
@@ -109,7 +119,10 @@ async function deriveInWorker(
         | { ok: false; message: string };
       cleanup();
       if (data.ok) resolve(new Uint8Array(data.key));
-      else reject(new KdfError('failed', data.message));
+      else
+        reject(
+          new KdfError(classifyFailure(new Error(data.message)), data.message)
+        );
     };
 
     if (signal?.aborted) {

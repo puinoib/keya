@@ -241,8 +241,12 @@ export function reorderGroups(
   if (orderedIds.length !== known.size) {
     return { ok: false, reason: 'unknown_group' };
   }
+  const seen = new Set<string>();
   for (const id of orderedIds) {
-    if (!known.has(id)) return { ok: false, reason: 'unknown_group' };
+    if (!known.has(id) || seen.has(id)) {
+      return { ok: false, reason: 'unknown_group' };
+    }
+    seen.add(id);
   }
 
   const byId = new Map(file.groups.map((group) => [group.id, group]));

@@ -33,7 +33,10 @@ function normalizeAuth(auth: ProbeAuth): ProbeAuth {
     case 'basic':
       return { mode: auth.mode };
     case 'header':
-      return { mode: 'header', name: trimIfPresent(auth.name) };
+      return {
+        mode: 'header',
+        name: trimIfPresent(auth.name).toLowerCase(),
+      };
     case 'query':
       return { mode: 'query', param: trimIfPresent(auth.param) };
   }

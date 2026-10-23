@@ -143,6 +143,12 @@ describe('§5.3 expiry semantics', () => {
     expect(expiryStatus(null, now, 'UTC')).toBe('none');
   });
 
+  it('keeps years below 100 in a date expiry', () => {
+    expect(
+      expiryPoint({ kind: 'date', value: '0050-01-01' }, 'UTC')?.toISOString()
+    ).toBe('0050-01-02T00:00:00.000Z');
+  });
+
   it('builds the condition string a dismissal binds to', () => {
     expect(expiryCondition(day)).toBe('date:2026-03-01');
     expect(

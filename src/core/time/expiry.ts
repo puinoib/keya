@@ -87,14 +87,11 @@ function addDays(day: CalendarDay, days: number): CalendarDay {
  * first legal moment of that day.
  */
 function firstInstantAtOrAfter(target: LocalWall, timeZone: string): number {
-  const base = Date.UTC(
-    target.year,
-    target.month - 1,
-    target.day,
-    target.hour,
-    target.minute,
-    target.second
-  );
+  // `Date.UTC` maps years 0-99 to 1900-1999; the format allows 0000-9999.
+  const date = new Date(0);
+  date.setUTCFullYear(target.year, target.month - 1, target.day);
+  date.setUTCHours(target.hour, target.minute, target.second, 0);
+  const base = date.getTime();
   let low = base - 26 * HOUR;
   let high = base + 26 * HOUR;
 

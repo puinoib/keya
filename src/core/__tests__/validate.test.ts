@@ -252,9 +252,16 @@ describe('§16.2 class A validation', () => {
     expect(control.ok).toBe(false);
 
     const multiline = reject((file) => {
-      file.keys[0].secret = '-----BEGIN-----\nbody\r\n-----END-----\n';
+      file.keys[0].secret = '-----BEGIN-----\nbody\r\n-----END-----';
     });
     expect(multiline.ok).toBe(true);
+
+    // §8.1: the reader only accepts canonical single-line fields; writers trim
+    // at input, so edge whitespace can only come from a hand-edited file.
+    const padded = reject((file) => {
+      file.keys[0].secret = ' sk-synthetic ';
+    });
+    expect(padded.ok).toBe(false);
   });
 
   it('22 accepts a query in probe.target but rejects a colliding credential param', () => {
@@ -276,6 +283,16 @@ describe('§16.2 class A validation', () => {
     });
     expect(collision.ok).toBe(false);
     expect(pathsOf(collision)).toContain('providers[0].probe.auth.param');
+
+    const fragment = reject((file) => {
+      file.providers[0].probe = {
+        target: 'models#fragment',
+        auth: { mode: 'bearer' },
+        headers: [],
+      };
+    });
+    expect(fragment.ok).toBe(false);
+    expect(pathsOf(fragment)).toContain('providers[0].probe.target');
   });
 
   it('25 rejects expiry value shapes that do not match the kind', () => {

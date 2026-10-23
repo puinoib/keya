@@ -42,6 +42,10 @@ export function checkBaseUrl(value: string): UrlProblem | null {
  * whether they are *executable* depends on the key's endpoint (§9.1).
  */
 export function checkTarget(value: string): UrlProblem | null {
+  // A fragment never reaches the server, so accepting one would make the
+  // fingerprinted URL differ from the request. Applies to relative targets too.
+  if (value.includes('#')) return { code: 'has_fragment' };
+
   const absolute = tryAbsolute(value);
   if (!absolute) return null;
 
@@ -74,6 +78,7 @@ export interface ResolveResult {
     | 'missing_endpoint'
     | 'unsupported_scheme'
     | 'has_userinfo'
+    | 'has_fragment'
     | 'bad_target';
 }
 
@@ -112,6 +117,9 @@ function finish(resolved: URL): ResolveResult {
   }
   if (resolved.username || resolved.password) {
     return { ok: false, url: null, reason: 'has_userinfo' };
+  }
+  if (resolved.hash) {
+    return { ok: false, url: null, reason: 'has_fragment' };
   }
   return { ok: true, url: resolved, reason: 'ok' };
 }
