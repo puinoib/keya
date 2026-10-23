@@ -209,11 +209,13 @@ export function KeyForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.secret) return;
-    if (view && hasDuplicateSecret(view, form.secret)) {
-      toast.error('Credential already exists', {
-        description: 'A matching key value is already saved in this vault.',
+    if (view && hasDuplicateSecret(view, form.secret.trim())) {
+      // §5.3: the same token in two environments is legitimate. Warn, do not
+      // block the entry.
+      toast.warning('This credential is already saved', {
+        description:
+          'Keya keeps both because the same token may be used twice.',
       });
-      return;
     }
 
     const created = addKey({

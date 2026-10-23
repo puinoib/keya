@@ -683,10 +683,11 @@ export function EditKeyDialog({
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
     if (view && hasDuplicateSecret(view, form.secret.trim(), editingKey.id)) {
-      toast.error('Credential already exists', {
-        description: 'A matching key value is already saved in this vault.',
+      // §5.3: warn instead of refusing the edit.
+      toast.warning('This credential is already saved', {
+        description:
+          'Keya keeps both because the same token may be used twice.',
       });
-      return;
     }
 
     const saved = onSave(editingKey.id, {

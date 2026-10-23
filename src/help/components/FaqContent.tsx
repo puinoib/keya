@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
   AccordionPanel,
 } from '@/components/ui/accordion';
-import { convertInternalLinks } from '../lib/markdown';
+import { convertInternalLinks, sanitizeHtml } from '../lib/markdown';
 
 interface FaqItem {
   question: string;
@@ -15,7 +15,7 @@ interface FaqItem {
 }
 
 function parseFaqMarkdown(content: string): FaqItem[] {
-  const html = marked(content) as string;
+  const html = sanitizeHtml(marked(content) as string);
   const container = document.createElement('div');
   container.innerHTML = html;
 

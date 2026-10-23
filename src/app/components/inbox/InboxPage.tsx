@@ -235,7 +235,7 @@ export function InboxPage() {
           </button>
           {archivedExpanded && (
             <div className="mt-2 rounded-lg border border-line-subtle bg-surface-2/20 overflow-hidden divide-y divide-line-subtle">
-              {archivedItems.slice(0, 20).map((row) => (
+              {archivedItems.map((row) => (
                 <div
                   key={`${row.reminder.rule}:${row.key.id}`}
                   className="px-4 py-2.5 flex items-center justify-between gap-2"
@@ -246,13 +246,21 @@ export function InboxPage() {
                       {getArchivedContext(row)}
                     </span>
                   </div>
-                  <div className="shrink-0 text-xs text-ink-quaternary">
-                    {row.dismissedAt
-                      ? new Intl.DateTimeFormat('en', {
-                          month: 'short',
-                          day: 'numeric',
-                        }).format(new Date(row.dismissedAt))
-                      : ''}
+                  <div className="flex shrink-0 items-center gap-2 text-xs text-ink-quaternary">
+                    <span>
+                      {row.dismissedAt
+                        ? new Intl.DateTimeFormat('en', {
+                            month: 'short',
+                            day: 'numeric',
+                          }).format(new Date(row.dismissedAt))
+                        : ''}
+                    </span>
+                    <button
+                      onClick={() => setReminderDismissed(row, false)}
+                      className="rounded px-1.5 py-0.5 text-accent-bright hover:bg-surface-3 hover:text-accent transition-colors"
+                    >
+                      Restore
+                    </button>
                   </div>
                 </div>
               ))}

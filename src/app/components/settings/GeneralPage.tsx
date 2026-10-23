@@ -430,7 +430,7 @@ export function GeneralPage() {
                     <div className="relative">
                       <Input
                         type={showNewPw ? 'text' : 'password'}
-                        placeholder="New password (min 8 chars)"
+                        placeholder="New password (min 12 characters)"
                         value={newPw}
                         onChange={(e) => {
                           setNewPw(e.target.value);
