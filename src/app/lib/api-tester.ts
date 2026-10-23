@@ -58,6 +58,8 @@ export class ApiTester {
     endpoint: string;
     secret: string;
     providers: readonly Provider[];
+    /** Injected in tests; the browser default shows the resolved recipient. */
+    confirmDestination?: (resolvedHref: string) => boolean | Promise<boolean>;
   }): Promise<TestResult> {
     const state = classifyRecipe(
       { provider_id: input.providerId, endpoint: input.endpoint },
@@ -72,6 +74,17 @@ export class ApiTester {
           state.unverifiable ??
           'This provider cannot be checked from a browser.',
         kind: 'unverifiable',
+      };
+    }
+
+    const confirmDestination =
+      input.confirmDestination ?? confirmDraftDestination;
+    if (!(await confirmDestination(state.plan.resolvedHref))) {
+      return {
+        success: false,
+        latency_ms: 0,
+        error: 'Destination approval was declined.',
+        kind: notExecutableKind(state),
       };
     }
 
@@ -98,6 +111,21 @@ export class ApiTester {
       kind: notExecutableKind(state),
     };
   }
+}
+
+function confirmDraftDestination(resolvedHref: string): boolean {
+  if (typeof window === 'undefined') return false;
+  let plaintext = false;
+  try {
+    plaintext = new URL(resolvedHref).protocol === 'http:';
+  } catch {
+    return false;
+  }
+  return window.confirm(
+    `${plaintext ? 'This sends the credential over plain http (clear text).' : 'Send this key to the resolved destination?'}\n\n` +
+      `${resolvedHref}\n\n` +
+      'Only continue if this is the address you intended.'
+  );
 }
 
 export function unverifiableReason(providerLabel: string): string {

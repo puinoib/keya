@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue } from 'react';
+import { useState, useEffect, useDeferredValue, useRef } from 'react';
 import {
   Spinner,
   ArrowRight,
@@ -19,14 +19,20 @@ import {
   judgePassword,
   type PasswordVerdict,
 } from '@/app/lib/password-policy';
+import { VaultOpenError } from '@/app/lib/storage';
+import { describeOpenFailure } from '@/app/state/presentation';
+import { downloadBytes } from '@/app/lib/download';
+import { toast } from 'sonner';
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new';
   vaultName: string;
   vaultIcon?: string;
   fileName?: string;
   vaultId?: string;
-  onSubmit: (password: string) => Promise<void>;
+  onSubmit: (password: string, signal: AbortSignal) => Promise<void>;
   onCancel: () => void;
+  /** §6.3 escape hatch: decrypt raw bytes after double confirmation. */
+  onExportRaw?: (password: string) => Promise<Uint8Array>;
 }
 
 const STRENGTH_CONFIG = {
@@ -45,6 +51,7 @@ export function VaultPasswordDialog({
   vaultId,
   onSubmit,
   onCancel,
+  onExportRaw,
 }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -55,6 +62,8 @@ export function VaultPasswordDialog({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [verdict, setVerdict] = useState<PasswordVerdict | null>(null);
+  const [openError, setOpenError] = useState<VaultOpenError | null>(null);
+  const submitController = useRef<AbortController | null>(null);
 
   const isCreate = mode === 'new';
   const canSubmit = isCreate
@@ -91,32 +100,87 @@ export function VaultPasswordDialog({
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    const controller = new AbortController();
+    submitController.current = controller;
     setLoading(true);
     setError('');
+    setOpenError(null);
     try {
-      await onSubmit(password);
-    } catch {
+      await onSubmit(password, controller.signal);
+    } catch (caught) {
+      if (controller.signal.aborted) return;
+      if (caught instanceof VaultOpenError) {
+        setError(describeOpenFailure(caught.failure, caught.issues));
+        setOpenError(caught);
+      } else {
+        setError(
+          isCreate
+            ? 'Failed to create vault.'
+            : caught instanceof Error
+              ? caught.message
+              : 'The vault could not be opened.'
+        );
+      }
+    } finally {
+      if (submitController.current === controller)
+        submitController.current = null;
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Cancelling while Argon2 runs must terminate the Worker; otherwise the
+    // vault can still open after the dialog is gone.
+    submitController.current?.abort();
+    onCancel();
+  };
+
+  const handleExportRaw = async () => {
+    if (!openError || !fileName || !onExportRaw) return;
+    const confirmed = window.confirm(
+      'This writes the decrypted contents of this vault as plain text, including every secret.\n\n' +
+        'It is not an encrypted backup. Delete the file when you are done.\n\n' +
+        'Continue?'
+    );
+    if (!confirmed) return;
+    const really = window.confirm(
+      'Last confirmation: the file will contain plaintext secrets and is not protected by your password.'
+    );
+    if (!really) return;
+    try {
+      const bytes = await onExportRaw(password);
+      downloadBytes(bytes, `${fileName}.plaintext.txt`);
+      toast.success('Exported decrypted raw contents');
+    } catch (caught) {
       setError(
-        isCreate ? 'Failed to create vault.' : 'Wrong password. Try again.'
+        caught instanceof VaultOpenError
+          ? describeOpenFailure(caught.failure, caught.issues)
+          : 'The raw contents could not be exported.'
       );
     }
-    setLoading(false);
   };
 
   const handleBiometric = async () => {
     if (!vaultId) return;
     setBioLoading(true);
     setError('');
+    const controller = new AbortController();
+    submitController.current = controller;
     try {
       const pw = await unlockWithBiometric(vaultId);
-      await onSubmit(pw);
+      await onSubmit(pw, controller.signal);
     } catch (e) {
+      if (controller.signal.aborted) return;
       setError(
-        e instanceof Error && e.message.includes('cancelled')
-          ? ''
-          : 'Biometric unlock failed. Use password instead.'
+        e instanceof VaultOpenError
+          ? describeOpenFailure(e.failure, e.issues)
+          : e instanceof Error && e.message.includes('cancelled')
+            ? ''
+            : 'Biometric unlock failed. Use password instead.'
       );
     } finally {
+      if (submitController.current === controller)
+        submitController.current = null;
       setBioLoading(false);
     }
   };
@@ -251,7 +315,26 @@ export function VaultPasswordDialog({
         </div>
       )}
 
+      {isCreate && (
+        <p className="text-[11px] leading-relaxed text-ink-quaternary">
+          There is no recovery path: if this password is lost, the file cannot
+          be opened.
+        </p>
+      )}
       {error && <p className="text-xs text-danger">{error}</p>}
+      {openError &&
+        fileName &&
+        onExportRaw &&
+        (openError.failure === 'invalid_payload' ||
+          openError.failure === 'payload_corrupt') && (
+          <button
+            type="button"
+            onClick={handleExportRaw}
+            className="w-full rounded-md border border-line bg-surface-2 px-3 py-2 text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
+          >
+            Export decrypted raw text (not a backup)
+          </button>
+        )}
 
       {showBiometric && !isCreate && (
         <button
@@ -282,7 +365,7 @@ export function VaultPasswordDialog({
       </button>
 
       <button
-        onClick={onCancel}
+        onClick={handleCancel}
         className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1"
       >
         ← Back

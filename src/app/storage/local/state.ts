@@ -14,11 +14,9 @@ import type {
   BusinessDismissal,
   ObservationDismissal,
 } from '../../../core/runtime/dismissals';
-import {
-  effectiveBusinessDismissals,
-  effectiveObservationDismissals,
-  type BusinessFact,
-  type ObservationFact,
+import type {
+  BusinessFact,
+  ObservationFact,
 } from '../../../core/runtime/dismissals';
 import type { Grant } from '../../../core/runtime/grants';
 import type { Observation } from '../../../core/runtime/observations';
@@ -224,46 +222,33 @@ export class LocalState {
   }
 
   /**
-   * Drop the dismissals whose fact no longer matches. Called when reminders are
-   * read: this is the only invalidation mechanism, so it must actually run.
+   * Read both dismissal tables.
+   *
+   * A record only *applies* while its fact matches, but it is deliberately not
+   * deleted on mismatch: moving the fact back revives the user's decision
+   * (§16.7). Records are removed when the Key is deleted (`forgetKey`) or when
+   * the user restores the reminder.
    */
   async pruneDismissals(
     vaultId: string,
-    businessFacts: readonly BusinessFact[],
-    observationFacts: readonly ObservationFact[]
+    _businessFacts: readonly BusinessFact[],
+    _observationFacts: readonly ObservationFact[]
   ): Promise<{
     business: BusinessDismissal[];
     observation: ObservationDismissal[];
   }> {
-    const business = await this.listBusinessDismissals(vaultId);
-    const observation = await this.listObservationDismissals(vaultId);
+    return this.listDismissals(vaultId);
+  }
 
-    const keptBusiness = effectiveBusinessDismissals(business, businessFacts);
-    const keptObservation = effectiveObservationDismissals(
-      observation,
-      observationFacts
-    );
-
-    for (const stale of business) {
-      if (!keptBusiness.includes(stale)) {
-        await this.removeBusinessDismissal(
-          stale.vault_id,
-          stale.key_id,
-          stale.rule
-        );
-      }
-    }
-    for (const stale of observation) {
-      if (!keptObservation.includes(stale)) {
-        await this.removeObservationDismissal(
-          stale.vault_id,
-          stale.key_id,
-          stale.rule
-        );
-      }
-    }
-
-    return { business: keptBusiness, observation: keptObservation };
+  /** Both tables for one vault, without recomputing reminder facts. */
+  async listDismissals(vaultId: string): Promise<{
+    business: BusinessDismissal[];
+    observation: ObservationDismissal[];
+  }> {
+    return {
+      business: await this.listBusinessDismissals(vaultId),
+      observation: await this.listObservationDismissals(vaultId),
+    };
   }
 
   // ── grants ──

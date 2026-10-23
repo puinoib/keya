@@ -135,20 +135,7 @@ export class VaultSession {
     business: BusinessDismissal[];
     observation: ObservationDismissal[];
   }> {
-    const vaultId = this.payload.vault.id;
-    const business = businessAlerts(this.payload, {
-      now: this.clock(),
-      timeZone: this.timeZone,
-    });
-    const bindings = await this.bindings();
-    const observation = observationAlerts(
-      this.payload,
-      (key) => bindings.get(key.id)?.binding ?? null,
-      await this.allObservations(),
-      { now: this.clock(), timeZone: this.timeZone }
-    );
-
-    return this.local.pruneDismissals(vaultId, business, observation);
+    return this.local.listDismissals(this.payload.vault.id);
   }
 
   async dismiss(reminder: Reminder): Promise<void> {

@@ -161,14 +161,22 @@ describe('reminders', () => {
     )!;
     await value.dismiss(target.reminder);
 
-    // Editing the payload changes the fact; the stored dismissal is pruned.
+    // Editing the payload changes the fact. The record stays, but it no longer
+    // matches, so the reminder is visible again.
     value.payload.keys[0].expiry = { kind: 'date', value: '2026-03-06' };
     const reminders = await value.reminders();
 
     expect(
       reminders.some((entry) => entry.reminder.rule === 'expiry_upcoming')
     ).toBe(true);
-    expect((await value.dismissed()).business).toHaveLength(0);
+    expect((await value.dismissed()).business).toHaveLength(1);
+
+    // Reverting the fact revives the decision (§16.7).
+    value.payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
+    const reverted = await value.reminders();
+    expect(
+      reverted.some((entry) => entry.reminder.rule === 'expiry_upcoming')
+    ).toBe(false);
   });
 });
 

@@ -7,10 +7,6 @@ export function BiometricPromptLayer() {
 
   if (!prompt) return null;
   return (
-    <BiometricPrompt
-      vaultId={prompt.vaultId}
-      password={prompt.password}
-      onDone={() => setPrompt(null)}
-    />
+    <BiometricPrompt vaultId={prompt.vaultId} onDone={() => setPrompt(null)} />
   );
 }

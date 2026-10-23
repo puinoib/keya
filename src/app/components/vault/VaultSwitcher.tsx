@@ -55,15 +55,20 @@ export function VaultSwitcher() {
     'Vault';
   const currentIcon = vaultData?.icon?.trim() || '';
 
-  const handleSwitch = async (fileName: string, password: string) => {
+  const handleSwitch = async (
+    fileName: string,
+    password: string,
+    signal?: AbortSignal
+  ) => {
     // A failed save must keep the user on the vault that owns the changes.
     if (!(await flushSave())) return;
-    const newDb = await FileStorage.openVault(fileName, password);
+    const newDb = await FileStorage.openVault(fileName, password, signal);
+    if (signal?.aborted) return;
     await useStore.getState().unlock(newDb, fileName);
     setSwitchTarget(null);
   };
 
-  const handleCreate = async (password: string) => {
+  const handleCreate = async (password: string, _signal?: AbortSignal) => {
     if (!(await flushSave())) return;
     const fileName = `vault-${Date.now()}.keya`;
     const newDb = await FileStorage.createVault(fileName, password);
@@ -196,8 +201,16 @@ export function VaultSwitcher() {
               ''
             }
             vaultId={metas[switchTarget!]?.vault_id}
-            onSubmit={(pw) =>
-              switchTarget ? handleSwitch(switchTarget, pw) : Promise.resolve()
+            fileName={switchTarget ?? undefined}
+            onSubmit={(pw, signal) =>
+              switchTarget
+                ? handleSwitch(switchTarget, pw, signal)
+                : Promise.resolve()
+            }
+            onExportRaw={(pw) =>
+              switchTarget
+                ? FileStorage.exportPlaintext(switchTarget, pw)
+                : Promise.reject(new Error('No vault selected.'))
             }
             onCancel={() => setSwitchTarget(null)}
           />

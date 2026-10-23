@@ -19,7 +19,10 @@ import {
 } from '../../core/format/container';
 import { deriveFileKey } from '../../core/format/kdf';
 import { serializePayload } from '../../core/payload/serialize';
-import { normalizeKeyaFile } from '../../core/payload/normalize';
+import {
+  checkIconForWriter,
+  normalizeKeyaFile,
+} from '../../core/payload/normalize';
 import { summarizeIssues, validateKeyaFile } from '../../core/payload/validate';
 import type { KeyaFile } from '../../core/payload/types';
 import { VAULT_WRITE_LOCK, Vault } from '../vault/vault';
@@ -150,9 +153,12 @@ export async function createVault(
 
   // The same normalization and class A gate every edit passes through, so a
   // name that is too long cannot produce a file nobody can open.
-  const validated = validateKeyaFile(normalizeKeyaFile(candidate));
+  const normalized = normalizeKeyaFile(candidate);
+  const validated = validateKeyaFile(normalized);
   if (!validated.ok)
     return { ok: false, failure: summarizeIssues(validated.issues) };
+  if (checkIconForWriter(validated.value.vault.icon) !== 'ok')
+    return { ok: false, failure: 'invalid_icon' };
 
   const kdf: KdfParams = { ops: KDF_DEFAULT_OPS, mem: KDF_DEFAULT_MEM };
   const salt = generateSalt();

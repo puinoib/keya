@@ -198,7 +198,11 @@ export function keyById(view: VaultView, id: string): Key | undefined {
 }
 
 export function sortedGroups(view: VaultView): Group[] {
-  return [...view.file.groups].sort((left, right) => left.order - right.order);
+  return [...view.file.groups].sort(
+    (left, right) =>
+      left.order - right.order ||
+      (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
+  );
 }
 
 export function providers(view: VaultView): Provider[] {

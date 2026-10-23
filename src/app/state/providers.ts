@@ -147,6 +147,7 @@ export interface ProviderDraft {
   /** Present when the draft was loaded from a stored provider. */
   id?: string;
   name: string;
+  description?: string;
   endpoint: string;
   check?: ProviderCheckDraft;
 }
@@ -157,6 +158,7 @@ export function providerToDraft(provider: Provider): ProviderDraft {
     return {
       id: provider.id,
       name: provider.name,
+      description: provider.description,
       endpoint: provider.default_endpoint ?? '',
     };
   }
@@ -170,6 +172,7 @@ export function providerToDraft(provider: Provider): ProviderDraft {
   return {
     id: provider.id,
     name: provider.name,
+    description: provider.description,
     endpoint: provider.default_endpoint ?? '',
     check: {
       path: probe.target,
@@ -222,7 +225,7 @@ export function draftToProvider(draft: ProviderDraft, id: string): Provider {
   return {
     id,
     name: draft.name.trim(),
-    description: '',
+    description: draft.description ?? '',
     default_endpoint: draft.endpoint.trim() || null,
     probe,
   };

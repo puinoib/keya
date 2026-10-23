@@ -5,7 +5,9 @@
  * handle, opens vaults, and exposes the summaries shown before unlocking.
  */
 
-import { Vault } from '../vault/vault';
+import { Vault, type OpenFailure } from '../vault/vault';
+import type { Issue } from '../../core/payload/validate';
+import { MAX_FILE_SIZE } from '../../core/format/constants';
 import { describePasswordVerdict, judgePassword } from './password-policy';
 import { VaultSession } from '../runtime/session';
 import { webLocks } from '../storage/browser';
@@ -18,6 +20,23 @@ import {
   deviceTimeZone,
   localState,
 } from '../storage/platform';
+
+/** A failed open with enough detail for the unlock dialog to explain it. */
+export class VaultOpenError extends Error {
+  readonly failure: OpenFailure;
+  readonly issues: Issue[] | undefined;
+
+  constructor(result: {
+    failure: OpenFailure;
+    issues?: Issue[];
+    message?: string;
+  }) {
+    super(result.message ?? result.failure);
+    this.name = 'VaultOpenError';
+    this.failure = result.failure;
+    this.issues = result.issues;
+  }
+}
 
 export interface CachedVaultMeta {
   vault_id: string;
@@ -90,7 +109,8 @@ export class FileStorage {
 
   static async openVault(
     fileName: string,
-    password: string
+    password: string,
+    signal?: AbortSignal
   ): Promise<OpenedVault> {
     const folder = await current();
     if (!folder) throw new Error('No folder is connected.');
@@ -101,9 +121,9 @@ export class FileStorage {
         clock: systemClock,
         locks: webLocks,
       },
-      { password }
+      { password, signal }
     );
-    if (!result.ok) throw new Error(result.failure);
+    if (!result.ok) throw new VaultOpenError(result);
 
     return finishOpen(fileName, result.vault);
   }
@@ -138,8 +158,11 @@ export class FileStorage {
   static async openVaultFromBytes(
     fileName: string,
     bytes: Uint8Array,
-    password: string
+    password: string,
+    signal?: AbortSignal
   ): Promise<OpenedVault> {
+    if (bytes.length > MAX_FILE_SIZE)
+      throw new VaultOpenError({ failure: 'file_too_large' });
     let current = bytes.slice();
     const port = {
       read: async () => current.slice(),
@@ -150,11 +173,51 @@ export class FileStorage {
 
     const result = await Vault.open(
       { file: port, clock: systemClock, locks: webLocks },
-      { password }
+      { password, signal }
     );
-    if (!result.ok) throw new Error(result.failure);
+    if (!result.ok) throw new VaultOpenError(result);
 
     return finishOpen(fileName, result.vault);
+  }
+
+  /**
+   * Decrypt the raw plaintext for the §6.3 escape hatch. The bytes are not
+   * parsed or validated and never enter the vault store.
+   */
+  static async exportPlaintext(
+    fileName: string,
+    password: string
+  ): Promise<Uint8Array> {
+    const folder = await current();
+    if (!folder) throw new Error('No folder is connected.');
+    const result = await Vault.openRaw(
+      {
+        file: await folder.filePort(fileName),
+        clock: systemClock,
+        locks: webLocks,
+      },
+      { password }
+    );
+    if (!result.ok) throw new VaultOpenError(result);
+    return result.payload;
+  }
+
+  static async exportPlaintextFromBytes(
+    bytes: Uint8Array,
+    password: string
+  ): Promise<Uint8Array> {
+    if (bytes.length > MAX_FILE_SIZE)
+      throw new VaultOpenError({ failure: 'file_too_large' });
+    const port = {
+      read: async () => bytes.slice(),
+      write: async () => undefined,
+    };
+    const result = await Vault.openRaw(
+      { file: port, clock: systemClock, locks: webLocks },
+      { password }
+    );
+    if (!result.ok) throw new VaultOpenError(result);
+    return result.payload;
   }
 }
 

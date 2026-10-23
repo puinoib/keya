@@ -6,6 +6,8 @@
  */
 
 import type { FilePort, LockPort } from '../vault/ports';
+import { FileTooLargeError } from '../vault/ports';
+import { MAX_FILE_SIZE } from '../../core/format/constants';
 
 /**
  * A `.keya` file behind the File System Access API.
@@ -25,6 +27,9 @@ export class FileHandlePort implements FilePort {
   async read(): Promise<Uint8Array | null> {
     try {
       const file = await this.handle.getFile();
+      // Refuse before allocating: the format cap is a guard rail, not a
+      // post-hoc check after a multi-gigabyte buffer exists.
+      if (file.size > MAX_FILE_SIZE) throw new FileTooLargeError();
       return new Uint8Array(await file.arrayBuffer());
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotFoundError') {

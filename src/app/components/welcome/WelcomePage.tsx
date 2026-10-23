@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
+import {
+  FileStorage,
+  VaultOpenError,
+  type CachedVaultMeta,
+} from '../../lib/storage';
+import { MAX_FILE_SIZE } from '../../../core/format/constants';
 import { useStore } from '../../store/useStore';
 import { Input } from '@/components/ui/input';
 import { KeyaLogo } from '@/components/ui/keya-logo';
@@ -157,14 +162,21 @@ export function WelcomePage() {
     }
   };
 
-  const handleUnlockVault = async (fileName: string, password: string) => {
-    const db = await FileStorage.openVault(fileName, password);
+  const handleUnlockVault = async (
+    fileName: string,
+    password: string,
+    signal?: AbortSignal
+  ) => {
+    const db = await FileStorage.openVault(fileName, password, signal);
+    if (signal?.aborted) return;
     const vaultId = db.vault.getPayload().vault.id;
     await useStore.getState().unlock(db, fileName);
-    setBiometricPrompt({ vaultId, password });
+    // The master password has served its purpose and must not enter the store
+    // (I16). Enabling biometrics asks for it again at that gesture instead.
+    setBiometricPrompt({ vaultId });
   };
 
-  const handleCreateVault = async (password: string) => {
+  const handleCreateVault = async (password: string, _signal?: AbortSignal) => {
     const fileName = newVaultName
       ? `${newVaultName.replace(/\.keya$/, '')}.keya`
       : `vault-${Date.now()}.keya`;
@@ -208,15 +220,19 @@ export function WelcomePage() {
     setMode('unlock');
   };
 
-  const handleLegacyUnlock = async (password: string) => {
+  const handleLegacyUnlock = async (password: string, signal?: AbortSignal) => {
     const file = legacyFile;
     if (!file) throw new Error('Please select a .keya file first.');
+    if (file.size > MAX_FILE_SIZE)
+      throw new VaultOpenError({ failure: 'file_too_large' });
     const buffer = await file.arrayBuffer();
     const opened = await FileStorage.openVaultFromBytes(
       file.name,
       new Uint8Array(buffer),
-      password
+      password,
+      signal
     );
+    if (signal?.aborted) return;
     await useStore.getState().unlock(opened, file.name, 'download');
   };
 
@@ -393,9 +409,21 @@ export function WelcomePage() {
                 vaultId={cachedMetas[selectedVault]?.vault_id}
                 onSubmit={
                   supportsFSA
-                    ? (pw) => handleUnlockVault(selectedVault, pw)
+                    ? (pw, signal) =>
+                        handleUnlockVault(selectedVault, pw, signal)
                     : handleLegacyUnlock
                 }
+                onExportRaw={async (pw) => {
+                  if (supportsFSA) {
+                    return FileStorage.exportPlaintext(selectedVault, pw);
+                  }
+                  const file = legacyFile;
+                  if (!file) throw new Error('No file selected.');
+                  if (file.size > MAX_FILE_SIZE)
+                    throw new VaultOpenError({ failure: 'file_too_large' });
+                  const bytes = new Uint8Array(await file.arrayBuffer());
+                  return FileStorage.exportPlaintextFromBytes(bytes, pw);
+                }}
                 onCancel={() => {
                   setMode('home');
                   setSelectedVault(null);

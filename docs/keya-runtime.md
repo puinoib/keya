@@ -41,7 +41,7 @@ Every write runs through one transaction, which owns timestamps, dismissals and 
 
 Two design decisions worth stating:
 
-1. **Dismissals carry no `condition` field of their own beyond the recorded fact.** Because the rules above delete a dismissal when the fact changes, the record's existence already means "the user decided this about the current fact", and a second copy of the fact would be dead weight. The alternative — keep the record and compare stored facts — makes one state encodable twice ("does reverting a date revive the dismissal?"). Clear-on-change costs a file write for these edits and is chosen deliberately.
+1. **Dismissals carry the fact they were decided about.** The record is kept when the fact changes and simply stops matching, so reverting the fact revives the same decision (test 94). Deleting on mismatch would make "change the date and change it back" permanently different from "never changed it", which is why the record is retained; it is removed when the Key is deleted or the user restores the reminder.
 2. **Secret rotation needs no extra field surgery.** Observation invalidation comes from the computed `observation_binding`; grant preservation comes from `send_fingerprint` excluding the secret.
 
 ## 9. Probing (class C)
@@ -243,7 +243,7 @@ interface ObservationDismissal {       // observation reminders
 ```
 
 - Both tables are keyed `(vault_id, key_id, rule)`. `condition` and `binding` are values, not part of the key, so each `(key, rule)` has at most one record and cannot orphan.
-- **A dismissal applies only while it matches.** Reading a reminder compares the current fact or `binding` against the record and **deletes the record** on mismatch. A local write is allowed here; the file never changes because of a read. This is the sole invalidation mechanism — edit transactions do not clean up (§8).
+- **A dismissal applies only while it matches.** Reading a reminder compares the current fact or `binding` against the record; a mismatch means "do not suppress this reminder", not "delete the decision". The record is kept so reverting the fact revives it (test 94), and is deleted when the Key is deleted or the user restores the reminder. The file never changes because of a read. This is the sole invalidation mechanism — edit transactions do not clean up (§8).
 - **Without the recorded fact there is no correctness.** With only `(key, rule)`, "revert the date to its old value" and "change it to another date" look identical in the table, and nothing decides whether the suppression still holds.
 - Say the consequence out loud rather than let users find it: **business reminders reappear once on a new device**, and again after clearing site data.
 - Adopting an `ok` observation **deletes that Key's `probe_failed` dismissal**, so failure → success → failure reminds again.
@@ -260,8 +260,8 @@ Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock
 | Device key | IndexedDB `device` | singleton | Lost when site data is cleared | non-extractable HMAC `CryptoKey` |
 | Container registrations | IndexedDB `containers` | `container_fingerprint` (§13.1) | Overwritten; after a password change write the new row and delete the old (§12.5) | name, icon, counts, timestamps only |
 | Observations | IndexedDB `observations` | `observation_id`, indexed by `vault_id,key_id` | 10 per Key | structured, with an irreversible `binding` |
-| Business dismissals | IndexedDB `business_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; deleted when `condition` stops matching | no |
-| Observation dismissals | IndexedDB `observation_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; deleted when `binding` stops matching | no |
+| Business dismissals | IndexedDB `business_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; kept while the Key exists, deleted with it or on restore | no |
+| Observation dismissals | IndexedDB `observation_dismissals` | `(vault_id,key_id,rule)` | §10.3.1; kept while the Key exists, deleted with it or on restore | no |
 | Biometrics | IndexedDB `biometrics` | `container_fingerprint` | Deleted on unbind | a PRF-wrapped `file_key` |
 | Grants | `localStorage` | `send_fingerprint`, not partitioned by `vault_id` | §10.2 | no: origin and path |
 | Preferences | `localStorage` | — | never expire | no: auto-lock, clipboard, theme, filters, selection |

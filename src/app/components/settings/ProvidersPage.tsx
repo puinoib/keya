@@ -10,6 +10,7 @@ import {
 } from '../../state/providers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import {
   Select,
   SelectContent,
@@ -101,6 +102,7 @@ export function ProvidersPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [newEndpoint, setNewEndpoint] = useState('');
   const [checkAuth, setCheckAuth] = useState<CheckAuthChoice>('none');
   const [checkPath, setCheckPath] = useState('');
@@ -180,6 +182,7 @@ export function ProvidersPage() {
 
   const resetForm = () => {
     setNewName('');
+    setNewDescription('');
     setNewEndpoint('');
     setCheckAuth('none');
     setCheckPath('');
@@ -196,6 +199,7 @@ export function ProvidersPage() {
   const startEdit = (provider: ProviderDraft) => {
     setEditingName(provider.name);
     setNewName(provider.name);
+    setNewDescription(provider.description ?? '');
     setNewEndpoint(provider.endpoint);
     setCheckAuth(provider.check?.auth ?? 'none');
     setCheckPath(provider.check?.path ?? '');
@@ -221,6 +225,7 @@ export function ProvidersPage() {
     const entry: ProviderDraft = {
       ...(editing?.id ? { id: editing.id } : {}),
       name,
+      description: newDescription,
       endpoint,
       ...(check ? { check } : {}),
     };
@@ -441,6 +446,12 @@ export function ProvidersPage() {
                       className="h-7 text-xs"
                       disabled={!!editingName}
                       autoFocus
+                    />
+                    <AutoResizeTextarea
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      placeholder="Why this provider exists (optional)"
+                      className="min-h-7 px-2 py-1 text-xs"
                     />
                     <Input
                       value={newEndpoint}

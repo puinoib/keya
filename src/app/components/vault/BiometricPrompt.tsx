@@ -5,22 +5,21 @@ import {
   isBiometricSupported,
   isBiometricRegistered,
 } from '@/app/lib/biometric';
+import { Input } from '@/components/ui/input';
+import { useStore } from '@/app/store/useStore';
 
 interface BiometricPromptProps {
   vaultId: string;
-  password: string;
   onDone: () => void;
 }
 
-export function BiometricPrompt({
-  vaultId,
-  password,
-  onDone,
-}: BiometricPromptProps) {
+export function BiometricPrompt({ vaultId, onDone }: BiometricPromptProps) {
+  const verifyPassword = useStore((s) => s.verifyPassword);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [visible, setVisible] = useState(true);
-  const enableRef = useRef<HTMLButtonElement | null>(null);
+  const [password, setPassword] = useState('');
+  const passwordRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isBiometricSupported()) {
@@ -32,11 +31,11 @@ export function BiometricPrompt({
     });
   }, [vaultId, onDone]);
 
-  // Focus the primary action and let Escape dismiss, so the overlay behaves
+  // Focus the password field and let Escape dismiss, so the overlay behaves
   // like the dialogs it looks like.
   useEffect(() => {
     if (!visible) return;
-    enableRef.current?.focus();
+    passwordRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setVisible(false);
@@ -55,13 +54,22 @@ export function BiometricPrompt({
   };
 
   const handleEnable = async () => {
+    if (!password) return;
     setLoading(true);
     setError('');
     try {
+      // The password is used for this gesture only: verify it, wrap it with the
+      // PRF key, then drop it. It is never stored in the app state (I16).
+      if (!(await verifyPassword(password))) {
+        setError('That is not the current master password.');
+        return;
+      }
       await registerBiometric(vaultId, password);
+      setPassword('');
       onDone();
     } catch (e) {
-      console.error('Biometric registration failed:', e);
+      // Never log the raw exception: provider or authenticator messages can
+      // carry values that do not belong in a console.
       setError(
         e instanceof Error
           ? e.message
@@ -102,10 +110,35 @@ export function BiometricPrompt({
           Use fingerprint or face recognition to unlock this vault quickly next
           time.
         </p>
-        <p className="text-xs text-ink-quaternary mb-4">
+        <p className="text-xs text-ink-quaternary mb-3">
           Make sure you remember your vault password — if this device's passkey
           is deleted, biometric unlock will stop working.
         </p>
+        <label
+          htmlFor="biometric-confirm-password"
+          className="mb-1 block text-xs text-ink-tertiary"
+        >
+          Confirm your master password
+        </label>
+        <Input
+          id="biometric-confirm-password"
+          ref={passwordRef}
+          type="password"
+          autoComplete="off"
+          data-lpignore="true"
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError('');
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && password && !loading) {
+              void handleEnable();
+            }
+          }}
+          placeholder="Master password"
+          className="mb-3 h-8 text-xs"
+        />
         {error && <p className="text-xs text-danger mb-3">{error}</p>}
         <div className="flex gap-2">
           <button
@@ -115,9 +148,8 @@ export function BiometricPrompt({
             Skip
           </button>
           <button
-            ref={enableRef}
             onClick={handleEnable}
-            disabled={loading}
+            disabled={loading || !password}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
           >
             {loading ? (

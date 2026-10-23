@@ -139,7 +139,7 @@ describe('observations', () => {
 });
 
 describe('dismissals', () => {
-  it('prunes the records whose fact changed', async () => {
+  it('retains records whose fact changed, so reverting can revive them', async () => {
     const local = state();
     await local.putBusinessDismissal({
       vault_id: VAULT,
@@ -176,10 +176,12 @@ describe('dismissals', () => {
       ]
     );
 
-    expect(kept.business).toEqual([]);
-    expect(kept.observation).toEqual([]);
-    expect(await local.listBusinessDismissals(VAULT)).toEqual([]);
-    expect(await local.listObservationDismissals(VAULT)).toEqual([]);
+    // They no longer apply (the view compares the current fact), but the
+    // records survive so changing the fact back revives the decision.
+    expect(kept.business).toHaveLength(1);
+    expect(kept.observation).toHaveLength(1);
+    expect(await local.listBusinessDismissals(VAULT)).toHaveLength(1);
+    expect(await local.listObservationDismissals(VAULT)).toHaveLength(1);
   });
 
   it('keeps a record whose fact still matches', async () => {

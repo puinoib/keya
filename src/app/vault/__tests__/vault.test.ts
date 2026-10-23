@@ -11,6 +11,7 @@ import type { KeyaFile } from '../../../core/payload/types';
 import { validateKeyaFile } from '../../../core/payload/validate';
 import { MemoryFile, fixedClock, memoryPorts } from './memory-port';
 import { Vault } from '../vault';
+import { FileTooLargeError } from '../ports';
 
 const PASSWORD = 'a fairly long synthetic passphrase';
 const SALT = new Uint8Array([...Array(16).keys()]);
@@ -97,6 +98,40 @@ describe('opening a vault', () => {
     expect(vault.containerInfo.kdf).toEqual(KDF);
     expect(vault.containerInfo.version).toBe(2);
     expect(vault.containerInfo.fingerprint).toHaveLength(64);
+  });
+
+  it('returns decrypted bytes without parsing them, for the escape hatch', async () => {
+    const plaintext = '{"vault":';
+    const file = new MemoryFile(await makeRawBytes(plaintext));
+    const ports = memoryPorts(file, fixedClock());
+
+    const parsed = await Vault.open(ports, { password: PASSWORD });
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.failure).toBe('payload_corrupt');
+
+    const raw = await Vault.openRaw(ports, { password: PASSWORD });
+    expect(raw.ok).toBe(true);
+    if (raw.ok) {
+      expect(new TextDecoder().decode(raw.payload)).toBe(plaintext);
+    }
+  });
+
+  it('maps a pre-read size rejection without allocating the file', async () => {
+    const result = await Vault.open(
+      {
+        file: {
+          read: async () => {
+            throw new FileTooLargeError();
+          },
+          write: async () => undefined,
+        },
+        clock: fixedClock(),
+        locks: { run: (_name, task) => task() },
+      },
+      { password: PASSWORD }
+    );
+
+    expect(result).toEqual({ ok: false, failure: 'file_too_large' });
   });
 
   it('reports distinct failures for distinct causes', async () => {
@@ -301,6 +336,22 @@ describe('saving', () => {
   it('does not write when nothing changed', async () => {
     const { file, vault } = await openedFile();
     const before = file.writes;
+    expect(await vault.flush()).toEqual({ ok: true });
+    expect(file.writes).toBe(before);
+  });
+
+  it('treats an edit that normalization erases as a no-op', async () => {
+    const { file, vault } = await openedFile();
+    const before = file.writes;
+    const key = vault.getPayload().keys[0];
+
+    const result = vault.saveKey({
+      ...key,
+      secret: ` ${key.secret} `,
+    });
+
+    expect(result).toEqual({ ok: true, changed: false });
+    expect(vault.hasUnsavedChanges).toBe(false);
     expect(await vault.flush()).toEqual({ ok: true });
     expect(file.writes).toBe(before);
   });

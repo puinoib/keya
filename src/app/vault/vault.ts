@@ -19,6 +19,8 @@
 import {
   KDF_DEFAULT_MEM,
   KDF_DEFAULT_OPS,
+  MAX_FILE_SIZE,
+  PREAMBLE_SIZE,
   VERSION,
   type KdfParams,
 } from '../../core/format/constants';
@@ -29,7 +31,11 @@ import {
   previousNonceOf,
   sealContainer,
 } from '../../core/format/container';
-import { deriveFileKey, KdfError } from '../../core/format/kdf';
+import {
+  deriveFileKey,
+  KdfError,
+  type KdfFailure,
+} from '../../core/format/kdf';
 import { inspectContainer, type Preamble } from '../../core/format/preamble';
 import { parsePayload, serializePayload } from '../../core/payload/serialize';
 import {
@@ -44,6 +50,7 @@ import {
 } from '../../core/payload/validate';
 import { containerFingerprint } from '../../core/fingerprint';
 import {
+  deepEqual,
   deleteGroup,
   deleteKey,
   deleteProvider,
@@ -58,6 +65,7 @@ import {
 } from '../../core/payload/edits';
 import type { Group, Key, Provider } from '../../core/payload/types';
 import type { FilePort, VaultPorts } from './ports';
+import { FileTooLargeError } from './ports';
 
 export type OpenFailure =
   | 'missing_file'
@@ -70,7 +78,9 @@ export type OpenFailure =
   | 'payload_corrupt'
   | 'invalid_payload'
   | 'kdf_busy'
-  | 'kdf_cancelled';
+  | 'kdf_cancelled'
+  | 'kdf_failed'
+  | 'kdf_memory';
 
 export type SaveFailure =
   | 'locked'
@@ -84,11 +94,29 @@ export type PasswordFailure =
   | 'wrong_password'
   | 'kdf_busy'
   | 'kdf_cancelled'
+  | 'kdf_failed'
+  | 'kdf_memory'
   | 'target_exists'
   | SaveFailure;
 
 /** Why an edit never reached memory: a transaction rule or class A. */
 export type EditFailure = EditRejection | 'invalid_edit' | 'invalid_icon';
+
+/** Keep Argon2 allocation failure distinct from cancellation and bad input. */
+function kdfFailureCode(
+  failure: KdfFailure
+): 'kdf_busy' | 'kdf_cancelled' | 'kdf_failed' | 'kdf_memory' {
+  switch (failure) {
+    case 'busy':
+      return 'kdf_busy';
+    case 'cancelled':
+      return 'kdf_cancelled';
+    case 'memory':
+      return 'kdf_memory';
+    case 'failed':
+      return 'kdf_failed';
+  }
+}
 
 export interface OpenOptions {
   password: string;
@@ -126,6 +154,25 @@ function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
     difference |= left[index] ^ right[index];
   }
   return difference === 0;
+}
+
+/**
+ * The part of a payload an edit can legitimately change. Timestamps move as a
+ * side effect of a transaction, so they are excluded when deciding whether a
+ * normalized edit is actually a no-op.
+ */
+/** The writer re-checks the serialized size; the field limits are arithmetic. */
+function payloadFits(bytes: Uint8Array): boolean {
+  return bytes.length + PREAMBLE_SIZE <= MAX_FILE_SIZE;
+}
+
+function businessState(file: KeyaFile): KeyaFile {
+  return {
+    vault: { ...file.vault, content_updated_at: '' },
+    providers: file.providers,
+    groups: file.groups,
+    keys: file.keys.map((key) => ({ ...key, content_updated_at: '' })),
+  };
 }
 
 export class Vault {
@@ -178,7 +225,14 @@ export class Vault {
     ports: VaultPorts,
     options: OpenOptions
   ): Promise<OpenResult> {
-    const bytes = await ports.file.read();
+    let bytes: Uint8Array | null;
+    try {
+      bytes = await ports.file.read();
+    } catch (error) {
+      if (error instanceof FileTooLargeError)
+        return { ok: false, failure: 'file_too_large' };
+      throw error;
+    }
     if (!bytes) return { ok: false, failure: 'missing_file' };
 
     const inspected = inspectContainer(bytes);
@@ -203,7 +257,7 @@ export class Vault {
         if (error instanceof KdfError) {
           return {
             ok: false,
-            failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
+            failure: kdfFailureCode(error.failure),
           };
         }
         throw error;
@@ -247,6 +301,63 @@ export class Vault {
         sessionId: crypto.randomUUID(),
         ports,
       }),
+    };
+  }
+
+  /**
+   * Read and decrypt without parsing or validating the payload.
+   *
+   * This is the isolated escape hatch for a file that decrypted but failed
+   * class A validation (§6.3). The bytes never enter the store, are not parsed
+   * into the model, and are returned to the caller for one explicit download.
+   */
+  static async openRaw(
+    ports: VaultPorts,
+    options: OpenOptions
+  ): Promise<
+    | { ok: true; payload: Uint8Array; preamble: Preamble }
+    | { ok: false; failure: OpenFailure }
+  > {
+    let bytes: Uint8Array | null;
+    try {
+      bytes = await ports.file.read();
+    } catch (error) {
+      if (error instanceof FileTooLargeError)
+        return { ok: false, failure: 'file_too_large' };
+      throw error;
+    }
+    if (!bytes) return { ok: false, failure: 'missing_file' };
+
+    const inspected = inspectContainer(bytes);
+    if (!inspected.ok) return { ok: false, failure: inspected.failure };
+
+    let fileKey: Uint8Array;
+    try {
+      fileKey = await deriveFileKey(
+        {
+          password: options.password,
+          salt: inspected.preamble.salt,
+          kdf: inspected.preamble.kdf,
+        },
+        { signal: options.signal, lockTimeoutMs: options.lockTimeoutMs }
+      );
+    } catch (error) {
+      if (error instanceof KdfError)
+        return { ok: false, failure: kdfFailureCode(error.failure) };
+      throw error;
+    }
+
+    const opened = await openContainer(bytes, fileKey);
+    if (!opened.ok)
+      return {
+        ok: false,
+        failure:
+          opened.failure === 'auth_failed' ? 'auth_failed' : opened.failure,
+      };
+    return {
+      ok: true,
+      payload: opened.payload,
+      preamble: opened.preamble,
     };
   }
 
@@ -311,6 +422,16 @@ export class Vault {
       }
     }
 
+    // The transaction compares before normalization, so "  sk-1 " can look
+    // different from "sk-1" and move timestamps. Normalization happens here;
+    // if the business state is unchanged, this is still a no-op edit and must
+    // not write a new file (§8).
+    if (
+      deepEqual(businessState(this.payload), businessState(validated.value))
+    ) {
+      return { ok: true, changed: false };
+    }
+
     this.payload = validated.value;
     this.revision += 1;
     this.dirty = true;
@@ -365,10 +486,16 @@ export class Vault {
    */
   async flush(): Promise<{ ok: true } | { ok: false; failure: SaveFailure }> {
     this.assertUnlocked();
-    const run = this.queue.then(
-      () => this.writeUntilClean(),
-      () => this.writeUntilClean()
-    );
+    return this.enqueue(() => this.writeUntilClean());
+  }
+
+  /**
+   * Every write that touches this file goes through one queue. `writeOnce` and
+   * the password-change rewrite must not interleave: otherwise a save that
+   * read the old container could overwrite the new one.
+   */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(task, task);
     this.queue = run.then(
       () => undefined,
       () => undefined
@@ -399,6 +526,7 @@ export class Vault {
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
 
     const payload = serializePayload(validated.value);
+    if (!payloadFits(payload)) return { ok: false, failure: 'invalid_payload' };
 
     try {
       return await this.ports.locks.run(WRITE_LOCK, async () => {
@@ -471,7 +599,7 @@ export class Vault {
       if (error instanceof KdfError) {
         return {
           ok: false,
-          failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
+          failure: kdfFailureCode(error.failure),
         };
       }
       throw error;
@@ -493,7 +621,7 @@ export class Vault {
       if (error instanceof KdfError) {
         return {
           ok: false,
-          failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
+          failure: kdfFailureCode(error.failure),
         };
       }
       throw error;
@@ -511,9 +639,22 @@ export class Vault {
       return { ok: false, failure: 'locked' };
     }
 
-    const performed = await this.rewriteWith({
-      fileKey: nextKey,
-      container: { version: VERSION, kdf: next, salt },
+    const nextFingerprint = await containerFingerprint(salt);
+
+    // Assign the new container inside the same queued task that writes it, so
+    // a save queued behind this one cannot observe the old key with the new
+    // file on disk.
+    const performed = await this.enqueue(async () => {
+      const written = await this.rewriteWith({
+        fileKey: nextKey,
+        container: { version: VERSION, kdf: next, salt },
+      });
+      if (written.ok) {
+        this.fileKey = nextKey;
+        this.container = { version: VERSION, kdf: next, salt };
+        this.fingerprint = nextFingerprint;
+      }
+      return written;
     });
 
     if (!performed.ok) {
@@ -521,9 +662,6 @@ export class Vault {
       return { ok: false, failure: performed.failure };
     }
 
-    this.fileKey = nextKey;
-    this.container = { version: VERSION, kdf: next, salt };
-    this.fingerprint = await containerFingerprint(salt);
     return { ok: true };
   }
 
@@ -539,6 +677,7 @@ export class Vault {
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
 
     const payload = serializePayload(validated.value);
+    if (!payloadFits(payload)) return { ok: false, failure: 'invalid_payload' };
 
     try {
       return await this.ports.locks.run(WRITE_LOCK, async () => {
@@ -595,7 +734,7 @@ export class Vault {
       if (error instanceof KdfError) {
         return {
           ok: false,
-          failure: error.failure === 'busy' ? 'kdf_busy' : 'kdf_cancelled',
+          failure: kdfFailureCode(error.failure),
         };
       }
       throw error;
@@ -613,8 +752,10 @@ export class Vault {
       keys: this.payload.keys,
     };
 
-    const validated = validateKeyaFile(copy);
+    const validated = validateKeyaFile(normalizeKeyaFile(copy));
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
+    if (checkIconForWriter(validated.value.vault.icon) !== 'ok')
+      return { ok: false, failure: 'invalid_payload' };
 
     // The clone is a write like any other: serialize it against the same lock,
     // and refuse to replace a file that is already there.
@@ -624,9 +765,13 @@ export class Vault {
         if (existing) {
           return { ok: false as const, failure: 'target_exists' as const };
         }
+        const serialized = serializePayload(validated.value);
+        if (!payloadFits(serialized)) {
+          return { ok: false as const, failure: 'invalid_payload' as const };
+        }
         const nonce = freshNonce(previousNonceOf(existing));
         const bytes = await sealContainer({
-          payload: serializePayload(validated.value),
+          payload: serialized,
           fileKey,
           container: { version: VERSION, kdf, salt },
           nonce,
@@ -648,6 +793,15 @@ export class Vault {
     if (this.dirty) return { ok: false, failure: 'unsaved_changes' };
     this.locked = true;
     this.fileKey.fill(0);
+    // Drop the plaintext graph too. References held elsewhere are GC's
+    // problem, but this object no longer keeps the secrets reachable.
+    const { id, created_at, content_updated_at } = this.payload.vault;
+    this.payload = {
+      vault: { id, name: '', icon: '', created_at, content_updated_at },
+      providers: [],
+      groups: [],
+      keys: [],
+    };
     return { ok: true };
   }
 
@@ -660,20 +814,31 @@ export class Vault {
   }
 
   /** Current payload as a complete file image, without touching the port. */
-  async exportBytes(): Promise<
+  async exportBytes(
+    options: { markClean?: boolean } = {}
+  ): Promise<
     { ok: true; bytes: Uint8Array } | { ok: false; failure: SaveFailure }
   > {
     this.assertUnlocked();
+    const revision = this.revision;
     const validated = validateKeyaFile(this.payload);
     if (!validated.ok) return { ok: false, failure: 'invalid_payload' };
 
+    const serialized = serializePayload(validated.value);
+    if (!payloadFits(serialized))
+      return { ok: false, failure: 'invalid_payload' };
+
     const nonce = freshNonce(this.lastNonce);
     const bytes = await sealContainer({
-      payload: serializePayload(validated.value),
+      payload: serialized,
       fileKey: this.fileKey,
       container: this.container,
       nonce,
     });
+    // Download mode has no writable file: the exported bytes *are* the save.
+    // Only clear dirty when the exported snapshot is still the current one; an
+    // edit that landed during sealing is not in these bytes.
+    if (options.markClean && this.revision === revision) this.dirty = false;
     return { ok: true, bytes };
   }
 

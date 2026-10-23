@@ -12,6 +12,17 @@ export interface FilePort {
   write(bytes: Uint8Array): Promise<void>;
 }
 
+/**
+ * Raised before allocating a file whose size already exceeds the format cap.
+ * `Vault.open` maps it to the same `file_too_large` failure as `inspectContainer`.
+ */
+export class FileTooLargeError extends Error {
+  constructor() {
+    super('file_too_large');
+    this.name = 'FileTooLargeError';
+  }
+}
+
 export interface ClockPort {
   now(): Date;
 }

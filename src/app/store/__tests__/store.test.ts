@@ -222,6 +222,29 @@ describe('flushSave', () => {
     expect(store.useStore.getState().workspaceState).toBe('unlocked');
   });
 
+  it('can lock a download-mode vault after exporting its changes', async () => {
+    const h = await openHarness();
+    const store = makeStore(h);
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'download');
+
+    store.useStore.getState().addKey({
+      name: 'Export then lock',
+      secret: 'sk-synthetic-export-lock',
+      providerId: null,
+      endpoint: '',
+      description: '',
+      groupId: null,
+      expiry: null,
+    });
+    expect(await store.exportVaultBytes(true)).not.toBeNull();
+    store.useStore.getState().markExported();
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(false);
+
+    await store.useStore.getState().lock();
+    expect(store.useStore.getState().workspaceState).toBe('welcome');
+    expect(h.vault.isLocked).toBe(true);
+  });
+
   it('treats an exported download-mode vault as saved, and guards pending edits', async () => {
     const h = await openHarness();
     const store = makeStore(h);
@@ -279,6 +302,23 @@ describe('unlock', () => {
     expect(store.useStore.getState().view).toBeNull();
   });
 
+  it('aborts and locks the previous session when switching vaults', async () => {
+    const first = await openHarness();
+    const store = makeStore(first);
+    await store.useStore
+      .getState()
+      .unlock(first.opened, 'first.keya', 'folder');
+
+    const second = await openHarness();
+    await store.useStore
+      .getState()
+      .unlock(second.opened, 'second.keya', 'folder');
+
+    expect(first.session.signal.aborted).toBe(true);
+    expect(first.vault.isLocked).toBe(true);
+    expect(store.useStore.getState().activeVaultFileName).toBe('second.keya');
+  });
+
   it('runs the daily check once per local day', async () => {
     const payload = cloneFile();
     const first = await openHarness({ payload });
@@ -305,6 +345,35 @@ describe('unlock', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(secondProbe).not.toHaveBeenCalled();
+  });
+});
+
+describe('reminder dismissals', () => {
+  it('writes device state without dirtying or saving the vault', async () => {
+    const { store, h } = await unlocked();
+    const row = store.useStore
+      .getState()
+      .view?.reminders.find((entry) => !entry.dismissed);
+    expect(row).toBeDefined();
+    if (!row) return;
+    const before = h.file.writes;
+
+    store.useStore.getState().setReminderDismissed(row, true);
+
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(false);
+    expect(h.vault.hasUnsavedChanges).toBe(false);
+    await vi.waitFor(() =>
+      expect(
+        store.useStore
+          .getState()
+          .view?.reminders.find(
+            (entry) =>
+              entry.key.id === row.key.id &&
+              entry.reminder.rule === row.reminder.rule
+          )?.dismissed
+      ).toBe(true)
+    );
+    expect(h.file.writes).toBe(before);
   });
 });
 

@@ -10,6 +10,9 @@
 import type { Expiry } from '../../core/time/expiry';
 import { expiryStatus } from '../../core/time/expiry';
 import type { Observation } from '../../core/runtime/observations';
+import type { OpenFailure } from '../vault/vault';
+import type { Issue } from '../../core/payload/validate';
+import { summarizeIssues } from '../../core/payload/validate';
 import type {
   NotExecutableReason,
   RecipeState,
@@ -121,6 +124,42 @@ export function expiryStatusLabel(status: ExpiryStatus): string {
       return 'Valid';
     case 'none':
       return 'No expiry';
+  }
+}
+
+/** Why a vault could not be opened, in the words the unlock screen shares. */
+export function describeOpenFailure(
+  failure: OpenFailure,
+  issues?: Issue[]
+): string {
+  switch (failure) {
+    case 'missing_file':
+      return 'This file no longer exists.';
+    case 'file_too_short':
+    case 'file_too_large':
+      return 'The file is incomplete or too large; it may be damaged.';
+    case 'bad_magic':
+      return 'This is not a Keya file.';
+    case 'unsupported_version':
+      return 'This file version is not supported by this build.';
+    case 'kdf_out_of_range':
+      return 'The file header parameters are outside the allowed range.';
+    case 'auth_failed':
+      return 'Wrong password, or the file contents have been modified.';
+    case 'payload_corrupt':
+      return 'The file was decrypted, but its contents are damaged.';
+    case 'invalid_payload':
+      return issues && issues.length > 0
+        ? `The file was decrypted, but its contents are invalid: ${summarizeIssues(issues)}`
+        : 'The file was decrypted, but its contents are invalid.';
+    case 'kdf_busy':
+      return 'Another tab is unlocking a vault. Try again in a moment.';
+    case 'kdf_cancelled':
+      return 'Unlocking was cancelled.';
+    case 'kdf_memory':
+      return 'This device does not have enough memory to unlock this file.';
+    case 'kdf_failed':
+      return 'The key could not be derived from this password.';
   }
 }
 

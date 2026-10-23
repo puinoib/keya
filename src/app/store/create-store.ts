@@ -85,7 +85,7 @@ export interface ManualCheckResult {
 export interface AppStore {
   useStore: UseBoundStore<StoreApi<AppState>>;
   flushSave: () => Promise<boolean>;
-  exportVaultBytes: () => Promise<Uint8Array | null>;
+  exportVaultBytes: (markClean?: boolean) => Promise<Uint8Array | null>;
   runManualCheck: (keyId: string) => Promise<ManualCheckResult | null>;
   /** Runs without a new gesture: only a persistent grant can authorize it. */
   runAutomaticCheck: (keyId: string) => Promise<void>;
@@ -158,7 +158,7 @@ export interface AppState {
 
   selectedKeyId: string | null;
   usage: Record<string, UsageEntry>;
-  biometricPrompt: { vaultId: string; password: string } | null;
+  biometricPrompt: { vaultId: string } | null;
   inboxVersion: number;
   lastInboxSyncAt: string | null;
   lastInboxSyncResult: {
@@ -187,9 +187,7 @@ export interface AppState {
   restoreKey: (id: string) => void;
 
   refreshUsage: (keyId: string) => Promise<void>;
-  setBiometricPrompt: (
-    prompt: { vaultId: string; password: string } | null
-  ) => void;
+  setBiometricPrompt: (prompt: { vaultId: string } | null) => void;
   setSearchQuery: (query: string) => void;
   setShowAddForm: (show: boolean) => void;
   beginAddKeyFlow: () => Promise<void>;
@@ -314,6 +312,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
   let runtime: Runtime | null = null;
   /** Bumped whenever the session is replaced; stale async results check it. */
   let generation = 0;
+  /** Monotonic refresh id: an older view must never overwrite a newer one. */
+  let viewSeq = 0;
   /** Key deletions whose local records may go once the file write lands. */
   const pendingLocalCleanup: { vaultId: string; keyId: string }[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -388,6 +388,42 @@ export function createAppStore(deps: StoreDeps): AppStore {
       lastInboxSyncResult: null,
 
       unlock: async (opened, fileName, storageMode = 'folder') => {
+        // Switching vaults must end the previous session first: its in-flight
+        // requests are aborted, its pending edits are flushed, and its file key
+        // is dropped. Otherwise a probe from the old vault can still leave the
+        // browser after the new one is on screen (I8 / §12.4).
+        if (runtime) {
+          const previous = runtime;
+          if (
+            getState().storageMode === 'download' &&
+            previous.vault.hasUnsavedChanges
+          ) {
+            throw new Error(
+              'Export the current download-mode vault before switching away.'
+            );
+          }
+          if (saveTimer) {
+            clearTimeout(saveTimer);
+            saveTimer = null;
+          }
+          const saved = await previous.vault.flush().catch(() => null);
+          if (!saved?.ok) {
+            throw new Error(
+              'The current vault could not be saved, so it was not closed.'
+            );
+          }
+          const locked = previous.vault.lock();
+          if (!locked.ok) {
+            throw new Error(
+              'The current vault could not be closed while it was busy.'
+            );
+          }
+          // Only end the session after the old file is safely written and
+          // locked; a failed flush must leave the old vault usable.
+          previous.session.lock();
+          await drainLocalCleanup();
+        }
+
         const preferences = await deps.local.getPreferences();
         generation += 1;
         runtime = {
@@ -404,6 +440,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
           storageMode,
           hasUnsavedChanges: false,
           saveFailure: null,
+          biometricPrompt: null,
           inboxVersion: get().inboxVersion + 1,
           // Filters belong to the vault that was open when they were set.
           selectedKeyId: null,
@@ -477,7 +514,15 @@ export function createAppStore(deps: StoreDeps): AppStore {
         });
       },
 
-      markExported: () => set({ hasUnsavedChanges: false }),
+      markExported: () =>
+        set({
+          // The vault knows whether the exported snapshot still covers every
+          // edit; never clear the flag just because a download started.
+          hasUnsavedChanges: runtime?.vault.hasUnsavedChanges ?? false,
+          saveFailure: runtime?.vault.hasUnsavedChanges
+            ? get().saveFailure
+            : null,
+        }),
 
       setTheme: (theme) => {
         try {
@@ -497,6 +542,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const active = runtime;
         if (!active) return;
         const run = generation;
+        viewSeq += 1;
+        const refreshId = viewSeq;
         let view: VaultView;
         try {
           view = await buildView({
@@ -510,6 +557,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
           if (
             runtime !== active ||
             generation !== run ||
+            viewSeq !== refreshId ||
             active.vault.isLocked
           ) {
             return;
@@ -518,7 +566,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         }
         // A refresh that started before a lock or switch must not repaint the
         // next session with the previous vault.
-        if (runtime !== active || generation !== run) return;
+        if (runtime !== active || generation !== run || viewSeq !== refreshId)
+          return;
         set({ view, inboxVersion: get().inboxVersion + 1 });
         announceNewReminders(view);
       },
@@ -601,6 +650,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (stored && stored.secret !== next.secret) {
           toast('Surrounding whitespace was removed from the credential.');
         }
+
+        // An edit that normalizes to the current state is a no-op; do not
+        // schedule a write or a refresh for it.
+        if (!result.changed) return true;
 
         // A snapshot describes the request that produced it; a rotated secret or
         // a moved endpoint makes it describe someone else's allowance.
@@ -909,24 +962,40 @@ export function createAppStore(deps: StoreDeps): AppStore {
                 ? 'The vault locked while the password was changing.'
                 : result.failure === 'busy'
                   ? 'Another password change is already running.'
-                  : result.failure;
+                  : result.failure === 'kdf_busy'
+                    ? 'Another tab is deriving a key. Try again in a moment.'
+                    : result.failure === 'kdf_memory'
+                      ? 'This device does not have enough memory to derive the new key.'
+                      : result.failure === 'kdf_failed' ||
+                          result.failure === 'kdf_cancelled'
+                        ? 'The new key could not be derived. Nothing was changed.'
+                        : result.failure;
           return { ok: false, reason };
         }
 
         const payload = active.vault.getPayload();
-        await deps.local.moveContainer(
-          {
-            fingerprint: active.vault.containerInfo.fingerprint,
-            file_name: active.fileName,
-            vault_id: payload.vault.id,
-            name: payload.vault.name,
-            icon: payload.vault.icon,
-            key_count: payload.keys.length,
-            content_updated_at: payload.vault.content_updated_at,
-            last_opened_at: clock().toISOString(),
-          },
-          before
-        );
+        try {
+          await deps.local.moveContainer(
+            {
+              fingerprint: active.vault.containerInfo.fingerprint,
+              file_name: active.fileName,
+              vault_id: payload.vault.id,
+              name: payload.vault.name,
+              icon: payload.vault.icon,
+              key_count: payload.keys.length,
+              content_updated_at: payload.vault.content_updated_at,
+              last_opened_at: clock().toISOString(),
+            },
+            before
+          );
+        } catch {
+          // The password change itself is already committed. A stale local
+          // registration is recoverable on the next unlock; reporting the whole
+          // change as failed would be false.
+          toast.error(
+            'Password changed, but the local vault registration could not be updated.'
+          );
+        }
 
         active.fingerprint = active.vault.containerInfo.fingerprint;
 
@@ -960,8 +1029,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
       setReminderDismissed: (row, dismissed) => {
         if (!runtime) return;
-        void (dismissed ? dismissReminder(row) : restoreReminder(row));
-        void afterChange();
+        // A dismissal is device-local: refresh the view, but never mark the
+        // payload dirty or schedule a file write (§8).
+        void (dismissed ? dismissReminder(row) : restoreReminder(row)).then(
+          () => get().refresh()
+        );
       },
 
       updateMeta: (updates) => {
@@ -1288,9 +1360,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
   }
 
   /** Bytes of the current vault, for "Export .keya". */
-  const exportVaultBytes = async (): Promise<Uint8Array | null> => {
+  const exportVaultBytes = async (
+    markClean = false
+  ): Promise<Uint8Array | null> => {
     if (!runtime) return null;
-    const result = await runtime.vault.exportBytes();
+    const result = await runtime.vault.exportBytes({ markClean });
     return result.ok ? result.bytes : null;
   };
 

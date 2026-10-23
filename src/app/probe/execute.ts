@@ -82,6 +82,7 @@ export async function runProbe(
     input.timeoutMs ?? DEFAULT_TIMEOUT_MS
   );
   const onExternalAbort = () => controller.abort();
+  if (input.signal?.aborted) controller.abort();
   input.signal?.addEventListener('abort', onExternalAbort);
 
   const started = performance.now();
