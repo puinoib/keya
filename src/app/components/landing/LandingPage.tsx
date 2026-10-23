@@ -139,7 +139,7 @@ export function LandingPage() {
               <div className="kl-hero-copy">
                 <p className="kl-kicker">
                   <span className="kl-live-dot" aria-hidden="true" />
-                  Local-first API credentials
+                  keya.one · local-first credentials
                 </p>
                 <h1 id="hero-title">
                   Keep every key
@@ -147,7 +147,7 @@ export function LandingPage() {
                 </h1>
                 <p className="kl-lede">
                   A quiet, encrypted home for the API keys and tokens your work
-                  depends on. No account. No backend. Just a folder you control.
+                  depends on. No account. No backend. Just a folder you own.
                 </p>
                 <div className="kl-cta-row">
                   <Link to="/start" className="kl-button kl-button-primary">
@@ -239,15 +239,15 @@ export function LandingPage() {
                   Most tools put your keys behind an account. Keya puts them in{' '}
                   <span className="kl-inline-pill">
                     <FolderSimple className="size-[.55em]" aria-hidden="true" />
-                    a folder
+                    one folder
                   </span>{' '}
                   you own.
                 </h2>
                 <p className="kl-thesis-copy">
-                  A local-first vault for API keys and tokens — AI, payments,
-                  cloud, scraping, or your own internal APIs. Encrypted on disk,
-                  organized by context, and ready to sync with the drive you
-                  already trust.
+                  A local-first vault for the API keys and tokens your work
+                  depends on — AI, payments, cloud, scraping, or your own
+                  internal APIs. Encrypted on disk, organized by context, and
+                  ready to sync with the drive you already trust.
                 </p>
               </div>
             </div>
@@ -452,7 +452,7 @@ export function LandingPage() {
               <span className="kl-reg kl-reg-sheet-br" aria-hidden="true" />
 
               <div className="kl-sheet-bar">
-                <span>KEYA / LOCAL VAULT</span>
+                <span>KEYA.ONE / LOCAL VAULT</span>
                 <span>02 — Under the hood</span>
                 <span>FIELD NOTES · V0.1</span>
               </div>
@@ -819,7 +819,7 @@ export function LandingPage() {
 
           <div className="kl-footer-legal">
             <span>© {year} Keya · MIT licensed</span>
-            <span>Local-first, by design.</span>
+            <span>keya.one · local-first, by design.</span>
           </div>
         </div>
       </footer>
