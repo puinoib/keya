@@ -154,7 +154,7 @@ export function KeyDetail() {
   return (
     <>
       <div
-        className="w-72 mr-3 mt-12 mb-3 flex flex-col rounded-xl
+        className="w-72 mr-3 flex h-full min-h-0 flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >
@@ -240,7 +240,7 @@ export function KeyDetail() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 scrollbar-thin">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4 scrollbar-thin">
           {key.archived_at && (
             <div className="mb-4 rounded-md border border-line-subtle bg-surface-2 px-2 py-1.5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary">

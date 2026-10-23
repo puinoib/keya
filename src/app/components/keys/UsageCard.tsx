@@ -113,19 +113,17 @@ export function UsageCard({
               stale,
             })}
           </span>
-          {snapshot && (
-            <span className="mt-1.5 flex gap-1" aria-hidden="true">
-              {snapshot.windows.map((window) => (
-                <span
-                  key={window.id}
-                  className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3"
-                >
-                  <span
-                    className={`block h-full rounded-full ${barTone(Math.round(window.percent_used), stale)}`}
-                    style={{ width: `${Math.round(window.percent_used)}%` }}
-                  />
-                </span>
-              ))}
+          {snapshot && tightest && (
+            // One bar for the window the line above names. Three unlabelled
+            // bars side by side read as decoration, not as data.
+            <span
+              className="mt-1.5 block h-1 overflow-hidden rounded-full bg-surface-3"
+              aria-hidden="true"
+            >
+              <span
+                className={`block h-full rounded-full ${barTone(Math.round(tightest.percent_used), stale)}`}
+                style={{ width: `${Math.round(tightest.percent_used)}%` }}
+              />
             </span>
           )}
         </span>
