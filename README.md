@@ -1,6 +1,6 @@
 # Keya
 
-A local-first API credential manager for developers. Keep API keys and tokens in encrypted `.keya` files, organize them into vaults and groups, and test connectivity to your configured providers.
+A local-first API credential manager for developers. Keep API keys and tokens in encrypted `.keya` files, organize them into vaults and groups, and run manual checks against your configured providers.
 
 AI providers are the default focus, but Keya is not limited to AI. Search, scraping, email, payments, cloud, and internal API credentials fit the same model. Any service can be added as a custom provider.
 
@@ -9,13 +9,14 @@ Keya is a static web application with no application backend or account system. 
 ## Features
 
 - Multiple password-protected vaults in a workspace folder
-- Key search, groups, provider filters, and expiry tracking
-- Preset AI providers plus platform presets (Exa, Firecrawl, GitHub, Vercel, Stripe), and custom providers for any API service, with optional credential checks
-- Manual and optional automatic API connectivity tests
-- Inbox alerts for expiry, connection failures, insecure endpoints, and missing or stale tests
+- Key search, ordered groups, provider/result/expiry filters, and archiving
+- Preset AI and developer-platform providers, plus custom providers for any API service with an optional check recipe
+- Manual **Test key** checks with a one-shot destination approval; results distinguish **Verified** from **Reachable**
+- Provider allowance card where the provider exposes a readable metadata endpoint
+- Inbox for due or expired keys and rejected checks; housekeeping offers checks this device has not run lately without treating them as failures
 - PRF-based WebAuthn biometric unlock where supported
-- Inactivity locking, keyboard shortcuts, and light/dark themes
-- Encrypted `.keya` export and plaintext JSON export (importing either is not available yet)
+- Auto lock, configurable clipboard clearing, customizable keyboard shortcuts, and light/dark themes
+- Encrypted `.keya` export and plaintext JSON export; import is not available
 - Built-in help at `/docs`
 
 ## Run locally
@@ -40,7 +41,10 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 - Biometric enrollment requires PRF; there is no stored-key fallback for unsupported authenticators.
 - Edits are auto-saved after a debounce. Locking and switching flush pending changes. If saving fails, locking is refused to preserve unsaved data; **the vault remains unlocked** until the problem is resolved.
 - Writes are coordinated between same-origin tabs and checked for external file changes. Cloud clients and other devices do not share that lock. Use one device at a time per vault, and keep independent backups.
-- Preset provider tests send the key to a metadata endpoint. A custom provider uses the check you configure in Settings → Providers; without one, Keya cannot check it and sends nothing. A provider that blocks browser requests fails with a network error, which is not proof the credential is invalid. Automatic testing is optional and disabled by default. Custom or metered endpoints may incur charges. A successful HTTP response is not universal proof of key validity.
+- **Test key** sends one `GET` request to the provider's check target, with the credential in the slot its recipe names. Every test needs a fresh approval that shows the exact destination; nothing is persisted that could act as a standing permission. There is no automatic or scheduled checking.
+- A custom provider uses the check recipe configured in Settings → Providers. With no recipe, Keya sends nothing and the key cannot be tested. A provider that blocks browser requests fails with a network error, which is not proof the credential is invalid.
+- A successful response is **Reachable** unless the endpoint requires the credential, in which case it can be **Verified**. Custom or metered endpoints may incur charges, so prefer a cheap metadata endpoint where the provider offers one.
+- Usage lookups read the provider's own allowance metadata on demand and are refused for plain `http:` endpoints. The figures are cached for this tab only, never written to the vault.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.
@@ -81,9 +85,14 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the pipeline, the required secrets, the b
 ## User guides
 
 - [Quick Start](src/help/content/quick-start.md)
+- [Keys & Groups](src/help/content/keys.md)
+- [Checks & Usage](src/help/content/checks.md)
+- [Providers](src/help/content/providers.md)
+- [Inbox](src/help/content/inbox.md)
+- [Vaults, Folders & Export](src/help/content/vaults.md)
+- [Settings & Shortcuts](src/help/content/settings.md)
 - [Security](src/help/content/security.md)
 - [Backup & Restore](src/help/content/backup.md)
-- [Inbox](src/help/content/inbox.md)
 - [FAQ](src/help/content/faq.md)
 
 These articles are also available in the running app at `/docs`.
