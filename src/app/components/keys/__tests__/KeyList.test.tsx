@@ -16,6 +16,11 @@ vi.mock('@/core/format/sodium', async () => {
   };
 });
 
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
+}));
+
 const holder = vi.hoisted(() => ({
   store: null as unknown,
   api: null as unknown,
@@ -48,6 +53,7 @@ const { KeyList, EditKeyDialog } = await import('../KeyList');
 let harness: ComponentHarness;
 
 beforeEach(async () => {
+  navigate.mockReset();
   const payload = cloneFile();
   payload.keys[0].expiry = { kind: 'date', value: '2026-03-05' };
   payload.keys.push(
@@ -55,7 +61,10 @@ beforeEach(async () => {
       ...structuredClone(payload.keys[0]),
       id: '66666666-6666-4666-8666-666666666666',
       name: 'Retired key',
+      description: 'retired',
       secret: 'sk-retired',
+      provider_id: 'preset:openai',
+      endpoint: 'https://api.openai.com/v1',
       expiry: { kind: 'date', value: '2026-03-02' },
       archived_at: '2026-03-03T00:00:00.000Z',
     },
@@ -103,6 +112,27 @@ describe('KeyList', () => {
 
     expect(rowNames()).toHaveLength(1);
     expect(screen.getByText(/Archived/)).toBeTruthy();
+  });
+
+  it('searches archived keys from the active list', async () => {
+    render(<KeyList />);
+    expect(screen.queryByText('Retired key')).toBeNull();
+
+    harness.api.useStore.getState().setSearchQuery('retired');
+
+    await screen.findByText('Retired key');
+    expect(rowNames()).toHaveLength(1);
+  });
+
+  it('searches active keys from the archived list', async () => {
+    harness.api.useStore.getState().setShowArchived(true);
+    render(<KeyList />);
+    expect(screen.queryByText('Edge key')).toBeNull();
+
+    harness.api.useStore.getState().setSearchQuery('edge');
+
+    await screen.findByText('Edge key');
+    expect(rowNames()).toHaveLength(1);
   });
 
   it('filters by provider label', async () => {

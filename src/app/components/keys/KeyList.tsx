@@ -83,10 +83,13 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
+import { useNavigate } from '@tanstack/react-router';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
+import { keysSearch } from '../../state/keys-search';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
 
 export function KeyList() {
+  const navigate = useNavigate();
   const view = useStore((s) => s.view);
   const providers = view?.file.providers ?? [];
   const {
@@ -115,8 +118,16 @@ export function KeyList() {
   // re-created the list on every unrelated store update.
   const keys = useMemo(() => {
     if (!view) return [];
-    let visible = showArchived ? archivedKeys(view) : activeKeys(view);
-    if (searchQuery) visible = searchKeys(view, visible, searchQuery);
+    // Search covers the whole vault, including archived keys, so a retired
+    // credential is still findable without opening Archived first. The scope
+    // only decides the unfiltered list.
+    const hasSearch = searchQuery.trim().length > 0;
+    let visible = hasSearch
+      ? [...view.file.keys]
+      : showArchived
+        ? archivedKeys(view)
+        : activeKeys(view);
+    if (hasSearch) visible = searchKeys(view, visible, searchQuery);
     if (filterGroupId) {
       visible =
         filterGroupId === '__ungrouped__'
@@ -333,7 +344,13 @@ export function KeyList() {
         </button>
         {archivedCount > 0 && (
           <button
-            onClick={() => useStore.getState().setShowArchived(true)}
+            onClick={() => {
+              useStore.getState().setShowArchived(true);
+              navigate({
+                to: '/keys',
+                search: keysSearch({ archived: true }),
+              });
+            }}
             className="mt-3 text-xs text-ink-quaternary hover:text-ink-secondary transition-colors"
           >
             View archive ({archivedCount})

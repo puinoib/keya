@@ -97,7 +97,7 @@ export function TopBar() {
         <MagnifyingGlass className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-ink-quaternary pointer-events-none" />
         <input
           type="text"
-          placeholder="Search keys..."
+          placeholder="Search all keys..."
           value={searchQuery}
           data-keya-search="true"
           onChange={(e) => setSearchQuery(e.target.value)}

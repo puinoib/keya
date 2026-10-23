@@ -1,4 +1,5 @@
 import { X } from '@phosphor-icons/react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Select,
   SelectContent,
@@ -7,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { useStore } from '../../store/useStore';
 import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
+import { keysSearch } from '../../state/keys-search';
 import { providerLabel } from '../../state/providers';
 import { KeyList } from '../keys/KeyList';
 import { KeyDetail } from '../keys/KeyDetail';
@@ -26,6 +28,7 @@ const EXPIRY_STATUS_LABELS: Record<string, string> = {
 };
 
 export function KeysPage() {
+  const navigate = useNavigate();
   const {
     view,
     selectedKeyId,
@@ -71,7 +74,13 @@ export function KeysPage() {
         ? 'Ungrouped'
         : groups.find((g) => g.id === filterGroupId)?.name;
     if (name)
-      tags.push({ label: name, onRemove: () => setFilterGroupId(null) });
+      tags.push({
+        label: name,
+        onRemove: () => {
+          setFilterGroupId(null);
+          navigate({ to: '/keys', search: keysSearch({}) });
+        },
+      });
   }
 
   const hasAnyFilters = hasSmartFilters || tags.length > 0;
@@ -159,6 +168,7 @@ export function KeysPage() {
                   clearSmartFilters();
                   clearFilters();
                   setSearchQuery('');
+                  navigate({ to: '/keys', search: keysSearch({}) });
                 }}
                 className="text-xs text-ink-quaternary hover:text-ink-secondary transition-colors px-1 ml-1"
               >

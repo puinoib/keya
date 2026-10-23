@@ -17,6 +17,11 @@ vi.mock('@/core/format/sodium', async () => {
   };
 });
 
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
+}));
+
 const holder = vi.hoisted(() => ({
   store: null as unknown,
   api: null as unknown,
@@ -49,6 +54,7 @@ const { KeyDetail } = await import('../KeyDetail');
 let harness: ComponentHarness;
 
 beforeEach(async () => {
+  navigate.mockReset();
   const payload = cloneFile();
   // A provider that has a usage source, so the panel's variable block renders.
   payload.keys[0].provider_id = 'preset:opencode-go';
@@ -163,6 +169,10 @@ describe('KeyDetail field structure', () => {
 
     expect(harness.api.useStore.getState().filterGroupId).toBe(IDS.group);
     expect(harness.api.useStore.getState().selectedKeyId).toBeNull();
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/keys',
+      search: { group: IDS.group },
+    });
   });
 
   it('filters the list by the provider from the same row', () => {

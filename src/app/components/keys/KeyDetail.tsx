@@ -1,6 +1,8 @@
 import { useStore } from '../../store/useStore';
+import { useNavigate } from '@tanstack/react-router';
 import { ApiTester, unverifiableReason } from '../../lib/api-tester';
 import { checkOf, expiryOf, keyById, sortedGroups } from '../../state/view';
+import { keysSearch } from '../../state/keys-search';
 import { expiryToDate, expiryStatusLabel } from '../../state/presentation';
 import { providerLabel } from '../../state/providers';
 import {
@@ -42,6 +44,7 @@ import {
 } from '@/components/ui/tooltip';
 
 export function KeyDetail() {
+  const navigate = useNavigate();
   const {
     view,
     selectedKeyId,
@@ -51,6 +54,7 @@ export function KeyDetail() {
     restoreKey,
     refreshUsage,
     usage,
+    filterGroupId,
     setFilterGroupId,
     setFilterProvider,
     setShowArchived,
@@ -180,16 +184,29 @@ export function KeyDetail() {
 
   /** Group is a filter, so using it means leaving the panel whose row it came from. */
   const handleGroupClick = () => {
-    setShowArchived(Boolean(key.archived_at));
-    setFilterGroupId(key.group_id ?? '__ungrouped__');
+    // The group filter belongs to the active scope. An archived key therefore
+    // opens the active list for that group rather than reintroducing the
+    // archived-plus-group state that the sidebar avoids.
+    const groupId = key.group_id ?? '__ungrouped__';
+    setShowArchived(false);
+    setFilterGroupId(groupId);
     setSelectedKeyId(null);
+    navigate({ to: '/keys', search: keysSearch({ groupId }) });
   };
 
   /** The provider is a filter in exactly the same way. */
   const handleProviderClick = () => {
-    setShowArchived(Boolean(key.archived_at));
+    const archived = Boolean(key.archived_at);
+    setShowArchived(archived);
     setFilterProvider(provider);
     setSelectedKeyId(null);
+    navigate({
+      to: '/keys',
+      search: keysSearch({
+        archived,
+        groupId: archived ? null : filterGroupId,
+      }),
+    });
   };
   const groupTitle = key.group_id
     ? `Filter the list by ${group?.name ?? 'this group'}`

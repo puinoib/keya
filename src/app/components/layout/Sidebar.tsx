@@ -2,6 +2,7 @@ import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
+import { keysSearch } from '../../state/keys-search';
 import { VaultSwitcher } from '../vault/VaultSwitcher';
 import { SidebarSection } from './SidebarSection';
 
@@ -68,13 +69,15 @@ export function Sidebar() {
     showArchived,
     setShowArchived,
     setFilterGroupId,
+    clearFilters,
+    clearSmartFilters,
   } = useStore();
 
   const openInboxCount = view
     ? view.reminders.filter((row) => !row.dismissed).length
     : 0;
   const isInboxActive = pathname === '/inbox';
-  const isAllKeysActive =
+  const isKeysActive =
     pathname === '/keys' &&
     !showArchived &&
     !filterGroupId &&
@@ -83,9 +86,22 @@ export function Sidebar() {
     !filterExpiryStatus;
   const isArchiveActive = pathname === '/keys' && showArchived;
 
-  const handleAllKeysClick = () => {
+  const handleKeysClick = () => {
+    // The default Keys view means no filters at all, so drop every active
+    // filter.
     setShowArchived(false);
+    clearFilters();
+    clearSmartFilters();
     navigate({ to: '/keys' });
+  };
+
+  const handleArchivedClick = () => {
+    // Archived is a top-level scope, not a filter combined with a group. Group
+    // counts only describe active keys, so keeping a group selected here would
+    // highlight two sidebar items and show counts for a different list.
+    setShowArchived(true);
+    setFilterGroupId(null);
+    navigate({ to: '/keys', search: keysSearch({ archived: true }) });
   };
 
   if (!view) return null;
@@ -120,20 +136,17 @@ export function Sidebar() {
           />
           <SidebarFilterButton
             icon={List}
-            label="All Keys"
+            label="Keys"
             count={keyCount}
-            isActive={isAllKeysActive}
-            onClick={handleAllKeysClick}
+            isActive={isKeysActive}
+            onClick={handleKeysClick}
           />
           <SidebarFilterButton
             icon={Archive}
             label="Archived"
             count={archivedCount}
             isActive={isArchiveActive}
-            onClick={() => {
-              setShowArchived(true);
-              navigate({ to: '/keys' });
-            }}
+            onClick={handleArchivedClick}
           />
         </nav>
 
@@ -157,11 +170,11 @@ export function Sidebar() {
             count={ungroupedCount}
             isActive={pathname === '/keys' && filterGroupId === '__ungrouped__'}
             onClick={() => {
+              const next =
+                filterGroupId === '__ungrouped__' ? null : '__ungrouped__';
               if (showArchived) setShowArchived(false);
-              setFilterGroupId(
-                filterGroupId === '__ungrouped__' ? null : '__ungrouped__'
-              );
-              navigate({ to: '/keys' });
+              setFilterGroupId(next);
+              navigate({ to: '/keys', search: keysSearch({ groupId: next }) });
             }}
           />
 
@@ -178,11 +191,13 @@ export function Sidebar() {
                 count={count}
                 isActive={pathname === '/keys' && filterGroupId === group.id}
                 onClick={() => {
+                  const next = filterGroupId === group.id ? null : group.id;
                   if (showArchived) setShowArchived(false);
-                  setFilterGroupId(
-                    filterGroupId === group.id ? null : group.id
-                  );
-                  navigate({ to: '/keys' });
+                  setFilterGroupId(next);
+                  navigate({
+                    to: '/keys',
+                    search: keysSearch({ groupId: next }),
+                  });
                 }}
               />
             );
