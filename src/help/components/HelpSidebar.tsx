@@ -1,16 +1,16 @@
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from '@phosphor-icons/react';
-import type { HelpDocument } from '../types';
+import type { HelpManifest } from '../types';
 import { cn } from '@/lib/utils';
 
 interface HelpSidebarProps {
-  documents: HelpDocument[];
+  categories: HelpManifest['categories'];
   currentSlug: string | null;
   onNavigate: (slug: string | null) => void;
 }
 
 export function HelpSidebar({
-  documents,
+  categories,
   currentSlug,
   onNavigate,
 }: HelpSidebarProps) {
@@ -27,25 +27,41 @@ export function HelpSidebar({
         <span>Back to app</span>
       </button>
 
-      <nav className="flex-1 overflow-y-auto space-y-0.5">
-        {documents.map((doc) => (
-          <button
-            key={doc.slug}
-            onClick={() => onNavigate(doc.slug === 'index' ? null : doc.slug)}
-            className={cn(
-              'flex items-center w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors',
-              (
-                doc.slug === 'index'
-                  ? currentSlug === null
-                  : currentSlug === doc.slug
-              )
-                ? 'bg-accent/35 text-accent-bright font-medium'
-                : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
-            )}
-          >
-            {doc.title}
-          </button>
-        ))}
+      <nav className="flex-1 overflow-y-auto space-y-3">
+        {Object.entries(categories)
+          .filter(([name]) => name !== 'all')
+          .map(([name, documents]) => (
+            <div key={name}>
+              <p className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-[0.08em] text-ink-quaternary">
+                {name}
+              </p>
+              <div className="space-y-0.5">
+                {documents.map((doc) => {
+                  const isCurrent =
+                    doc.slug === 'index'
+                      ? currentSlug === null
+                      : currentSlug === doc.slug;
+                  return (
+                    <button
+                      key={doc.slug}
+                      type="button"
+                      onClick={() =>
+                        onNavigate(doc.slug === 'index' ? null : doc.slug)
+                      }
+                      className={cn(
+                        'flex items-center w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors',
+                        isCurrent
+                          ? 'bg-accent/35 text-accent-bright font-medium'
+                          : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
+                      )}
+                    >
+                      {doc.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
       </nav>
     </aside>
   );

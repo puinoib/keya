@@ -44,12 +44,41 @@ function loadDocument(slug: string, raw: string): HelpDocument | null {
       title: (data.title as string) || slug,
       description: (data.description as string) || '',
       content,
-      updated: (data.updated as string) || undefined,
+      category: (data.category as string) || undefined,
       order: (data.order as number) || 999,
     };
   } catch {
     return null;
   }
+}
+
+/** Sidebar groups, in display order. A guide without a category falls into Other. */
+export const HELP_CATEGORY_ORDER = [
+  'Getting started',
+  'Daily use',
+  'Security & data',
+  'Settings & help',
+] as const;
+
+export function groupDocuments(
+  documents: HelpDocument[]
+): HelpManifest['categories'] {
+  const categories: HelpManifest['categories'] = { all: documents };
+
+  for (const name of HELP_CATEGORY_ORDER) {
+    const entries = documents.filter((doc) => doc.category === name);
+    if (entries.length > 0) categories[name] = entries;
+  }
+
+  const other = documents.filter(
+    (doc) =>
+      !HELP_CATEGORY_ORDER.includes(
+        doc.category as (typeof HELP_CATEGORY_ORDER)[number]
+      )
+  );
+  if (other.length > 0) categories.Other = other;
+
+  return categories;
 }
 
 export function loadManifest(): HelpManifest {
@@ -65,7 +94,7 @@ export function loadManifest(): HelpManifest {
 
   return {
     documents,
-    categories: { all: documents },
+    categories: groupDocuments(documents),
   };
 }
 

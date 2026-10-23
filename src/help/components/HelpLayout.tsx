@@ -21,11 +21,13 @@ const themeOptions = [
 
 function getSlugFromPath(pathname: string): string | null {
   const slug = pathname.replace('/docs/', '').replace('/docs', '');
-  return slug || null;
+  // The welcome guide and the `/docs` landing share one page, so there is no
+  // second, unreachable copy of it at `/docs/index`.
+  return !slug || slug === 'index' ? null : slug;
 }
 
 export function HelpLayout() {
-  const { documents } = loadManifest();
+  const { documents, categories } = loadManifest();
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useStore();
@@ -51,7 +53,7 @@ export function HelpLayout() {
   return (
     <div className="flex h-screen bg-canvas-panel text-ink-primary overflow-hidden">
       <HelpSidebar
-        documents={documents}
+        categories={categories}
         currentSlug={currentSlug}
         onNavigate={handleNavigate}
       />

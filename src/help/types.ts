@@ -3,7 +3,8 @@ export interface HelpDocument {
   title: string;
   description: string;
   content: string;
-  updated?: string;
+  /** Sidebar group, e.g. "Getting started". */
+  category?: string;
   order?: number;
 }
 
@@ -15,6 +16,7 @@ export interface SearchResult {
 
 export interface HelpManifest {
   documents: HelpDocument[];
+  /** `all` plus one entry per category, both in display order. */
   categories: {
     [key: string]: HelpDocument[];
   };

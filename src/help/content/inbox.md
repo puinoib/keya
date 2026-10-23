@@ -1,19 +1,19 @@
 ---
 title: Inbox
 description: What the Inbox shows, and how each item goes away.
-updated: 2026-03-02
-order: 3
+category: Daily use
+order: 6
 ---
 
-The Inbox is computed from the vault plus what this device knows. Nothing about it is stored in the file and nothing is stored on the device, so the list is always current — and the same file shows the same list on every device.
+The Inbox is computed from the vault, this device's check history, and the current time. The list itself is not stored anywhere, so the same file shows the same expiry and rejection items on every device. This device's history is stored locally; it is not written into the file.
 
 ## What appears
 
-Only two things, because only two are both time-sensitive and fixable:
+Two rules, because only these are both time-sensitive and fixable:
 
-- **Expires soon** — within seven days of the expiry.
+- **Due soon** — within seven days of the expiry.
 - **Expired** — past the expiry.
-- **Rejected** — the newest check was answered with "this credential is not accepted" (401 or 403).
+- **Rejected** — the newest check was answered with `401` or `403`.
 
 ## What does not appear
 
@@ -21,13 +21,14 @@ Only two things, because only two are both time-sensitive and fixable:
 - **Never checked / not checked lately.** That is this device's own record, not a problem with the key. It lives in **Housekeeping**, collapsed and quiet, with a **Check all** button.
 - **Network errors and timeouts.** The request never reached a verdict, so Keya will not claim the credential is bad. The key says "could not verify" instead.
 - **A key whose provider cannot be checked at all.** Nothing is reported as failed where no request could have been made.
+- **Archived keys.** Archiving removes a key from the Inbox and from checks.
 
 ## How an item goes away
 
-There is nothing to dismiss or archive. An item stays until its fact changes:
+There is nothing to dismiss or archive in the Inbox itself. An item stays until its fact changes:
 
-- fix the expiry date, or archive the key;
-- run a check that the provider accepts, or archive the key.
+- fix the expiry date, clear it, extend it by 30 days, or archive the key;
+- run a test that the provider accepts, or archive the key.
 
 That is deliberate. A dismissal would be a decision stored on one device, so the same vault would show different lists on your laptop and your desktop. Instead, every item maps to something you can do to the vault.
 
@@ -35,6 +36,6 @@ The sidebar count shows only these items. It is normally zero, and that is the p
 
 ## Housekeeping
 
-This device's check history is its own. A new device knows nothing about checks you ran elsewhere, so it lists every checkable key as "never verified on this device". That is not a warning about the keys; it is an offer to check them. Nothing there is counted, announced or badged.
+This device's check history is its own. A new device knows nothing about checks you ran elsewhere, so it lists every checkable key as "never verified on this device". That is not a warning about the keys; it is an offer to check them. Nothing there is counted, announced, or badged.
 
-A successful check clears a previous rejection, so a later rejection is reported again.
+A successful check clears a previous rejection, so a later rejection is reported again. **Check all** runs the same one-request approval for each key in turn.

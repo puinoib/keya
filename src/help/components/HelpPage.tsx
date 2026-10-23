@@ -35,11 +35,6 @@ export function HelpPage({ slug }: { slug: string }) {
         <h1 className="text-2xl font-bold text-ink-primary mb-2">
           {document.title}
         </h1>
-        {document.updated && (
-          <p className="text-xs text-ink-quaternary mb-5">
-            Updated {document.updated}
-          </p>
-        )}
         {document.description && (
           <p className="text-sm text-ink-secondary mb-8 leading-relaxed border-l-2 border-accent pl-3">
             {document.description}
