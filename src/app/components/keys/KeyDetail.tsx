@@ -240,7 +240,7 @@ export function KeyDetail() {
           )}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4 scrollbar-thin">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-4 scrollbar-hidden">
           {key.archived_at && (
             <div className="mb-4 rounded-md border border-line-subtle bg-surface-2 px-2 py-1.5">
               <p className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary">

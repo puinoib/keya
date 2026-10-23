@@ -134,48 +134,59 @@ export function UsageCard({
         />
       </button>
 
-      {expanded && (
-        <div className="space-y-2 border-t border-line-subtle px-3 py-2.5">
-          {failure && <UsageFailureNote failure={failure} />}
+      {/* Height animation without measuring: a 0fr -> 1fr grid row grows and
+          shrinks with its content, so a refresh that adds a window still fits. */}
+      <div
+        data-usage-detail
+        aria-hidden={!expanded}
+        className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${
+          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-2 border-t border-line-subtle px-3 py-2.5">
+            {failure && <UsageFailureNote failure={failure} />}
 
-          {!entry && (
-            <p className="text-[11px] leading-relaxed text-ink-quaternary">
-              Ask {provider} for its allowance windows. Nothing is stored in
-              this vault.
-            </p>
-          )}
-
-          {snapshot && (
-            <>
-              {snapshot.windows.map((window) => (
-                <WindowRow
-                  key={window.id}
-                  window={window}
-                  stale={stale}
-                  now={currentTime}
-                />
-              ))}
-              <p className="text-[10px] leading-relaxed text-ink-quaternary">
-                {stale ? (
-                  <>
-                    <Warning className="mr-1 inline size-2.5 align-[-1px]" />
-                    Last checked {describeAge(snapshot.checked_at, currentTime)}
-                    . The provider may have moved since.
-                  </>
-                ) : (
-                  <>
-                    {tightest
-                      ? `${tightest.label} is closest to its limit. `
-                      : ''}
-                    Read from {provider}{' '}
-                    {describeAge(snapshot.checked_at, currentTime)}.
-                  </>
-                )}
+            {!entry && (
+              <p className="text-[11px] leading-relaxed text-ink-quaternary">
+                Ask {provider} for its allowance windows. Nothing is stored in
+                this vault.
               </p>
-            </>
-          )}
+            )}
+
+            {snapshot && (
+              <>
+                {snapshot.windows.map((window) => (
+                  <WindowRow
+                    key={window.id}
+                    window={window}
+                    stale={stale}
+                    now={currentTime}
+                  />
+                ))}
+                <p className="text-[10px] leading-relaxed text-ink-quaternary">
+                  {stale ? (
+                    <>
+                      <Warning className="mr-1 inline size-2.5 align-[-1px]" />
+                      Last checked{' '}
+                      {describeAge(snapshot.checked_at, currentTime)}. The
+                      provider may have moved since.
+                    </>
+                  ) : (
+                    <>
+                      {tightest
+                        ? `${tightest.label} is closest to its limit. `
+                        : ''}
+                      Read from {provider}{' '}
+                      {describeAge(snapshot.checked_at, currentTime)}.
+                    </>
+                  )}
+                </p>
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

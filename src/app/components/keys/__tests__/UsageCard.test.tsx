@@ -206,10 +206,15 @@ describe('UsageCard disclosure', () => {
       }),
     });
 
-    // One summary line, not one row per window.
-    expect(view.textContent).not.toContain('10% used');
+    // The detail is mounted for the height animation, but hidden from readers
+    // and clipped to nothing until the disclosure is opened.
+    const detail = view.querySelector('[data-usage-detail]');
+    expect(detail?.getAttribute('aria-hidden')).toBe('true');
+    expect(detail?.className).toContain('grid-rows-[0fr]');
 
     await expand(view);
+    expect(detail?.getAttribute('aria-hidden')).toBe('false');
+    expect(detail?.className).toContain('grid-rows-[1fr]');
     expect(view.textContent).toContain('10% used');
     expect(view.textContent).toContain('7 days is closest to its limit');
   });
