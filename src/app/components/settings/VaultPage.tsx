@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { FolderSimple, Palette, Shield, Spinner } from '@phosphor-icons/react';
+import { Palette, Shield, Spinner } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
 import { FileStorage } from '@/app/lib/storage';
@@ -152,31 +152,21 @@ export function VaultPage() {
               className="h-8 text-xs"
             />
           </div>
-          <p className="mt-2 text-[11px] text-ink-quaternary">
-            The name and icon are stored inside the .keya file, so every copy
-            shows them.
-          </p>
-        </section>
-
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <FolderSimple className="size-3.5 text-ink-quaternary" />
-            <span className="text-xs font-medium text-ink-secondary">
-              Location
-            </span>
-          </div>
-          <div className="rounded-lg border border-line bg-surface-2 p-3">
-            <p className="text-xs font-medium text-ink-primary">Vault file</p>
+          <div className="mt-2 flex items-baseline justify-between gap-3">
+            <p className="text-[11px] text-ink-quaternary">
+              The name and icon are stored inside the .keya file, so every copy
+              shows them.
+            </p>
             {/* A browser exposes the folder's name and nothing more, so this is
                 deliberately not a path and carries no click target. */}
-            <p className="mt-1 font-mono text-xs text-ink-quaternary">
+            <p className="shrink-0 text-right font-mono text-[11px] text-ink-quaternary">
               {storageMode === 'folder' ? (
                 <>
                   {folderName ? `${folderName}/` : ''}
                   {activeVaultFileName ?? 'unnamed file'}
                 </>
               ) : (
-                'Not saved to a folder — export a .keya copy to keep one'
+                'Not saved to a folder'
               )}
             </p>
           </div>
