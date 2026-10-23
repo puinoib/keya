@@ -1,20 +1,9 @@
 import { useState } from 'react';
 import { Outlet } from '@tanstack/react-router';
-import { X } from '@phosphor-icons/react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MinimalTopBar } from './MinimalTopBar';
 import { KeyForm } from '../keys/KeyForm';
-import {
-  AlertDialogRoot,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStore } from '../../store/useStore';
 import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
@@ -30,14 +19,7 @@ export function AppLayout({
   children?: React.ReactNode;
   topbar?: AppLayoutTopbar;
 }) {
-  const {
-    showAddForm,
-    setShowAddForm,
-    clipboardCandidate,
-    confirmClipboardCandidate,
-    skipClipboardCandidate,
-    dismissClipboardCandidate,
-  } = useStore();
+  const { showAddForm, setShowAddForm } = useStore();
   const [showShortcuts, setShowShortcuts] = useState(false);
   useGlobalShortcuts(() => setShowShortcuts(true));
 
@@ -58,49 +40,6 @@ export function AppLayout({
       </div>
 
       <KeyForm open={showAddForm} onClose={() => setShowAddForm(false)} />
-      <AlertDialogRoot
-        open={!!clipboardCandidate}
-        onOpenChange={(open) => {
-          if (!open) dismissClipboardCandidate();
-        }}
-      >
-        <AlertDialogContent className="relative">
-          <AlertDialogCancel
-            aria-label="Close"
-            className="absolute right-4 top-4 border-0 bg-transparent p-1 text-ink-quaternary hover:bg-surface-3 hover:text-ink-secondary"
-          >
-            <X className="size-4" />
-          </AlertDialogCancel>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Use clipboard key?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm text-ink-secondary">
-              <p>
-                Detected a possible {clipboardCandidate?.provider} API key or
-                token.
-              </p>
-              {clipboardCandidate ? (
-                <p className="font-mono text-xs text-ink-quaternary">
-                  {clipboardCandidate.masked}
-                </p>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogAction
-              onClick={() => skipClipboardCandidate()}
-              className="bg-surface-2 border border-line text-ink-secondary hover:bg-surface-3"
-            >
-              Blank Form
-            </AlertDialogAction>
-            <AlertDialogAction
-              onClick={() => confirmClipboardCandidate()}
-              className="bg-accent text-white hover:bg-accent-bright"
-            >
-              Use Key
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogRoot>
       <KeyboardShortcutsDialog
         open={showShortcuts}
         onClose={() => setShowShortcuts(false)}

@@ -78,25 +78,6 @@ export function KeysPage() {
             }
           />
         </div>
-        <div className="flex items-center justify-between p-3">
-          <div>
-            <p className="text-xs font-medium text-ink-primary">
-              Clipboard Detection
-            </p>
-            <p className="text-xs text-ink-quaternary mt-0.5">
-              Auto-detect API keys and tokens from clipboard when adding
-            </p>
-          </div>
-          <Toggle
-            checked={!!preferences.clipboard_detection_on_add}
-            onChange={() =>
-              updateSettings({
-                clipboard_detection_on_add:
-                  !preferences.clipboard_detection_on_add,
-              })
-            }
-          />
-        </div>
       </div>
     </>
   );

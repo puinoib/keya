@@ -919,7 +919,7 @@ These values pin the three easiest mistakes: ① C′ must equal C, so sorting r
 - Biometric records: PRF-wrapped unlock material (see D.4 for the current deviation).
 - `observations`: check results, the latest 10 per Key.
 - `grants`: persistent authorizations keyed by `send_fingerprint`.
-- `preferences`: auto-lock, post-write check, daily check, clipboard detection, hidden presets, the daily check date.
+- `preferences`: auto-lock, post-write check, daily check, hidden presets, the daily check date.
 - Usage snapshots: a tab-level `sessionStorage` cache, dropped when stale.
 
 **Computed (never persisted)**

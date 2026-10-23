@@ -13,7 +13,6 @@ Keya is a static web application with no application backend or account system. 
 - Preset AI providers plus platform presets (Exa, Firecrawl, GitHub, Vercel, Stripe), and custom providers for any API service, with optional credential checks
 - Manual and optional automatic API connectivity tests
 - Inbox alerts for expiry, connection failures, insecure endpoints, and missing or stale tests
-- Optional clipboard detection when adding keys
 - PRF-based WebAuthn biometric unlock where supported
 - Inactivity locking, keyboard shortcuts, and light/dark themes
 - Encrypted `.keya` export and plaintext JSON export (importing either is not available yet)

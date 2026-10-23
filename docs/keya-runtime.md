@@ -246,7 +246,7 @@ Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock
 | Observations | IndexedDB `observations` | `observation_id`, indexed by `vault_id,key_id` | 10 per Key | structured, with an irreversible `binding` |
 | Biometrics | IndexedDB `biometrics` | `container_fingerprint` | Deleted on unbind | a PRF-wrapped `file_key` |
 | Grants | `localStorage` | `send_fingerprint`, not partitioned by `vault_id` | §10.2 | no: origin and path |
-| Preferences | `localStorage` | — | never expire | no: auto-lock, clipboard, theme, filters, selection |
+| Preferences | `localStorage` | — | never expire | no: auto-lock, theme, filters, selection |
 | Usage snapshots | `sessionStorage` | `vault_id + key_id` | current for 15 min, dropped after 24 h, cleared with the tab | quota numbers |
 
 "Not in `.keya`" is not "safe to store in the clear". All of the above must be described in copy as data that clearing browser storage would destroy. The file owes them nothing.

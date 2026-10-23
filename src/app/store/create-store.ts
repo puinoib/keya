@@ -25,12 +25,7 @@ import {
   providerLabel,
   type ProviderDraft,
 } from '../state/providers';
-import {
-  buildVaultView,
-  hasDuplicateSecret,
-  keyById,
-  type VaultView,
-} from '../state/view';
+import { buildVaultView, keyById, type VaultView } from '../state/view';
 import { describeSaveFailure } from '../state/presentation';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import {
@@ -41,11 +36,6 @@ import {
 } from '../lib/usage-cache';
 import type { OpenedVault } from '../lib/storage';
 import {
-  tryDetectClipboardKey,
-  type AddKeyDraft,
-  type ClipboardKeyCandidate,
-} from '../lib/clipboard-intake';
-import {
   SHORTCUT_DEFINITIONS,
   readShortcutMap,
   writeShortcutMap,
@@ -54,6 +44,16 @@ import {
 import { describePasswordVerdict, judgePassword } from '../lib/password-policy';
 import { isBiometricRegistered, removeBiometric } from '../lib/biometric';
 import { clearClipboardNow } from '../lib/clipboard';
+
+/** A prefilled form state; the clipboard scanner that used to build it is gone. */
+export interface AddKeyDraft {
+  name: string;
+  secret: string;
+  providerId: string | null;
+  endpoint: string;
+  description: string;
+  groupId: string | null;
+}
 
 export type VaultStorageMode = 'folder' | 'download';
 
@@ -118,7 +118,6 @@ export interface SettingsPatch {
   auto_lock_minutes?: number;
   auto_probe_on_save?: boolean;
   auto_probe_daily?: boolean;
-  clipboard_detection_on_add?: boolean;
   hidden_presets?: string[];
   providers?: ProviderDraft[];
 }
@@ -145,7 +144,6 @@ export interface AppState {
   searchQuery: string;
   showAddForm: boolean;
   addKeyDraft: AddKeyDraft | null;
-  clipboardCandidate: ClipboardKeyCandidate | null;
   theme: 'dark' | 'light' | 'system';
   keyboardShortcuts: ShortcutMap;
 
@@ -182,10 +180,7 @@ export interface AppState {
   setBiometricPrompt: (prompt: { vaultId: string } | null) => void;
   setSearchQuery: (query: string) => void;
   setShowAddForm: (show: boolean) => void;
-  beginAddKeyFlow: () => Promise<void>;
-  confirmClipboardCandidate: () => void;
-  skipClipboardCandidate: () => void;
-  dismissClipboardCandidate: () => void;
+  beginAddKeyFlow: () => void;
   clearAddKeyDraft: () => void;
   setFilterGroupId: (id: string | null) => void;
   setFilterProvider: (provider: string | null) => void;
@@ -359,7 +354,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
       searchQuery: '',
       showAddForm: false,
       addKeyDraft: null,
-      clipboardCandidate: null,
       theme: readTheme(),
       keyboardShortcuts: readShortcutMap(),
 
@@ -487,7 +481,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
           biometricPrompt: null,
           showAddForm: false,
           addKeyDraft: null,
-          clipboardCandidate: null,
           filterGroupId: null,
           filterProvider: null,
           filterTestStatus: null,
@@ -767,70 +760,9 @@ export function createAppStore(deps: StoreDeps): AppStore {
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setShowAddForm: (showAddForm) => set({ showAddForm }),
 
-      beginAddKeyFlow: async () => {
-        const view = get().view;
-        if (!view?.preferences.clipboard_detection_on_add) {
-          set({
-            showAddForm: true,
-            addKeyDraft: null,
-            clipboardCandidate: null,
-          });
-          return;
-        }
-
-        const vaultId = view.vaultId;
-        const candidate = await tryDetectClipboardKey(
-          view.preferences,
-          view.file.providers
-        );
-        const current = get().view;
-        if (!current || current.vaultId !== vaultId) return;
-
-        if (candidate && hasDuplicateSecret(current, candidate.raw)) {
-          toast('This credential is already saved');
-          set({
-            showAddForm: true,
-            addKeyDraft: null,
-            clipboardCandidate: null,
-          });
-          return;
-        }
-
-        if (candidate) {
-          set({
-            showAddForm: false,
-            addKeyDraft: null,
-            clipboardCandidate: candidate,
-          });
-          return;
-        }
-
-        set({ showAddForm: true, addKeyDraft: null, clipboardCandidate: null });
+      beginAddKeyFlow: () => {
+        set({ showAddForm: true, addKeyDraft: null });
       },
-
-      confirmClipboardCandidate: () => {
-        const candidate = get().clipboardCandidate;
-        if (!candidate) return;
-        set({
-          clipboardCandidate: null,
-          addKeyDraft: candidate.draft,
-          showAddForm: true,
-        });
-      },
-
-      skipClipboardCandidate: () =>
-        set({
-          clipboardCandidate: null,
-          addKeyDraft: null,
-          showAddForm: true,
-        }),
-
-      dismissClipboardCandidate: () =>
-        set({
-          clipboardCandidate: null,
-          addKeyDraft: null,
-          showAddForm: false,
-        }),
 
       clearAddKeyDraft: () => set({ addKeyDraft: null }),
 
@@ -899,10 +831,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         }
         if (patch.auto_probe_daily !== undefined) {
           preferences.auto_probe_daily = patch.auto_probe_daily;
-        }
-        if (patch.clipboard_detection_on_add !== undefined) {
-          preferences.clipboard_detection_on_add =
-            patch.clipboard_detection_on_add;
         }
         if (patch.hidden_presets !== undefined) {
           preferences.hidden_presets = patch.hidden_presets;

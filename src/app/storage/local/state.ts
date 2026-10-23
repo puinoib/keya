@@ -40,7 +40,6 @@ export interface Preferences {
   auto_probe_daily: boolean;
   /** Local day (`YYYY-MM-DD`) of the last daily check, so it runs once. */
   last_daily_probe_day: string | null;
-  clipboard_detection_on_add: boolean;
   hidden_presets: string[];
 }
 
@@ -49,7 +48,6 @@ export const DEFAULT_PREFERENCES: Preferences = {
   auto_probe_on_save: false,
   auto_probe_daily: false,
   last_daily_probe_day: null,
-  clipboard_detection_on_add: true,
   hidden_presets: [],
 };
 

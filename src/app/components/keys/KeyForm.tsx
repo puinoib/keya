@@ -9,7 +9,7 @@ import {
 } from '../../state/providers';
 import { dateToExpiry } from '../../state/presentation';
 import { hasDuplicateSecret, sortedGroups } from '../../state/view';
-import type { AddKeyDraft } from '../../lib/clipboard-intake';
+import type { AddKeyDraft } from '../../store/create-store';
 import type { Provider } from '../../../core/payload/types';
 import { runAutomaticCheck, useStore } from '../../store/useStore';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
