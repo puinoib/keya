@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   WarningCircle,
 } from '@phosphor-icons/react';
+import { KeyaLogo } from '@/components/ui/keya-logo';
 import './landing.css';
 
 const navItems = [
@@ -87,7 +88,7 @@ export function LandingPage() {
       <header className="kl-nav">
         <div className="kl-wrap kl-nav-inner">
           <Link to="/home" className="kl-brand" aria-label="Keya home">
-            <img src="/icon-dark.svg" alt="" width={26} height={26} />
+            <KeyaLogo className="kl-brand-mark" />
             <span>Keya</span>
           </Link>
 
@@ -180,7 +181,7 @@ export function LandingPage() {
                   <span className="kl-keycard-hole" />
                   <div className="kl-keycard-head">
                     <span className="kl-keycard-brand">
-                      <img src="/icon-dark.svg" alt="" width={18} height={18} />
+                      <KeyaLogo className="kl-keycard-mark" />
                       KEYA
                     </span>
                     <span className="kl-keycard-state">
