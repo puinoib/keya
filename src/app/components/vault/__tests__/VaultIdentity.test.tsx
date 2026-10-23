@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { VaultIdentity } from '../VaultIdentity';
 
 describe('VaultIdentity', () => {
-  it('shows the file name only when it adds information', () => {
+  it('hides a file name that only repeats the name plus .keya', () => {
     render(<VaultIdentity name="vault-1" fileName="vault-1.keya" />);
     expect(screen.queryByText('vault-1.keya')).toBeNull();
   });
@@ -14,15 +14,23 @@ describe('VaultIdentity', () => {
     expect(screen.getByText('vault-1.keya')).toBeTruthy();
   });
 
-  it('renders the badge and footnote beside the name', () => {
+  it('keeps the file line when the caller asks for a fixed layout', () => {
+    render(
+      <VaultIdentity name="vault-1" fileName="vault-1.keya" fileLine="always" />
+    );
+    expect(screen.getByText('vault-1.keya')).toBeTruthy();
+  });
+
+  it('renders the footnote below the file line', () => {
     render(
       <VaultIdentity
         name="Work"
-        badge={<span>Unlocked</span>}
-        footnote="in Keya"
+        fileName="vault-1.keya"
+        fileLine="always"
+        footnote="in KeyaDB"
       />
     );
-    expect(screen.getByText('Unlocked')).toBeTruthy();
-    expect(screen.getByText('in Keya')).toBeTruthy();
+    expect(screen.getByText('vault-1.keya')).toBeTruthy();
+    expect(screen.getByText('in KeyaDB')).toBeTruthy();
   });
 });

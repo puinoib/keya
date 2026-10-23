@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { flushSave, useStore } from '../../store/useStore';
 import { FileStorage, type CachedVaultMeta } from '../../lib/storage';
-import { formatShortcutCompact, getShortcutKeys } from '../../lib/shortcuts';
+import {
+  formatShortcut,
+  formatShortcutCompact,
+  getShortcutKeys,
+} from '../../lib/shortcuts';
 import { VaultIdentity } from './VaultIdentity';
 import { VaultPasswordDialog } from './VaultPasswordDialog';
 import { sortVaultFiles, vaultDisplayName } from './vault-order';
@@ -16,6 +20,7 @@ import {
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Kbd } from '@/components/ui/kbd';
 import {
   AlertDialogAction,
   AlertDialogCancel,
@@ -38,11 +43,9 @@ import {
 } from '@phosphor-icons/react';
 import { useNavigate } from '@tanstack/react-router';
 
-const KBD =
-  'ml-auto shrink-0 rounded border border-line bg-canvas-base px-1.5 py-0.5 font-mono text-[10px] leading-none text-ink-quaternary';
-
 export function VaultSwitcher() {
-  const { view, activeVaultFileName, keyboardShortcuts } = useStore();
+  const { view, activeVaultFileName, keyboardShortcuts, storageMode } =
+    useStore();
   const navigate = useNavigate();
   const [vaults, setVaults] = useState<string[]>([]);
   const [metas, setMetas] = useState<Record<string, CachedVaultMeta>>({});
@@ -85,9 +88,15 @@ export function VaultSwitcher() {
   const switchMeta = switchTarget ? metas[switchTarget] : undefined;
   const switchName = switchTarget ? vaultName(switchTarget) : 'Vault';
 
-  const lockShortcut = formatShortcutCompact(
-    getShortcutKeys(keyboardShortcuts, 'vault.lock')
-  );
+  const lockKeys = getShortcutKeys(keyboardShortcuts, 'vault.lock');
+  const lockShortcut = formatShortcutCompact(lockKeys);
+  // The file and folder lines are always present, so the identity block does
+  // not change height or shape depending on whether a name was customized.
+  const folderLine = folderName
+    ? `in ${folderName}`
+    : storageMode === 'folder'
+      ? 'Folder permission required'
+      : 'Not saved to a folder';
 
   const sortedVaults = sortVaultFiles(vaults, metas, activeVaultFileName);
 
@@ -152,13 +161,8 @@ export function VaultSwitcher() {
               name={currentName}
               icon={currentIcon}
               fileName={activeVaultFileName ?? undefined}
-              badge={
-                <span className="flex shrink-0 items-center gap-1 text-[10px] leading-relaxed text-ink-tertiary">
-                  <span className="size-1.5 rounded-full bg-success" />
-                  Unlocked
-                </span>
-              }
-              footnote={folderName ? `in ${folderName}` : undefined}
+              fileLine="always"
+              footnote={folderLine}
             />
           </div>
           <DropdownMenuSeparator />
@@ -242,7 +246,9 @@ export function VaultSwitcher() {
             <Lock className="size-3.5" />
             <span>Lock</span>
             {lockShortcut !== 'Disabled' && (
-              <kbd className={KBD}>{lockShortcut}</kbd>
+              <Kbd label={formatShortcut(lockKeys)} className="ml-auto">
+                {lockShortcut}
+              </Kbd>
             )}
           </DropdownMenuItem>
         </DropdownMenuContent>

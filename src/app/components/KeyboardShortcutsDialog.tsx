@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Kbd } from '@/components/ui/kbd';
 import {
   SHORTCUT_DEFINITIONS,
   formatShortcut,
@@ -58,9 +59,9 @@ export function KeyboardShortcutsDialog({
                           {item.description}
                         </p>
                       </div>
-                      <kbd className="shrink-0 rounded-md border border-line bg-canvas-base px-2 py-1 font-mono text-[11px] text-ink-secondary">
+                      <Kbd className="h-auto px-2 py-1 text-[11px] text-ink-secondary">
                         {formatShortcut(resolved[item.id])}
-                      </kbd>
+                      </Kbd>
                     </div>
                   ))}
                 </div>

@@ -6,9 +6,13 @@ interface VaultIdentityProps {
   name: string;
   icon?: string;
   fileName?: string;
-  /** Trailing marker next to the name, e.g. an "Unlocked" badge. */
-  badge?: ReactNode;
-  /** Third line for context that is not the file itself, e.g. the folder. */
+  /**
+   * "auto" hides the file name when it is just the display name plus `.keya`.
+   * "always" keeps the file line, for places that show the vault's disk
+   * identity rather than repeating a title.
+   */
+  fileLine?: 'auto' | 'always';
+  /** Extra line for context that is not the file itself, e.g. the folder. */
   footnote?: ReactNode;
   size?: 'sm' | 'md';
   className?: string;
@@ -23,7 +27,7 @@ export function VaultIdentity({
   name,
   icon,
   fileName,
-  badge,
+  fileLine = 'auto',
   footnote,
   size = 'md',
   className,
@@ -31,7 +35,8 @@ export function VaultIdentity({
   const mark = icon?.trim();
   // An unnamed vault's file name is its name plus the extension; showing both
   // lines would repeat the same random string twice.
-  const showFile = !!fileName && fileName !== `${name}.keya`;
+  const showFile =
+    !!fileName && (fileLine === 'always' || fileName !== `${name}.keya`);
   const compact = size === 'sm';
 
   return (
@@ -45,18 +50,15 @@ export function VaultIdentity({
         {mark ? mark : <Lock className={compact ? 'size-3.5' : 'size-4'} />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <p
-            className={cn(
-              'truncate font-semibold leading-snug tracking-tight text-ink-primary',
-              compact ? 'text-[13px]' : 'text-[15px]'
-            )}
-            title={name}
-          >
-            {name}
-          </p>
-          {badge}
-        </div>
+        <p
+          className={cn(
+            'truncate font-semibold leading-snug tracking-tight text-ink-primary',
+            compact ? 'text-[13px]' : 'text-[15px]'
+          )}
+          title={name}
+        >
+          {name}
+        </p>
         {showFile && (
           <p
             className="truncate font-mono text-[11px] leading-snug text-ink-quaternary"

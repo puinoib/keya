@@ -459,6 +459,16 @@
   }
 }
 
+/* ── Shortcut keycaps ── */
+/* Modifier glyphs (⌘ ⌥ ⇧ ⌃) have to come from one font. A monospace stack such
+   as the UI's --font-mono drops ⇧, so it falls back to a proportional face and
+   renders heavier and off the baseline next to the other keys. */
+@utility kbd-glyph {
+  font-family:
+    ui-sans-serif, -apple-system, "Segoe UI Symbol", system-ui, sans-serif;
+  font-variant-ligatures: none;
+}
+
 /* ── Animation utilities (replaces tailwindcss-animate) ── */
 @utility fade-in-0 {
   --tw-enter-opacity: 0;
