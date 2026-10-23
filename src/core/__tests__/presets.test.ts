@@ -21,9 +21,9 @@ const custom = (overrides: Partial<Provider> = {}): Provider => ({
 });
 
 describe('preset data', () => {
-  it('ships 50 presets with unique slugs', () => {
-    expect(PRESETS).toHaveLength(50);
-    expect(new Set(PRESETS.map((preset) => preset.slug)).size).toBe(50);
+  it('ships 41 presets with unique slugs', () => {
+    expect(PRESETS).toHaveLength(41);
+    expect(new Set(PRESETS.map((preset) => preset.slug)).size).toBe(41);
   });
 
   it('every slug matches the frozen grammar', () => {
@@ -33,7 +33,7 @@ describe('preset data', () => {
   });
 
   it('keeps unverifiable providers out of the probe path', () => {
-    for (const slug of ['amazon-bedrock', 'nvidia', 'baseten', 'exa']) {
+    for (const slug of ['amazon-bedrock', 'exa', 'typesafe']) {
       const preset = findPreset(slug);
       expect(preset, slug).toBeDefined();
       expect(preset!.probe).toBeNull();
@@ -236,6 +236,6 @@ describe('§10.3 recipe states', () => {
       else if (state.kind === 'manual_only') counts.manual += 1;
       else counts.missing += 1;
     }
-    expect(counts).toEqual({ auto: 46, manual: 0, missing: 4 });
+    expect(counts).toEqual({ auto: 38, manual: 0, missing: 3 });
   });
 });

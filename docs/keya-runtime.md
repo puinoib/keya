@@ -217,7 +217,7 @@ Both add +6 when the Key is grouped and +4 when its newest check succeeded. Ties
 | **Manual only** | executable, `resolved_url` is `http:` | expiry, rejected | "Manual checks only (plaintext transport)"; **never "needs re-authorization"** |
 | **Auto-capable** | executable, `https:` | expiry, rejected | "Needs re-authorization" plus bulk approval when the grant is missing |
 
-Measured occupancy over the 51 presets: 46 auto-capable, 5 with no capability (`amazon bedrock`, `nvidia nim`, `baseten`, `exa`, `typesafe`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
+Measured occupancy over the 41 presets: 38 auto-capable, 3 with no capability (`amazon bedrock`, `exa`, `typesafe`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
 
 **A plaintext destination is a property, not a fact.** `http:` never keeps a grant (§10.2), so the Key shows a standing warning that its requests travel in clear text, and the Inbox stays silent. Judging by the resolved request rather than `endpoint` alone is still required: `probe.target` may be an absolute `http:` URL while `endpoint` is `null` or `https:`, and the credential still leaves in the clear.
 

@@ -16,10 +16,6 @@ describe('provider logos', () => {
     expect(getProviderLogo('Moonshot AI (Global)')).toBe(
       getProviderLogo('Moonshot')
     );
-    expect(getProviderLogo('Z.AI Coding (China)')).toBe(
-      getProviderLogo('Z.AI')
-    );
-    expect(getProviderLogo('Z.AI (General)')).toBe(getProviderLogo('Z.AI'));
     expect(getProviderLogo('Vercel')).toBe(
       getProviderLogo('Vercel AI Gateway')
     );
@@ -36,9 +32,9 @@ describe('provider logos', () => {
       logos.add(logo);
     }
 
-    // 50 presets, 1 without a mark. Moonshot (2), Z.AI (3), Vercel (2) and
-    // OpenCode (2) share one asset each, which drops five more distinct URLs.
-    expect(logos.size).toBe(PRESET_PROVIDERS.length - 1 - 5);
+    // 41 presets, 1 without a mark. Moonshot (2), Vercel (2) and OpenCode (2)
+    // share one asset each, which drops three more distinct URLs.
+    expect(logos.size).toBe(PRESET_PROVIDERS.length - 1 - 3);
   });
 
   it('marks only monochrome marks for dark theme inversion', () => {
@@ -52,9 +48,6 @@ describe('provider logos', () => {
         'Moonshot',
         'Moonshot AI (Global)',
         'Z.AI',
-        'Z.AI Coding (China)',
-        'Z.AI (General)',
-        'Baseten',
         'Xiaomi MiMo',
         'Vercel AI Gateway',
         'Vercel',
@@ -62,11 +55,9 @@ describe('provider logos', () => {
         'OpenCode Zen',
         'OpenCode Go',
         'StepFun',
-        'Reka',
-        'Upstage',
         'Nebius',
-        'Chutes',
         'Recraft',
+        'TypeSafe',
       ].sort()
     );
 
@@ -85,20 +76,17 @@ describe('provider logos', () => {
       'Cerebras',
       'Fireworks',
       'SiliconFlow',
-      'NVIDIA NIM',
       'Hugging Face',
       'OpenRouter',
       'Together',
       'Perplexity',
       'Exa',
-      'Gitee AI',
       'Tencent Hunyuan',
       'Baichuan',
       'Firecrawl',
       'Stripe',
       'Stability AI',
       'DeepInfra',
-      'Hyperbolic',
     ]) {
       expect(isMonochromeProviderLogo(provider), provider).toBe(false);
     }
