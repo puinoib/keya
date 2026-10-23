@@ -32,6 +32,7 @@ import type { ContainerRecord } from './local/state';
 import { webLocks } from './browser';
 import type { ProbeFetch } from '../probe/execute';
 import type { Workspace } from './workspace';
+import type { FilePort } from '../vault/ports';
 
 /** Process-wide device state. */
 export const localState = new LocalState(new IndexedDbKeyValue());
@@ -157,7 +158,7 @@ export async function createVault(
   const salt = generateSalt();
 
   return webLocks.run(VAULT_WRITE_LOCK, async () => {
-    let file;
+    let file: FilePort;
     try {
       file = await workspace.createFilePort(fileName);
     } catch (error) {
