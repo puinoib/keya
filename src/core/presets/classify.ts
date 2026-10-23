@@ -8,8 +8,8 @@
  * - "not executable" has four different causes, three of which the user can
  *   fix. Collapsing them into one message tells a user their provider is
  *   unsupported when all they did was leave the endpoint blank.
- * - "manual only" (`http:`) can never hold a persistent grant, so it must never
- *   show "needs re-authorization": that warning could not be cleared.
+ * - "manual only" (`http:`) sends the credential in clear text, so the UI has to
+ *   say so before the click that approves it.
  */
 
 import { findPreset, type Preset } from '../presets/data';

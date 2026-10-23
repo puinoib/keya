@@ -22,7 +22,6 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsShortcutsRouteImport } from './routes/_authenticated/settings.shortcuts'
 import { Route as AuthenticatedSettingsProvidersRouteImport } from './routes/_authenticated/settings.providers'
-import { Route as AuthenticatedSettingsKeysRouteImport } from './routes/_authenticated/settings.keys'
 import { Route as AuthenticatedSettingsGroupsRouteImport } from './routes/_authenticated/settings.groups'
 import { Route as AuthenticatedSettingsGeneralRouteImport } from './routes/_authenticated/settings.general'
 import { Route as AuthenticatedSettingsAboutRouteImport } from './routes/_authenticated/settings.about'
@@ -94,12 +93,6 @@ const AuthenticatedSettingsProvidersRoute =
     path: '/providers',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
-const AuthenticatedSettingsKeysRoute =
-  AuthenticatedSettingsKeysRouteImport.update({
-    id: '/keys',
-    path: '/keys',
-    getParentRoute: () => AuthenticatedSettingsRoute,
-  } as any)
 const AuthenticatedSettingsGroupsRoute =
   AuthenticatedSettingsGroupsRouteImport.update({
     id: '/groups',
@@ -132,7 +125,6 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof AuthenticatedSettingsAboutRoute
   '/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
-  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -149,7 +141,6 @@ export interface FileRoutesByTo {
   '/settings/about': typeof AuthenticatedSettingsAboutRoute
   '/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
-  '/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
@@ -169,7 +160,6 @@ export interface FileRoutesById {
   '/_authenticated/settings/about': typeof AuthenticatedSettingsAboutRoute
   '/_authenticated/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/_authenticated/settings/groups': typeof AuthenticatedSettingsGroupsRoute
-  '/_authenticated/settings/keys': typeof AuthenticatedSettingsKeysRoute
   '/_authenticated/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/_authenticated/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -189,7 +179,6 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/general'
     | '/settings/groups'
-    | '/settings/keys'
     | '/settings/providers'
     | '/settings/shortcuts'
     | '/settings/'
@@ -206,7 +195,6 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/general'
     | '/settings/groups'
-    | '/settings/keys'
     | '/settings/providers'
     | '/settings/shortcuts'
     | '/settings'
@@ -225,7 +213,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/about'
     | '/_authenticated/settings/general'
     | '/_authenticated/settings/groups'
-    | '/_authenticated/settings/keys'
     | '/_authenticated/settings/providers'
     | '/_authenticated/settings/shortcuts'
     | '/_authenticated/settings/'
@@ -334,13 +321,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsProvidersRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
-    '/_authenticated/settings/keys': {
-      id: '/_authenticated/settings/keys'
-      path: '/keys'
-      fullPath: '/settings/keys'
-      preLoaderRoute: typeof AuthenticatedSettingsKeysRouteImport
-      parentRoute: typeof AuthenticatedSettingsRoute
-    }
     '/_authenticated/settings/groups': {
       id: '/_authenticated/settings/groups'
       path: '/groups'
@@ -369,7 +349,6 @@ interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAboutRoute: typeof AuthenticatedSettingsAboutRoute
   AuthenticatedSettingsGeneralRoute: typeof AuthenticatedSettingsGeneralRoute
   AuthenticatedSettingsGroupsRoute: typeof AuthenticatedSettingsGroupsRoute
-  AuthenticatedSettingsKeysRoute: typeof AuthenticatedSettingsKeysRoute
   AuthenticatedSettingsProvidersRoute: typeof AuthenticatedSettingsProvidersRoute
   AuthenticatedSettingsShortcutsRoute: typeof AuthenticatedSettingsShortcutsRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -379,7 +358,6 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAboutRoute: AuthenticatedSettingsAboutRoute,
   AuthenticatedSettingsGeneralRoute: AuthenticatedSettingsGeneralRoute,
   AuthenticatedSettingsGroupsRoute: AuthenticatedSettingsGroupsRoute,
-  AuthenticatedSettingsKeysRoute: AuthenticatedSettingsKeysRoute,
   AuthenticatedSettingsProvidersRoute: AuthenticatedSettingsProvidersRoute,
   AuthenticatedSettingsShortcutsRoute: AuthenticatedSettingsShortcutsRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,

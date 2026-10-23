@@ -1,5 +1,5 @@
 /**
- * The session facade: bindings, grants and probes for one vault.
+ * The session facade: bindings, approvals and probes for one vault.
  *
  * These tests exercise what the UI will actually call, with fakes for the file,
  * the network and local storage.
@@ -57,13 +57,10 @@ async function makeBytes(payload: KeyaFile): Promise<Uint8Array> {
   });
 }
 
-async function session(
-  options: { payload?: KeyaFile; grant?: boolean } = {}
-): Promise<{
+async function session(options: { payload?: KeyaFile } = {}): Promise<{
   session: VaultSession;
   payload: KeyaFile;
   requests: string[];
-  grants: string[];
   local: LocalState;
 }> {
   const payload = options.payload ?? cloneFile();
@@ -77,7 +74,6 @@ async function session(
   const local = new LocalState(new MemoryKv(), { now: () => NOW });
   const deviceKey = await importDeviceKey(new Uint8Array(32).fill(9));
   const requests: string[] = [];
-  const grants: string[] = [];
 
   const fetchImpl: ProbeFetch = async (url) => {
     requests.push(url);
@@ -89,47 +85,25 @@ async function session(
     local,
     deviceKey,
     fetch: fetchImpl,
-    clock: () => new Date(NOW),
   });
 
-  // Seed a grant through the public API when the test needs one.
-  if (options.grant) {
-    const grant = await value.grant(IDS.key);
-    if (grant) grants.push(grant.fingerprint);
-  }
-
-  return { session: value, payload, requests, grants, local };
+  return { session: value, payload, requests, local };
 }
 
 describe('probes', () => {
-  it('needs authorization, then runs after a grant', async () => {
-    const denied = await session();
-    expect(await denied.session.probe(IDS.key, 'automatic')).toMatchObject({
-      status: 'needs_authorization',
-    });
-    expect(denied.requests).toEqual([]);
-
-    const allowed = await session({ grant: true });
-    expect(await allowed.session.probe(IDS.key, 'automatic')).toMatchObject({
-      status: 'observed',
-    });
-    expect(allowed.requests).toHaveLength(1);
-  });
-
-  it('runs a manual probe after a one-shot approval, once', async () => {
+  it('needs approval, then runs after a one-shot gesture, once', async () => {
     const { session: value, requests } = await session();
 
-    expect(await value.probe(IDS.key, 'manual')).toMatchObject({
+    expect(await value.probe(IDS.key)).toMatchObject({
       status: 'needs_authorization',
     });
+    expect(requests).toEqual([]);
 
     expect(await value.approveOnce(IDS.key)).toBeTruthy();
-    expect(await value.probe(IDS.key, 'manual')).toMatchObject({
-      status: 'observed',
-    });
+    expect(await value.probe(IDS.key)).toMatchObject({ status: 'observed' });
 
     // The approval is gone; a second attempt without a gesture is refused.
-    expect(await value.probe(IDS.key, 'manual')).toMatchObject({
+    expect(await value.probe(IDS.key)).toMatchObject({
       status: 'needs_authorization',
     });
     expect(requests).toHaveLength(1);
@@ -139,26 +113,9 @@ describe('probes', () => {
     const { session: value } = await session();
     await value.approveOnce(IDS.key);
     value.lock();
-    expect(await value.probe(IDS.key, 'manual')).toMatchObject({
+    expect(await value.probe(IDS.key)).toMatchObject({
       status: 'needs_authorization',
     });
-  });
-
-  it('derives the grant from the current configuration', async () => {
-    const { session: value } = await session();
-    const grant = await value.grant(IDS.key);
-
-    expect(grant).not.toBeNull();
-    expect(grant!.origin).toBe('https://edge.example.com');
-    expect(grant!.path).toBe('/v1/models');
-    expect(grant!.fingerprint).toHaveLength(64);
-  });
-
-  it('cannot grant a key whose recipe cannot run', async () => {
-    const payload = cloneFile();
-    payload.providers[0].probe = null;
-    const { session: value } = await session({ payload });
-    expect(await value.grant(IDS.key)).toBeNull();
   });
 });
 
@@ -181,7 +138,7 @@ describe('usage consent', () => {
     expect(await value.authorizeUsage(IDS.key, URL)).toBe(false);
   });
 
-  it('accepts a standing grant without a fresh click', async () => {
+  it("does not carry one URL's consent to another", async () => {
     const { session: value } = await session();
     const fingerprint = await value.approveUsageOnce(IDS.key, URL);
     await value.authorizeUsage(IDS.key, URL);

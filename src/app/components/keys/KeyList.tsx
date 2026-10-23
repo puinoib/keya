@@ -2,11 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
-import {
-  runAutomaticCheck,
-  useStore,
-  type KeyPatch,
-} from '../../store/useStore';
+import { useStore, type KeyPatch } from '../../store/useStore';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -719,11 +715,6 @@ export function EditKeyDialog({
     if (!saved) return;
 
     toast.success('Key updated', { description: form.name.trim() });
-
-    // Auto-test on save reuses only a standing grant.
-    if (preferences?.auto_probe_on_save) {
-      void runAutomaticCheck(editingKey.id);
-    }
   };
 
   return (

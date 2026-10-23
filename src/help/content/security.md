@@ -52,9 +52,9 @@ This is not a distributed lock: another device using the same cloud folder can s
 
 ## Network
 
-There is no Keya backend and no account system. The deployed site can also load Cloudflare Web Analytics, the zone's RUM beacon: it is injected at the edge, is not part of this repository, and can be switched off in the Cloudflare dashboard. Beyond that, network requests come only from something you asked for: a check, which first shows the address the credential will actually reach, or a usage query, approved for the URL it asks. A daily check reuses only destinations you allowed permanently, and it never asks on its own. `http:` destinations can never be approved permanently and are confirmed for each send; usage queries refuse an `http:` endpoint outright because the key would travel in clear text. Redirects are never followed.
+There is no Keya backend and no account system. The deployed site can also load Cloudflare Web Analytics, the zone's RUM beacon: it is injected at the edge, is not part of this repository, and can be switched off in the Cloudflare dashboard. Beyond that, network requests come only from something you asked for: a check or a usage query, each preceded by the address the credential will actually reach. Nothing is ever sent on a schedule, and no approval outlives the click that gave it. `http:` endpoints are confirmed for every send, and usage queries refuse them outright because the key would travel in clear text. Redirects are never followed.
 
-Destinations you approve are stored on this device; a vault file copied from another device arrives with no grants.
+Nothing about a destination is stored: every check and every usage query asks once, for the exact request it is about to send, and a vault file copied from another device carries no authorization at all.
 
 ## Backups and exports
 

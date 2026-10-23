@@ -2,7 +2,7 @@
  * §16.4 / §16.5 / §16.7 — the pure parts of the runtime rules.
  *
  * Storage and UI come later; what is tested here is the decision logic that the
- * spec pins down: adoption order, outcome classification, grant matching.
+ * spec pins down: adoption order, outcome classification, approval matching.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,13 +15,7 @@ import {
   relevantObservations,
   shouldAdopt,
 } from '../runtime/observations';
-import {
-  addGrant,
-  allowsPersistentGrant,
-  consumeApproval,
-  hasGrant,
-  type Grant,
-} from '../runtime/grants';
+import { consumeApproval } from '../runtime/approvals';
 
 const VAULT = '11111111-1111-4111-8111-111111111111';
 const KEY = '33333333-3333-4333-8333-333333333333';
@@ -156,27 +150,7 @@ describe('§10.1 adoption', () => {
   });
 });
 
-describe('§10.2 grants', () => {
-  const grant: Grant = {
-    fingerprint: 'fp-1',
-    vault_id: VAULT,
-    origin: 'https://api.example.com',
-    path: '/v1/models',
-    approved_at: NOW,
-  };
-
-  it('matches by fingerprint only', () => {
-    expect(hasGrant([grant], 'fp-1')).toBe(true);
-    expect(hasGrant([grant], 'fp-2')).toBe(false);
-    expect(hasGrant([{ ...grant, origin: 'https://other' }], 'fp-1')).toBe(
-      true
-    );
-  });
-
-  it('adding an existing fingerprint does not duplicate it', () => {
-    expect(addGrant([grant], grant)).toHaveLength(1);
-  });
-
+describe('§10.2 approvals', () => {
   it('a one-shot approval is consumed by exactly one request', () => {
     const approvals = [{ fingerprint: 'fp-1', keyId: KEY, sessionId: SESSION }];
     const request = { fingerprint: 'fp-1', keyId: KEY, sessionId: SESSION };
@@ -207,8 +181,14 @@ describe('§10.2 grants', () => {
     ).toBe(false);
   });
 
-  it('plaintext targets never keep a persistent grant', () => {
-    expect(allowsPersistentGrant(true)).toBe(false);
-    expect(allowsPersistentGrant(false)).toBe(true);
+  it('an approval for a different request shape does not apply', () => {
+    const approvals = [{ fingerprint: 'fp-1', keyId: KEY, sessionId: SESSION }];
+    expect(
+      consumeApproval(approvals, {
+        fingerprint: 'fp-2',
+        keyId: KEY,
+        sessionId: SESSION,
+      }).ok
+    ).toBe(false);
   });
 });

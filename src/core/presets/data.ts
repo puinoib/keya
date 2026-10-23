@@ -2,8 +2,8 @@
  * Preset providers: the application-side half of the provider model.
  *
  * Presets are data, not branches: their send recipe is what `send_fingerprint`
- * is computed from, so editing a target or a header here invalidates existing
- * grants exactly like editing a custom provider would.
+ * is computed from, so editing a target or a header here changes the request
+ * shape exactly like editing a custom provider would.
  *
  * Three constraints shape the table: a target never starts with `/` (that would
  * make it root-relative), Azure keeps its `api-version` in the target query, and

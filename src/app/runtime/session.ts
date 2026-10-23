@@ -3,30 +3,23 @@
  *
  * Owns the pieces that must agree with each other: the payload, the device
  * facts and the probes. Everything here returns data ready to render — no
- * component computes a fingerprint or decides whether a grant exists.
+ * component computes a fingerprint or decides whether a request is approved.
  */
 
-import type { CheckOutcome, CheckMode } from '../probe/check';
+import type { CheckOutcome } from '../probe/check';
 import { runCheck, type AuthorizationPort } from '../probe/check';
 import type { ProbeFetch } from '../probe/execute';
 import type { LocalState } from '../storage/local/state';
 import type { Vault } from '../vault/vault';
 import { currentBindings, type KeyBinding } from './binding';
-import type { Approval } from '../../core/runtime/grants';
-import {
-  allowsPersistentGrant,
-  consumeApproval,
-} from '../../core/runtime/grants';
-import { isPlaintextRequest } from '../../core/payload/url';
+import { consumeApproval, type Approval } from '../../core/runtime/approvals';
 import { sendFingerprint } from '../../core/fingerprint';
-import type { Grant } from '../../core/runtime/grants';
 
 export interface SessionOptions {
   vault: Vault;
   local: LocalState;
   deviceKey: CryptoKey;
   fetch: ProbeFetch;
-  clock: () => Date;
 }
 
 export class VaultSession {
@@ -34,7 +27,6 @@ export class VaultSession {
   private readonly local: LocalState;
   private readonly deviceKey: CryptoKey;
   private readonly fetch: ProbeFetch;
-  private readonly clock: () => Date;
 
   /** One-shot approvals for this unlock only; never persisted. */
   private approvals: Approval[] = [];
@@ -49,7 +41,6 @@ export class VaultSession {
     this.local = options.local;
     this.deviceKey = options.deviceKey;
     this.fetch = options.fetch;
-    this.clock = options.clock;
   }
 
   /** Pass to every request this session starts. */
@@ -70,49 +61,8 @@ export class VaultSession {
   }
 
   /**
-   * Persistent consent for one request shape. Called only after the user has
-   * seen the real recipient; the fingerprint is recomputed here so the grant
-   * cannot be written for a stale configuration. A plaintext target can never
-   * hold one (I7).
-   */
-  async grant(keyId: string): Promise<Grant | null> {
-    const binding = (await this.bindings()).get(keyId);
-    if (!binding) return null;
-    if (!this.mayPersistGrant(binding.plan.resolvedHref)) return null;
-
-    const grant: Grant = {
-      fingerprint: binding.send,
-      vault_id: this.payload.vault.id,
-      origin: safeOrigin(binding.plan.resolvedHref),
-      path: safePath(binding.plan.resolvedHref),
-      approved_at: this.clock().toISOString(),
-    };
-
-    await this.local.putGrant(grant);
-    return grant;
-  }
-
-  /** Whether this key's exact request already holds a persistent grant. */
-  async hasGrant(keyId: string): Promise<boolean> {
-    const binding = (await this.bindings()).get(keyId);
-    if (!binding) return false;
-    if (!this.mayPersistGrant(binding.plan.resolvedHref)) return false;
-    return this.hasGrantFor(binding.send);
-  }
-
-  /** `http:` never keeps consent, so a stored grant for it must not count. */
-  private mayPersistGrant(resolvedHref: string): boolean {
-    try {
-      return allowsPersistentGrant(isPlaintextRequest(new URL(resolvedHref)));
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Usage queries are not probes, but they still send the credential somewhere.
-   * They get the same one-shot consent: a click approves this URL once, and a
-   * standing grant for the same shape keeps working without another click.
+   * They get the same one-shot consent: the click approves this URL once.
    */
   async approveUsageOnce(keyId: string, url: string): Promise<string | null> {
     const fingerprint = await this.usageFingerprint(keyId, url);
@@ -129,7 +79,6 @@ export class VaultSession {
   async authorizeUsage(keyId: string, url: string): Promise<boolean> {
     const fingerprint = await this.usageFingerprint(keyId, url);
     if (!fingerprint) return false;
-    if (await this.hasGrantFor(fingerprint)) return true;
 
     const outcome = consumeApproval(this.approvals, {
       fingerprint,
@@ -165,9 +114,8 @@ export class VaultSession {
     return binding.send;
   }
 
-  async probe(keyId: string, mode: CheckMode): Promise<CheckOutcome> {
+  async probe(keyId: string): Promise<CheckOutcome> {
     const authorization: AuthorizationPort = {
-      hasGrant: (fingerprint) => this.hasGrantFor(fingerprint),
       consumeApproval: (fingerprint, id) => {
         const outcome = consumeApproval(this.approvals, {
           fingerprint,
@@ -198,7 +146,7 @@ export class VaultSession {
           this.adoptedSeq.set(id, seq);
         },
       },
-      { keyId, mode }
+      { keyId }
     );
   }
 
@@ -210,25 +158,5 @@ export class VaultSession {
     this.controller.abort();
     this.approvals = [];
     this.adoptedSeq.clear();
-  }
-
-  private async hasGrantFor(fingerprint: string): Promise<boolean> {
-    return this.local.hasGrant(fingerprint);
-  }
-}
-
-function safeOrigin(href: string): string {
-  try {
-    return new URL(href).origin;
-  } catch {
-    return '';
-  }
-}
-
-function safePath(href: string): string {
-  try {
-    return new URL(href).pathname;
-  } catch {
-    return '';
   }
 }

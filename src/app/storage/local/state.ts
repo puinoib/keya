@@ -2,7 +2,7 @@
  * Device-local state (§11).
  *
  * Nothing here is encrypted and nothing here is part of the file: containers,
- * observations, grants and preferences describe *this device*.
+ * observations and preferences describe *this device*.
  * Losing them costs a re-check and a few preferences, which is why they are
  * allowed to live in plain browser storage.
  *
@@ -10,7 +10,6 @@
  * without IndexedDB; the browser adapter is a thin translation layer.
  */
 
-import type { Grant } from '../../../core/runtime/grants';
 import type { Observation } from '../../../core/runtime/observations';
 import { importDeviceKey } from '../../../core/fingerprint';
 
@@ -36,18 +35,11 @@ export interface ContainerRecord {
 
 export interface Preferences {
   auto_lock_minutes: number;
-  auto_probe_on_save: boolean;
-  auto_probe_daily: boolean;
-  /** Local day (`YYYY-MM-DD`) of the last daily check, so it runs once. */
-  last_daily_probe_day: string | null;
   hidden_presets: string[];
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   auto_lock_minutes: 5,
-  auto_probe_on_save: false,
-  auto_probe_daily: false,
-  last_daily_probe_day: null,
   hidden_presets: [],
 };
 
@@ -62,7 +54,6 @@ export interface LocalStateOptions {
 
 const CONTAINER = 'containers';
 const OBSERVATION = 'observations';
-const GRANT = 'grants';
 const PREFERENCE = 'prefs';
 const DEVICE_KEY = 'device/hmacKey';
 
@@ -153,24 +144,6 @@ export class LocalState {
       .sort((left, right) => right.finished_at.localeCompare(left.finished_at));
   }
 
-  // ── grants ──
-
-  async listGrants(): Promise<Grant[]> {
-    return this.collect<Grant>(GRANT);
-  }
-
-  async putGrant(grant: Grant): Promise<void> {
-    await this.kv.set(keyOf(GRANT, grant.fingerprint), grant);
-  }
-
-  async hasGrant(fingerprint: string): Promise<boolean> {
-    return (await this.kv.get<Grant>(keyOf(GRANT, fingerprint))) !== undefined;
-  }
-
-  async removeGrant(fingerprint: string): Promise<void> {
-    await this.kv.delete(keyOf(GRANT, fingerprint));
-  }
-
   // ── preferences ──
 
   async getPreferences(): Promise<Preferences> {
@@ -251,24 +224,11 @@ export class LocalState {
     }
   }
 
-  /**
-   * Forget this device's knowledge of one vault: every observation of its keys,
-   * and the grants whose audit field names it.
-   *
-   * Grants are deliberately not partitioned by `vault_id` (§10.2), so that a
-   * clone keeps them; the audit field is only how a cleanup finds the rows that
-   * belong to this vault. It is not a matching rule.
-   */
+  /** Forget this device's knowledge of one vault: every observation of it. */
   async forgetVault(vaultId: string): Promise<void> {
     const observations = await this.kv.keys(keyOf(OBSERVATION, vaultId));
     for (const key of observations) {
       await this.kv.delete(key);
-    }
-
-    for (const grant of await this.listGrants()) {
-      if (grant.vault_id === vaultId) {
-        await this.kv.delete(keyOf(GRANT, grant.fingerprint));
-      }
     }
   }
 
@@ -278,15 +238,5 @@ export class LocalState {
 
   timestamp(): string {
     return this.now();
-  }
-
-  private async collect<T>(prefix: string): Promise<T[]> {
-    const keys = await this.kv.keys(prefix);
-    const collected: T[] = [];
-    for (const key of keys) {
-      const value = await this.kv.get<T>(key);
-      if (value !== undefined) collected.push(value);
-    }
-    return collected;
   }
 }

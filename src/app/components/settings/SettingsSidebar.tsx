@@ -1,7 +1,6 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import {
   Gear,
-  Key,
   HardDrives,
   Keyboard,
   Folders,
@@ -11,7 +10,6 @@ import {
 
 const navItems = [
   { path: '/settings/general', label: 'General', icon: Gear },
-  { path: '/settings/keys', label: 'Keys', icon: Key },
   { path: '/settings/providers', label: 'Providers', icon: HardDrives },
   { path: '/settings/shortcuts', label: 'Shortcuts', icon: Keyboard },
   { path: '/settings/groups', label: 'Groups', icon: Folders },

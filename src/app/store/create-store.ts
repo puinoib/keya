@@ -16,7 +16,6 @@ import type { EditFailure, SaveFailure, Vault } from '../vault/vault';
 import type { VaultSession } from '../runtime/session';
 import type { LocalState, Preferences } from '../storage/local/state';
 import type { Observation } from '../../core/runtime/observations';
-import type { Grant } from '../../core/runtime/grants';
 import { summarizeIssues, type Issue } from '../../core/payload/validate';
 import type { Expiry } from '../../core/time/expiry';
 import type { Group, Key } from '../../core/payload/types';
@@ -60,7 +59,7 @@ export type VaultStorageMode = 'folder' | 'download';
 
 /** Everything the store needs from the outside world, so tests can supply it. */
 export interface StoreDeps {
-  /** Device-local state: preferences, observations, grants. */
+  /** Device-local state: preferences and observations. */
   local: LocalState;
   clock?: () => Date;
   timeZone?: () => string;
@@ -87,8 +86,6 @@ export interface AppStore {
   flushSave: () => Promise<boolean>;
   exportVaultBytes: (markClean?: boolean) => Promise<Uint8Array | null>;
   runManualCheck: (keyId: string) => Promise<ManualCheckResult | null>;
-  /** Runs without a new gesture: only a persistent grant can authorize it. */
-  runAutomaticCheck: (keyId: string) => Promise<void>;
 }
 
 /** Fields a caller may change on a stored key; the rest is the vault's own. */
@@ -117,8 +114,6 @@ export interface NewKeyInput {
 /** The settings page writes device preferences and, separately, providers. */
 export interface SettingsPatch {
   auto_lock_minutes?: number;
-  auto_probe_on_save?: boolean;
-  auto_probe_daily?: boolean;
   hidden_presets?: string[];
   providers?: ProviderDraft[];
 }
@@ -204,13 +199,10 @@ export interface AppState {
     oldPassword: string,
     newPassword: string
   ) => Promise<{ ok: true } | { ok: false; reason: string }>;
-  /** Standing approvals for this device, so they can be inspected and revoked. */
-  listGrants: () => Promise<Grant[]>;
-  revokeGrant: (fingerprint: string) => Promise<void>;
   /**
-   * Drop this device's knowledge of the open vault: check results, standing
-   * approvals, cached allowances and the biometric binding. The file is never
-   * touched — it is the only durable copy and this is not a delete.
+   * Drop this device's knowledge of the open vault: check results, cached
+   * allowances and the biometric binding. The file is never touched — it is the
+   * only durable copy and this is not a delete.
    */
   forgetDeviceState: () => Promise<void>;
   updateMeta: (updates: Partial<{ name: string; icon: string }>) => void;
@@ -242,10 +234,6 @@ async function buildView(state: {
     if (latest) checks.set(keyId, latest);
   }
 
-  const grants = new Set(
-    (await state.local.listGrants()).map((grant) => grant.fingerprint)
-  );
-
   return buildVaultView({
     file,
     preferences: state.preferences,
@@ -253,7 +241,6 @@ async function buildView(state: {
     timeZone: state.timeZone,
     checks,
     bindings,
-    grants,
   });
 }
 
@@ -443,9 +430,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const keyIds = opened.vault.getPayload().keys.map((key) => key.id);
         pruneUsageCache(vaultId, keyIds);
         set({ usage: readUsageCache(vaultId) });
-
-        // Fire and forget: the daily run must never reject out of `unlock`.
-        void runDailyProbe().catch(() => undefined);
       },
 
       verifyPassword: async (password) => {
@@ -833,12 +817,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         if (patch.auto_lock_minutes !== undefined) {
           preferences.auto_lock_minutes = patch.auto_lock_minutes;
         }
-        if (patch.auto_probe_on_save !== undefined) {
-          preferences.auto_probe_on_save = patch.auto_probe_on_save;
-        }
-        if (patch.auto_probe_daily !== undefined) {
-          preferences.auto_probe_daily = patch.auto_probe_daily;
-        }
         if (patch.hidden_presets !== undefined) {
           preferences.hidden_presets = patch.hidden_presets;
         }
@@ -933,16 +911,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
         return { ok: true as const };
       },
 
-      listGrants: async () => {
-        if (!runtime) return [];
-        return runtime.local.listGrants();
-      },
-
-      revokeGrant: async (fingerprint) => {
-        if (!runtime) return;
-        await runtime.local.removeGrant(fingerprint);
-      },
-
       forgetDeviceState: async () => {
         const active = runtime;
         if (!active) return;
@@ -984,14 +952,15 @@ export function createAppStore(deps: StoreDeps): AppStore {
     if (!payload.keys.some((key) => key.id === keyId)) return null;
 
     const binding = (await active.session.bindings()).get(keyId);
-    if (binding && !(await active.session.hasGrant(keyId))) {
-      if (!(await confirmDestination(binding.plan.resolvedHref))) return null;
+    // Nothing is stored that could stand in for this click.
+    if (binding && !(await confirmDestination(binding.plan.resolvedHref))) {
+      return null;
     }
 
     let outcome: Awaited<ReturnType<typeof active.session.probe>>;
     try {
       await active.session.approveOnce(keyId);
-      outcome = await active.session.probe(keyId, 'manual');
+      outcome = await active.session.probe(keyId);
     } catch (error) {
       // Locking (or switching) mid-flight tears the session down; the caller
       // still needs an answer instead of an unhandled rejection.
@@ -1017,7 +986,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
       };
     }
     const observation = outcome.observation;
-    if (observation.outcome === 'ok') void offerStandingApproval(keyId);
 
     return {
       success: observation.outcome === 'ok',
@@ -1028,46 +996,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
           : (observation.detail_code ?? observation.outcome),
       kind: observation.kind,
     };
-  };
-
-  /**
-   * A check the app starts on its own (after a save). It reuses only a
-   * persistent grant, so it never invents the gesture that consent requires.
-   */
-  const runAutomaticCheck = async (keyId: string): Promise<void> => {
-    const active = runtime;
-    if (!active) return;
-    try {
-      await active.session.probe(keyId, 'automatic');
-    } catch {
-      // A lock or switch tears the session down; nothing to report.
-      return;
-    }
-    if (runtime === active) await getState().refresh();
-  };
-
-  /**
-   * A manual check is consent for one request. Daily auto-test can only reuse
-   * persistent consent, so offer it once the destination has actually answered.
-   * A plaintext destination can never hold one, so it is never offered.
-   */
-  const offerStandingApproval = async (keyId: string): Promise<void> => {
-    const active = runtime;
-    if (!active) return;
-    const binding = (await active.session.bindings()).get(keyId);
-    if (!binding || binding.plan.resolvedHref.startsWith('http:')) return;
-    if (await active.session.hasGrant(keyId)) return;
-
-    toast('Allow this destination permanently?', {
-      description:
-        'Daily auto-test only checks destinations you allowed permanently.',
-      action: {
-        label: 'Always allow',
-        onClick: () => {
-          void active.session.grant(keyId);
-        },
-      },
-    });
   };
 
   /** Turn a refused edit into the sentence the user sees. */
@@ -1095,51 +1023,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
   }
 
   /** Local `YYYY-MM-DD`, so "once a day" follows the device's clock. */
-  function localDay(now: Date, timeZone: string): string {
-    try {
-      return new Intl.DateTimeFormat('en-CA', {
-        timeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(now);
-    } catch {
-      return now.toISOString().slice(0, 10);
-    }
-  }
-
-  /**
-   * Daily auto-test. It reuses standing grants only: a key the user never
-   * approved permanently is left untouched instead of being sent silently.
-   */
-  const runDailyProbe = async (): Promise<void> => {
-    const active = runtime;
-    if (!active || !active.preferences.auto_probe_daily) return;
-
-    const day = localDay(clock(), timeZone());
-    if (active.preferences.last_daily_probe_day === day) return;
-
-    active.preferences = { ...active.preferences, last_daily_probe_day: day };
-    await deps.local.setPreferences({ last_daily_probe_day: day });
-
-    const keys = active.vault
-      .getPayload()
-      .keys.filter((key) => key.archived_at === null)
-      .map((key) => key.id);
-
-    for (const keyId of keys) {
-      if (runtime !== active) return;
-      try {
-        await active.session.probe(keyId, 'automatic');
-      } catch {
-        // One key's failure must not end the sweep. A lock or switch tears the
-        // session down instead, which the runtime check above stops.
-      }
-    }
-
-    if (runtime === active) await getState().refresh();
-  };
-
   /**
    * Write the custom providers the settings page shows. Matching is by id first,
    * so renaming a provider keeps the references keys already point at.
@@ -1259,7 +1142,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
     flushSave,
     exportVaultBytes,
     runManualCheck,
-    runAutomaticCheck,
   };
 }
 

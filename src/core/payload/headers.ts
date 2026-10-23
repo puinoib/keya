@@ -4,7 +4,7 @@
  * Order is semantically irrelevant, but the file must be byte-deterministic
  * ("same state, same bytes"), so writers store headers sorted by lowercased
  * name and then value. The fingerprint encoder sorts the same way, which is why
- * reordering headers in the UI cannot invalidate a grant.
+ * reordering headers in the UI cannot invalidate an approval.
  */
 
 import type { StaticHeader } from './types';

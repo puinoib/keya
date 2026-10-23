@@ -318,34 +318,6 @@ describe('unlock', () => {
     expect(first.vault.isLocked).toBe(true);
     expect(store.useStore.getState().activeVaultFileName).toBe('second.keya');
   });
-
-  it('runs the daily check once per local day', async () => {
-    const payload = cloneFile();
-    const first = await openHarness({ payload });
-    await first.local.setPreferences({ auto_probe_daily: true });
-    const firstProbe = vi.spyOn(first.session, 'probe');
-    const store = makeStore(first);
-
-    await store.useStore.getState().unlock(first.opened, 'work.keya', 'folder');
-    await vi.waitFor(async () =>
-      expect((await first.local.getPreferences()).last_daily_probe_day).toBe(
-        '2026-03-01'
-      )
-    );
-    expect(firstProbe.mock.calls.length).toBeGreaterThan(0);
-
-    // A second session the same day shares the preference and must skip it.
-    const second = await openHarness({ payload });
-    second.local = first.local;
-    const secondProbe = vi.spyOn(second.session, 'probe');
-    const reopened = makeStore(second);
-    await reopened.useStore
-      .getState()
-      .unlock(second.opened, 'work.keya', 'folder');
-    await new Promise((resolve) => setTimeout(resolve, 20));
-
-    expect(secondProbe).not.toHaveBeenCalled();
-  });
 });
 
 describe('inbox attention', () => {
@@ -518,48 +490,6 @@ describe('a check that is still in flight', () => {
     expect(h.vault.hasUnsavedChanges).toBe(true);
     expect(h.vault.getPayload().vault.name).toBe('Late edit');
   });
-
-  it('keeps a failing daily run from rejecting out of unlock', async () => {
-    const h = await openHarness();
-    await h.local.setPreferences({ auto_probe_daily: true });
-    // The exact failure a lock produces: the session's payload is gone.
-    const probe = vi
-      .spyOn(h.session, 'probe')
-      .mockRejectedValue(new Error('vault is locked'));
-    const store = makeStore(h);
-
-    await expect(
-      store.useStore.getState().unlock(h.opened, 'work.keya', 'folder')
-    ).resolves.toBeUndefined();
-    await vi.waitFor(() => expect(probe).toHaveBeenCalled());
-    // Give an escaping rejection a turn to surface.
-    await new Promise((resolve) => setTimeout(resolve, 20));
-
-    expect(store.useStore.getState().workspaceState).toBe('unlocked');
-  });
-
-  it('keeps sweeping the remaining keys when one of them fails', async () => {
-    const payload = cloneFile();
-    payload.keys.push({
-      ...payload.keys[0],
-      id: '11111111-1111-4111-8111-111111111111',
-      name: 'Second key',
-      secret: 'sk-synthetic-second',
-    });
-
-    const h = await openHarness({ payload });
-    await h.local.setPreferences({ auto_probe_daily: true });
-    const probe = vi
-      .spyOn(h.session, 'probe')
-      .mockRejectedValueOnce(new Error('this one broke'))
-      .mockResolvedValue({ status: 'no_key' });
-    const store = makeStore(h);
-
-    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
-    await vi.waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
-
-    expect(store.useStore.getState().workspaceState).toBe('unlocked');
-  });
 });
 
 describe('provider edits', () => {
@@ -722,7 +652,7 @@ describe('a manual check asks about the destination', () => {
     expect(h.requests).toEqual(['https://edge.example.com/v1/models']);
   });
 
-  it('never keeps a persistent grant for a plaintext target', async () => {
+  it('asks again for a plaintext target instead of reusing consent', async () => {
     const payload = cloneFile();
     payload.keys[0].endpoint = 'http://edge.example.com/v1';
     const h = await openHarness({ payload });
@@ -730,9 +660,10 @@ describe('a manual check asks about the destination', () => {
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     await store.runManualCheck(IDS.key);
+    await store.runManualCheck(IDS.key);
 
-    expect(await h.session.hasGrant(IDS.key)).toBe(false);
-    expect(await h.local.listGrants()).toHaveLength(0);
+    // Nothing stored stands in for the second click.
+    expect(h.requests).toHaveLength(2);
   });
 });
 

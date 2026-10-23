@@ -35,7 +35,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import type { Grant } from '@/core/runtime/grants';
 import { MAX_VAULT_NAME } from '@/core/payload/limits';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
@@ -75,8 +74,6 @@ export function GeneralPage() {
     updateSettings,
     changePassword,
     verifyPassword,
-    listGrants,
-    revokeGrant,
     forgetDeviceState,
     activeVaultFileName,
     storageMode,
@@ -95,7 +92,6 @@ export function GeneralPage() {
   // Enrollment re-asks for the password instead of keeping it in the session.
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [enrollPw, setEnrollPw] = useState('');
-  const [grants, setGrants] = useState<Grant[]>([]);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [confirmForget, setConfirmForget] = useState(false);
@@ -153,18 +149,6 @@ export function GeneralPage() {
       .then(setBioRegistered)
       .catch(() => setBioRegistered(false));
   }, [bioSupported, vaultId]);
-
-  // Standing approvals are device state, so they are read here, not from the file.
-  useEffect(() => {
-    if (!vaultId) return;
-    let cancelled = false;
-    listGrants().then((list) => {
-      if (!cancelled) setGrants(list);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [vaultId, listGrants]);
 
   if (!data) return null;
 
@@ -368,42 +352,6 @@ export function GeneralPage() {
                 </div>
               </div>
             )}
-            {grants.length > 0 && (
-              <div className="p-3 space-y-2">
-                <p className="text-xs font-medium text-ink-primary">
-                  Approved destinations
-                </p>
-                <p className="text-[11px] text-ink-quaternary">
-                  Daily auto-test may only reuse these. Revoking one asks again
-                  before the next request.
-                </p>
-                {grants.map((grant) => (
-                  <div
-                    key={grant.fingerprint}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span className="truncate font-mono text-[11px] text-ink-secondary">
-                      {grant.origin}
-                      {grant.path}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await revokeGrant(grant.fingerprint);
-                        setGrants((list) =>
-                          list.filter(
-                            (entry) => entry.fingerprint !== grant.fingerprint
-                          )
-                        );
-                      }}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-danger/80 hover:bg-danger/5 hover:text-danger transition-colors"
-                    >
-                      Revoke
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="flex items-center justify-between p-3">
               <div>
                 <p className="text-xs font-medium text-ink-primary">
@@ -473,9 +421,8 @@ export function GeneralPage() {
                 Forget this device's data
               </p>
               <p className="text-xs text-ink-quaternary mt-0.5">
-                Deletes this device's check results, approved destinations,
-                cached allowances and biometric binding for this vault. The
-                .keya file is not touched.
+                Deletes this device's check results, cached allowances and
+                biometric binding for this vault. The .keya file is not touched.
               </p>
             </div>
             <button
@@ -515,9 +462,9 @@ export function GeneralPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Forget this device's data?</AlertDialogTitle>
             <AlertDialogDescription>
-              Check results, approved destinations, cached allowances and the
-              biometric binding for this vault are deleted from this device. The
-              .keya file stays exactly as it is, and nothing is sent anywhere.
+              Check results, cached allowances and the biometric binding for
+              this vault are deleted from this device. The .keya file stays
+              exactly as it is, and nothing is sent anywhere.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -527,7 +474,6 @@ export function GeneralPage() {
                 setForgetting(true);
                 try {
                   await forgetDeviceState();
-                  setGrants([]);
                   setBioRegistered(false);
                   toast.success('Device data forgotten');
                 } catch (error) {

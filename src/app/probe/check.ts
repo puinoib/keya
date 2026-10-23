@@ -2,9 +2,10 @@
  * One probe, end to end (§10.1, §10.2).
  *
  * Ties together the pieces that already exist: classify the recipe, derive the
- * two fingerprints, check authorization, run the request, decide whether the
- * result may be adopted, and persist it. This is the only place that decides a
- * check is allowed to leave the browser.
+ * two fingerprints, consume the approval the click created, run the request,
+ * decide whether the result may be adopted, and persist it. This is the only
+ * place that decides a check is allowed to leave the browser, and it never runs
+ * without a gesture: nothing is stored that a later check could reuse.
  */
 
 import {
@@ -19,12 +20,8 @@ import type { KeyaFile, Key } from '../../core/payload/types';
 import type { LocalState } from '../storage/local/state';
 import { runProbe, type ProbeFetch } from './execute';
 
-export type CheckMode = 'manual' | 'automatic';
-
 export interface AuthorizationPort {
-  /** A persistent grant for this exact request. */
-  hasGrant(fingerprint: string): Promise<boolean>;
-  /** Consume a one-shot approval created by the user's gesture. */
+  /** Consume the one-shot approval created by the user's gesture. */
   consumeApproval(fingerprint: string, keyId: string): boolean;
 }
 
@@ -49,7 +46,6 @@ export interface CheckDependencies {
 
 export interface CheckRequest {
   keyId: string;
-  mode: CheckMode;
 }
 
 export type CheckOutcome =
@@ -58,10 +54,6 @@ export type CheckOutcome =
       status: 'not_executable';
       reason: Extract<RecipeState, { kind: 'not_executable' }>['reason'];
       unverifiable?: string;
-    }
-  | {
-      status: 'skipped';
-      reason: 'manual_only' | 'automatic_disabled';
     }
   | {
       status: 'needs_authorization';
@@ -117,12 +109,6 @@ export async function runCheck(
     };
   }
 
-  // Manual-only recipes can never hold a persistent grant, so automatic
-  // probing skips them instead of asking for an approval nobody can give.
-  if (request.mode === 'automatic' && state.kind === 'manual_only') {
-    return { status: 'skipped', reason: 'manual_only' };
-  }
-
   const { send, binding } = await describeSend({
     artifact: {
       keyId: key.id,
@@ -135,15 +121,9 @@ export async function runCheck(
     deviceKey: dependencies.deviceKey,
   });
 
-  // A plaintext target never reuses standing consent: every execution needs a
-  // fresh gesture, even if a grant row exists from an older build (I7).
-  const authorized =
-    (state.kind === 'auto' &&
-      (await dependencies.authorization.hasGrant(send))) ||
-    (request.mode === 'manual' &&
-      dependencies.authorization.consumeApproval(send, key.id));
-
-  if (!authorized) {
+  // The only way in is the approval the click created. `http:` targets are no
+  // different: consent is one request long for every destination (I7).
+  if (!dependencies.authorization.consumeApproval(send, key.id)) {
     return {
       status: 'needs_authorization',
       fingerprint: send,

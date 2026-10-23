@@ -122,35 +122,16 @@ describe('observations', () => {
   });
 });
 
-describe('grants and preferences', () => {
-  it('stores grants by fingerprint', async () => {
-    const local = state();
-    await local.putGrant({
-      fingerprint: 'fp-1',
-      vault_id: VAULT,
-      origin: 'https://api.example.com',
-      path: '/v1/models',
-      approved_at: '2026-06-01T00:00:00.000Z',
-    });
-
-    expect(await local.hasGrant('fp-1')).toBe(true);
-    expect(await local.hasGrant('fp-2')).toBe(false);
-
-    await local.removeGrant('fp-1');
-    expect(await local.hasGrant('fp-1')).toBe(false);
-  });
-
+describe('preferences', () => {
   it('merges preference patches over the defaults', async () => {
     const local = state();
     expect(await local.getPreferences()).toMatchObject({
       auto_lock_minutes: 5,
-      auto_probe_on_save: false,
     });
 
     await local.setPreferences({ auto_lock_minutes: 30 });
     expect(await local.getPreferences()).toMatchObject({
       auto_lock_minutes: 30,
-      auto_probe_on_save: false,
     });
   });
 });

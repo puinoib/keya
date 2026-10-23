@@ -124,30 +124,38 @@ describe('changing the master password', () => {
 });
 
 describe('forgetting this device', () => {
-  it('drops the standing approval and the biometric binding, not the file', async () => {
-    await harness.vault.local.putGrant({
-      fingerprint: 'f'.repeat(64),
+  it('drops the check results and the biometric binding, not the file', async () => {
+    const binding = (await harness.vault.session.bindings()).get(IDS.key);
+    expect(binding).toBeTruthy();
+    await harness.vault.local.recordObservation({
+      observation_id: 'obs-forget',
       vault_id: IDS.vault,
-      origin: 'https://api.example.com',
-      path: '/v1/models',
-      approved_at: '2026-03-01T00:00:00.000Z',
+      key_id: IDS.key,
+      binding: (binding as { binding: string }).binding,
+      kind: 'request',
+      outcome: 'ok',
+      detail_code: null,
+      http_status: 200,
+      latency_ms: 1,
+      started_at: '2026-03-01T12:00:00.000Z',
+      finished_at: '2026-03-01T12:00:00.000Z',
     });
+    await harness.api.useStore.getState().refresh();
 
     render(<GeneralPage />);
-    expect(await screen.findByText('Approved destinations')).toBeTruthy();
-
     fireEvent.click(screen.getByRole('button', { name: 'Forget' }));
     fireEvent.click(
       await screen.findByRole('button', { name: 'Forget device data' })
     );
 
     await waitFor(async () => {
-      expect(await harness.vault.local.listGrants()).toEqual([]);
+      expect(
+        await harness.vault.local.listObservations(IDS.vault, IDS.key)
+      ).toEqual([]);
     });
     expect(biometric.removeBiometric).toHaveBeenCalledWith(IDS.vault);
     // The payload is untouched: this is device state, not a delete.
-    expect(currentView(harness).file).toEqual(
-      harness.vault.opened.vault.getPayload()
-    );
+    expect(harness.api.useStore.getState().hasUnsavedChanges).toBe(false);
+    expect(currentView(harness).file.vault.name).toBe('Work');
   });
 });

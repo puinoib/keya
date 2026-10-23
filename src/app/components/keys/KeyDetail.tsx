@@ -196,7 +196,7 @@ export function KeyDetail() {
           : 'Untested: no check has run from this device yet.';
   const plaintextTarget = plaintextTargetOf(view, key);
   const showStatusChips = Boolean(
-    expiryLabel || (stateHint && (check.manualOnly || check.needsAuthorization))
+    expiryLabel || (stateHint && check.manualOnly)
   );
 
   /** Group is a filter, so using it means leaving the panel whose row it came from. */
@@ -325,7 +325,7 @@ export function KeyDetail() {
                   <Warning className="size-3" /> {expiryLabel}
                 </span>
               )}
-              {stateHint && (check.manualOnly || check.needsAuthorization) && (
+              {stateHint && check.manualOnly && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
                   <Warning className="size-3" /> {stateHint}
                 </span>

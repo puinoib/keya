@@ -12,11 +12,11 @@
 
 | # | Principle | Consequence |
 |---|---|---|
-| P1 | The file holds **assets** and **the dependencies needed to use them** | Device observations, user decisions, derived presentation, local preferences and network grants stay out. The file has no "activity log" of any kind |
+| P1 | The file holds **assets** and **the dependencies needed to use them** | Device observations, user decisions, derived presentation, local preferences and network approvals stay out. The file has no "activity log" of any kind |
 | P2 | Authentication covers everything; the reader does not guess, repair or partially load | A failed open leaves the file untouched and offers exactly one escape hatch (§6.3) |
 | P3 | Security properties hold **by construction**, not by remembering to update a field | Every invalidation decision uses a **computed fingerprint**; no revision numbers exist in the file (§7) |
 | P4 | What the writer produces ⊆ what the reader accepts | Every read rule also holds when writing; an out-of-range edit is refused rather than written into a file the app cannot read back (§6.4) |
-| P5 | Network egress needs authorization; file content grants no network ability | Any request needs a persistent grant or a single-use approval from that same interaction (§10.2) |
+| P5 | Network egress needs authorization; file content carries no network ability | Every request needs a single-use approval from that same interaction, and nothing is stored that could stand in for one (§10.2) |
 | P6 | Describe only real boundaries | No rollback protection, no distributed lock, no memory wiping, no power-loss atomicity |
 
 ### 1.1 Invariants
@@ -31,9 +31,9 @@ These 14 items are a single conjunction. Breaking any of them is an implementati
 | I4 | `file_key` depends only on the current password, the current `salt` and the current KDF parameters: no public randomness, no pre-hashing |
 | I5 | A failed read never modifies the file and leaves no partial state usable as an opened vault. The one exception is the isolated plaintext buffer of §6.3: unparsed, never in the store, dropped on lock |
 | I6 | A payload that fails class A validation is never written |
-| I7 | No request without a matching authorization; `http:` targets never get a persistent grant |
+| I7 | No request without a matching approval from the same interaction; no authorization is ever persisted |
 | I8 | A single-use approval is never persisted, dies when the request is sent, and is consumed once |
-| I9 | Import inherits no grants, observations, preferences, biometric bindings or usage snapshots |
+| I9 | Import inherits no observations, preferences, biometric bindings or usage snapshots |
 | I10 | A failed write neither clears dirty state nor discards edits |
 | I11 | If the pre-lock save fails, the lock is **cancelled**: an in-memory edit outranks the act of locking |
 | I12 | Adopting an async result requires every check in §10.1 (`session_id`, Key alive and unarchived, `binding`, monotonic `request_seq`). This list deliberately does not restate them |
@@ -51,7 +51,7 @@ These 14 items are a single conjunction. Breaking any of them is an implementati
 |---|---|
 | Holds a copy of the file (cloud leak, bad share, backup leak) | Ciphertext only. Security equals **password strength × Argon2id parameters**. The file reveals no vault name, Key name, provider, URL, credential or other business plaintext — only the metadata needed to unlock (`magic`, `version`, `kdf_*`, `salt`, `nonce`) and the total length |
 | Can write the file (sync client, hostile script, mistake) | Every variation fails AEAD authentication: preamble edits, one ciphertext byte, truncation, appending |
-| Drives Keya into sending with a forged file | No request without authorization; grants bind to `key_id`, the real target URL and the authentication placement (§7.1); import inherits nothing (§14) |
+| Drives Keya into sending with a forged file | No request without authorization; an approval binds to `key_id`, the real target URL and the authentication placement (§7.1); import inherits nothing (§14) |
 | Poisons the UI with a forged file | Nothing from the file renders before opening; afterwards the payload passes class A validation (§6) |
 
 ### 2.2 What is not protected
@@ -389,9 +389,9 @@ Two meta-constraints decide everything else:
 | `providers[].name` | Categorization and display; unique in the file (§6.2) | — |
 | `providers[].description` | Why this integration exists — self-hosted gateway, proxy, regional restriction. Guards the "six months later I no longer remember why this provider looks like this" case, which a recipe cannot answer: a recipe says where to send, not why | — |
 | `providers[].default_endpoint` | Prefills an address for new Keys. Convenience, not a dependency; no existing Key reads it | Removing it changes nothing except that new Keys need the address typed. It stays only so a device switch does not require retyping the base URL |
-| `keys[].endpoint` | The send target for this credential, stored per Key | Inheriting it from the Provider would make the send target depend on a mutable shared record, and neither grants nor offline reasoning would hold |
+| `keys[].endpoint` | The send target for this credential, stored per Key | Inheriting it from the Provider would make the send target depend on a mutable shared record, and neither authorization nor offline reasoning would hold |
 | `providers[].probe` | Where and how the credential is sent | — |
-| `probe.headers[]` | The constant protocol headers a real request needs (`anthropic-version`, `accept: application/json`). Without it such providers get headers injected in app code, and injected headers are not in `send_fingerprint` — "the grant equals the bytes sent" collapses | See §9.2 and the denylist in §6.2 |
+| `probe.headers[]` | The constant protocol headers a real request needs (`anthropic-version`, `accept: application/json`). Without it such providers get headers injected in app code, and injected headers are not in `send_fingerprint` — "the approval equals the bytes sent" collapses | See §9.2 and the denylist in §6.2 |
 | `auth.mode: 'basic'` | Stripe, Twilio, Mailgun, Jira and others use `Authorization: Basic`. Expressed as "`secret` is the literal `user:password`", with no `username`/`aux` fields | Multi-part credentials are pasted into one `secret`. Keya is a carrier, not an interpreter (§17) |
 | `keys[].secret` | The asset | — |
 | `keys[].provider_id` | Categorization; `null` is a legal "uncategorized" | Without `null` the only option is a dangling reference (§6.2) |
@@ -408,7 +408,7 @@ Two annotated exceptions:
 - **`icon` spells "no icon" as `""`, not `null`.** This is the explicit exception to "one state, one encoding": `null` and `""` would mean the same thing, so only one survives, and `""` wins because it has no second reading (`null` already means "field missing").
 - **`Provider` has no `icon`.** Preset brand marks are app constants; custom providers have names. Icons for custom providers would be a new field, hence a version bump; out of scope.
 
-Not in the file, and not to be added back: `schema_version`, `key.revision`, `provider.check_revision`, `tester_version`, any "the user dismissed this reminder" record, observations, usage snapshots, preferences such as auto-lock, network grants, biometric bindings. Because: revision numbers only served the device observation cache, now replaced by computed fingerprints (§7.3); observations and usage are device facts; device preferences are usually wrong to sync; grants are bound to this device, this browser and the user's current consent; an Inbox decision is derived from the file plus the current time, so there is nothing to store (runtime §10.3).
+Not in the file, and not to be added back: `schema_version`, `key.revision`, `provider.check_revision`, `tester_version`, any "the user dismissed this reminder" record, observations, usage snapshots, preferences such as auto-lock, network approvals, biometric bindings. Because: revision numbers only served the device observation cache, now replaced by computed fingerprints (§7.3); observations and usage are device facts; device preferences are usually wrong to sync; an approval is bound to this browser and the current interaction; an Inbox decision is derived from the file plus the current time, so there is nothing to store (runtime §10.3).
 
 ### 5.3 Identity, time, ordering
 
@@ -568,7 +568,7 @@ Why there is no repair flow: dangling references — a `custom:` pointing at a m
 
 The file contains no revision numbers. Every invalidation decision is computed while reading.
 
-### 7.1 `send_fingerprint` (public; decides whether re-authorization is needed)
+### 7.1 `send_fingerprint` (public; names the request an approval covers)
 
 ```
 encode(fields) = for each field (name, v₁ … vₙ):
@@ -590,18 +590,18 @@ send_fingerprint = hexLowerCase(SHA-256(
 ))
 ```
 
-- Computed only when the recipe is executable. `probe: null`, a null `endpoint` with a relative `target`, or a non-http(s) resolved protocol all mean no fingerprint, no grant and no request.
-- It covers **the shape and destination of the request, never the credential value**. That one sentence explains both "rotating `secret` keeps the grant" and "the `query`-mode secret is appended after the fingerprint is taken" (§9.2). The `url` field is therefore the `href` before the secret parameter is added.
+- Computed only when the recipe is executable. `probe: null`, a null `endpoint` with a relative `target`, or a non-http(s) resolved protocol all mean no fingerprint, no approval and no request.
+- It covers **the shape and destination of the request, never the credential value**. That one sentence explains both "rotating `secret` keeps a stored observation valid" and "the `query`-mode secret is appended after the fingerprint is taken" (§9.2). The `url` field is therefore the `href` before the secret parameter is added.
 - `probe.headers` is **stored** ascending by `(lowercase name, value)` and **read** in any order; otherwise one logical state would have two serializations, breaking §4.1.
-- Because of that sort, reordering headers keeps the grant, while renaming, adding, removing or changing a value does not. Same principle as "changing `target` without changing the resolution keeps the grant": the fingerprint covers the bytes actually sent, not how the recipe is written.
+- Because of that sort, reordering headers does not change the fingerprint, while renaming, adding, removing or changing a value does. Same principle as "changing `target` without changing the resolution changes nothing": the fingerprint covers the bytes actually sent, not how the recipe is written.
 - **Presets and custom providers must share this encoder.** A preset's recipe is an app constant and skips class A, so lowercasing, header sorting and URL normalization implemented only on the custom path would give the same send two fingerprints and two bindings.
 - Length prefixes make values unambiguous and multi-value fields need no separators, so no "input must not contain newlines" convention is needed. `\r`, `\n` and `\0` are forbidden by the header rules of §6.2, not by the encoding.
 - Output is 64 lowercase hex characters.
 - Read only normalized, class-A-validated values; apply no transformation that §8.1 does not specify, or the same credential would fingerprint differently through different entry points.
-- Bound to `key.id`, so copying an authorized Key does not inherit its grant.
-- Excludes the secret, so rotation preserves the grant.
+- Bound to `key.id`, so copying a Key does not carry any authorization with it.
+- Excludes the secret, so rotation leaves the fingerprint — and any observation's match — untouched.
 - Excludes the recipe text, so a recipe edit matters only if it changes `resolved_url`, the auth placement or the encoding.
-- `http:` targets never get a persistent grant; each run needs a separate confirmation (§10.2).
+- `http:` targets are approved per request like everything else, and the prompt names the clear-text transport (§10.2).
 
 ### 7.2 `observation_binding` (device-local; decides whether an observation still counts)
 
@@ -623,25 +623,25 @@ observation_binding = hexLowerCase(HMAC-SHA-256(
 
 ### 7.3 Why computed fingerprints beat revision numbers
 
-The old design kept `key.revision` and `check_revision` as random UUIDs in the file, correct only if the editor remembered to regenerate them. That is a convention, and conventions get missed: change `probe`, forget the bump, and the old network grant stays valid while credentials go to a new address.
+The old design kept `key.revision` and `check_revision` as random UUIDs in the file, correct only if the editor remembered to regenerate them. That is a convention, and conventions get missed: change `probe`, forget the bump, and the stale value keeps describing a request the user never approved.
 
 Computed fingerprints turn the same property into construction:
 
 | Old mechanism | Failure mode | Replacement |
 |---|---|---|
 | `key.revision` (UUID, regenerated when the secret or target changes) | Missed update → a stale observation reads as current | `observation_binding` HMACs what is actually sent |
-| `provider.check_revision` (UUID, regenerated when the recipe changes) | Missed update → credentials go to a new address under a valid grant | `send_fingerprint` hashes the resolved URL and auth placement |
-| `tester_version` ("display only", yet it must be bumped in step with `check_revision`) | Two invalidation schemes coexist, and an app update may require rewriting every vault | `engine` folds into `observation_binding`; grants are untouched because the send did not change |
+| `provider.check_revision` (UUID, regenerated when the recipe changes) | Missed update → a stored approval would describe a request the user never saw | `send_fingerprint` hashes the resolved URL and auth placement |
+| `tester_version` ("display only", yet it must be bumped in step with `check_revision`) | Two invalidation schemes coexist, and an app update may require rewriting every vault | `engine` folds into `observation_binding`; the send itself is unchanged |
 
 The accepted cost: changing `target` without changing the resolution does not invalidate observations. The send really did not change.
 
 ## 14. Import and export
 
-> **Status: there is no importer.** §14.2 (merge import) and §14.3 (plaintext JSON import) are not implemented and are not planned. The text stays because two implemented behaviors rest on its reasoning: opening a `.keya` file restores content and no device state (§14.1), and a vault copied from elsewhere never brings network grants with it (§14.2's "different `vault.id` → rebuild ids"). A second vault is opened from the welcome screen and lives beside the first; it is never merged into an open one. Runtime test vectors 47, 48, 55, 77 and 85 in [keya-runtime.md](keya-runtime.md) §16 therefore describe an unbuilt path.
+> **Status: there is no importer.** §14.2 (merge import) and §14.3 (plaintext JSON import) are not implemented and are not planned. The text stays because two implemented behaviors rest on its reasoning: opening a `.keya` file restores content and no device state (§14.1), and a vault copied from elsewhere never brings network authorization with it (there is none to bring, and §14.2's "different `vault.id` → rebuild ids" keeps it that way). A second vault is opened from the welcome screen and lives beside the first; it is never merged into an open one. Runtime test vectors 47, 48, 55, 77 and 85 in [keya-runtime.md](keya-runtime.md) §16 therefore describe an unbuilt path.
 
 ### 14.1 Opening an encrypted file
 
-Unlocking with the password restores all business content. It restores no device observations, preferences, grants, usage snapshots or biometric bindings.
+Unlocking with the password restores all business content. It restores no device observations, preferences, usage snapshots or biometric bindings.
 
 ### 14.2 Merge import (not implemented)
 
@@ -664,8 +664,8 @@ Import is an in-memory transaction with a fixed order; a failure at any step lea
 
 `vault.id` decides the branch, and the two branches are entirely different:
 
-- **Same `vault.id`** (importing an old copy of this vault): align by `id` and deduplicate on content — if the `id` exists, compare and then overwrite or skip; if not, insert. Ids are not rebuilt, so `send_fingerprint` is unchanged and grants keep working. Rebuilding unconditionally would duplicate the Key list and orphan every grant in the vault.
-- **Different `vault.id`** (another vault, or `KeyaExchange`): allocate new ids and map `providers[].id`, `groups[].id`, `keys[].id`, `keys[].group_id` and `keys[].provider_id`. This is the mechanism behind "import inherits no grants".
+- **Same `vault.id`** (importing an old copy of this vault): align by `id` and deduplicate on content — if the `id` exists, compare and then overwrite or skip; if not, insert. Ids are not rebuilt, so `send_fingerprint` is unchanged and a stored observation still matches. Rebuilding unconditionally would duplicate the Key list.
+- **Different `vault.id`** (another vault, or `KeyaExchange`): allocate new ids and map `providers[].id`, `groups[].id`, `keys[].id`, `keys[].group_id` and `keys[].provider_id`. This is the mechanism behind "an import inherits no device state".
 
 The criterion is `vault.id` alone — not the filename, not content similarity.
 
@@ -673,7 +673,7 @@ Deletions do not propagate. With the same `vault.id`, the target wins: existing 
 
 Custom providers are compared by configuration content (`name` + `default_endpoint` + `probe`). Same name with different configuration is asked about, never silently overwritten. Duplicate credentials (identical `secret`) offer "skip / keep both", and that comparison happens only in memory — never persist a hash of a secret for it.
 
-Observations and grants are not imported; they were never in the file. Import brings assets and dependencies only. Report added, skipped, conflicting and unmigrated items.
+Observations and approvals are not imported; they were never in the file. Import brings assets and dependencies only. Report added, skipped, conflicting and unmigrated items.
 
 Since `key.id` is newly allocated, `send_fingerprint` changes, so no Key sends anything until it is confirmed (§10.2).
 
@@ -690,7 +690,7 @@ interface KeyaExchange {
 }
 ```
 
-- No observations, preferences or grants, for the same reason as above.
+- No observations or preferences, for the same reason as above.
 - Must be labelled **"contains plaintext secrets; this is not an encrypted backup"**.
 - Parsing is stricter than the container path because the input is untrusted text: reject duplicate keys, nesting deeper than 8, and invalid UTF-8. **Check the input size ≤ 33 554 432 B (32 MiB) before parsing** — the only place that can refuse before class A validation, and the alternative is a strict parser eating all available memory first.
 - The strict parser is needed only here (§4.2). Take it from a mature implementation if you like, but do not swap it into the container path to save a dependency, and do not relax the checks here either.
@@ -918,8 +918,8 @@ These values pin the three easiest mistakes: ① C′ must equal C, so sorting r
 - `containers`: the registration table behind the locked view, keyed by `container_fingerprint`.
 - Biometric records: PRF-wrapped unlock material (see D.4 for the current deviation).
 - `observations`: check results, the latest 10 per Key.
-- `grants`: persistent authorizations keyed by `send_fingerprint`.
-- `preferences`: auto-lock, post-write check, daily check, hidden presets, the daily check date.
+- `preferences`: auto-lock and hidden presets.
+- Network approvals: none. They live in memory for one interaction (§10.2).
 - Usage snapshots: a tab-level `sessionStorage` cache, dropped when stale.
 
 **Computed (never persisted)**

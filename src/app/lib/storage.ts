@@ -232,7 +232,6 @@ async function finishOpen(
     local: localState,
     deviceKey,
     fetch: browserFetch,
-    clock: () => new Date(),
   });
 
   await localState.putContainer({

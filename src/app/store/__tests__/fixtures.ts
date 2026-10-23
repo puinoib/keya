@@ -103,7 +103,6 @@ export async function openHarness(
     local,
     deviceKey,
     fetch: fetchImpl,
-    clock: () => new Date(overrides.now ?? FIXED_NOW),
   });
 
   return {

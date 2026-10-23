@@ -41,7 +41,7 @@ Every write runs through one transaction, which owns timestamps and dirty state.
 Two design decisions worth stating:
 
 1. **Inbox facts are computed, never stored.** Expiry and rejection decisions come from the payload, the current time and this device's observations. There is no decision record to keep in sync, so the same file yields the same Inbox on every device and no edit has to clean up device state. A fact clears when the user fixes it (a new date, a successful check) or archives the Key — that is the only way an item leaves the Inbox (§10.3).
-2. **Secret rotation needs no extra field surgery.** Observation invalidation comes from the computed `observation_binding`; grant preservation comes from `send_fingerprint` excluding the secret.
+2. **Secret rotation needs no extra field surgery.** Observation invalidation comes from the computed `observation_binding`; `send_fingerprint` excluding the secret is what keeps the two independent.
 
 ## 9. Probing (class C)
 
@@ -87,7 +87,7 @@ A null `endpoint` blocks relative targets only.
 | Mode | `mode: 'cors'`, since the status code must be readable |
 | Timeout | 10 s via `AbortController`, recorded as `timeout` |
 | Response body | Unread by default; at most 64 KiB when semantics must be judged, and **never persisted** |
-| Transport | `http:` targets need a manual confirmation each time and never get a persistent grant |
+| Transport | `http:` targets need a confirmation before every request, and the prompt says they travel in clear text |
 
 ### 9.3 What an observation may claim
 
@@ -107,11 +107,11 @@ Redirects deserve their own sentence: `redirect: 'error'` turns `301/302` into `
 
 ### 9.4 Presets and custom providers
 
-- A preset's send policy is **data** (target, auth placement, static headers), and `send_fingerprint` comes from the resolved result. Any data change — adding `anthropic-version` to Anthropic, say — invalidates grants automatically, with no version bump.
+- A preset's send policy is **data** (target, auth placement, static headers), and `send_fingerprint` comes from the resolved result. Any data change — adding `anthropic-version` to Anthropic, say — changes the request shape automatically, with no version bump.
 - A preset's **interpretation semantics** (status code and response to `credential/ok`) carry a version scoped to that interpreter, folded into `observation_binding`: `custom/1`, `preset:<slug>/1`. Never one app-wide constant: that voids every observation on an unrelated release, the `tester_version` failure mode of §7.3 wearing a different hat.
 - Bump that number only when interpretation changes. Send-policy changes travel through data into `send_fingerprint` and take effect by themselves.
 - Custom providers only ever use the generic executor and can never produce `credential`.
-- Slugs freeze at release. Preset checking may be added or removed with app versions, and neither grants authorization.
+- Slugs freeze at release. Preset checking may be added or removed with app versions; neither is authorization.
 - **Preset data migrates from the existing implementation; it is not redesigned.** The current code holds experience the spec cannot replace: `UNSUPPORTED_PROVIDERS` (which providers cannot be verified in a browser, and why — AWS signatures, missing CORS headers), `TEST_ENDPOINTS` (which presets need a metadata endpoint: GitHub `/user`, Stripe `/v1/balance`, Stability `/v1/user/account`), the fact that `/models` is public across the OpenAI-compatible surface and only proves the request went through, and Azure's `api-version` constant. Carry these into the preset module as **data** rather than rediscovering them the hard way.
 - **All 50 existing presets were compared between the old concatenation and §9.1's WHATWG resolution**, producing two data shapes that must change:
   1. `TEST_ENDPOINTS` values starting with `/` (`/key`, `/user`, `/v2/user`, `/v1/models`, `/v1/balance` …) meant "append after the endpoint" before, and are **root-relative** under §9.1. `openrouter` used to reach `https://openrouter.ai/api/v1/key` and now resolves to `https://openrouter.ai/key`, losing `/api/v1`. Migration must drop the leading `/` or use an absolute URL.
@@ -149,35 +149,28 @@ Adoption order, "the latest started wins":
 2. On return, check in order: `session_id` is still current → the Key exists → it is not archived → `binding` matches. Any failure → **discard**, writing no cache and changing no UI.
 3. For one Key accept only a `request_seq` greater than the adopted one; equal or lower is discarded. `finished_at` is not compared, so changing the system clock has no effect.
 4. Across unlocks, results from an old `session_id` are discarded even if every identity field matches.
-5. Keep the latest 10 per Key; delete them with the Key. Archiving keeps history but removes it from the Inbox and automatic probing.
+5. Keep the latest 10 per Key; delete them with the Key. Archiving keeps history but removes it from the Inbox.
 
 Staleness: `finished_at` older than 30 days → the Key is offered a fresh check in the quiet device list. A mismatched `binding` → "not yet verified on this device", with the record kept so the UI can say the last check happened under a different configuration. Neither is an Inbox fact.
 
 ### 10.2 Network authorization
 
-Two kinds of approval, and the words must not be confused.
+One kind of consent, and it never outlives the gesture that gave it.
 
 | Kind | Form | Lifetime | Who may use it |
 |---|---|---|---|
-| **Persistent grant** | `localStorage` record `{ fingerprint, vault_id, origin, path, approved_at }`, keyed by `fingerprint` | Until no Key produces that `fingerprint`, or the user revokes it | Automatic probing only |
-| **Single-use approval** | In-memory one-shot `{ fingerprint, session_id, key_id }`, never persisted | Consumed the moment the request goes out; a retry needs another click | Manual probes and manual usage queries |
+| **Single-use approval** | In-memory one-shot `{ fingerprint, session_id, key_id }`, never persisted | Consumed the moment the request goes out; a retry needs another click | Every probe and every usage query |
 
 Rules:
 
-- **No request without a matching persistent grant or a single-use approval created by that same interaction (I7).**
-- Automatic probing recognizes persistent grants only, does nothing while the global switch is off, and runs at most 3 concurrently.
-- A manual probe or usage query produces **one** approval per gesture. A matching persistent grant is reused without prompting; otherwise show the real recipient before sending.
-- A single-use approval is not persisted and not replayable: one gesture, one `fetch()`, and any async retry needs another click. That is what reconciles "a click is an approval" with "every request needs prior authorization". The browser's CORS preflight counts as part of that `fetch()` and consumes nothing extra.
-- `http:` targets never get a persistent grant: single-use approvals only, labelled "plaintext transport".
-- `origin`, `path` and `vault_id` are audit and display fields; matching uses `fingerprint` alone.
-- **Grant storage is not partitioned by `vault_id`**, which is the only way "cloning keeps grants" can hold: a clone has a new `vault.id`, so partitioning would strip its grants. The cost is one `fingerprint` shared across vaults, and since it includes `key.id` (UUIDv4) the real collision probability is zero.
-- No grant is acquired automatically by opening a file, copying a Key, updating the app or changing a preset. Each of those changes `fingerprint` or creates a new Key.
-- The first time automatic probing is enabled, show the real recipient origin, path and method per Key. Bulk confirmation is allowed only for Keys whose `fingerprint` is identical apart from `key.id`.
-- **A missing grant must be visible, but only where it can exist.** For auto-capable recipes (`https:`, executable), a missing grant reads "needs re-authorization" with a bulk approval entry point. Fail-closed must be repaid by the UI, but not as a warning that can never clear: `http:` targets by design never hold a grant, so they read "manual checks only (plaintext transport)". §10.3 gives the full state taxonomy.
-- **UI suggestion, not a format rule**: when editing static headers, hint "if this is a credential, move it to the authentication placement". A header value enters `send_fingerprint`, and that fingerprint sits in `localStorage`, becoming an offline-verifiable SHA-256 of the value and bypassing Argon2 entirely. A heuristic (warn when the value equals an existing `secret`) is optional convenience; class A cannot decide whether text is a secret, so this cannot become a validation rule.
-- **A clone is a new vault that keeps grants.** Cloning keeps `keys[].id`, `endpoint` and `provider_id` (§5.3), so `send_fingerprint` is unchanged, grants still match, and automatic probing sends on the clone immediately. That is intended — the same Key going to the same address is what was approved — but it is the opposite of "import inherits nothing" (§14.2), so it is recorded here rather than mistaken later for a vulnerability. The only difference would be whether ids are rebuilt: a clone keeps them, an import rebuilds them. No import exists, so a clone is the only path that keeps ids.
-- **Grants are per (key, request).** Probing and usage are different URLs and `send_fingerprint` includes `resolved_url`, so one grant mathematically cannot cover both. Every new request type computes its own fingerprint and earns its own approval.
-- **Usage and balance queries are preset-only.** The format has no `Provider.usage` (§17). Supporting them for custom providers later means adding that recipe and reusing this fingerprint mechanism, not reusing the probe grant.
+- **No request without a single-use approval created by that same interaction (I7).**
+- A probe or usage query produces **one** approval per gesture. The real recipient is shown before the request is built; the approval names that exact `fingerprint`, so a configuration change between the click and the send finds nothing to consume.
+- An approval is not persisted and not replayable: one gesture, one `fetch()`, and any async retry needs another click. That is what reconciles "a click is an approval" with "every request needs prior authorization". The browser's CORS preflight counts as part of that `fetch()` and consumes nothing extra.
+- `origin`, `path` and `vault_id` are display fields; matching uses `fingerprint` alone.
+- **There is no standing permission.** A persisted grant used to let a daily sweep and an on-save check run unattended; both were removed with the settings page that switched them on, because nothing in the product needs to send without a click. Device storage therefore holds no network consent at all, and a copied file, a clone or a restored backup inherits none — there is none to inherit.
+- **UI suggestion, not a format rule**: when editing static headers, hint "if this is a credential, move it to the authentication placement". A header value enters `send_fingerprint`, and a heuristic (warn when the value equals an existing `secret`) is optional convenience; class A cannot decide whether text is a secret, so this cannot become a validation rule.
+- **Requests are per (key, URL).** Probing and usage are different URLs and `send_fingerprint` includes `resolved_url`, so one approval mathematically cannot cover both. Every request computes its own fingerprint and earns its own approval.
+- **Usage and balance queries are preset-only.** The format has no `Provider.usage` (§17). Supporting them for custom providers later means adding that recipe and reusing this fingerprint mechanism.
 
 ### 10.3 Inbox facts, device verification, recipe states
 
@@ -214,17 +207,14 @@ Both add +6 when the Key is grouped and +4 when its newest check succeeded. Ties
 | **Not executable · no address** | `probe !== null`, relative `target`, `Key.endpoint === null` | none | "**The recipe cannot run: this Key has no server address**"; fix: fill in `endpoint`, or make `target` absolute |
 | **Not executable · bad target** | `probe !== null`, an absolute `target` that will not parse, a non-http(s) result, or `userinfo` | none | "**The recipe cannot run: the target address is invalid**"; fix: edit `target` |
 | **Not executable · unknown preset** | `provider_id = preset:<slug>` the current version does not know | none | "**This version does not recognize this Provider**"; fix: update the app, or re-point to a custom provider |
-| **Manual only** | executable, `resolved_url` is `http:` | expiry, rejected | "Manual checks only (plaintext transport)"; **never "needs re-authorization"** |
-| **Auto-capable** | executable, `https:` | expiry, rejected | "Needs re-authorization" plus bulk approval when the grant is missing |
+| **Manual only** | executable, `resolved_url` is `http:` | expiry, rejected | "Plain http — approved one request at a time": the clear-text warning, shown before the click |
+| **Checkable** | executable, `https:` | expiry, rejected | No standing warning: a check needs a click, and the prompt names the recipient |
 
 Measured occupancy over the 41 presets: 38 auto-capable, 3 with no capability (`amazon bedrock`, `exa`, `typesafe`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
 
-**A plaintext destination is a property, not a fact.** `http:` never keeps a grant (§10.2), so the Key shows a standing warning that its requests travel in clear text, and the Inbox stays silent. Judging by the resolved request rather than `endpoint` alone is still required: `probe.target` may be an absolute `http:` URL while `endpoint` is `null` or `https:`, and the credential still leaves in the clear.
+**A plaintext destination is a property, not a fact.** No consent is stored for any destination (§10.2), so the only standing statement a Key can make is the one about its own transport: an `http:` target shows that its requests travel in clear text, and the Inbox stays silent. Judging by the resolved request rather than `endpoint` alone is still required: `probe.target` may be an absolute `http:` URL while `endpoint` is `null` or `https:`, and the credential still leaves in the clear.
 
-Two distinctions that must not collapse:
-
-- **"Needs re-authorization" excludes "manual only."** `http:` targets never hold a grant, so on those Keys the hint is structurally impossible to clear. Do not present an unsatisfiable state as a missing one.
-- **"No address" and "bad target" are not "no capability."** Both arise from entirely legal edits — give a custom provider `target: "models"`, then create a Key without an `endpoint` — and the file passes class A while §8 happily saves. Calling them "this Provider does not support checking" produces a self-contradictory screen.
+**"No address" and "bad target" are not "no capability."** Both arise from entirely legal edits — give a custom provider `target: "models"`, then create a Key without an `endpoint` — and the file passes class A while §8 happily saves. Calling them "this Provider does not support checking" produces a self-contradictory screen.
 
 **No stored decisions.** Earlier revisions kept device-local dismissal records bound to a fact fingerprint (`condition` / `binding`). They are gone, for three reasons:
 
@@ -245,13 +235,12 @@ Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock
 | Container registrations | IndexedDB `containers` | `container_fingerprint` (§13.1) | Overwritten; after a password change write the new row and delete the old (§12.5) | name, icon, counts, timestamps only |
 | Observations | IndexedDB `observations` | `observation_id`, indexed by `vault_id,key_id` | 10 per Key | structured, with an irreversible `binding` |
 | Biometrics | IndexedDB `biometrics` | `container_fingerprint` | Deleted on unbind | a PRF-wrapped `file_key` |
-| Grants | `localStorage` | `send_fingerprint`, not partitioned by `vault_id` | §10.2 | no: origin and path |
 | Preferences | `localStorage` | — | never expire | no: auto-lock, theme, filters, selection |
 | Usage snapshots | `sessionStorage` | `vault_id + key_id` | current for 15 min, dropped after 24 h, cleared with the tab | quota numbers |
 
 "Not in `.keya`" is not "safe to store in the clear". All of the above must be described in copy as data that clearing browser storage would destroy. The file owes them nothing.
 
-Because none of this is in the file, it can also be dropped without touching the file. The app offers one per-vault action that deletes the vault's observations, the grants whose audit field names it, its cached allowance snapshots and its biometric binding — everything above except the device key, preferences and the container registration. It is a device cleanup, not a delete: the file stays byte-identical and nothing is sent.
+Because none of this is in the file, it can also be dropped without touching the file. The app offers one per-vault action that deletes the vault's observations, its cached allowance snapshots and its biometric binding — everything above except the device key, preferences and the container registration. It is a device cleanup, not a delete: the file stays byte-identical and nothing is sent.
 
 **Container fingerprint**, computable before unlock and the stable primary key for local state:
 
@@ -355,22 +344,22 @@ Renaming or moving the file does not invalidate the registration, since the fing
 43. Change `endpoint` → both change.
 44. Change `target` without changing the resolution → neither changes.
 45. Change `target` and the resolution → both change.
-46. Copy a Key (new id) → `send_fingerprint` changes and no grant is inherited.
+46. Copy a Key (new id) → `send_fingerprint` changes, so the copy carries no authorization.
 47. ~~Merge import~~ **Unbuilt path** (§14.2 of keya-format.md): no importer exists, so there is nothing to assert.
-48. ~~Import with the same `vault.id`~~ Same as 47 — retained only as design rationale for why a copied file never brings grants.
-49. `http:` target → no persistent grant; a single-use approval every time.
+48. ~~Import with the same `vault.id`~~ Same as 47.
+49. `http:` target → a single-use approval every time, and the prompt names the clear-text transport.
 50. Static headers: add, remove, change value, rename → `send_fingerprint` changes; reordering only → unchanged.
 51. Changing a static header also changes `observation_binding` (not just `send_fingerprint`): one case each for add, remove, value change, asserting the old observation immediately reads as "not yet checked on this device".
 52. `basic` golden vector: fixed `secret` containing `:` → assert the fingerprint and the base64 request header.
 53. Compare every frozen vector of appendix C: A/B/C/D, `container_fingerprint`, both `observation_binding` values, and C's negative vector. A single drift in `container_fingerprint` invalidates every vault's locked display and biometric binding at once, so it ranks with `send_fingerprint`.
 54. Clone → the two files' `salt` and `container_fingerprint` differ; `containers` holds two rows; binding one does not affect the other, proving nothing did "copy the container, change `vault.id`".
-55. Cloning inherits persistent grants (`send_fingerprint` unchanged). There is no importer to contrast it with; if one is ever built, it must rebuild ids and inherit nothing.
+55. Cloning keeps `keys[].id`, so `send_fingerprint` is unchanged. Authorization is unaffected because none is stored: a clone sends nothing until someone clicks.
 56. Export two encrypted copies of one vault → identical `container_fingerprint` (same vault, shared registration and biometrics) but different `nonce` and ciphertext; a clone differs. The counterpart of the previous item.
 57. `resolved_url` golden vectors: one per row of the §9.1 table, plus `https:models` → **`https://models/`** and `//other.example/x`. Also assert the serialized form is `href`: `https://Example.COM:443/v1/../v1/models` → `https://example.com/v1/models`, lowercased, default port dropped, `..` normalized — not origin+pathname and no trailing-slash stripping.
 58. Interpreter scoping: bumping the `custom` interpreter version changes custom providers' `observation_binding` but not `send_fingerprint`; bumping `preset:x` leaves `preset:y`'s observations alone.
-59. Missing grant → list and detail show "needs re-authorization"; automatic probing does not silently stop.
-60. Keys with `http:` targets never show "needs re-authorization", only "manual checks only (plaintext transport)".
-61. Single-use approval: one gesture sends one request and a second is refused; the approval never appears in `localStorage`; it dies on lock.
+59. No stored consent: nothing in `localStorage` or IndexedDB names a destination, and unlocking never sends anything on its own.
+60. Keys with `http:` targets show "manual checks only (plaintext transport)"; every other checkable key shows no standing authorization warning.
+61. Single-use approval: one gesture sends one request and a second is refused; the approval never appears in storage; it dies on lock.
 
 ### 16.5 Observations and privacy
 
@@ -382,7 +371,7 @@ Renaming or moving the file does not invalidate the registration, since the fing
 67. Lock and unlock → late results from the previous session are discarded.
 68. A custom recipe receiving 2xx → `request/ok` only, never `credential/ok`, `basic` mode included.
 69. `timeout` and `network` copy never says "invalid credential" or "CORS error"; a static header whose preflight the server rejects is also `network`, with copy hinting the server may not allow that header.
-70. Archive → no automatic probing, no Inbox facts, history kept. Delete → observations cleared.
+70. Archive → no Inbox facts, history kept. Delete → observations cleared.
 71. `probe: null` → no Inbox fact and no device row; copy is "this Provider does not support checking".
 72. **Fixable and unfixable stay apart**: `probe !== null`, `endpoint === null`, relative `target` → no Inbox fact and no device row, copy says "the recipe cannot run: this Key has no server address", not "does not support checking". Filling in `endpoint` flips it to auto-capable with "needs re-authorization".
 73. Two Keys under one custom provider, one with an `endpoint` and one without → different copy, so a Key-level problem is never described as a provider-level one.

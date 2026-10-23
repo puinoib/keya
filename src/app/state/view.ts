@@ -46,8 +46,6 @@ export interface VaultView {
   bindings: Map<string, KeyBinding>;
   /** Recipe state per key, including the ones that cannot run at all. */
   recipes: Map<string, RecipeState>;
-  /** `send_fingerprint` values this device has approved permanently. */
-  grants: Set<string>;
   /** Facts that need a decision now, most urgent first. Empty when all is well. */
   attention: AttentionRow[];
   /** This device's verification standing, for every key that can be checked. */
@@ -73,7 +71,6 @@ export interface ViewInput {
   timeZone: string;
   checks: Map<string, Observation>;
   bindings: Map<string, KeyBinding>;
-  grants: Set<string>;
 }
 
 export function buildVaultView(input: ViewInput): VaultView {
@@ -159,7 +156,6 @@ export function buildVaultView(input: ViewInput): VaultView {
     checks: input.checks,
     bindings: input.bindings,
     recipes,
-    grants: input.grants,
     attention,
     device,
   };
@@ -260,8 +256,6 @@ export interface KeyCheck {
   recipe: RecipeState | undefined;
   /** `http:` targets can only ever be approved one request at a time (I7). */
   manualOnly: boolean;
-  /** Executable, but this device has no standing consent for the request. */
-  needsAuthorization: boolean;
 }
 
 export function checkOf(view: VaultView, key: Key): KeyCheck {
@@ -278,8 +272,6 @@ export function checkOf(view: VaultView, key: Key): KeyCheck {
     kind: binding ? binding.plan.verifies : 'unverifiable',
     recipe,
     manualOnly,
-    needsAuthorization:
-      binding !== undefined && !manualOnly && !view.grants.has(binding.send),
   };
 }
 

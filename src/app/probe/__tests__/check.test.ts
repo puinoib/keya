@@ -2,8 +2,8 @@
  * §16.4 / §16.5 — the authorization gate and the full probe pipeline.
  *
  * The point of these tests is that no request leaves the browser without a
- * matching grant or a gesture-backed one-shot approval, and that a result is
- * only stored when it still describes the current configuration.
+ * gesture-backed one-shot approval, and that a result is only stored when it
+ * still describes the current configuration.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -37,9 +37,7 @@ class MemoryKv implements KeyValuePort {
 
 const DEVICE_KEY_RAW = new Uint8Array(32).fill(7);
 
-async function setup(
-  options: { grant?: boolean; approval?: boolean; payload?: KeyaFile } = {}
-) {
+async function setup(options: { approval?: boolean; payload?: KeyaFile } = {}) {
   const payload = options.payload ?? cloneFile();
   const local = new LocalState(new MemoryKv(), {
     now: () => '2026-06-01T00:00:00.000Z',
@@ -47,10 +45,12 @@ async function setup(
   const deviceKey = await importDeviceKey(DEVICE_KEY_RAW);
 
   const approved: string[] = [];
+  // One approval, consumed by the first request that asks for it.
+  let remaining = options.approval ? 1 : 0;
   const authorization: AuthorizationPort = {
-    hasGrant: async () => options.grant ?? false,
     consumeApproval: (fingerprint) => {
-      if (!(options.approval ?? false)) return false;
+      if (remaining <= 0) return false;
+      remaining -= 1;
       approved.push(fingerprint);
       return true;
     },
@@ -77,79 +77,58 @@ async function setup(
 }
 
 describe('authorization gate', () => {
-  it('refuses automatic probing without a persistent grant', async () => {
+  it('refuses a probe with nothing behind it', async () => {
     const { dependencies, requests } = await setup();
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
 
     expect(result.status).toBe('needs_authorization');
     expect(requests).toEqual([]);
   });
 
-  it('runs automatic probing when a grant exists', async () => {
-    const { dependencies, requests, local } = await setup({ grant: true });
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
-
-    expect(result.status).toBe('observed');
-    expect(requests).toHaveLength(1);
-    expect(await local.listObservations(IDS.vault, IDS.key)).toHaveLength(1);
-  });
-
-  it('needs a gesture for a manual probe without a grant', async () => {
-    const { dependencies, requests } = await setup();
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'manual',
-    });
-    expect(result.status).toBe('needs_authorization');
-    expect(requests).toEqual([]);
-  });
-
-  it('accepts a one-shot approval for a manual probe', async () => {
-    const { dependencies, requests, approved } = await setup({
+  it('accepts the one-shot approval the click created', async () => {
+    const { dependencies, requests, approved, local } = await setup({
       approval: true,
     });
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'manual',
-    });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
 
     expect(result.status).toBe('observed');
     expect(requests).toHaveLength(1);
     expect(approved).toHaveLength(1);
+    expect(await local.listObservations(IDS.vault, IDS.key)).toHaveLength(1);
   });
 
-  it('never runs a plaintext-only recipe automatically', async () => {
+  it('needs a fresh approval every time, even for an https target', async () => {
+    const { dependencies, requests } = await setup({ approval: true });
+    expect((await runCheck(dependencies, { keyId: IDS.key })).status).toBe(
+      'observed'
+    );
+    // The approval was consumed by the request above.
+    expect((await runCheck(dependencies, { keyId: IDS.key })).status).toBe(
+      'needs_authorization'
+    );
+    expect(requests).toHaveLength(1);
+  });
+
+  it('needs a gesture for a plaintext target too', async () => {
     const payload = cloneFile();
     payload.providers[0].probe = {
       target: 'http://192.168.1.5:8080/models',
       auth: { mode: 'bearer' },
       headers: [],
     };
-    const { dependencies, requests } = await setup({ payload, grant: true });
+    const { dependencies, requests } = await setup({ payload });
 
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
-    expect(result).toEqual({ status: 'skipped', reason: 'manual_only' });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
+    expect(result.status).toBe('needs_authorization');
     expect(requests).toEqual([]);
   });
 
   it('reports a non-executable recipe without touching the network', async () => {
     const payload = cloneFile();
     payload.keys[0].provider_id = presetId('exa');
-    const { dependencies, requests } = await setup({ payload, grant: true });
+    const { dependencies, requests } = await setup({ payload, approval: true });
 
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
     expect(result.status).toBe('not_executable');
     if (result.status === 'not_executable') {
       expect(result.reason).toBe('capability_missing');
@@ -159,10 +138,9 @@ describe('authorization gate', () => {
   });
 
   it('reports an unknown key instead of throwing', async () => {
-    const { dependencies } = await setup();
+    const { dependencies } = await setup({ approval: true });
     const result = await runCheck(dependencies, {
       keyId: '99999999-9999-4999-8999-999999999999',
-      mode: 'manual',
     });
     expect(result).toEqual({ status: 'no_key' });
   });
@@ -170,11 +148,8 @@ describe('authorization gate', () => {
 
 describe('adoption and persistence', () => {
   it('stores the observation with the binding of what was sent', async () => {
-    const { dependencies, local, payload } = await setup({ grant: true });
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
+    const { dependencies, local, payload } = await setup({ approval: true });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
     expect(result.status).toBe('observed');
     if (result.status !== 'observed') return;
 
@@ -186,7 +161,7 @@ describe('adoption and persistence', () => {
 
   it('discards a result whose configuration changed while in flight', async () => {
     const payload = cloneFile();
-    const { dependencies, local } = await setup({ grant: true, payload });
+    const { dependencies, local } = await setup({ approval: true, payload });
 
     // Rotate the secret during the request.
     const originalFetch = dependencies.fetch;
@@ -195,10 +170,7 @@ describe('adoption and persistence', () => {
       return originalFetch(url, init);
     };
 
-    const result = await runCheck(dependencies, {
-      keyId: IDS.key,
-      mode: 'automatic',
-    });
+    const result = await runCheck(dependencies, { keyId: IDS.key });
 
     expect(result.status).toBe('discarded');
     expect(await local.listObservations(payload.vault.id, IDS.key)).toEqual([]);

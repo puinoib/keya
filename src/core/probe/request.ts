@@ -40,7 +40,7 @@ export function base64OfUtf8(value: string): string {
  * Build the request for one probe.
  *
  * The secret is injected here and only here: `resolvedHref` stays secret-free so
- * fingerprints and grants describe the destination, not the credential.
+ * fingerprints describe the destination, not the credential.
  */
 export function buildProbeRequest(
   plan: RecipePlan,

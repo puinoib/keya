@@ -160,11 +160,9 @@ export function notExecutableLabel(reason: NotExecutableReason): string {
 export function checkStateHint(check: {
   checkable: boolean;
   manualOnly: boolean;
-  needsAuthorization: boolean;
   recipe: RecipeState | undefined;
 }): string | null {
   if (check.manualOnly) return 'Plain http — approved one request at a time';
-  if (check.needsAuthorization) return 'Automatic checks need approval';
   if (!check.checkable && check.recipe?.kind === 'not_executable') {
     return notExecutableLabel(check.recipe.reason);
   }

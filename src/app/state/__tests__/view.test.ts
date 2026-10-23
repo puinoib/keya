@@ -53,7 +53,6 @@ function input(overrides: Partial<ViewInput> = {}): ViewInput {
     timeZone: 'UTC',
     checks: new Map(),
     bindings: bindingsFor(),
-    grants: new Set(['send-fingerprint']),
     ...overrides,
   };
 }
@@ -359,28 +358,13 @@ describe('check status', () => {
 });
 
 describe('recipe state in the view', () => {
-  it('reports whether standing consent is missing', () => {
-    const allowed = buildVaultView(input());
-    expect(checkOf(allowed, allowed.file.keys[0])).toMatchObject({
-      checkable: true,
-      manualOnly: false,
-      needsAuthorization: false,
-    });
-
-    const noGrant = buildVaultView(input({ grants: new Set() }));
-    expect(checkOf(noGrant, noGrant.file.keys[0]).needsAuthorization).toBe(
-      true
-    );
-  });
-
-  it('marks a plain http recipe as manual only, never needing a grant', () => {
+  it('marks a plain http recipe as manual only', () => {
     const plain = cloneFile();
     plain.keys[0].endpoint = 'http://edge.example.com/v1';
-    const view = buildVaultView(input({ file: plain, grants: new Set() }));
+    const view = buildVaultView(input({ file: plain }));
 
     const check = checkOf(view, view.file.keys[0]);
     expect(check.manualOnly).toBe(true);
-    expect(check.needsAuthorization).toBe(false);
     expect(checkStateHint(check)).toContain('Plain http');
   });
 

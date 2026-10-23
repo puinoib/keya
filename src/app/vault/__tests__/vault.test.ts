@@ -514,7 +514,7 @@ describe('cloning', () => {
     expect(copy.vault.getPayload().vault.id).not.toBe(
       vault.getPayload().vault.id
     );
-    // Assets travel; the key ids are preserved so grant fingerprints survive.
+    // Assets travel; the key ids are preserved so approvals still match.
     expect(copy.vault.getPayload().keys[0].id).toBe(KEY_ID);
 
     const reopenedOriginal = await Vault.open(

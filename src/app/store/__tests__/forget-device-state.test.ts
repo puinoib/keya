@@ -16,7 +16,7 @@ vi.mock('../../lib/biometric', () => ({
   removeBiometric: biometric.removeBiometric,
 }));
 
-const FINGERPRINT = 'f'.repeat(64);
+const OTHER_VAULT = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 
 describe('forgetDeviceState', () => {
   it('drops observations, approvals and cached allowances for this vault', async () => {
@@ -44,13 +44,6 @@ describe('forgetDeviceState', () => {
       latency_ms: 1,
       started_at: FIXED_NOW,
       finished_at: FIXED_NOW,
-    });
-    await h.local.putGrant({
-      fingerprint: FINGERPRINT,
-      vault_id: h.payload.vault.id,
-      origin: 'https://api.example.com',
-      path: '/v1',
-      approved_at: FIXED_NOW,
     });
     store.useStore.setState({
       usage: {
@@ -83,7 +76,6 @@ describe('forgetDeviceState', () => {
     expect(await h.local.listObservations(h.payload.vault.id, IDS.key)).toEqual(
       []
     );
-    expect(await h.local.listGrants()).toEqual([]);
     expect(biometric.removeBiometric).toHaveBeenCalledWith(h.payload.vault.id);
 
     const after = store.useStore.getState();
@@ -106,21 +98,25 @@ describe('forgetDeviceState', () => {
       saveDelayMs: 0,
       confirmDestination: async () => true,
     });
-    // Grants are stored without a vault namespace so a clone keeps them; the
-    // audit field is what a cleanup uses to tell them apart.
-    await h.local.putGrant({
-      fingerprint: 'a'.repeat(64),
-      vault_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
-      origin: 'https://other.example.com',
-      path: '/v1',
-      approved_at: FIXED_NOW,
+    await h.local.recordObservation({
+      observation_id: 'obs-other',
+      vault_id: OTHER_VAULT,
+      key_id: IDS.key,
+      binding: 'other-binding',
+      kind: 'request',
+      outcome: 'ok',
+      detail_code: null,
+      http_status: 200,
+      latency_ms: 1,
+      started_at: FIXED_NOW,
+      finished_at: FIXED_NOW,
     });
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     await store.useStore.getState().forgetDeviceState();
 
-    const remaining = await h.local.listGrants();
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0].origin).toBe('https://other.example.com');
+    expect(await h.local.listObservations(OTHER_VAULT, IDS.key)).toHaveLength(
+      1
+    );
   }, 30_000);
 });
