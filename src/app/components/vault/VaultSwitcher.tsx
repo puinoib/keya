@@ -90,10 +90,16 @@ export function VaultSwitcher() {
 
   const lockKeys = getShortcutKeys(keyboardShortcuts, 'vault.lock');
   const lockShortcut = formatShortcutCompact(lockKeys);
-  // The file and folder lines are always present, so the identity block does
-  // not change height or shape depending on whether a name was customized.
-  const folderLine = folderName
-    ? `in ${folderName}`
+  // The menu names the file by where it lives: "Keya/work.keya". A browser
+  // exposes the folder's name and nothing more, so this is a label rather than
+  // a path. The identity block keeps one line either way, so it does not change
+  // shape per vault.
+  const fileLabel = folderName
+    ? `${folderName}/${activeVaultFileName ?? 'unnamed.keya'}`
+    : (activeVaultFileName ?? undefined);
+  // With no folder to join, the honest copy about why moves to a second line.
+  const folderNote = folderName
+    ? undefined
     : storageMode === 'folder'
       ? 'Folder permission required'
       : 'Not saved to a folder';
@@ -160,9 +166,9 @@ export function VaultSwitcher() {
               size="sm"
               name={currentName}
               icon={currentIcon}
-              fileName={activeVaultFileName ?? undefined}
+              fileName={fileLabel}
               fileLine="always"
-              footnote={folderLine}
+              footnote={folderNote}
             />
           </div>
           <DropdownMenuSeparator />
@@ -209,12 +215,11 @@ export function VaultSwitcher() {
                             <Check className="size-3 shrink-0 text-accent-bright" />
                           )}
                         </div>
+                        {/* The date here was the container's last write: it
+                            names nothing the user can act on, and the list is
+                            already ordered by it. Only the count stays. */}
                         <p className="truncate text-[11px] text-ink-quaternary">
-                          {meta
-                            ? `${meta.keyCount} keys · ${new Date(
-                                meta.updatedAt
-                              ).toLocaleDateString()}`
-                            : fileName}
+                          {meta ? `${meta.keyCount} keys` : fileName}
                         </p>
                       </div>
                     </DropdownMenuItem>

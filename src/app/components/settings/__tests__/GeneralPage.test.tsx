@@ -107,7 +107,7 @@ describe('vault name field', () => {
 describe('where the vault lives', () => {
   it('names the folder and the file, not a path the browser cannot read', async () => {
     render(<GeneralPage />);
-    expect(await screen.findByText('Keya / work.keya')).toBeTruthy();
+    expect(await screen.findByText('Keya/work.keya')).toBeTruthy();
   });
 });
 

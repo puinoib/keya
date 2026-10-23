@@ -61,10 +61,19 @@ describe('InboxPage', () => {
     expect(screen.getByRole('button', { name: /Housekeeping/ })).toBeTruthy();
   });
 
-  it('extending the date clears the row on its own', async () => {
+  it('offers only Open and Archive, not a second way to edit the date', () => {
     render(<InboxPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Extend 30 days' }));
+    expect(screen.getByRole('button', { name: 'Open' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Extend 30 days' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Clear date' })).toBeNull();
+  });
+
+  it('archiving from the row clears it', async () => {
+    render(<InboxPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
 
     await waitFor(() =>
       expect(harness.api.useStore.getState().view?.attention).toEqual([])
@@ -72,7 +81,7 @@ describe('InboxPage', () => {
     const key = harness.api.useStore
       .getState()
       .view?.file.keys.find((entry) => entry.id === IDS.key);
-    expect(key?.expiry?.value).toBe('2026-04-04');
+    expect(key?.archived_at).not.toBeNull();
   });
 
   it('listing housekeeping is quiet and offers a check', () => {

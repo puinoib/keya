@@ -24,7 +24,6 @@ import {
   removeBiometric,
 } from '@/app/lib/biometric';
 import { FileStorage } from '@/app/lib/storage';
-import { describeAge } from '@/app/state/presentation';
 import {
   AlertDialogRoot,
   AlertDialogContent,
@@ -152,8 +151,6 @@ export function GeneralPage() {
 
   if (!data) return null;
 
-  const now = new Date();
-
   return (
     <>
       {/* Page Header */}
@@ -219,25 +216,19 @@ export function GeneralPage() {
           </div>
           {/* A browser exposes the folder's name and nothing more, so this is
               deliberately not a path and carries no click target. */}
-          <div className="mt-3 space-y-1 text-[11px] text-ink-quaternary">
-            <p className="flex items-center gap-1.5">
-              <FolderSimple className="size-3.5 shrink-0" />
-              {storageMode === 'folder' ? (
-                <span className="truncate font-mono">
-                  {folderName ? `${folderName} / ` : ''}
-                  {activeVaultFileName ?? 'unnamed file'}
-                </span>
-              ) : (
-                <span>
-                  Not saved to a folder — export a .keya copy to keep one
-                </span>
-              )}
-            </p>
-            <p>
-              Created {describeAge(data.created_at, now)}, last changed{' '}
-              {describeAge(data.content_updated_at, now)}
-            </p>
-          </div>
+          <p className="mt-2 flex items-center justify-end gap-1.5 text-[11px] text-ink-quaternary">
+            <FolderSimple className="size-3.5 shrink-0" />
+            {storageMode === 'folder' ? (
+              <span className="truncate font-mono">
+                {folderName ? `${folderName}/` : ''}
+                {activeVaultFileName ?? 'unnamed file'}
+              </span>
+            ) : (
+              <span>
+                Not saved to a folder — export a .keya copy to keep one
+              </span>
+            )}
+          </p>
         </section>
 
         {/* Security Section */}

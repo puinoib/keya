@@ -5,6 +5,11 @@ import { cn } from '@/lib/utils';
 interface VaultIdentityProps {
   name: string;
   icon?: string;
+  /**
+   * The vault on disk. Callers that know the folder pass the joined form
+   * (`Keya/work.keya`), because a browser exposes the folder's name and never
+   * its path.
+   */
   fileName?: string;
   /**
    * "auto" hides the file name when it is just the display name plus `.keya`.

@@ -384,15 +384,21 @@ export function ProvidersPage() {
                             </span>
                           )}
                         </div>
+                        {/* Every provider sends to a base address, preset or
+                            custom: it is the one fact that makes two similarly
+                            named entries distinguishable. */}
+                        {provider.endpoint && (
+                          <p
+                            className="mt-0.5 truncate font-mono text-[11px] text-ink-quaternary"
+                            title={provider.endpoint}
+                          >
+                            {provider.endpoint}
+                          </p>
+                        )}
                         {provider.isCustom && (
-                          <>
-                            <p className="mt-0.5 truncate font-mono text-[11px] text-ink-quaternary">
-                              {provider.endpoint}
-                            </p>
-                            <p className="mt-0.5 truncate text-[11px] text-ink-quaternary">
-                              {describeCustomCheck(provider.check)}
-                            </p>
-                          </>
+                          <p className="mt-0.5 truncate text-[11px] text-ink-quaternary">
+                            {describeCustomCheck(provider.check)}
+                          </p>
                         )}
                       </div>
                     </div>

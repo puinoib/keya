@@ -84,6 +84,14 @@ describe('ProvidersPage', () => {
     expect(screen.getByText('No check configured')).toBeTruthy();
   });
 
+  it('shows the base endpoint of presets and custom providers', () => {
+    render(<ProvidersPage />);
+
+    // A preset's address comes from its recipe; a custom one from the vault.
+    expect(screen.getByText('https://api.openai.com/v1')).toBeTruthy();
+    expect(screen.getByText('https://edge.example.com/v1')).toBeTruthy();
+  });
+
   it('adds a custom provider through the form', async () => {
     render(<ProvidersPage />);
 

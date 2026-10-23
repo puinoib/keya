@@ -9,7 +9,6 @@ import {
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import type { Key } from '../../../core/payload/types';
-import type { Expiry } from '../../../core/time/expiry';
 import {
   attentionCount,
   attentionSeverity,
@@ -18,31 +17,11 @@ import {
   type AttentionRow,
 } from '../../state/view';
 import { providerLabel } from '../../state/providers';
-import { daysSince, expiryToDate } from '../../state/presentation';
+import { daysSince } from '../../state/presentation';
 import { Button } from '@/components/ui/button';
 import { useStore, runManualCheck } from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Thirty days past whichever is later: the current expiry or today. */
-function extendExpiry(expiry: Expiry, now: Date): Expiry {
-  const current = expiryToDate(expiry);
-  const base =
-    current && current.getTime() > now.getTime() ? current : new Date(now);
-  const next = new Date(base.getTime() + 30 * DAY_MS);
-
-  if (expiry.kind === 'instant') {
-    return { kind: 'instant', value: next.toISOString() };
-  }
-  return {
-    kind: 'date',
-    value: `${String(next.getFullYear()).padStart(4, '0')}-${String(
-      next.getMonth() + 1
-    ).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`,
-  };
-}
 
 function expiryLine(row: AttentionRow): string {
   if (row.fact.kind !== 'expiry') return '';
@@ -70,7 +49,6 @@ function whyLine(row: AttentionRow): string {
 export function InboxPage() {
   const navigate = useNavigate();
   const view = useStore((s) => s.view);
-  const updateKey = useStore((s) => s.updateKey);
   const archiveKey = useStore((s) => s.archiveKey);
   const setSelectedKeyId = useStore((s) => s.setSelectedKeyId);
   const setShowArchived = useStore((s) => s.setShowArchived);
@@ -104,13 +82,6 @@ export function InboxPage() {
       });
     }
     return success;
-  };
-
-  const extend = (row: AttentionRow) => {
-    if (!view || !row.key.expiry) return;
-    updateKey(row.key.id, {
-      expiry: extendExpiry(row.key.expiry, view.now),
-    });
   };
 
   const checkAll = async () => {
@@ -223,28 +194,10 @@ export function InboxPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    {row.fact.kind === 'expiry' ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => extend(row)}
-                        >
-                          Extend 30 days
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() =>
-                            updateKey(row.key.id, { expiry: null })
-                          }
-                        >
-                          Clear date
-                        </Button>
-                      </>
-                    ) : (
+                    {/* A rejected credential clears by checking it again; an
+                        expiry clears when the date is edited, which is what
+                        Open is for. */}
+                    {row.fact.kind === 'rejected' && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -263,6 +216,14 @@ export function InboxPage() {
                     >
                       Open
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => archiveKey(row.key.id)}
+                    >
+                      Archive
+                    </Button>
                   </div>
                 </div>
                 <div className="mt-1.5 flex items-center gap-3">
@@ -275,12 +236,6 @@ export function InboxPage() {
                     className="text-[11px] text-ink-quaternary hover:text-ink-secondary transition-colors"
                   >
                     Why am I seeing this?
-                  </button>
-                  <button
-                    onClick={() => archiveKey(row.key.id)}
-                    className="text-[11px] text-ink-quaternary hover:text-ink-secondary transition-colors"
-                  >
-                    Archive key
                   </button>
                 </div>
                 {expandedWhy === rowId(row) && (
