@@ -22,9 +22,9 @@ const THEME_OPTIONS = [
 
 const CLIPBOARD_OPTIONS = [
   { value: 0, label: 'Off' },
-  { value: 15, label: '15 seconds' },
-  { value: 30, label: '30 seconds' },
-  { value: 60, label: '1 minute' },
+  { value: 15, label: '15s' },
+  { value: 30, label: '30s' },
+  { value: 60, label: '1m' },
 ];
 
 /**
@@ -142,11 +142,11 @@ export function GeneralPage() {
                 updateSettings({ clipboard_clear_seconds: Number(v) })
               }
             >
-              <SelectTrigger className="w-28 h-7 text-xs">
+              <SelectTrigger className="w-20 h-7 text-xs">
                 <SelectValue>
                   {CLIPBOARD_OPTIONS.find(
                     (option) => option.value === clipboardSeconds
-                  )?.label ?? '15 seconds'}
+                  )?.label ?? '15s'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>

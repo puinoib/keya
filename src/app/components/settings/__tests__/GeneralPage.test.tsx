@@ -49,7 +49,7 @@ describe('clipboard clearing', () => {
   it('shows the stored delay and offers to turn it off', () => {
     render(<GeneralPage />);
 
-    expect(screen.getByText('15 seconds')).toBeTruthy();
+    expect(screen.getByText('15s')).toBeTruthy();
     expect(
       screen.getByText(/Remove a copied credential from the clipboard/)
     ).toBeTruthy();
