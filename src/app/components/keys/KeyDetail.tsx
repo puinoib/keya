@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
-import { checkStatusLabel, checkStateHint } from '../../state/presentation';
+import { checkStateHint, describeFailure } from '../../state/presentation';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -25,11 +25,8 @@ import {
   EyeSlash,
   X,
   CheckCircle,
-  XCircle,
-  MinusCircle,
   Clock,
   Globe,
-  Tag,
   FileText,
   Warning,
 } from '@phosphor-icons/react';
@@ -38,6 +35,11 @@ import { EditKeyDialog } from './KeyList';
 import { UsageCard } from './UsageCard';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function KeyDetail() {
   const {
@@ -49,6 +51,9 @@ export function KeyDetail() {
     restoreKey,
     refreshUsage,
     usage,
+    setFilterGroupId,
+    setFilterProvider,
+    setShowArchived,
   } = useStore();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -78,7 +83,6 @@ export function KeyDetail() {
   const check = checkOf(view, key);
   const observed = check.observation;
   const connectionStatus = check.status;
-  const connectionLabel = checkStatusLabel(check.status, check.kind);
   const stateHint = checkStateHint(check);
   const plannedKind = check.kind;
   const testOk = connectionStatus === 'success';
@@ -150,6 +154,46 @@ export function KeyDetail() {
         .filter(Boolean)
         .join(' · ')
     : 'Never';
+  // The list encodes the last check as a dot; the panel shows the same dot for
+  // the same key, and puts the words behind it on hover instead of a second
+  // badge. Colour alone is never the only carrier: the tooltip says the rest.
+  const statusDot = testOk
+    ? 'bg-success-bright'
+    : testFail
+      ? 'bg-danger'
+      : 'bg-ink-quaternary/35';
+  const verdictHint =
+    check.kind === 'unverifiable'
+      ? (checkError ??
+        stateHint ??
+        'Keya cannot verify this provider from a browser.')
+      : testOk
+        ? check.kind === 'credential'
+          ? 'Verified: the provider accepted this credential.'
+          : 'Reachable: the endpoint answered. This does not prove the credential is valid.'
+        : testFail
+          ? `Failed: ${describeFailure(observed) ?? 'the last request did not succeed'}.`
+          : 'Untested: no check has run from this device yet.';
+  const showStatusChips = Boolean(
+    expiryLabel || (stateHint && (check.manualOnly || check.needsAuthorization))
+  );
+
+  /** Group is a filter, so using it means leaving the panel whose row it came from. */
+  const handleGroupClick = () => {
+    setShowArchived(Boolean(key.archived_at));
+    setFilterGroupId(key.group_id ?? '__ungrouped__');
+    setSelectedKeyId(null);
+  };
+
+  /** The provider is a filter in exactly the same way. */
+  const handleProviderClick = () => {
+    setShowArchived(Boolean(key.archived_at));
+    setFilterProvider(provider);
+    setSelectedKeyId(null);
+  };
+  const groupTitle = key.group_id
+    ? `Filter the list by ${group?.name ?? 'this group'}`
+    : 'Filter the list by ungrouped keys';
 
   return (
     <>
@@ -168,19 +212,59 @@ export function KeyDetail() {
             style={{ animationDelay: '40ms' }}
           >
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-ink-primary truncate">
-                {key.name}
-              </h2>
-              <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-tertiary">
-                {getProviderLogo(provider) && (
-                  <img
-                    src={getProviderLogo(provider)!}
-                    alt=""
-                    className="size-3 shrink-0"
-                  />
+              <div className="flex min-w-0 items-center gap-2">
+                {key.archived_at ? (
+                  <Archive className="size-3 shrink-0 text-ink-quaternary" />
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger
+                      type="button"
+                      delay={200}
+                      aria-label={verdictHint}
+                      className="inline-flex size-3 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright/40"
+                    >
+                      <span
+                        className={`size-1.5 rounded-full ${statusDot}`}
+                        aria-hidden
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={6} className="max-w-56">
+                      {verdictHint}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-                <span className="truncate">{provider}</span>
-              </p>
+                <h2 className="min-w-0 truncate text-base font-semibold text-ink-primary">
+                  {key.name}
+                </h2>
+              </div>
+              {/* Belonging: what this key is, and where it is filed. Both are
+                  filters, so both lead back to the list. */}
+              <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-ink-tertiary">
+                <button
+                  type="button"
+                  onClick={handleProviderClick}
+                  title={`Filter the list by ${provider}`}
+                  className="inline-flex min-w-0 items-center gap-1.5 rounded transition-colors duration-100 hover:text-ink-primary"
+                >
+                  {getProviderLogo(provider) && (
+                    <img
+                      src={getProviderLogo(provider)!}
+                      alt=""
+                      className="size-3 shrink-0"
+                    />
+                  )}
+                  <span className="truncate">{provider}</span>
+                </button>
+                <span className="shrink-0 text-divider">·</span>
+                <button
+                  type="button"
+                  onClick={handleGroupClick}
+                  title={groupTitle}
+                  className="inline-flex min-w-0 items-center gap-1 rounded transition-colors duration-100 hover:text-ink-primary"
+                >
+                  <span className="truncate">{groupLabel}</span>
+                </button>
+              </div>
             </div>
             <button
               onClick={() => setSelectedKeyId(null)}
@@ -191,37 +275,11 @@ export function KeyDetail() {
             </button>
           </div>
 
-          {!key.archived_at && (
+          {!key.archived_at && showStatusChips && (
             <div
               className="mt-3 flex flex-wrap items-center gap-1.5 animate-stagger-in"
               style={{ animationDelay: '120ms' }}
             >
-              {testOk && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-bright">
-                  <CheckCircle className="size-3" />
-                  {connectionLabel}
-                </span>
-              )}
-              {testFail && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-                  <XCircle className="size-3" /> Failed
-                </span>
-              )}
-              {connectionStatus === 'untested' &&
-                check.kind === 'unverifiable' && (
-                  <span
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary"
-                    title={checkError ?? undefined}
-                  >
-                    <MinusCircle className="size-3" /> Cannot verify
-                  </span>
-                )}
-              {connectionStatus === 'untested' &&
-                check.kind !== 'unverifiable' && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-quaternary">
-                    <MinusCircle className="size-3" /> Untested
-                  </span>
-                )}
               {expiryLabel && (
                 <span
                   className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -317,9 +375,9 @@ export function KeyDetail() {
                 label="Endpoint"
                 value={key.endpoint}
                 mono
+                copyable
               />
             )}
-            <MetaRow icon={Tag} label="Group" value={groupLabel} />
             {key.description && (
               <MetaRow
                 icon={FileText}
@@ -346,7 +404,7 @@ export function KeyDetail() {
                 label="Last tested"
                 value={
                   observed?.finished_at
-                    ? formatDate(observed?.finished_at)
+                    ? formatDate(observed.finished_at)
                     : 'Never'
                 }
               />
@@ -355,7 +413,7 @@ export function KeyDetail() {
                 label="Latency"
                 value={
                   observed?.latency_ms != null
-                    ? `${observed?.latency_ms}ms`
+                    ? `${observed.latency_ms}ms`
                     : '-'
                 }
                 highlight={testOk && observed?.latency_ms != null}
@@ -465,6 +523,9 @@ function MetaRow({
   tone,
   detail,
   nowrap,
+  copyable,
+  valueTitle,
+  onValueClick,
 }: {
   icon: React.ElementType;
   label: string;
@@ -474,7 +535,13 @@ function MetaRow({
   tone?: 'danger' | 'warning';
   detail?: string;
   nowrap?: boolean;
+  /** Adds a copy control for values a reader pastes elsewhere. */
+  copyable?: boolean;
+  /** Makes the value a button, with this as its tooltip. */
+  valueTitle?: string;
+  onValueClick?: () => void;
 }) {
+  const [copiedValue, setCopiedValue] = useState(false);
   const iconClassName =
     tone === 'danger'
       ? 'text-danger'
@@ -495,17 +562,55 @@ function MetaRow({
       : tone === 'warning'
         ? 'text-[#d97706]/80 dark:text-[#fbbf24]/80'
         : 'text-ink-quaternary';
+  const valueClass = `text-xs ${valueClassName} ${
+    mono ? 'font-mono break-all' : nowrap ? 'whitespace-nowrap' : 'break-words'
+  }`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedValue(true);
+      setTimeout(() => setCopiedValue(false), 2000);
+      toast.success('Copied to clipboard');
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   return (
     <div className="flex items-start gap-2">
       <Icon className={`size-3 mt-0.5 shrink-0 ${iconClassName}`} />
       <div className="min-w-0 flex-1">
         <p className="text-xs text-ink-quaternary">{label}</p>
-        <p
-          className={`text-xs ${valueClassName} ${mono ? 'font-mono break-all' : nowrap ? 'whitespace-nowrap' : 'break-words'}`}
-        >
-          {value}
-        </p>
+        <div className="flex items-start gap-1">
+          {onValueClick ? (
+            <button
+              type="button"
+              onClick={onValueClick}
+              title={valueTitle}
+              className={`min-w-0 text-left transition-colors hover:text-ink-primary ${valueClass}`}
+            >
+              {value}
+            </button>
+          ) : (
+            <p className={`min-w-0 ${valueClass}`}>{value}</p>
+          )}
+          {copyable && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label={`Copy ${label.toLowerCase()}`}
+              title={copiedValue ? 'Copied!' : `Copy ${label.toLowerCase()}`}
+              className="inline-flex size-4 shrink-0 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+            >
+              {copiedValue ? (
+                <CheckCircle className="size-3 text-success-bright" />
+              ) : (
+                <Copy className="size-3" />
+              )}
+            </button>
+          )}
+        </div>
         {detail && detail !== value && (
           <p className={`mt-0.5 text-xs ${detailClassName}`}>{detail}</p>
         )}
