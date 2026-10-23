@@ -97,38 +97,23 @@ export function UsageCard({
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((open) => !open)}
-        className="flex w-full items-center justify-between gap-2 px-3 pt-1 pb-2.5 text-left"
+        className="flex w-full items-start justify-between gap-2 px-3 pt-1 pb-2.5 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span
-            className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
-          >
-            {summaryLine({
-              loading,
-              failure,
-              snapshot,
-              tightest,
-              provider,
-              currentTime,
-              stale,
-            })}
-          </span>
-          {snapshot && tightest && (
-            // One bar for the window the line above names. Three unlabelled
-            // bars side by side read as decoration, not as data.
+          {snapshot && tightest ? (
+            // The summary *is* the most-used window. Expanding adds the other
+            // windows instead of repeating this one with a second bar.
+            <WindowRow window={tightest} stale={stale} now={currentTime} />
+          ) : (
             <span
-              className="mt-1.5 block h-1 overflow-hidden rounded-full bg-surface-3"
-              aria-hidden="true"
+              className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
             >
-              <span
-                className={`block h-full rounded-full ${barTone(Math.round(tightest.percent_used), stale)}`}
-                style={{ width: `${Math.round(tightest.percent_used)}%` }}
-              />
+              {summaryLine({ loading, failure, provider })}
             </span>
           )}
         </span>
         <CaretDown
-          className={`size-3 shrink-0 text-ink-quaternary transition-transform duration-150 ${
+          className={`mt-0.5 size-3 shrink-0 text-ink-quaternary transition-transform duration-150 ${
             expanded ? 'rotate-180' : ''
           }`}
         />
@@ -156,14 +141,16 @@ export function UsageCard({
 
             {snapshot && (
               <>
-                {snapshot.windows.map((window) => (
-                  <WindowRow
-                    key={window.id}
-                    window={window}
-                    stale={stale}
-                    now={currentTime}
-                  />
-                ))}
+                {snapshot.windows
+                  .filter((window) => window.id !== tightest?.id)
+                  .map((window) => (
+                    <WindowRow
+                      key={window.id}
+                      window={window}
+                      stale={stale}
+                      now={currentTime}
+                    />
+                  ))}
                 <p className="text-[10px] leading-relaxed text-ink-quaternary">
                   {stale ? (
                     <>
@@ -191,40 +178,18 @@ export function UsageCard({
   );
 }
 
-/** The single line the collapsed card shows. */
+/** The single line the collapsed card shows when there is no snapshot yet. */
 function summaryLine({
   loading,
   failure,
-  snapshot,
-  tightest,
   provider,
-  currentTime,
-  stale,
 }: {
   loading: boolean;
   failure: UsageFailure | undefined;
-  snapshot: UsageEntry['snapshot'] | undefined;
-  tightest: UsageWindow | null;
   provider: string;
-  currentTime: Date;
-  stale: boolean;
 }): string {
   if (loading) return `Asking ${provider}…`;
   if (failure) return failureTitle(failure);
-  if (snapshot && tightest) {
-    const reset = describeReset(tightest.resets_at, currentTime);
-    // The age only earns space when the figure is not current; the fresh case
-    // already fits in one line at 288px.
-    const age = stale ? describeAge(snapshot.checked_at, currentTime) : null;
-    return [
-      tightest.label,
-      `${Math.round(tightest.percent_used)}% used`,
-      reset,
-      age,
-    ]
-      .filter(Boolean)
-      .join(' · ');
-  }
   return 'Nothing read yet — the provider’s own numbers, nothing stored.';
 }
 

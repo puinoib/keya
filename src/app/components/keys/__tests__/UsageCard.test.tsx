@@ -212,9 +212,16 @@ describe('UsageCard disclosure', () => {
     expect(detail?.getAttribute('aria-hidden')).toBe('true');
     expect(detail?.className).toContain('grid-rows-[0fr]');
 
+    const occurrences = () =>
+      (view.textContent?.match(/62% used/g) ?? []).length;
+    expect(occurrences()).toBe(1);
+
     await expand(view);
     expect(detail?.getAttribute('aria-hidden')).toBe('false');
     expect(detail?.className).toContain('grid-rows-[1fr]');
+    // The summary is the tightest window; expanding adds the others and does
+    // not repeat it with a second bar.
+    expect(occurrences()).toBe(1);
     expect(view.textContent).toContain('10% used');
     expect(view.textContent).toContain('7 days is closest to its limit');
   });
