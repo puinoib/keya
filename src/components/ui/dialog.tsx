@@ -26,7 +26,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       className={cn(
-        'fixed inset-0 z-50 bg-black/30 data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
+        'fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
         className
       )}
       {...props}
@@ -44,7 +44,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          'fixed left-[50%] top-[50%] z-[60] w-full max-w-lg translate-x-[-50%] translate-y-[-50%]',
+          'fixed left-[50%] top-[50%] z-[60] flex w-full max-w-lg translate-x-[-50%] translate-y-[-50%] flex-col',
           'bg-canvas-raised border border-line rounded-lg shadow-dialog',
           'p-6 gap-4',
           'data-[state=open]:animate-dialog-enter data-[state=closed]:animate-dialog-exit',
@@ -53,7 +53,7 @@ function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-accent-bright disabled:pointer-events-none data-[state=open]:bg-surface-4 data-[state=open]:text-ink-tertiary">
+        <DialogPrimitive.Close className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-md text-ink-quaternary transition-colors hover:bg-surface-4 hover:text-ink-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright disabled:pointer-events-none">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

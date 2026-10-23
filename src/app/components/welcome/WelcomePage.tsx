@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { VaultCard } from '../vault/VaultCard';
 import { VaultPasswordDialog } from '../vault/VaultPasswordDialog';
+import { VaultIdentity } from '../vault/VaultIdentity';
 import {
   FolderOpen,
   Spinner,
@@ -398,37 +399,42 @@ export function WelcomePage() {
 
             {/* Mode: Unlock */}
             {mode === 'unlock' && selectedVault && (
-              <VaultPasswordDialog
-                mode="unlock"
-                vaultName={
-                  cachedMetas[selectedVault]?.name ||
-                  selectedVault.replace(/\.keya$/, '')
-                }
-                vaultIcon={cachedMetas[selectedVault]?.icon}
-                fileName={selectedVault}
-                vaultId={cachedMetas[selectedVault]?.vault_id}
-                onSubmit={
-                  supportsFSA
-                    ? (pw, signal) =>
-                        handleUnlockVault(selectedVault, pw, signal)
-                    : handleLegacyUnlock
-                }
-                onExportRaw={async (pw) => {
-                  if (supportsFSA) {
-                    return FileStorage.exportPlaintext(selectedVault, pw);
+              <div className="flex flex-col gap-4">
+                <VaultIdentity
+                  name={
+                    cachedMetas[selectedVault]?.name ||
+                    selectedVault.replace(/\.keya$/, '')
                   }
-                  const file = legacyFile;
-                  if (!file) throw new Error('No file selected.');
-                  if (file.size > MAX_FILE_SIZE)
-                    throw new VaultOpenError({ failure: 'file_too_large' });
-                  const bytes = new Uint8Array(await file.arrayBuffer());
-                  return FileStorage.exportPlaintextFromBytes(bytes, pw);
-                }}
-                onCancel={() => {
-                  setMode('home');
-                  setSelectedVault(null);
-                }}
-              />
+                  icon={cachedMetas[selectedVault]?.icon}
+                  fileName={selectedVault}
+                />
+                <VaultPasswordDialog
+                  mode="unlock"
+                  fileName={selectedVault}
+                  vaultId={cachedMetas[selectedVault]?.vault_id}
+                  onSubmit={
+                    supportsFSA
+                      ? (pw, signal) =>
+                          handleUnlockVault(selectedVault, pw, signal)
+                      : handleLegacyUnlock
+                  }
+                  onExportRaw={async (pw) => {
+                    if (supportsFSA) {
+                      return FileStorage.exportPlaintext(selectedVault, pw);
+                    }
+                    const file = legacyFile;
+                    if (!file) throw new Error('No file selected.');
+                    if (file.size > MAX_FILE_SIZE)
+                      throw new VaultOpenError({ failure: 'file_too_large' });
+                    const bytes = new Uint8Array(await file.arrayBuffer());
+                    return FileStorage.exportPlaintextFromBytes(bytes, pw);
+                  }}
+                  onCancel={() => {
+                    setMode('home');
+                    setSelectedVault(null);
+                  }}
+                />
+              </div>
             )}
 
             {/* Mode: New */}
@@ -473,8 +479,7 @@ export function WelcomePage() {
                 </div>
                 <VaultPasswordDialog
                   mode="new"
-                  vaultName={newVaultName || 'New Vault'}
-                  vaultIcon={newVaultIcon}
+                  autoFocus={false}
                   onSubmit={handleCreateVault}
                   onCancel={() => {
                     setMode('home');

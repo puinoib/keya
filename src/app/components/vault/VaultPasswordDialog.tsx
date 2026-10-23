@@ -1,8 +1,7 @@
 import { useState, useEffect, useDeferredValue, useRef } from 'react';
 import {
   Spinner,
-  ArrowRight,
-  Lock,
+  LockSimpleOpen,
   Fingerprint,
   Eye,
   EyeSlash,
@@ -22,17 +21,21 @@ import {
 import { VaultOpenError } from '@/app/lib/storage';
 import { describeOpenFailure } from '@/app/state/presentation';
 import { downloadBytes } from '@/app/lib/download';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
 interface VaultPasswordDialogProps {
   mode: 'unlock' | 'new';
-  vaultName: string;
-  vaultIcon?: string;
   fileName?: string;
   vaultId?: string;
   onSubmit: (password: string, signal: AbortSignal) => Promise<void>;
   onCancel: () => void;
   /** §6.3 escape hatch: decrypt raw bytes after double confirmation. */
   onExportRaw?: (password: string) => Promise<Uint8Array>;
+  /** Dialog callers close with the X, so the text link is only inline. */
+  showBack?: boolean;
+  /** Focus the password field on mount (off when another field comes first). */
+  autoFocus?: boolean;
 }
 
 const STRENGTH_CONFIG = {
@@ -43,15 +46,21 @@ const STRENGTH_CONFIG = {
   4: { label: 'Strong', color: 'bg-emerald-500' },
 } as const;
 
+const EYE_BUTTON =
+  'absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-ink-quaternary transition-colors hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright';
+
+const SECONDARY_BUTTON =
+  'flex w-full items-center justify-center gap-2 rounded-md border border-line bg-surface-2 px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright disabled:pointer-events-none disabled:opacity-50';
+
 export function VaultPasswordDialog({
   mode,
-  vaultName,
-  vaultIcon,
   fileName,
   vaultId,
   onSubmit,
   onCancel,
   onExportRaw,
+  showBack = true,
+  autoFocus = true,
 }: VaultPasswordDialogProps) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -64,6 +73,7 @@ export function VaultPasswordDialog({
   const [verdict, setVerdict] = useState<PasswordVerdict | null>(null);
   const [openError, setOpenError] = useState<VaultOpenError | null>(null);
   const submitController = useRef<AbortController | null>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const isCreate = mode === 'new';
   const canSubmit = isCreate
@@ -97,6 +107,17 @@ export function VaultPasswordDialog({
     isBiometricSupported() &&
       isBiometricRegistered(vaultId).then(setShowBiometric);
   }, [isCreate, vaultId]);
+
+  // Opening a dialog to type a password should not require a second click.
+  useEffect(() => {
+    if (autoFocus) passwordRef.current?.focus();
+  }, [autoFocus]);
+
+  // Unmounting while Argon2 runs (dialog dismissed by X or Esc) must terminate
+  // the Worker, otherwise the vault can still open after the dialog is gone.
+  useEffect(() => {
+    return () => submitController.current?.abort();
+  }, []);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -185,45 +206,53 @@ export function VaultPasswordDialog({
     }
   };
 
-  return (
-    <div className="space-y-3">
-      {!isCreate && (
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="flex items-center justify-center size-8 rounded-lg bg-accent/15 text-accent-bright">
-            {vaultIcon || <Lock className="size-4" />}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-ink-primary">
-              Unlock: {vaultName}
-            </p>
-            {fileName && (
-              <p className="text-xs text-ink-quaternary">{fileName}</p>
-            )}
-          </div>
-        </div>
-      )}
+  const submitClassName = cn(
+    'flex h-10 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors',
+    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright',
+    loading && 'bg-accent text-white/90 cursor-progress',
+    !loading &&
+      (canSubmit
+        ? 'bg-accent text-white hover:bg-accent-hover'
+        : 'border border-line bg-surface-4 text-ink-quaternary')
+  );
 
-      <div className="space-y-1.5">
-        <Label className="text-xs text-ink-tertiary">Master Password</Label>
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void handleSubmit();
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <Label
+          htmlFor={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
+          className="text-[13px] font-medium text-ink-secondary"
+        >
+          Master Password
+        </Label>
         <div className="relative">
           <Input
+            ref={passwordRef}
+            id={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
             type={showPassword ? 'text' : 'password'}
             name={isCreate ? 'vault-new-secret' : 'vault-unlock-secret'}
             autoComplete="off"
             data-form-type="other"
             data-lpignore="true"
+            aria-invalid={!!error}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={
-              isCreate ? 'Choose a strong password...' : 'Enter password...'
-            }
-            className="pr-10"
-            onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+            placeholder={isCreate ? 'Choose a strong password...' : undefined}
+            className={cn(
+              'pr-10',
+              error && 'border-danger/60 focus-visible:ring-danger/60'
+            )}
           />
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
-            className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+            className={EYE_BUTTON}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
@@ -234,9 +263,9 @@ export function VaultPasswordDialog({
           </button>
         </div>
         {isCreate && password && (
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <div className="flex-1 flex gap-1">
+              <div className="flex flex-1 gap-1">
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
@@ -275,29 +304,33 @@ export function VaultPasswordDialog({
       </div>
 
       {isCreate && (
-        <div className="space-y-1.5">
-          <Label className="text-xs text-ink-tertiary">Confirm Password</Label>
+        <div className="flex flex-col gap-2">
+          <Label
+            htmlFor="vault-confirm-secret"
+            className="text-[13px] font-medium text-ink-secondary"
+          >
+            Confirm Password
+          </Label>
           <div className="relative">
             <Input
+              id="vault-confirm-secret"
               type={showConfirmPassword ? 'text' : 'password'}
               name="vault-confirm-secret"
               autoComplete="off"
               data-form-type="other"
               data-lpignore="true"
+              aria-invalid={!!confirm && password !== confirm}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Re-enter your password..."
               className={`pr-10 ${
-                confirm && password !== confirm ? 'border-red-500/50' : ''
+                confirm && password !== confirm ? 'border-danger/60' : ''
               }`}
-              onKeyDown={(e) =>
-                e.key === 'Enter' && canSubmit && handleSubmit()
-              }
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((visible) => !visible)}
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-ink-quaternary transition-colors hover:text-ink-secondary"
+              className={EYE_BUTTON}
               aria-label={
                 showConfirmPassword ? 'Hide password' : 'Show password'
               }
@@ -321,7 +354,13 @@ export function VaultPasswordDialog({
           be opened.
         </p>
       )}
-      {error && <p className="text-xs text-danger">{error}</p>}
+
+      {error && (
+        <p role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      )}
+
       {openError &&
         fileName &&
         onExportRaw &&
@@ -330,7 +369,7 @@ export function VaultPasswordDialog({
           <button
             type="button"
             onClick={handleExportRaw}
-            className="w-full rounded-md border border-line bg-surface-2 px-3 py-2 text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
+            className={cn(SECONDARY_BUTTON, 'py-2 text-xs')}
           >
             Export decrypted raw text (not a backup)
           </button>
@@ -338,9 +377,10 @@ export function VaultPasswordDialog({
 
       {showBiometric && !isCreate && (
         <button
+          type="button"
           onClick={handleBiometric}
           disabled={bioLoading}
-          className="w-full flex items-center justify-center gap-2 rounded-md bg-surface-2 border border-line px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-surface-3 transition-colors disabled:opacity-50"
+          className={SECONDARY_BUTTON}
         >
           {bioLoading ? (
             <Spinner className="size-4 animate-spin" />
@@ -352,24 +392,28 @@ export function VaultPasswordDialog({
       )}
 
       <button
-        onClick={handleSubmit}
+        type="submit"
         disabled={loading || !canSubmit}
-        className="w-full flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-bright transition-colors disabled:opacity-50"
+        aria-busy={loading}
+        className={submitClassName}
       >
         {loading ? (
           <Spinner className="size-4 animate-spin" />
         ) : (
-          <ArrowRight className="size-4" />
+          !isCreate && <LockSimpleOpen className="size-4" />
         )}
         {isCreate ? 'Create' : 'Unlock'}
       </button>
 
-      <button
-        onClick={handleCancel}
-        className="w-full text-xs text-ink-quaternary hover:text-ink-tertiary transition-colors py-1"
-      >
-        ← Back
-      </button>
-    </div>
+      {showBack && (
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="-mt-1 w-full py-1 text-xs text-ink-quaternary transition-colors hover:text-ink-tertiary"
+        >
+          ← Back
+        </button>
+      )}
+    </form>
   );
 }

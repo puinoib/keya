@@ -12,13 +12,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VaultIdentity } from './VaultIdentity';
 import {
   Lock,
   Plus,
@@ -54,6 +49,10 @@ export function VaultSwitcher() {
     activeVaultFileName?.replace(/\.keya$/, '') ||
     'Vault';
   const currentIcon = vaultData?.icon?.trim() || '';
+
+  const switchMeta = switchTarget ? metas[switchTarget] : undefined;
+  const switchName =
+    switchMeta?.name?.trim() || switchTarget?.replace(/\.keya$/, '') || 'Vault';
 
   const handleSwitch = async (
     fileName: string,
@@ -184,23 +183,17 @@ export function VaultSwitcher() {
         open={!!switchTarget}
         onOpenChange={(v) => !v && setSwitchTarget(null)}
       >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Unlock Vault</DialogTitle>
-            <DialogDescription>
-              Enter the master password for{' '}
-              {metas[switchTarget!]?.name ||
-                switchTarget?.replace(/\.keya$/, '')}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-sm gap-5">
+          <DialogTitle className="sr-only">{`Unlock ${switchName}`}</DialogTitle>
+          <VaultIdentity
+            name={switchName}
+            icon={switchMeta?.icon}
+            fileName={switchTarget ?? undefined}
+          />
           <VaultPasswordDialog
             mode="unlock"
-            vaultName={
-              metas[switchTarget!]?.name ||
-              switchTarget?.replace(/\.keya$/, '') ||
-              ''
-            }
-            vaultId={metas[switchTarget!]?.vault_id}
+            showBack={false}
+            vaultId={switchMeta?.vault_id}
             fileName={switchTarget ?? undefined}
             onSubmit={(pw, signal) =>
               switchTarget
@@ -218,16 +211,11 @@ export function VaultSwitcher() {
       </Dialog>
 
       <Dialog open={showNewVault} onOpenChange={setShowNewVault}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Create New Vault</DialogTitle>
-            <DialogDescription>
-              Set a master password for your new vault
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-sm gap-5">
+          <DialogTitle>Create New Vault</DialogTitle>
           <VaultPasswordDialog
             mode="new"
-            vaultName="New Vault"
+            showBack={false}
             onSubmit={handleCreate}
             onCancel={() => setShowNewVault(false)}
           />
