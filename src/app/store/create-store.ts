@@ -194,6 +194,8 @@ export interface AppState {
     patch: Partial<Pick<Group, 'name' | 'icon' | 'order'>>
   ) => void;
   deleteGroup: (id: string) => void;
+  /** Rewrites dense order 0..n-1 from the given ids. */
+  reorderGroups: (orderedIds: readonly string[]) => void;
 
   updateSettings: (patch: SettingsPatch) => void;
   changePassword: (
@@ -804,6 +806,16 @@ export function createAppStore(deps: StoreDeps): AppStore {
       deleteGroup: (id) => {
         if (!runtime) return;
         const result = runtime.vault.removeGroup(id);
+        if (!result.ok) {
+          toast.error(describeEditFailure(result.reason, result.issues));
+          return;
+        }
+        void afterChange();
+      },
+
+      reorderGroups: (orderedIds) => {
+        if (!runtime) return;
+        const result = runtime.vault.reorderGroups(orderedIds);
         if (!result.ok) {
           toast.error(describeEditFailure(result.reason, result.issues));
           return;

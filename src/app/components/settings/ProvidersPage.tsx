@@ -271,14 +271,11 @@ export function ProvidersPage() {
 
   return (
     <>
-      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-2">
-        Providers
-      </h1>
-
       <p className="mb-4 text-xs leading-relaxed text-ink-quaternary">
         Preset providers cover common AI services. Add a custom provider for any
         other API, including search, scraping, email, payments, and internal
-        endpoints.
+        endpoints. Hiding a preset removes it from the Key form's provider
+        picker; keys that already use it keep working.
       </p>
 
       <div className="mb-5 flex h-8 items-center gap-2 rounded-md border border-line bg-surface-2 px-2.5">

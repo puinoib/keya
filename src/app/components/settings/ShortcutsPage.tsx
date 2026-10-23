@@ -116,10 +116,6 @@ export function ShortcutsPage() {
 
   return (
     <>
-      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
-        Shortcuts
-      </h1>
-
       <div className="rounded-lg border border-line bg-surface-2">
         <div className="flex items-center justify-between gap-3 border-b border-line p-3">
           <div>

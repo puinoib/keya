@@ -20,10 +20,12 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedKeysRouteImport } from './routes/_authenticated/keys'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
+import { Route as AuthenticatedSettingsVaultRouteImport } from './routes/_authenticated/settings.vault'
 import { Route as AuthenticatedSettingsShortcutsRouteImport } from './routes/_authenticated/settings.shortcuts'
 import { Route as AuthenticatedSettingsProvidersRouteImport } from './routes/_authenticated/settings.providers'
 import { Route as AuthenticatedSettingsGroupsRouteImport } from './routes/_authenticated/settings.groups'
 import { Route as AuthenticatedSettingsGeneralRouteImport } from './routes/_authenticated/settings.general'
+import { Route as AuthenticatedSettingsDataRouteImport } from './routes/_authenticated/settings.data'
 import { Route as AuthenticatedSettingsAboutRouteImport } from './routes/_authenticated/settings.about'
 
 const StartRoute = StartRouteImport.update({
@@ -81,6 +83,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsVaultRoute =
+  AuthenticatedSettingsVaultRouteImport.update({
+    id: '/vault',
+    path: '/vault',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsShortcutsRoute =
   AuthenticatedSettingsShortcutsRouteImport.update({
     id: '/shortcuts',
@@ -105,6 +113,12 @@ const AuthenticatedSettingsGeneralRoute =
     path: '/general',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsDataRoute =
+  AuthenticatedSettingsDataRouteImport.update({
+    id: '/data',
+    path: '/data',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsAboutRoute =
   AuthenticatedSettingsAboutRouteImport.update({
     id: '/about',
@@ -123,10 +137,12 @@ export interface FileRoutesByFullPath {
   '/docs/$slug': typeof DocsSlugRoute
   '/docs/': typeof DocsIndexRoute
   '/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/settings/data': typeof AuthenticatedSettingsDataRoute
   '/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
   '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings/vault': typeof AuthenticatedSettingsVaultRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -139,10 +155,12 @@ export interface FileRoutesByTo {
   '/docs/$slug': typeof DocsSlugRoute
   '/docs': typeof DocsIndexRoute
   '/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/settings/data': typeof AuthenticatedSettingsDataRoute
   '/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/settings/groups': typeof AuthenticatedSettingsGroupsRoute
   '/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/settings/vault': typeof AuthenticatedSettingsVaultRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -158,10 +176,12 @@ export interface FileRoutesById {
   '/docs/$slug': typeof DocsSlugRoute
   '/docs/': typeof DocsIndexRoute
   '/_authenticated/settings/about': typeof AuthenticatedSettingsAboutRoute
+  '/_authenticated/settings/data': typeof AuthenticatedSettingsDataRoute
   '/_authenticated/settings/general': typeof AuthenticatedSettingsGeneralRoute
   '/_authenticated/settings/groups': typeof AuthenticatedSettingsGroupsRoute
   '/_authenticated/settings/providers': typeof AuthenticatedSettingsProvidersRoute
   '/_authenticated/settings/shortcuts': typeof AuthenticatedSettingsShortcutsRoute
+  '/_authenticated/settings/vault': typeof AuthenticatedSettingsVaultRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -177,10 +197,12 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/docs/'
     | '/settings/about'
+    | '/settings/data'
     | '/settings/general'
     | '/settings/groups'
     | '/settings/providers'
     | '/settings/shortcuts'
+    | '/settings/vault'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -193,10 +215,12 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/docs'
     | '/settings/about'
+    | '/settings/data'
     | '/settings/general'
     | '/settings/groups'
     | '/settings/providers'
     | '/settings/shortcuts'
+    | '/settings/vault'
     | '/settings'
   id:
     | '__root__'
@@ -211,10 +235,12 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/docs/'
     | '/_authenticated/settings/about'
+    | '/_authenticated/settings/data'
     | '/_authenticated/settings/general'
     | '/_authenticated/settings/groups'
     | '/_authenticated/settings/providers'
     | '/_authenticated/settings/shortcuts'
+    | '/_authenticated/settings/vault'
     | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -307,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/vault': {
+      id: '/_authenticated/settings/vault'
+      path: '/vault'
+      fullPath: '/settings/vault'
+      preLoaderRoute: typeof AuthenticatedSettingsVaultRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/shortcuts': {
       id: '/_authenticated/settings/shortcuts'
       path: '/shortcuts'
@@ -335,6 +368,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsGeneralRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/data': {
+      id: '/_authenticated/settings/data'
+      path: '/data'
+      fullPath: '/settings/data'
+      preLoaderRoute: typeof AuthenticatedSettingsDataRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/about': {
       id: '/_authenticated/settings/about'
       path: '/about'
@@ -347,19 +387,23 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAboutRoute: typeof AuthenticatedSettingsAboutRoute
+  AuthenticatedSettingsDataRoute: typeof AuthenticatedSettingsDataRoute
   AuthenticatedSettingsGeneralRoute: typeof AuthenticatedSettingsGeneralRoute
   AuthenticatedSettingsGroupsRoute: typeof AuthenticatedSettingsGroupsRoute
   AuthenticatedSettingsProvidersRoute: typeof AuthenticatedSettingsProvidersRoute
   AuthenticatedSettingsShortcutsRoute: typeof AuthenticatedSettingsShortcutsRoute
+  AuthenticatedSettingsVaultRoute: typeof AuthenticatedSettingsVaultRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAboutRoute: AuthenticatedSettingsAboutRoute,
+  AuthenticatedSettingsDataRoute: AuthenticatedSettingsDataRoute,
   AuthenticatedSettingsGeneralRoute: AuthenticatedSettingsGeneralRoute,
   AuthenticatedSettingsGroupsRoute: AuthenticatedSettingsGroupsRoute,
   AuthenticatedSettingsProvidersRoute: AuthenticatedSettingsProvidersRoute,
   AuthenticatedSettingsShortcutsRoute: AuthenticatedSettingsShortcutsRoute,
+  AuthenticatedSettingsVaultRoute: AuthenticatedSettingsVaultRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
 }
 

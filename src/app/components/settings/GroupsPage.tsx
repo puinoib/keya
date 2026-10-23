@@ -4,7 +4,15 @@ import { activeKeys, sortedGroups } from '../../state/view';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
-import { Plus, Trash, PencilSimple, Check, X } from '@phosphor-icons/react';
+import {
+  CaretDown,
+  CaretUp,
+  Check,
+  PencilSimple,
+  Plus,
+  Trash,
+  X,
+} from '@phosphor-icons/react';
 
 function EmojiPickerPopover({
   icon,
@@ -53,7 +61,8 @@ function EmojiPickerPopover({
 }
 
 export function GroupsPage() {
-  const { view, addGroup, updateGroup, deleteGroup } = useStore();
+  const { view, addGroup, updateGroup, deleteGroup, reorderGroups } =
+    useStore();
   const groups = view ? sortedGroups(view) : [];
   const keys = view ? activeKeys(view) : [];
 
@@ -85,14 +94,25 @@ export function GroupsPage() {
   }
   const getKeyCount = (groupId: string) => keyCounts.get(groupId) ?? 0;
 
+  // Dense renumbering is the edit's rule: swap the two ids and let the payload
+  // rewrite 0..n-1, instead of inventing a midpoint order.
+  const moveGroup = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= groups.length) return;
+    const next = [...groups];
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderGroups(next.map((group) => group.id));
+  };
+
   return (
     <>
-      <h1 className="text-base font-semibold tracking-tight text-ink-primary mb-6">
-        Groups
-      </h1>
+      <p className="mb-3 text-xs leading-relaxed text-ink-quaternary">
+        The order here is the order in the sidebar. Deleting a group keeps its
+        keys: they move to Ungrouped.
+      </p>
 
       <div className="rounded-lg border border-line bg-surface-2 divide-y divide-line">
-        {groups.map((g) => (
+        {groups.map((g, index) => (
           <div key={g.id} className="p-3">
             {editingId === g.id ? (
               <div className="space-y-2">
@@ -151,6 +171,22 @@ export function GroupsPage() {
                 <span className="text-[11px] text-ink-quaternary">
                   {getKeyCount(g.id)} keys
                 </span>
+                <button
+                  onClick={() => moveGroup(index, -1)}
+                  disabled={index === 0}
+                  aria-label={`Move ${g.name} up`}
+                  className="text-ink-quaternary transition-colors hover:text-ink-primary disabled:opacity-30 disabled:hover:text-ink-quaternary"
+                >
+                  <CaretUp className="size-3.5" />
+                </button>
+                <button
+                  onClick={() => moveGroup(index, 1)}
+                  disabled={index === groups.length - 1}
+                  aria-label={`Move ${g.name} down`}
+                  className="text-ink-quaternary transition-colors hover:text-ink-primary disabled:opacity-30 disabled:hover:text-ink-quaternary"
+                >
+                  <CaretDown className="size-3.5" />
+                </button>
                 <button
                   onClick={() => {
                     setEditingIcon('');

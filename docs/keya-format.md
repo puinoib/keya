@@ -918,7 +918,7 @@ These values pin the three easiest mistakes: ① C′ must equal C, so sorting r
 - `containers`: the registration table behind the locked view, keyed by `container_fingerprint`.
 - Biometric records: PRF-wrapped unlock material (see D.4 for the current deviation).
 - `observations`: check results, the latest 10 per Key.
-- `preferences`: auto-lock and hidden presets.
+- `preferences`: auto-lock, clipboard clearing, and hidden presets.
 - Network approvals: none. They live in memory for one interaction (§10.2).
 - Usage snapshots: a tab-level `sessionStorage` cache, dropped when stale.
 
