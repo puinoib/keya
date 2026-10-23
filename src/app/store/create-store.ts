@@ -677,7 +677,14 @@ export function createAppStore(deps: StoreDeps): AppStore {
         set((state) => ({
           usage: {
             ...state.usage,
-            [keyId]: { state: 'loading', vault_id: vaultId },
+            [keyId]: {
+              state: 'loading',
+              vault_id: vaultId,
+              // Keep the last figures on screen while a refresh is in flight;
+              // the button already says "Checking…", and swapping the card back
+              // to its empty state would collapse an open disclosure.
+              snapshot: state.usage[keyId]?.snapshot,
+            },
           },
         }));
 

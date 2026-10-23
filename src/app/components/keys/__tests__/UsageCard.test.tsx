@@ -64,9 +64,8 @@ describe('UsageCard', () => {
     expect(view.textContent).toContain('Check usage');
     expect(view.textContent).not.toMatch(/% used/);
     expect(view.textContent).toContain('Nothing read yet');
-
-    await expand(view);
-    expect(view.textContent).toMatch(/Nothing is stored in this vault/);
+    // Nothing to reveal yet, so there is no disclosure control.
+    expect(view.querySelector('button[aria-expanded]')).toBeNull();
   });
 
   it('renders the allowance windows the provider reported', async () => {
@@ -157,6 +156,29 @@ describe('UsageCard', () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the last figures on screen while a refresh is in flight', async () => {
+    const { view } = await render({
+      entry: entry({
+        state: 'loading',
+        snapshot: {
+          provider: 'OpenCode Go',
+          checked_at: new Date().toISOString(),
+          windows: [
+            {
+              id: 'weekly',
+              label: '7 days',
+              percent_used: 72,
+              resets_at: null,
+            },
+          ],
+        },
+      }),
+    });
+
+    expect(view.textContent).toContain('72% used');
+    expect(view.textContent).toContain('Checking');
+  });
+
   it('disables the button while a query is in flight', async () => {
     const { view } = await render({ entry: entry({ state: 'loading' }) });
     const button = view.querySelector('button') as HTMLButtonElement;
@@ -180,6 +202,40 @@ describe('UsageCard', () => {
 });
 
 describe('UsageCard disclosure', () => {
+  it('expands when the summary row itself is clicked', async () => {
+    const { view } = await render({
+      entry: entry({
+        snapshot: {
+          provider: 'OpenCode Go',
+          checked_at: new Date().toISOString(),
+          windows: [
+            {
+              id: 'weekly',
+              label: '7 days',
+              percent_used: 72,
+              resets_at: null,
+            },
+          ],
+        },
+      }),
+    });
+
+    const summaryButton = view.querySelector(
+      '[data-usage-summary] button'
+    ) as HTMLButtonElement;
+    expect(summaryButton).toBeTruthy();
+
+    await act(async () => {
+      summaryButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(
+      view.querySelector('[data-usage-detail]')?.getAttribute('aria-hidden')
+    ).toBe('false');
+    // Once clipped away, the summary must leave the tab order.
+    expect(summaryButton.getAttribute('tabindex')).toBe('-1');
+  });
+
   it('keeps the per-window detail behind the summary', async () => {
     const { view } = await render({
       now: new Date('2026-10-20T12:00:00.000Z'),
@@ -208,21 +264,28 @@ describe('UsageCard disclosure', () => {
 
     // The detail is mounted for the height animation, but hidden from readers
     // and clipped to nothing until the disclosure is opened.
+    const summary = view.querySelector('[data-usage-summary]');
     const detail = view.querySelector('[data-usage-detail]');
+    expect(summary?.getAttribute('aria-hidden')).toBe('false');
     expect(detail?.getAttribute('aria-hidden')).toBe('true');
-    expect(detail?.className).toContain('grid-rows-[0fr]');
-
-    const occurrences = () =>
-      (view.textContent?.match(/62% used/g) ?? []).length;
-    expect(occurrences()).toBe(1);
 
     await expand(view);
+
+    // The summary row goes away as the full three-window list arrives.
+    expect(summary?.getAttribute('aria-hidden')).toBe('true');
+    expect(summary?.className).toContain('grid-rows-[0fr]');
     expect(detail?.getAttribute('aria-hidden')).toBe('false');
     expect(detail?.className).toContain('grid-rows-[1fr]');
-    // The summary is the tightest window; expanding adds the others and does
-    // not repeat it with a second bar.
-    expect(occurrences()).toBe(1);
-    expect(view.textContent).toContain('10% used');
-    expect(view.textContent).toContain('7 days is closest to its limit');
+
+    const body = detail?.textContent ?? '';
+    expect(body).toContain('7 days');
+    expect(body).toContain('Month');
+    expect(body).toContain('62% used');
+    expect(body).toContain('10% used');
+    expect(body).toContain('7 days is closest to its limit');
+    // No divider between the title row and the open detail.
+    expect(
+      view.querySelector('[data-usage-detail] .space-y-2')?.className
+    ).not.toContain('border-t');
   });
 });

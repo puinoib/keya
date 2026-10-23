@@ -153,8 +153,10 @@ export function KeyDetail() {
 
   return (
     <>
+      {/* The card fills the animated wrapper minus its right gutter, so the
+          wrapper is the only place the panel width is decided. */}
       <div
-        className="w-72 mr-3 flex h-full min-h-0 flex-col rounded-xl
+        className="w-[calc(100%-0.75rem)] mr-3 flex h-full min-h-0 flex-col rounded-xl
                    bg-canvas-raised border border-line shadow-elevated
                    overflow-hidden"
       >

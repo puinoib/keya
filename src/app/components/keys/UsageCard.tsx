@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CaretDown, Clock, Gauge, Warning } from '@phosphor-icons/react';
 import {
   describeAge,
@@ -38,7 +38,9 @@ export function UsageCard({
 }) {
   const currentTime = useNow(now);
   const [expanded, setExpanded] = useState(false);
-  const snapshot = entry?.state === 'ok' ? entry.snapshot : undefined;
+  // A refresh keeps the previous snapshot, so the card does not collapse while
+  // a request is in flight.
+  const snapshot = entry?.snapshot;
   const stale = isStaleSnapshot(snapshot?.checked_at, currentTime);
 
   if (!supportsUsage(provider)) {
@@ -60,20 +62,59 @@ export function UsageCard({
   const loading = entry?.state === 'loading';
   const failure = entry?.state === 'failed' ? entry.failure : undefined;
   const tightest = tightestWindow(snapshot);
+  /** Nothing to reveal for a provider that has not answered yet. */
+  const canExpand = Boolean(snapshot || failure);
+  const summaryVisible = !expanded || !canExpand;
+  const detailVisible = expanded && canExpand;
+  /** Focus has to leave the summary when it is clipped away. */
+  const headerToggleRef = useRef<HTMLButtonElement | null>(null);
+
+  const label = (
+    <>
+      <Gauge className="size-3" />
+      Usage
+      {stale && snapshot && (
+        <span
+          data-usage-stale
+          title={`Not current — last checked ${describeAge(
+            snapshot.checked_at,
+            currentTime
+          )}. Refresh for current numbers.`}
+          className="inline-flex"
+        >
+          <Warning
+            className="size-3 text-[#d97706] dark:text-[#fbbf24]"
+            aria-label="This figure is not current"
+          />
+        </span>
+      )}
+    </>
+  );
 
   return (
     <div className="rounded-lg bg-surface-2 border border-line-subtle mb-4 animate-stagger-in">
       <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-        <span className="flex items-center gap-1.5 text-xs text-ink-quaternary">
-          <Gauge className="size-3" />
-          Usage
-          {stale && (
-            <Warning
-              className="size-3 text-[#d97706] dark:text-[#fbbf24]"
-              aria-label="This figure is not current"
+        {canExpand ? (
+          <button
+            ref={headerToggleRef}
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+            title={expanded ? 'Hide usage details' : 'Show usage details'}
+            className="flex items-center gap-1.5 rounded text-xs text-ink-quaternary transition-colors hover:text-ink-secondary"
+          >
+            {label}
+            <CaretDown
+              className={`size-3 transition-transform duration-150 ${
+                expanded ? 'rotate-180' : ''
+              }`}
             />
-          )}
-        </span>
+          </button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs text-ink-quaternary">
+            {label}
+          </span>
+        )}
         <button
           onClick={onRefresh}
           disabled={loading}
@@ -93,64 +134,77 @@ export function UsageCard({
         </button>
       </div>
 
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((open) => !open)}
-        className="flex w-full items-start justify-between gap-2 px-3 pt-1 pb-2.5 text-left"
-      >
-        <span className="min-w-0 flex-1">
-          {snapshot && tightest ? (
-            // The summary *is* the most-used window. Expanding adds the other
-            // windows instead of repeating this one with a second bar.
-            <WindowRow window={tightest} stale={stale} now={currentTime} />
-          ) : (
-            <span
-              className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
-            >
-              {summaryLine({ loading, failure, provider })}
-            </span>
-          )}
-        </span>
-        <CaretDown
-          className={`mt-0.5 size-3 shrink-0 text-ink-quaternary transition-transform duration-150 ${
-            expanded ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-
-      {/* Height animation without measuring: a 0fr -> 1fr grid row grows and
-          shrinks with its content, so a refresh that adds a window still fits. */}
+      {/* Summary: the most-used window while collapsed. Expanding fades it out
+          and fades the complete list in, so the same window is never drawn
+          twice. Both rows animate with their own content height. */}
       <div
-        data-usage-detail
-        aria-hidden={!expanded}
-        className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${
-          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        data-usage-summary
+        aria-hidden={!summaryVisible}
+        className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${
+          summaryVisible
+            ? 'grid-rows-[1fr] opacity-100'
+            : 'grid-rows-[0fr] opacity-0'
         }`}
       >
         <div className="overflow-hidden">
-          <div className="space-y-2 border-t border-line-subtle px-3 py-2.5">
-            {failure && <UsageFailureNote failure={failure} />}
+          {canExpand ? (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              tabIndex={summaryVisible ? 0 : -1}
+              onClick={() => {
+                setExpanded(true);
+                // The row is about to be clipped; keep focus on a control that
+                // stays visible.
+                headerToggleRef.current?.focus();
+              }}
+              className="w-full rounded-b-lg px-3 pt-1 pb-2.5 text-left transition-colors hover:bg-surface-3/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-bright/40"
+            >
+              {snapshot && tightest ? (
+                <WindowRow window={tightest} stale={stale} now={currentTime} />
+              ) : (
+                <span
+                  className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
+                >
+                  {summaryLine({ loading, failure, provider })}
+                </span>
+              )}
+            </button>
+          ) : (
+            <div className="px-3 pt-1 pb-2.5">
+              <span
+                className={`block truncate text-[11px] ${summaryTone(entry, stale)}`}
+              >
+                {summaryLine({ loading, failure, provider })}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {!entry && (
-              <p className="text-[11px] leading-relaxed text-ink-quaternary">
-                Ask {provider} for its allowance windows. Nothing is stored in
-                this vault.
-              </p>
-            )}
+      <div
+        data-usage-detail
+        aria-hidden={!detailVisible}
+        className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${
+          detailVisible
+            ? 'grid-rows-[1fr] opacity-100'
+            : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-2 px-3 py-2.5">
+            {failure && <UsageFailureNote failure={failure} />}
 
             {snapshot && (
               <>
-                {snapshot.windows
-                  .filter((window) => window.id !== tightest?.id)
-                  .map((window) => (
-                    <WindowRow
-                      key={window.id}
-                      window={window}
-                      stale={stale}
-                      now={currentTime}
-                    />
-                  ))}
+                {snapshot.windows.map((window) => (
+                  <WindowRow
+                    key={window.id}
+                    window={window}
+                    stale={stale}
+                    now={currentTime}
+                  />
+                ))}
                 <p className="text-[10px] leading-relaxed text-ink-quaternary">
                   {stale ? (
                     <>

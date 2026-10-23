@@ -173,10 +173,11 @@ export function KeysPage() {
 
       {/* Detail wrapper: animates width so flex naturally shifts the list.
           Its padding is what keeps the panel clear of the top bar and gives it
-          a bounded height to scroll inside. */}
+          a bounded height to scroll inside. The panel keeps the narrower width
+          below md, where it would otherwise crowd the list off the row. */}
       <div
         className={`pt-[4.5rem] pb-3 shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
-                    ${selectedKeyId ? 'w-80' : 'w-0'}`}
+                    ${selectedKeyId ? 'w-80 md:w-88' : 'w-0'}`}
       >
         <KeyDetail />
       </div>
