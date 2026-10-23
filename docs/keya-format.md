@@ -289,7 +289,7 @@ Before writing: the payload passes class A (P4), `nonce` is a freshly generated 
 - Decode with `TextDecoder('utf-8', { fatal: true })`; invalid UTF-8, WTF-8 style lone surrogates included, fails at once.
 - Accept **any legal JSON shape**: no canonical form, no field order requirement.
 - Do **not** require or implement duplicate-key detection, nesting limits, or `NaN`/`Infinity`/comment/trailing-comma detection. Such bytes can only come from something other than the writer, and writer bytes are already authenticated; requiring them would mean hand-writing a JSON lexer inside the container path to defend against an unreachable adversary.
-- All of that strictness lives **only on the plaintext JSON import path** (§14.3), where input is untrusted text. Hence two parsers exist by design: `JSON.parse` plus structural validation in the container path, and a strict parser on import. Do not move the lexer into the container path, and do not relax the import path to save a dependency.
+- All of that strictness would live **only on a plaintext JSON import path** (§14.3), where input is untrusted text. With no importer (§14), the container path is the only parser, so `JSON.parse` plus structural validation is the whole story. If import is ever built, it gets its own strict parser: never move a lexer into the container path, and never relax the import path to save a dependency.
 
 ### 4.3 What is deliberately not done
 
@@ -552,11 +552,11 @@ The writer re-checks total length after serialization rather than trusting the a
 One behavior only: **refuse to open**. No partial load, no automatic repair, no read-only-plus-pending-repair state.
 
 - The message lists every failing field path, up to 10 plus "and N more".
-- The only escape hatch is an **explicit export of the decrypted raw plaintext bytes** (pretty-printed when it parses), never writing to the file. It requires double confirmation — a separate checkbox "I understand this writes plaintext secrets" — and the label "this is not an encrypted backup". The user fixes the text and imports it back through §14.3.
+- The only escape hatch is an **explicit export of the decrypted raw plaintext bytes** (pretty-printed when it parses), never writing to the file. It requires double confirmation — a separate checkbox "I understand this writes plaintext secrets" — and the label "this is not an encrypted backup". The user fixes the text by hand and keeps the secrets they need; there is no importer to read it back (§14).
 - That path means plaintext in memory, so it must be an explicit isolated state: one byte buffer, **not parsed into the model**, no fields rendered, nothing in the store, nothing in any device index, dropped on lock or close. This is the only exception I5 allows. Parsing it into the store because "it decrypted after all" degrades into the half-open vault I5 forbids.
 - The original file stays untouched.
 
-Why there is no repair flow: dangling references — a `custom:` pointing at a missing provider, a `group_id` pointing at a missing group — cannot be produced by editing. Deleting a referenced provider is refused (§8), and merge import allocates new ids and rebuilds the mapping (§14.2). Three repair paths for an unreachable state would cost a new state machine (read-only unlock, pending repair, its interaction with the save queue and auto-lock) for nothing.
+Why there is no repair flow: dangling references — a `custom:` pointing at a missing provider, a `group_id` pointing at a missing group — cannot be produced by editing. Deleting a referenced provider is refused (§8), and a future merge import would allocate new ids and rebuild the mapping (§14.2, unbuilt). Three repair paths for an unreachable state would cost a new state machine (read-only unlock, pending repair, its interaction with the save queue and auto-lock) for nothing.
 
 ### 6.4 Write closure
 
@@ -637,11 +637,13 @@ The accepted cost: changing `target` without changing the resolution does not in
 
 ## 14. Import and export
 
+> **Status: there is no importer.** §14.2 (merge import) and §14.3 (plaintext JSON import) are not implemented and are not planned. The text stays because two implemented behaviors rest on its reasoning: opening a `.keya` file restores content and no device state (§14.1), and a vault copied from elsewhere never brings network grants with it (§14.2's "different `vault.id` → rebuild ids"). A second vault is opened from the welcome screen and lives beside the first; it is never merged into an open one. Runtime test vectors 47, 48, 55, 77 and 85 in [keya-runtime.md](keya-runtime.md) §16 therefore describe an unbuilt path.
+
 ### 14.1 Opening an encrypted file
 
 Unlocking with the password restores all business content. It restores no device observations, preferences, grants, usage snapshots or biometric bindings.
 
-### 14.2 Merge import
+### 14.2 Merge import (not implemented)
 
 Import is an in-memory transaction with a fixed order; a failure at any step leaves nothing behind.
 
@@ -675,7 +677,7 @@ Observations and grants are not imported; they were never in the file. Import br
 
 Since `key.id` is newly allocated, `send_fingerprint` changes, so no Key sends anything until it is confirmed (§10.2).
 
-### 14.3 Plaintext JSON (exchange format)
+### 14.3 Plaintext JSON (exchange format, export only — no importer)
 
 ```ts
 interface KeyaExchange {

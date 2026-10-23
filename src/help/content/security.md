@@ -1,7 +1,7 @@
 ---
 title: Security
 description: The file format, the key derivation, and the limits of local protection.
-updated: 2026-03-01
+updated: 2026-10-23
 order: 4
 ---
 
@@ -52,10 +52,10 @@ This is not a distributed lock: another device using the same cloud folder can s
 
 There is no Keya backend and no account system. The deployed site can also load Cloudflare Web Analytics, the zone's RUM beacon: it is injected at the edge, is not part of this repository, and can be switched off in the Cloudflare dashboard. Beyond that, network requests come only from something you asked for: a check, which first shows the address the credential will actually reach, or a usage query, approved for the URL it asks. A daily check reuses only destinations you allowed permanently, and it never asks on its own. `http:` destinations can never be approved permanently and are confirmed for each send; usage queries refuse an `http:` endpoint outright because the key would travel in clear text. Redirects are never followed.
 
-Destinations you approve are stored on this device; importing a vault never grants network access.
+Destinations you approve are stored on this device; a vault file copied from another device arrives with no grants.
 
 ## Backups and exports
 
-An encrypted `.keya` copy is the backup format. **Export JSON** writes the vault's keys, providers and groups as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. It carries no device state — no preferences, check results or approvals. Importing either format is not available yet.
+An encrypted `.keya` copy is the backup format. **Export JSON** writes the vault's keys, providers and groups as plaintext for moving them into other tools; that file is a secret, and deleting it is the only protection it has. It carries no device state — no preferences, check results or approvals. Keya cannot read either export back: to restore or move a vault, copy the `.keya` file into the folder and open it with its password.
 
 If you change a password, older copies keep opening with the old one. Keya cannot revoke a copy that left the device.

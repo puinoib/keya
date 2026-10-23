@@ -5,8 +5,6 @@ import {
   MagnifyingGlass,
   Plus,
   Download,
-  Key,
-  FileCode,
   DownloadSimple,
   Lock,
 } from '@phosphor-icons/react';
@@ -14,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
@@ -31,11 +28,6 @@ export function TopBar() {
     saveFailure,
     markExported,
   } = useStore();
-  const notifyUnavailable = (feature: string) => {
-    toast('Not available in this build', {
-      description: `${feature} is not wired up yet. Existing keys are unaffected.`,
-    });
-  };
 
   /* ──── Export .keya ──── */
   const handleExportKeya = async () => {
@@ -135,31 +127,16 @@ export function TopBar() {
         )
       )}
 
-      {/* Import/Export menu */}
+      {/* Export menu. Keya has no importer: another vault is opened from the
+          welcome screen, not merged into this one. */}
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex items-center justify-center size-7 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-150">
           <Download className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-44">
-          {/* Keya import/export — encrypted, first priority */}
-          <DropdownMenuItem
-            disabled
-            title="Import is not available in this build"
-            onClick={() => notifyUnavailable('Import .keya')}
-          >
-            <Key className="size-3.5" /> Import .keya
-          </DropdownMenuItem>
+          {/* Encrypted copy first; the plaintext export is the exception. */}
           <DropdownMenuItem onClick={handleExportKeya}>
             <DownloadSimple className="size-3.5" /> Export .keya
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {/* JSON import/export — unencrypted, secondary */}
-          <DropdownMenuItem
-            disabled
-            title="Import is not available in this build"
-            onClick={() => notifyUnavailable('Import JSON')}
-          >
-            <FileCode className="size-3.5" /> Import JSON
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportJson}>
             <DownloadSimple className="size-3.5" /> Export JSON

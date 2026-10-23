@@ -33,7 +33,7 @@ Every write runs through one transaction, which owns timestamps and dirty state.
 
 - **Trimming happens at input, and the user sees it.** Stripping a pasted newline from a token is right; for `secret` it is a silent edit of credential bytes. In `basic` mode the password in a `user:password` really can start or end with a space, and a PEM's trailing `\n` can be content. So the field says "leading and trailing whitespace removed" the moment it happens, instead of changing bytes at save time and surfacing as an authentication failure later.
 - **The reader never normalizes.** It accepts only canonical form and treats edge whitespace as a class A failure, consistent with "no guessing, no repair". Whitespace in a file can only come from hand editing or a foreign writer.
-- One `normalize()` serves all five entry points: create, edit, plaintext import, merge import, programmatic edit (I14). Skip one and the same credential yields different bytes depending on the path, which `observation_binding` is built to notice.
+- One `normalize()` serves every entry point: create, edit, programmatic edit, and a future import (I14). Only the first three exist today; no importer is built (§14 of [keya-format.md](keya-format.md)). Skip one and the same credential yields different bytes depending on the path, which `observation_binding` is built to notice.
 - After normalizing, apply the **C0 check** (§6.2): any `U+0000`–`U+001F` other than `\t`, `\n`, `\r` → **reject the edit** with "contains invisible control characters". Same reasoning as an empty `secret`: fail at edit time, not on the write path.
 
 **An unexecutable recipe is not an edit error.** When an edit to `endpoint`, `provider_id` or `providers[].probe` leaves the recipe in one of §10.3's non-executable states (with `probe !== null`), **save normally** and show the cause with a fix entry point in the same frame the edit completes. The file is legal — runtime capability is not file validity (§6.1) — so it cannot enter class A or block the write. It must not be buried by "saved" either, only to surface the next time the user clicks check.
@@ -170,12 +170,12 @@ Rules:
 - A single-use approval is not persisted and not replayable: one gesture, one `fetch()`, and any async retry needs another click. That is what reconciles "a click is an approval" with "every request needs prior authorization". The browser's CORS preflight counts as part of that `fetch()` and consumes nothing extra.
 - `http:` targets never get a persistent grant: single-use approvals only, labelled "plaintext transport".
 - `origin`, `path` and `vault_id` are audit and display fields; matching uses `fingerprint` alone.
-- **Grant storage is not partitioned by `vault_id`**, which is the only way "cloning keeps grants" can hold: a clone has a new `vault.id`, so partitioning would strip its grants. The cost is one `fingerprint` shared across vaults, and since it includes `key.id` (UUIDv4) the real collision probability outside import is zero.
-- No grant is acquired automatically by opening or importing a file, merging, copying a Key, updating the app or changing a preset. Each of those changes `fingerprint` or creates a new Key.
+- **Grant storage is not partitioned by `vault_id`**, which is the only way "cloning keeps grants" can hold: a clone has a new `vault.id`, so partitioning would strip its grants. The cost is one `fingerprint` shared across vaults, and since it includes `key.id` (UUIDv4) the real collision probability is zero.
+- No grant is acquired automatically by opening a file, copying a Key, updating the app or changing a preset. Each of those changes `fingerprint` or creates a new Key.
 - The first time automatic probing is enabled, show the real recipient origin, path and method per Key. Bulk confirmation is allowed only for Keys whose `fingerprint` is identical apart from `key.id`.
 - **A missing grant must be visible, but only where it can exist.** For auto-capable recipes (`https:`, executable), a missing grant reads "needs re-authorization" with a bulk approval entry point. Fail-closed must be repaid by the UI, but not as a warning that can never clear: `http:` targets by design never hold a grant, so they read "manual checks only (plaintext transport)". §10.3 gives the full state taxonomy.
 - **UI suggestion, not a format rule**: when editing static headers, hint "if this is a credential, move it to the authentication placement". A header value enters `send_fingerprint`, and that fingerprint sits in `localStorage`, becoming an offline-verifiable SHA-256 of the value and bypassing Argon2 entirely. A heuristic (warn when the value equals an existing `secret`) is optional convenience; class A cannot decide whether text is a secret, so this cannot become a validation rule.
-- **A clone is a new vault that keeps grants.** Cloning keeps `keys[].id`, `endpoint` and `provider_id` (§5.3), so `send_fingerprint` is unchanged, grants still match, and automatic probing sends on the clone immediately. That is intended — the same Key going to the same address is what was approved — but it is asymmetric with "import inherits nothing", so it is recorded here rather than mistaken later for a vulnerability. The only difference is whether ids are rebuilt: a clone keeps them, an import rebuilds them.
+- **A clone is a new vault that keeps grants.** Cloning keeps `keys[].id`, `endpoint` and `provider_id` (§5.3), so `send_fingerprint` is unchanged, grants still match, and automatic probing sends on the clone immediately. That is intended — the same Key going to the same address is what was approved — but it is the opposite of "import inherits nothing" (§14.2), so it is recorded here rather than mistaken later for a vulnerability. The only difference would be whether ids are rebuilt: a clone keeps them, an import rebuilds them. No import exists, so a clone is the only path that keeps ids.
 - **Grants are per (key, request).** Probing and usage are different URLs and `send_fingerprint` includes `resolved_url`, so one grant mathematically cannot cover both. Every new request type computes its own fingerprint and earns its own approval.
 - **Usage and balance queries are preset-only.** The format has no `Provider.usage` (§17). Supporting them for custom providers later means adding that recipe and reusing this fingerprint mechanism, not reusing the probe grant.
 
@@ -217,7 +217,7 @@ Both add +6 when the Key is grouped and +4 when its newest check succeeded. Ties
 | **Manual only** | executable, `resolved_url` is `http:` | expiry, rejected | "Manual checks only (plaintext transport)"; **never "needs re-authorization"** |
 | **Auto-capable** | executable, `https:` | expiry, rejected | "Needs re-authorization" plus bulk approval when the grant is missing |
 
-Measured occupancy over the 50 existing presets: 46 auto-capable, 4 with no capability (`amazon bedrock`, `nvidia nim`, `baseten`, `exa`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
+Measured occupancy over the 51 presets: 46 auto-capable, 5 with no capability (`amazon bedrock`, `nvidia nim`, `baseten`, `exa`, `typesafe`), 0 manual only. So "manual only" is reachable today only through a custom provider or a hand-typed `http:` endpoint, while "bad target" and "unknown preset" depend on the app version and cannot occur with the current preset table.
 
 **A plaintext destination is a property, not a fact.** `http:` never keeps a grant (§10.2), so the Key shows a standing warning that its requests travel in clear text, and the Inbox stays silent. Judging by the resolved request rather than `endpoint` alone is still required: `probe.target` may be an absolute `http:` URL while `endpoint` is `null` or `https:`, and the credential still leaves in the clear.
 
@@ -354,15 +354,15 @@ Renaming or moving the file does not invalidate the registration, since the fing
 44. Change `target` without changing the resolution → neither changes.
 45. Change `target` and the resolution → both change.
 46. Copy a Key (new id) → `send_fingerprint` changes and no grant is inherited.
-47. Merge import → no grant inherited; enabling automatic probing still sends nothing.
-48. **Import with the same `vault.id` rebuilds no ids**: importing an old copy of the current vault keeps `keys[].id`, creates no duplicates, and leaves grants matching. Only a different `vault.id` rebuilds ids.
+47. ~~Merge import~~ **Unbuilt path** (§14.2 of keya-format.md): no importer exists, so there is nothing to assert.
+48. ~~Import with the same `vault.id`~~ Same as 47 — retained only as design rationale for why a copied file never brings grants.
 49. `http:` target → no persistent grant; a single-use approval every time.
 50. Static headers: add, remove, change value, rename → `send_fingerprint` changes; reordering only → unchanged.
 51. Changing a static header also changes `observation_binding` (not just `send_fingerprint`): one case each for add, remove, value change, asserting the old observation immediately reads as "not yet checked on this device".
 52. `basic` golden vector: fixed `secret` containing `:` → assert the fingerprint and the base64 request header.
 53. Compare every frozen vector of appendix C: A/B/C/D, `container_fingerprint`, both `observation_binding` values, and C's negative vector. A single drift in `container_fingerprint` invalidates every vault's locked display and biometric binding at once, so it ranks with `send_fingerprint`.
 54. Clone → the two files' `salt` and `container_fingerprint` differ; `containers` holds two rows; binding one does not affect the other, proving nothing did "copy the container, change `vault.id`".
-55. Cloning inherits persistent grants (`send_fingerprint` unchanged) while merge import inherits none — adjacent assertions, so the deliberate asymmetry is not "fixed" as a bug.
+55. Cloning inherits persistent grants (`send_fingerprint` unchanged). There is no importer to contrast it with; if one is ever built, it must rebuild ids and inherit nothing.
 56. Export two encrypted copies of one vault → identical `container_fingerprint` (same vault, shared registration and biometrics) but different `nonce` and ciphertext; a clone differs. The counterpart of the previous item.
 57. `resolved_url` golden vectors: one per row of the §9.1 table, plus `https:models` → **`https://models/`** and `//other.example/x`. Also assert the serialized form is `href`: `https://Example.COM:443/v1/../v1/models` → `https://example.com/v1/models`, lowercased, default port dropped, `..` normalized — not origin+pathname and no trailing-slash stripping.
 58. Interpreter scoping: bumping the `custom` interpreter version changes custom providers' `observation_binding` but not `send_fingerprint`; bumping `preset:x` leaves `preset:y`'s observations alone.
@@ -390,7 +390,7 @@ Renaming or moving the file does not invalidate the registration, since the fing
 ### 16.6 Save discipline and lifecycle
 
 76. Unlocking, browsing, crossing midnight, viewing the Inbox, probing and usage queries leave the digest unchanged.
-77. Plaintext JSON import above 32 MiB → rejected **before parsing**, never reaching the strict parser.
+77. ~~Plaintext JSON import above 32 MiB~~ **Unbuilt path** (§14.3): no importer, no size gate to test.
 78. No-op edits (same name; a `secret` with added edge spaces) write nothing.
 79. A failed save leaves the edits in memory with both exports available.
 80. An externally modified file → the write is refused and an export is offered.
@@ -398,7 +398,7 @@ Renaming or moving the file does not invalidate the registration, since the fing
 82. After a successful change: the new fingerprint's row exists, the old one is gone, and the vault occupies one row.
 83. **Stage 3 succeeds, stage 4 fails**: the file already opens with the new password; the next open misses the fingerprint and registers it as an unknown file once, losing the biometric binding (accepted); repeating put/delete is idempotent.
 84. **No password survives unlock**: the session object holds no password or equivalent, and later saves and biometric re-wrapping complete given only `file_key`. A password change requires the old password and **must verify by re-deriving**; assert there is no code path comparing it against a cached copy as strings.
-85. **Clone requires the password again**: cloning while unlocked prompts for it, and afterwards the session still holds no password or equivalent (the I16 assertion). The same holds for saving a plaintext import as a new vault.
+85. **Clone requires the password again**: cloning while unlocked prompts for it, and afterwards the session still holds no password or equivalent (the I16 assertion). A future "save a plaintext import as a new vault" would owe the same assertion.
 86. Password policy for creation and change: 11 code points or zxcvbn score 2 → **reject** (not warn); 12 code points with score 3 → accept; four CJK characters (12 bytes, 4 code points) → **reject**; a non-ASCII-majority password under 16 code points → reject.
 87. A password that is not well-formed UTF-16 → **reject**; and assert `"\uD800"` and `"\uFFFD"` cannot derive the same `file_key`.
 88. Download mode: the UI separates "new-password file generated" from "disk updated".

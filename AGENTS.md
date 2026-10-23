@@ -50,7 +50,7 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 
 ## Known gaps
 
-- **Import is disabled.** The menu items exist and say so. `docs/keya-format.md` §14 describes the format work this needs; nothing imports a `.keya` or a JSON export yet.
+- **Import is not built and is not planned.** Keya has no importer for either `.keya` or the JSON export; the top bar carries export only. A second vault is opened from the welcome screen and lives beside the first, never merged into it. `docs/keya-format.md` §14.2–§14.3 keeps the design as rationale (why a copied file inherits no grants), and the runtime vectors that name merge or JSON import are marked unbuilt. Building it would be a format decision, not a UI addition.
 - **Biometric records wrap the password, not the file key.** `src/app/lib/biometric.ts` stores a PRF-wrapped password keyed by `vault_id`, with no AAD; the spec (§13.2, and appendix D.4) asks for a wrapped `file_key` bound to `container_fingerprint`. Both paths require PRF, so neither downgrades, but the blast radius differs. Pick one before changing biometrics.
 
 ## Branches and deployment

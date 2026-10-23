@@ -1,7 +1,7 @@
 ---
 title: FAQ
 description: Browsers, recovery, and the known gaps in this build.
-updated: 2026-03-01
+updated: 2026-10-23
 order: 6
 ---
 
@@ -33,6 +33,6 @@ The one thing that differs between devices is Housekeeping: each device knows on
 
 ## What is not in this build?
 
-- Importing `.keya` files or JSON exports. Export works both ways: `.keya` stays encrypted, JSON is plaintext.
+- Importing `.keya` files or JSON exports. There is no importer, and none is planned: a second vault is opened from the welcome screen and lives beside the first rather than being merged into it. Export works both ways: `.keya` stays encrypted, JSON is plaintext.
 
 Anything stored in this build is in the `.keya` file or in this browser's local storage; nothing else leaves the device.
