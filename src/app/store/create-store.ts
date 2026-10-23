@@ -114,6 +114,7 @@ export interface NewKeyInput {
 /** The settings page writes device preferences and, separately, providers. */
 export interface SettingsPatch {
   auto_lock_minutes?: number;
+  clipboard_clear_seconds?: number;
   hidden_presets?: string[];
   providers?: ProviderDraft[];
 }
@@ -816,6 +817,9 @@ export function createAppStore(deps: StoreDeps): AppStore {
 
         if (patch.auto_lock_minutes !== undefined) {
           preferences.auto_lock_minutes = patch.auto_lock_minutes;
+        }
+        if (patch.clipboard_clear_seconds !== undefined) {
+          preferences.clipboard_clear_seconds = patch.clipboard_clear_seconds;
         }
         if (patch.hidden_presets !== undefined) {
           preferences.hidden_presets = patch.hidden_presets;

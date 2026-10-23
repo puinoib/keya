@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { exportVaultBytes, flushSave, useStore } from '../../store/useStore';
-import { buildJsonExport, jsonExportFileName } from '../../lib/export-json';
+import { flushSave, useStore } from '../../store/useStore';
 import { describeSaveFailure } from '../../state/presentation';
 import {
   MagnifyingGlass,
@@ -15,8 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
-import { downloadBytes, downloadJSON } from '../../lib/download';
+import { exportJsonCopy, exportKeyaCopy } from '../../lib/vault-export';
 import {
   formatShortcut,
   formatShortcutCompact,
@@ -30,11 +28,9 @@ export function TopBar() {
     searchQuery,
     setSearchQuery,
     beginAddKeyFlow,
-    view,
     storageMode,
     hasUnsavedChanges,
     saveFailure,
-    markExported,
     keyboardShortcuts,
   } = useStore();
   const [searchFocused, setSearchFocused] = useState(false);
@@ -46,53 +42,6 @@ export function TopBar() {
   const showSearchHint =
     !searchQuery && !searchFocused && searchHint !== 'Disabled';
 
-  /* ──── Export .keya ──── */
-  const handleExportKeya = async () => {
-    if (!view) return;
-    try {
-      const bytes = await exportVaultBytes(storageMode === 'download');
-      if (!bytes) {
-        toast.error('Export failed');
-        return;
-      }
-
-      const date = new Date().toISOString().slice(0, 10);
-      downloadBytes(bytes, `keya-${date}.keya`);
-      // In folder mode this is a copy, not the save: keep the unsaved flag.
-      if (storageMode === 'download') markExported();
-      toast.success('Exported .keya file');
-    } catch {
-      toast.error('Export failed', {
-        description: 'Failed to export .keya file',
-      });
-    }
-  };
-
-  /* ──── Export JSON ──── */
-  const handleExportJson = async () => {
-    if (!view) return;
-    const confirmed = window.confirm(
-      'Export JSON writes every key in this vault as plain text, including the secrets.\n\n' +
-        'The file is not a backup. Store it somewhere safe and delete it when you are done.\n\n' +
-        'Export the plaintext JSON file?'
-    );
-    if (!confirmed) return;
-    try {
-      // The view lags a debounced edit; refresh before snapshotting so the
-      // export cannot silently omit the key that was just saved.
-      await useStore.getState().refresh();
-      const current = useStore.getState().view;
-      if (!current) return;
-      downloadJSON(buildJsonExport(current.file), jsonExportFileName());
-      toast.success('Exported JSON file', {
-        description: 'Plain text: delete it once the keys have been moved.',
-      });
-    } catch {
-      toast.error('Export failed', {
-        description: 'The vault could not be read for export.',
-      });
-    }
-  };
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">
       <button
@@ -164,10 +113,10 @@ export function TopBar() {
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-44">
           {/* Encrypted copy first; the plaintext export is the exception. */}
-          <DropdownMenuItem onClick={handleExportKeya}>
+          <DropdownMenuItem onClick={() => void exportKeyaCopy()}>
             <DownloadSimple className="size-3.5" /> Export .keya
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportJson}>
+          <DropdownMenuItem onClick={() => void exportJsonCopy()}>
             <DownloadSimple className="size-3.5" /> Export JSON
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -35,11 +35,14 @@ export interface ContainerRecord {
 
 export interface Preferences {
   auto_lock_minutes: number;
+  /** Seconds before a copied credential is cleared; 0 leaves it alone. */
+  clipboard_clear_seconds: number;
   hidden_presets: string[];
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
   auto_lock_minutes: 5,
+  clipboard_clear_seconds: 15,
   hidden_presets: [],
 };
 

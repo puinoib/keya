@@ -202,7 +202,9 @@ export function KeyList() {
       await navigator.clipboard.writeText(keyValue);
       setCopiedId(keyId);
       setTimeout(() => setCopiedId(null), 2000);
-      scheduleClipboardClear(keyValue);
+      const seconds =
+        useStore.getState().view?.preferences.clipboard_clear_seconds;
+      if (seconds) scheduleClipboardClear(keyValue, seconds * 1000);
       toast.success('Copied to clipboard');
     } catch {
       /* clipboard unavailable */
