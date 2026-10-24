@@ -122,11 +122,6 @@ export function LandingPage() {
         <section className="kl-hero" aria-labelledby="hero-title">
           <div className="kl-stage">
             <div className="kl-mesh" aria-hidden="true">
-              <span className="kl-blob kl-blob-a" />
-              <span className="kl-blob kl-blob-b" />
-              <span className="kl-blob kl-blob-c" />
-              <span className="kl-blob kl-blob-d" />
-              <span className="kl-blob kl-blob-e" />
               <span className="kl-veil" />
             </div>
             <div className="kl-grain" aria-hidden="true" />
@@ -137,10 +132,6 @@ export function LandingPage() {
 
             <div className="kl-wrap kl-hero-inner">
               <div className="kl-hero-copy">
-                <p className="kl-kicker">
-                  <span className="kl-live-dot" aria-hidden="true" />
-                  keya.one · local-first credentials
-                </p>
                 <h1 id="hero-title">
                   Keep every key
                   <span>close to home.</span>
@@ -175,7 +166,6 @@ export function LandingPage() {
                   <span className="kl-orbit-ring kl-orbit-ring-2" />
                   <span className="kl-orbit-node kl-orbit-node-a" />
                   <span className="kl-orbit-node kl-orbit-node-b" />
-                  <span className="kl-orbit-caption">KEYA / VAULT 01</span>
                 </div>
                 <div className="kl-keycard">
                   <span className="kl-keycard-hole" />
@@ -203,9 +193,6 @@ export function LandingPage() {
                     <span>ARGON2ID</span>
                   </div>
                 </div>
-                <p className="kl-object-caption">
-                  FIG. 01 — A vault, not an account.
-                </p>
               </div>
             </div>
 
@@ -756,6 +743,7 @@ export function LandingPage() {
 
       <footer className="kl-footer">
         <div className="kl-footer-card">
+          <div className="kl-grain" aria-hidden="true" />
           <div className="kl-footer-top">
             <div className="kl-footer-cta">
               <p className="kl-label">Ready when you are</p>
