@@ -214,6 +214,36 @@ export function formatShortcut(keys: string): string {
 }
 
 /**
+ * The keys of every alternate binding, one label per keycap: `mod+shift+l`
+ * becomes `['⌘', '⇧', 'L']` on Apple platforms and `['Ctrl', 'Shift', 'L']`
+ * elsewhere. An empty map means the action is disabled.
+ */
+export function shortcutKeyLabels(
+  keys: string,
+  isMac = detectMacPlatform()
+): string[][] {
+  if (!keys) return [];
+
+  return keys
+    .split(',')
+    .map((combo) => combo.trim())
+    .filter(Boolean)
+    .map((combo) =>
+      // The question mark is one glyph, not "Shift" plus "/".
+      combo === 'shift+slash'
+        ? ['?']
+        : combo.split('+').map((part) => keyLabel(part, isMac))
+    );
+}
+
+function keyLabel(part: string, isMac: boolean): string {
+  const symbols: Record<string, string> = isMac
+    ? { mod: '⌘', meta: '⌘', ctrl: '⌃', alt: '⌥', shift: '⇧' }
+    : { mod: 'Ctrl', meta: 'Meta', ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift' };
+  return symbols[part] ?? formatShortcutPart(part, isMac);
+}
+
+/**
  * Compact form for menu hints, where "Cmd + Shift + L" does not fit:
  * "⌘⇧L" on Apple platforms, "Ctrl+Shift+L" elsewhere. The first binding wins
  * because a hint describes one key to press, not every alternative.
@@ -222,18 +252,9 @@ export function formatShortcutCompact(
   keys: string,
   isMac = detectMacPlatform()
 ): string {
-  if (!keys) return 'Disabled';
-  const first = keys.split(',')[0].trim();
-  if (first === 'shift+slash') return '?';
-
-  const symbols: Record<string, string> = isMac
-    ? { mod: '⌘', meta: '⌘', ctrl: '⌃', alt: '⌥', shift: '⇧' }
-    : { mod: 'Ctrl', meta: 'Meta', ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift' };
-
-  return first
-    .split('+')
-    .map((part) => symbols[part] ?? formatShortcutPart(part, isMac))
-    .join(isMac ? '' : '+');
+  const [first] = shortcutKeyLabels(keys, isMac);
+  if (!first) return 'Disabled';
+  return first.join(isMac ? '' : '+');
 }
 
 function formatShortcutPart(part: string, isMac: boolean): string {

@@ -14,6 +14,7 @@ import {
   type ShortcutMap,
   type ShortcutScope,
 } from '@/app/lib/shortcuts';
+import { ShortcutKeys } from '@/app/components/ui/shortcut-keys';
 
 const SHORTCUT_SCOPE_LABELS: Record<ShortcutScope, string> = {
   global: 'Global',
@@ -42,11 +43,30 @@ function ShortcutSettingsRow({
 
   useEffect(() => {
     if (!recording) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
+
+    // Nothing is written back until the keys are released. A chord is only
+    // complete once every modifier is up, so the row never flickers through
+    // "⌘", "⌘ ⇧", "⌘ ⇧ L" on the way to the one shortcut it records.
+    let candidate: string | null = null;
+
+    const swallow = (event: KeyboardEvent) => {
       event.preventDefault();
       event.stopPropagation();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      swallow(event);
       const nextShortcut = shortcutFromKeyboardEvent(event);
-      if (!nextShortcut) return;
+      if (nextShortcut) candidate = nextShortcut;
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      swallow(event);
+      const held =
+        event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+      if (!candidate || held) return;
+
+      const nextShortcut = candidate;
       const conflict = findShortcutConflict(
         actionId,
         nextShortcut,
@@ -54,14 +74,20 @@ function ShortcutSettingsRow({
       );
       if (conflict) {
         setError(`Already used by ${conflict.label}`);
+        setRecording(false);
         return;
       }
       updateShortcut(actionId, nextShortcut);
       setError('');
       setRecording(false);
     };
+
     window.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUp, { capture: true });
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
+    };
   }, [actionId, recording, shortcutMap, updateShortcut]);
 
   return (
@@ -79,16 +105,26 @@ function ShortcutSettingsRow({
         <button
           type="button"
           onClick={() => {
+            // Clicking again is the way out: Escape has to stay available as a
+            // key you can bind.
             setError('');
-            setRecording(true);
+            setRecording((was) => !was);
           }}
-          className={`min-w-24 rounded-md border px-2.5 py-1.5 text-center font-mono text-[11px] transition-colors ${
+          aria-label={`Change ${definition.label} shortcut`}
+          className={`min-w-28 rounded-md border px-2.5 py-1.5 text-center font-mono text-[11px] transition-colors ${
             recording
               ? 'border-accent-bright bg-accent/10 text-accent-bright'
               : 'border-line bg-canvas-base text-ink-secondary hover:bg-surface-3'
           }`}
         >
-          {recording ? 'Press keys...' : formatShortcut(resolved[actionId])}
+          {recording ? (
+            'Press keys...'
+          ) : (
+            <ShortcutKeys
+              keys={resolved[actionId]}
+              className="justify-center"
+            />
+          )}
         </button>
         <button
           type="button"
