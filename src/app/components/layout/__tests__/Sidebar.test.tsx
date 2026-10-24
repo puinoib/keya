@@ -51,7 +51,38 @@ beforeEach(async () => {
   holder.store = harness.api.useStore;
 });
 
+/** Every direct child that is not the icon or the label. */
+function countParts(button: HTMLElement): HTMLElement[] {
+  return [...button.children].filter(
+    (child) => child.tagName === 'SPAN' && /^\d+$/.test(child.textContent ?? '')
+  ) as HTMLElement[];
+}
+
 describe('Sidebar', () => {
+  it('keeps the Inbox and Keys shortcut hints out of the way until hover', () => {
+    render(<Sidebar />);
+
+    const inbox = screen.getByRole('button', { name: /Inbox/ });
+    const hint = inbox.querySelector('kbd');
+    expect(hint?.textContent).toBe('Ctrl+2');
+    // Present for the layout, revealed by `group-hover` rather than by state.
+    expect(hint?.className).toContain('invisible');
+
+    const keys = screen.getByRole('button', { name: /Keys/ });
+    const keysHint = keys.querySelector('kbd');
+    expect(keysHint?.textContent).toBe('Ctrl+1');
+
+    // Order is label, hint, then the count on the row's right edge.
+    const parts = [...keys.children].map((child) =>
+      child.tagName === 'KBD' ? 'kbd' : (child.textContent ?? '')
+    );
+    expect(parts.indexOf('kbd')).toBe(parts.length - 2);
+    expect(
+      [...countParts(keys)].at(-1)?.className,
+      'the count owns the right edge'
+    ).toContain('ml-auto');
+  });
+
   it('clears every filter when Keys is clicked', async () => {
     const store = harness.api.useStore;
 

@@ -90,6 +90,8 @@ export function VaultSwitcher() {
 
   const lockKeys = getShortcutKeys(keyboardShortcuts, 'vault.lock');
   const lockShortcut = formatShortcutCompact(lockKeys);
+  const settingsKeys = getShortcutKeys(keyboardShortcuts, 'nav.settings');
+  const settingsShortcut = formatShortcutCompact(settingsKeys);
   // The menu names the file by where it lives: "Keya/work.keya". A browser
   // exposes the folder's name and nothing more, so this is a label rather than
   // a path. The identity block keeps one line either way, so it does not change
@@ -243,6 +245,11 @@ export function VaultSwitcher() {
           <DropdownMenuItem onClick={() => navigate({ to: '/settings' })}>
             <Gear className="size-3.5" />
             <span>Settings</span>
+            {settingsShortcut !== 'Disabled' && (
+              <Kbd label={formatShortcut(settingsKeys)} className="ml-auto">
+                {settingsShortcut}
+              </Kbd>
+            )}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

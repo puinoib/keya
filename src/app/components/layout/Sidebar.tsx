@@ -2,6 +2,12 @@ import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
 import {
+  formatShortcutCompact,
+  getShortcutKeys,
+  type ShortcutActionId,
+} from '../../lib/shortcuts';
+import { Kbd } from '@/components/ui/kbd';
+import {
   activeKeys,
   archivedKeys,
   attentionCount,
@@ -23,12 +29,15 @@ function SidebarFilterButton({
   count,
   isActive,
   onClick,
+  shortcut,
 }: {
   icon: IconComponent | React.ReactNode;
   label: string;
   count: number;
   isActive: boolean;
   onClick: () => void;
+  /** Compact shortcut hint, revealed on hover. Reserved space, no layout jump. */
+  shortcut?: string;
 }) {
   const isComponent =
     typeof icon === 'function' ||
@@ -36,7 +45,7 @@ function SidebarFilterButton({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
+      className={`group w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-150 ${
         isActive
           ? 'bg-accent/35 text-accent-bright'
           : 'text-ink-tertiary hover:text-ink-secondary hover:bg-surface-3'
@@ -50,9 +59,21 @@ function SidebarFilterButton({
             );
           })()
         : (icon as React.ReactNode)}
-      <span className="truncate flex-1 text-left">{label}</span>
+      <span className="min-w-0 truncate text-left">{label}</span>
+      {shortcut && (
+        // Immediately after the label, so the hint reads as part of the entry.
+        // Always laid out, only visible on hover: the row keeps its width and
+        // the label never re-truncates as the pointer enters.
+        <Kbd
+          label={label}
+          className="invisible group-hover:visible group-focus-visible:visible"
+        >
+          {shortcut}
+        </Kbd>
+      )}
+      {/* The count owns the row's right edge, whatever sits in front of it. */}
       {count > 0 && (
-        <span className="text-xs tabular-nums text-ink-quaternary">
+        <span className="ml-auto text-xs tabular-nums text-ink-quaternary">
           {count}
         </span>
       )}
@@ -76,6 +97,7 @@ export function Sidebar() {
     setFilterGroupId,
     clearFilters,
     clearSmartFilters,
+    keyboardShortcuts,
   } = useStore();
 
   const openInboxCount = attentionCount(view);
@@ -109,6 +131,14 @@ export function Sidebar() {
 
   if (!view) return null;
 
+  const shortcutHint = (id: ShortcutActionId) => {
+    const keys = getShortcutKeys(keyboardShortcuts, id);
+    const compact = formatShortcutCompact(keys);
+    return compact === 'Disabled' ? undefined : compact;
+  };
+  const inboxHint = shortcutHint('nav.inbox');
+  const keysHint = shortcutHint('nav.keys');
+
   const liveKeys = activeKeys(view);
   const keyCount = liveKeys.length;
   const archivedCount = archivedKeys(view).length;
@@ -136,6 +166,7 @@ export function Sidebar() {
             count={openInboxCount}
             isActive={isInboxActive}
             onClick={() => navigate({ to: '/inbox' })}
+            shortcut={inboxHint}
           />
           <SidebarFilterButton
             icon={List}
@@ -143,6 +174,7 @@ export function Sidebar() {
             count={keyCount}
             isActive={isKeysActive}
             onClick={handleKeysClick}
+            shortcut={keysHint}
           />
           <SidebarFilterButton
             icon={Archive}
