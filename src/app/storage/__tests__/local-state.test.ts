@@ -29,9 +29,41 @@ class MemoryKv implements KeyValuePort {
   async keys(prefix: string): Promise<string[]> {
     return [...this.map.keys()].filter((key) => key.startsWith(prefix));
   }
+  async values<T>(prefix: string): Promise<T[]> {
+    return [...this.map.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, value]) => value as T);
+  }
 
   size(): number {
     return this.map.size;
+  }
+}
+
+class CountingKv extends MemoryKv {
+  gets = 0;
+  keyScans = 0;
+  valueScans = 0;
+
+  reset(): void {
+    this.gets = 0;
+    this.keyScans = 0;
+    this.valueScans = 0;
+  }
+
+  override async get<T>(key: string): Promise<T | undefined> {
+    this.gets += 1;
+    return super.get<T>(key);
+  }
+
+  override async keys(prefix: string): Promise<string[]> {
+    this.keyScans += 1;
+    return super.keys(prefix);
+  }
+
+  override async values<T>(prefix: string): Promise<T[]> {
+    this.valueScans += 1;
+    return super.values<T>(prefix);
   }
 }
 
@@ -65,6 +97,18 @@ describe('containers registry', () => {
     content_updated_at: '2026-06-01T00:00:00.000Z',
     last_opened_at: '2026-06-02T00:00:00.000Z',
   };
+
+  it('lists the registry with one read', async () => {
+    const kv = new CountingKv();
+    const local = new LocalState(kv);
+    await local.putContainer(record);
+    await local.putContainer({ ...record, fingerprint: 'fp-old' });
+    kv.reset();
+
+    expect(await local.listContainers()).toHaveLength(2);
+    expect(kv.valueScans).toBe(1);
+    expect(kv.gets).toBe(0);
+  });
 
   it('round-trips a record', async () => {
     const local = state();
@@ -178,6 +222,26 @@ describe('observations', () => {
         .get('44444444-4444-4444-8444-444444444444')
         ?.map((entry) => entry.observation_id)
     ).toEqual(['obs-2']);
+  });
+
+  it('reads a whole vault with one request, not one per record', async () => {
+    const kv = new CountingKv();
+    const local = new LocalState(kv);
+    for (let index = 0; index < 5; index += 1) {
+      await local.recordObservation(
+        observation(`obs-${index}`, `2026-06-01T00:00:0${index}.000Z`)
+      );
+    }
+    kv.reset();
+
+    const grouped = await local.observationsByKey(VAULT);
+
+    expect(grouped.get(KEY)).toHaveLength(5);
+    // One range read for the vault. A scan plus a get per key is the shape
+    // that made a 1000-key vault take thousands of round trips per refresh.
+    expect(kv.valueScans).toBe(1);
+    expect(kv.gets).toBe(0);
+    expect(kv.keyScans).toBe(0);
   });
 
   it('forgets everything about a deleted key', async () => {

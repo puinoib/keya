@@ -80,4 +80,19 @@ export class IndexedDbKeyValue implements KeyValuePort {
       request.onerror = () => reject(request.error);
     });
   }
+
+  /**
+   * One transaction and one request for the whole range. `getAll` returns the
+   * values in key order; callers that care about order sort them themselves.
+   */
+  async values<T>(prefix: string): Promise<T[]> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(STORE, 'readonly').objectStore(STORE);
+      const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+      const request = store.getAll(range);
+      request.onsuccess = () => resolve(request.result as T[]);
+      request.onerror = () => reject(request.error);
+    });
+  }
 }

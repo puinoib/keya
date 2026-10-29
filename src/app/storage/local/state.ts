@@ -19,6 +19,13 @@ export interface KeyValuePort {
   set<T>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<void>;
   keys(prefix: string): Promise<string[]>;
+  /**
+   * Every value whose key starts with `prefix`, in one read.
+   *
+   * A prefix scan followed by one `get` per key is one storage round trip per
+   * record; this is one round trip for the whole range.
+   */
+  values<T>(prefix: string): Promise<T[]>;
 }
 
 export interface ContainerRecord {
@@ -87,13 +94,7 @@ export class LocalState {
   }
 
   async listContainers(): Promise<ContainerRecord[]> {
-    const keys = await this.kv.keys(`${CONTAINER}/`);
-    const records = await Promise.all(
-      keys.map((key) => this.kv.get<ContainerRecord>(key))
-    );
-    return records.filter((record): record is ContainerRecord =>
-      Boolean(record)
-    );
+    return this.kv.values<ContainerRecord>(`${CONTAINER}/`);
   }
 
   async putContainer(record: ContainerRecord): Promise<void> {
@@ -174,35 +175,30 @@ export class LocalState {
     vaultId: string,
     keyId: string
   ): Promise<Observation[]> {
-    // The trailing separator matters: `keys()` is a raw prefix scan, so
+    // The trailing separator matters: the scan is a raw prefix match, so
     // `observations/v/k` would also match `observations/v/k2/...`.
-    const keys = await this.kv.keys(`${keyOf(OBSERVATION, vaultId, keyId)}/`);
-    const records = await Promise.all(
-      keys.map((key) => this.kv.get<Observation>(key))
+    const records = await this.kv.values<Observation>(
+      `${keyOf(OBSERVATION, vaultId, keyId)}/`
     );
-    return records
-      .filter((record): record is Observation => Boolean(record))
-      .sort(compareObservationsNewestFirst);
+    return records.sort(compareObservationsNewestFirst);
   }
 
   /**
-   * Every observation of one vault in a single range scan, grouped by key.
+   * Every observation of one vault, grouped by key, from one read.
    *
-   * The view needs the newest record per key on every refresh; doing one scan
-   * per key turns a 1000-key vault into thousands of serialized IndexedDB
-   * round trips per save.
+   * The view needs the newest record per key on every refresh; reading one
+   * prefix per key turned a 1000-key vault into a storage round trip per
+   * record on every edit.
    */
   async observationsByKey(
     vaultId: string
   ): Promise<Map<string, Observation[]>> {
-    const keys = await this.kv.keys(`${keyOf(OBSERVATION, vaultId)}/`);
-    const records = await Promise.all(
-      keys.map((key) => this.kv.get<Observation>(key))
+    const records = await this.kv.values<Observation>(
+      `${keyOf(OBSERVATION, vaultId)}/`
     );
 
     const grouped = new Map<string, Observation[]>();
     for (const record of records) {
-      if (!record) continue;
       const list = grouped.get(record.key_id);
       if (list) list.push(record);
       else grouped.set(record.key_id, [record]);

@@ -33,6 +33,11 @@ class MemoryKv implements KeyValuePort {
   async keys(prefix: string): Promise<string[]> {
     return [...this.map.keys()].filter((key) => key.startsWith(prefix));
   }
+  async values<T>(prefix: string): Promise<T[]> {
+    return [...this.map.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, value]) => value as T);
+  }
 }
 
 const DEVICE_KEY_RAW = new Uint8Array(32).fill(7);
