@@ -75,15 +75,19 @@ const VISIBLE_PER_SECTION = 6;
 function Toggle({
   checked,
   onChange,
+  label,
 }: {
   checked: boolean;
   onChange: () => void;
+  /** Accessible name: the row's text is not associated with the switch. */
+  label: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={onChange}
       className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-all duration-200 ${
         checked ? 'bg-accent' : 'bg-surface-3'
@@ -436,6 +440,7 @@ export function ProvidersPage() {
                       )}
                       <Toggle
                         checked={provider.isEnabled}
+                        label={`${provider.name} provider`}
                         onChange={() =>
                           toggleProvider(provider.name, !provider.isEnabled)
                         }

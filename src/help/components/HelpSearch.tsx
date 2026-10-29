@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import type { HelpDocument, SearchResult } from '../types';
 import { searchDocuments, buildSearchIndex } from '../lib/search';
@@ -13,6 +13,7 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const searchIndex = useMemo(() => buildSearchIndex(documents), [documents]);
 
@@ -34,7 +35,23 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
   };
 
   return (
-    <div className="relative w-full max-w-sm">
+    <div
+      ref={containerRef}
+      className="relative w-full max-w-sm"
+      // The panel floats over the article, so it has to get out of the way
+      // without the user deleting their query: leaving the field or pressing
+      // Escape closes it.
+      onBlur={(event) => {
+        if (containerRef.current?.contains(event.relatedTarget as Node)) return;
+        setIsOpen(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        setIsOpen(false);
+        setQuery('');
+        event.stopPropagation();
+      }}
+    >
       <div className="relative">
         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
         <input

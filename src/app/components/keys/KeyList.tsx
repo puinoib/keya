@@ -25,6 +25,7 @@ import {
 } from '../../state/view';
 import {
   checkStateHint,
+  checkStatusLabel,
   dateToExpiry,
   expiryToDate,
   expiryStatusLabel,
@@ -444,6 +445,11 @@ export function KeyList() {
           const checkLabel = check
             ? getTestActionLabel(check.kind)
             : getTestActionLabel('request');
+          // The dot is the only status the row shows, so it has to be named
+          // rather than relying on colour.
+          const statusLabel = check
+            ? checkStatusLabel(check.status, check.kind)
+            : checkStatusLabel('untested');
           const expiryLabel =
             expiryStatus === 'expired' || expiryStatus === 'expiring_soon'
               ? expiryStatusLabel(expiryStatus)
@@ -478,6 +484,8 @@ export function KeyList() {
                     <Archive className="size-3 shrink-0 text-ink-quaternary" />
                   ) : (
                     <span
+                      role="img"
+                      aria-label={`Check status: ${statusLabel}`}
                       className={`size-1.5 shrink-0 rounded-full ${status.dot}`}
                     />
                   )}

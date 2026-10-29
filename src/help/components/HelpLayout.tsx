@@ -66,7 +66,10 @@ export function HelpLayout() {
           <header className="h-12 flex items-center px-4 shrink-0 gap-2">
             <HelpSearch documents={documents} onNavigate={handleNavigate} />
             <DropdownMenu>
-              <DropdownMenuTrigger className="ml-auto inline-flex items-center justify-center size-8 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors">
+              <DropdownMenuTrigger
+                aria-label="Theme"
+                className="ml-auto inline-flex items-center justify-center size-8 rounded-md text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors"
+              >
                 <CurrentIcon className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent>

@@ -206,6 +206,8 @@ export function Sidebar() {
           label="Groups"
           action={
             <button
+              type="button"
+              aria-label="Manage groups"
               onClick={() => navigate({ to: '/settings/groups' })}
               className="text-ink-quaternary hover:text-ink-secondary transition-colors p-0.5 rounded hover:bg-surface-3"
             >

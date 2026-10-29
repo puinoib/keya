@@ -133,4 +133,19 @@ describe('ProvidersPage', () => {
     expect(after?.id).toBe(IDS.providerId);
     expect(providerNames()).not.toContain('Edge Gateway');
   });
+
+  it('gives every provider switch an accessible name', () => {
+    render(<ProvidersPage />);
+
+    const switches = screen.getAllByRole('switch');
+    expect(switches.length).toBeGreaterThan(0);
+    // The row carries no <label>, so an unnamed switch is announced as just
+    // "switch" twenty-odd times in a row.
+    for (const control of switches) {
+      expect(control.getAttribute('aria-label')).toMatch(/ provider$/);
+    }
+    expect(
+      screen.getByRole('switch', { name: 'OpenAI provider' })
+    ).toBeTruthy();
+  });
 });

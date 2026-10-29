@@ -410,34 +410,38 @@ export function KeyForm({
           {/* Expiration */}
           <div className="relative" ref={calendarRef}>
             <Label className="text-xs">Expiration</Label>
-            <button
-              type="button"
-              onClick={() => setShowCalendar(!showCalendar)}
-              className="mt-1.5 w-full inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
-            >
-              <Calendar className="size-3.5 shrink-0" />
-              <span
-                className={
-                  !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
-                }
+            {/* Two controls, not a button inside a button: a nested
+                `role="button"` cannot be focused, so the clear action was
+                mouse-only. */}
+            <div className="mt-1.5 flex h-9 w-full items-center rounded-md border border-line bg-transparent transition-colors hover:bg-surface-4 focus-within:ring-1 focus-within:ring-accent-bright">
+              <button
+                type="button"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="inline-flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 text-left text-xs font-normal hover:text-ink-primary"
               >
-                {form.expiry
-                  ? format(form.expiry, 'MMM d, yyyy')
-                  : 'Pick a date'}
-              </span>
-              {form.expiry && (
+                <Calendar className="size-3.5 shrink-0" />
                 <span
-                  role="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setForm((f) => ({ ...f, expiry: undefined }));
-                  }}
-                  className="ml-auto text-ink-quaternary hover:text-ink-secondary"
+                  className={
+                    !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
+                  }
+                >
+                  {form.expiry
+                    ? format(form.expiry, 'MMM d, yyyy')
+                    : 'Pick a date'}
+                </span>
+              </button>
+              {form.expiry && (
+                <button
+                  type="button"
+                  aria-label="Clear expiration"
+                  title="Clear expiration"
+                  onClick={() => setForm((f) => ({ ...f, expiry: undefined }))}
+                  className="mr-1.5 inline-flex size-6 shrink-0 items-center justify-center rounded text-ink-quaternary hover:text-ink-secondary"
                 >
                   <X className="size-3" />
-                </span>
+                </button>
               )}
-            </button>
+            </div>
             {showCalendar && (
               <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
                 <DayPicker

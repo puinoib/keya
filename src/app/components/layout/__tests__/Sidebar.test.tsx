@@ -136,4 +136,21 @@ describe('Sidebar', () => {
       search: { group: IDS.group },
     });
   });
+
+  it('collapses a section from its header without firing its action', () => {
+    render(<Sidebar />);
+
+    const header = () => screen.getByRole('button', { name: 'Groups' });
+    expect(header().getAttribute('aria-expanded')).toBe('true');
+
+    // The action lives beside the toggle, not inside it: opening group
+    // settings must not also fold the section away underneath the pointer.
+    fireEvent.click(screen.getByRole('button', { name: 'Manage groups' }));
+    expect(navigate).toHaveBeenCalledWith({ to: '/settings/groups' });
+    expect(header().getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.click(header());
+    expect(header().getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('Ungrouped')).toBeNull();
+  });
 });

@@ -133,4 +133,32 @@ describe('HelpSearch', () => {
 
     expect(container.textContent).toContain('No matching results');
   });
+
+  it('closes the result panel on Escape and clears the query', async () => {
+    await act(async () => {
+      root.render(<HelpSearch documents={documents} onNavigate={vi.fn()} />);
+    });
+
+    const input = container.querySelector('input')!;
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!;
+    await act(async () => {
+      valueSetter.call(input, 'security');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(container.textContent).toContain('Encryption and limits');
+
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+    });
+
+    // The panel covers the article, so it must be dismissable without the
+    // user deleting what they typed.
+    expect(container.textContent).not.toContain('Encryption and limits');
+    expect(input.value).toBe('');
+  });
 });
