@@ -199,11 +199,15 @@ describe('§16.1 container', () => {
     const foreign = file.slice();
     foreign[0] = 0x58;
     const magicResult = await openContainer(foreign, key);
+    // An `if (!ok)` guard would let the whole case pass while a foreign file
+    // was accepted, which is the failure this vector exists to catch.
+    expect(magicResult.ok).toBe(false);
     if (!magicResult.ok) expect(magicResult.failure).toBe('bad_magic');
 
     const future = file.slice();
     new DataView(future.buffer).setUint16(4, 3, true);
     const versionResult = await openContainer(future, key);
+    expect(versionResult.ok).toBe(false);
     if (!versionResult.ok)
       expect(versionResult.failure).toBe('unsupported_version');
   });

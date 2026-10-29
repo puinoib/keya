@@ -84,11 +84,47 @@ describe('probe execution', () => {
     expect(observation.observation_id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('never persists provider text, only controlled codes', async () => {
-    const { observation } = await runProbe(input(), respond(401));
-    expect(observation.outcome).toBe('auth_failed');
-    expect(observation.detail_code).toBe('credential_rejected');
-    expect(JSON.stringify(observation)).not.toContain('invalid_api_key');
+  it('records only controlled codes, never provider text or the credential', async () => {
+    const rejected = await runProbe(input(), respond(401));
+    expect(rejected.observation.outcome).toBe('auth_failed');
+    expect(rejected.observation.detail_code).toBe('credential_rejected');
+
+    // `ProbeResponse` has no body, so the reachable leak is a thrown error and
+    // the credential-bearing URL. Both must stop at the observation boundary.
+    const secret = 'sk-live-secret-value';
+    const leaky: ProbeFetch = async () => {
+      throw new Error(
+        `invalid_api_key: ${secret} belongs to account acme-prod`
+      );
+    };
+    const { observation } = await runProbe(
+      input({ secret, plan: plan({ auth: { mode: 'query', param: 'key' } }) }),
+      leaky
+    );
+
+    expect(observation.outcome).toBe('network');
+    expect(observation.detail_code).toBe('unreachable');
+
+    const stored = JSON.stringify(observation);
+    expect(stored).not.toContain(secret);
+    expect(stored).not.toContain('invalid_api_key');
+    expect(stored).not.toContain('acme-prod');
+
+    // The field set is closed. A URL, header or response body could only reach
+    // storage as a new key, so pin the exact shape instead of the wording.
+    expect(Object.keys(observation).sort()).toEqual([
+      'binding',
+      'detail_code',
+      'finished_at',
+      'http_status',
+      'key_id',
+      'kind',
+      'latency_ms',
+      'observation_id',
+      'outcome',
+      'started_at',
+      'vault_id',
+    ]);
   });
 
   it('turns a rejected fetch into network, not into a credential verdict', async () => {

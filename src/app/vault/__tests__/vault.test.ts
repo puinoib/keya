@@ -10,14 +10,18 @@ import { serializePayload } from '../../../core/payload/serialize';
 import type { KeyaFile } from '../../../core/payload/types';
 import { validateKeyaFile } from '../../../core/payload/validate';
 import { MemoryFile, fixedClock, memoryPorts } from './memory-port';
-import { Vault } from '../vault';
-import { FileTooLargeError } from '../ports';
+import { VAULT_WRITE_LOCK, Vault } from '../vault';
+import { FileTooLargeError, type LockPort } from '../ports';
 
 const PASSWORD = 'a fairly long synthetic passphrase';
 const SALT = new Uint8Array([...Array(16).keys()]);
 const KDF = { ops: 2, mem: 19_922_944 };
 const TS = '2026-06-01T00:00:00.000Z';
 const KEY_ID = '33333333-3333-4333-8333-333333333333';
+
+/** Bytes compared by value: two `Uint8Array` instances are never `toBe`. */
+const hex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 
 const payload = (): KeyaFile => ({
   vault: {
@@ -429,7 +433,10 @@ describe('changing the password', () => {
     );
     // The password change resets KDF parameters to the current default.
     expect(after.preamble.kdf).toEqual({ ops: 10, mem: 67_108_864 });
-    expect(after.preamble.nonce).not.toBe(before.preamble.nonce);
+    // I15: every rewrite under the same file_key must take a fresh nonce.
+    // Comparing the arrays with `toBe` would pass even if the bytes were equal.
+    expect(hex(after.preamble.nonce)).not.toBe(hex(before.preamble.nonce));
+    expect(after.preamble.nonce).toHaveLength(24);
 
     const withNew = await Vault.open(
       memoryPorts(new MemoryFile(file.bytes), clock),
@@ -539,6 +546,86 @@ describe('cloning', () => {
     expect(Array.from(nonceOf(target.bytes!)!)).not.toEqual(
       Array.from(source.preamble.nonce)
     );
+  });
+});
+
+describe('cross-tab write lock', () => {
+  it('takes the named lock on every path that writes the file', async () => {
+    const file = new MemoryFile(await makeBytes());
+    const names: string[] = [];
+    let held = false;
+    const recording: LockPort = {
+      run: async (name, task) => {
+        // The queue serializes writes, so one task never nests in another.
+        expect(held).toBe(false);
+        names.push(name);
+        held = true;
+        try {
+          return await task();
+        } finally {
+          held = false;
+        }
+      },
+    };
+
+    const clock = fixedClock();
+    const opened = await Vault.open(
+      { file, clock, locks: recording },
+      { password: PASSWORD }
+    );
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const vault = opened.vault;
+
+    vault.updateMeta({ name: 'Locked write' });
+    expect(await vault.flush()).toEqual({ ok: true });
+    expect(names).toEqual([VAULT_WRITE_LOCK]);
+
+    names.length = 0;
+    vault.updateMeta({ name: 'Password change' });
+    expect(
+      await vault.changePassword(PASSWORD, 'an entirely different passphrase')
+    ).toEqual({ ok: true });
+    // The pending edit is flushed first, then the container is rewritten.
+    expect(names).toEqual([VAULT_WRITE_LOCK, VAULT_WRITE_LOCK]);
+
+    names.length = 0;
+    expect(await vault.cloneTo(new MemoryFile(null), PASSWORD)).toMatchObject({
+      ok: true,
+    });
+    expect(names).toEqual([VAULT_WRITE_LOCK]);
+  });
+});
+
+describe('key material hygiene', () => {
+  it('keeps no copy of the master password on the opened vault', async () => {
+    const { vault } = await openedFile();
+
+    // I16: the password is an input to the KDF and nothing else. Walking the
+    // reachable graph catches the case the store-level check cannot: a private
+    // field or closure that quietly retained it.
+    const seen = new Set<object>();
+    const stack: unknown[] = [vault];
+    const leaked: string[] = [];
+
+    while (stack.length > 0 && seen.size < 10_000) {
+      const value = stack.pop();
+      if (typeof value === 'string') {
+        if (value.includes(PASSWORD)) leaked.push(value);
+        continue;
+      }
+      if (typeof value !== 'object' || value === null) continue;
+      if (value instanceof Uint8Array) continue;
+      if (seen.has(value)) continue;
+      seen.add(value);
+
+      for (const property of Object.getOwnPropertyNames(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, property);
+        if (descriptor && 'value' in descriptor) stack.push(descriptor.value);
+      }
+    }
+
+    expect(leaked).toEqual([]);
   });
 });
 
