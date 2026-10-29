@@ -127,6 +127,9 @@ export function ProvidersPage() {
       name,
       logo: getProviderLogo(name),
       endpoint: presetEndpoints[name],
+      // Presets have no editable description; the field keeps the row shape
+      // uniform so editing a custom provider can carry its own.
+      description: '',
       check: undefined as ProviderCheckDraft | undefined,
       isCustom: false,
       isEnabled: !disabled.has(name),
@@ -135,6 +138,7 @@ export function ProvidersPage() {
       name: cp.name,
       logo: undefined as string | undefined,
       endpoint: cp.endpoint,
+      description: cp.description ?? '',
       check: cp.check,
       isCustom: true,
       isEnabled: !disabled.has(cp.name),
@@ -407,6 +411,7 @@ export function ProvidersPage() {
                               startEdit({
                                 name: provider.name,
                                 endpoint: provider.endpoint,
+                                description: provider.description,
                                 check: provider.check,
                               })
                             }

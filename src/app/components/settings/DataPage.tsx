@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { DownloadSimple, UploadSimple, Warning } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
@@ -114,9 +115,16 @@ export function DataPage() {
               Keya cannot merge a .keya file or a JSON export into this vault.
               To move to another vault, open it from the vault menu; opening
               replaces the current session rather than adding to it. See{' '}
-              <a href="/docs/backup" className="text-accent hover:underline">
+              {/* A plain anchor reloads the app, and no unlocked session
+                  survives a reload: reading this help page would cost the
+                  reader their master password. */}
+              <Link
+                to="/docs/$slug"
+                params={{ slug: 'backup' }}
+                className="text-accent hover:underline"
+              >
                 Backup &amp; Restore
-              </a>{' '}
+              </Link>{' '}
               for what the file does and does not guarantee.
             </p>
           </div>
