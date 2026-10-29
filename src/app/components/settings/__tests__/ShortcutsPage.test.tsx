@@ -98,4 +98,47 @@ describe('ShortcutsPage', () => {
     ).toBe(undefined);
     expect(within(recorder('Lock Vault')).getByText('Ctrl')).toBeTruthy();
   });
+
+  it('records into one action at a time', () => {
+    render(<ShortcutsPage />);
+    fireEvent.click(recorder('Lock Vault'));
+    fireEvent.click(recorder('Add Key'));
+
+    // Starting a second recording ends the first. Two live listeners would
+    // write the same chord into both actions, and the second write would
+    // resurrect a stale map and silently undo the first.
+    expect(
+      within(recorder('Lock Vault')).queryByText('Press keys...')
+    ).toBeNull();
+    expect(within(recorder('Add Key')).getByText('Press keys...')).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'x' });
+    fireEvent.keyUp(window, { key: 'x' });
+
+    const shortcuts = harness.api.useStore.getState().keyboardShortcuts;
+    expect(shortcuts['key.add']).toBe('x');
+    expect(shortcuts['vault.lock']).toBe(undefined);
+  });
+
+  it('stops recording when the click lands outside the row', () => {
+    render(<ShortcutsPage />);
+    const lock = recorder('Lock Vault');
+    fireEvent.click(lock);
+    expect(within(lock).getByText('Press keys...')).toBeTruthy();
+
+    // The row swallows every key while it records, so anything else must be
+    // able to take the keyboard back.
+    fireEvent.pointerDown(document.body);
+
+    expect(
+      within(recorder('Lock Vault')).queryByText('Press keys...')
+    ).toBeNull();
+
+    fireEvent.keyDown(window, { key: 'x' });
+    fireEvent.keyUp(window, { key: 'x' });
+
+    expect(
+      harness.api.useStore.getState().keyboardShortcuts['vault.lock']
+    ).toBe(undefined);
+  });
 });

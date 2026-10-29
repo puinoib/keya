@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { ArrowCounterClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -28,18 +28,30 @@ function ShortcutSettingsRow({
   updateShortcut,
   resetShortcut,
   disableShortcut,
+  recording,
+  onStartRecording,
+  onStopRecording,
 }: {
   actionId: ShortcutActionId;
   shortcutMap: ShortcutMap;
   updateShortcut: (id: ShortcutActionId, keys: string) => void;
   resetShortcut: (id: ShortcutActionId) => void;
   disableShortcut: (id: ShortcutActionId) => void;
+  // Only one row records at a time. Two live listeners would write the same
+  // chord into two actions, and the second write would resurrect a stale map.
+  recording: boolean;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
 }) {
   const definition = SHORTCUT_DEFINITIONS.find((item) => item.id === actionId)!;
-  const [recording, setRecording] = useState(false);
   const [error, setError] = useState('');
   const resolved = getResolvedShortcuts(shortcutMap);
   const hasCustomValue = Object.hasOwn(shortcutMap, actionId);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  // Kept in a ref so the recording effect does not re-run (and lose the
+  // partially held chord) every time the page re-renders.
+  const stopRef = useRef(onStopRecording);
+  stopRef.current = onStopRecording;
 
   useEffect(() => {
     if (!recording) return;
@@ -74,19 +86,29 @@ function ShortcutSettingsRow({
       );
       if (conflict) {
         setError(`Already used by ${conflict.label}`);
-        setRecording(false);
+        stopRef.current();
         return;
       }
       updateShortcut(actionId, nextShortcut);
       setError('');
-      setRecording(false);
+      stopRef.current();
+    };
+
+    // While this row records, it swallows every key, so Escape stays bindable.
+    // Clicking anything else has to be the way out, or the page becomes a
+    // keyboard trap that only the same button can release.
+    const cancelOutside = (event: PointerEvent) => {
+      if (buttonRef.current?.contains(event.target as Node)) return;
+      stopRef.current();
     };
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     window.addEventListener('keyup', handleKeyUp, { capture: true });
+    window.addEventListener('pointerdown', cancelOutside, true);
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyUp, true);
+      window.removeEventListener('pointerdown', cancelOutside, true);
     };
   }, [actionId, recording, shortcutMap, updateShortcut]);
 
@@ -103,12 +125,14 @@ function ShortcutSettingsRow({
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <button
+          ref={buttonRef}
           type="button"
           onClick={() => {
             // Clicking again is the way out: Escape has to stay available as a
             // key you can bind.
             setError('');
-            setRecording((was) => !was);
+            if (recording) onStopRecording();
+            else onStartRecording();
           }}
           aria-label={`Change ${definition.label} shortcut`}
           className={`min-w-28 rounded-md border px-2.5 py-1.5 text-center font-mono text-[11px] transition-colors ${
@@ -149,6 +173,7 @@ function ShortcutSettingsRow({
 
 export function ShortcutsPage() {
   const { keyboardShortcuts, updateKeyboardShortcuts } = useStore();
+  const [recordingId, setRecordingId] = useState<ShortcutActionId | null>(null);
 
   return (
     <div className="rounded-lg border border-line bg-surface-2">
@@ -185,6 +210,9 @@ export function ShortcutsPage() {
               key={shortcut.id}
               actionId={shortcut.id}
               shortcutMap={keyboardShortcuts}
+              recording={recordingId === shortcut.id}
+              onStartRecording={() => setRecordingId(shortcut.id)}
+              onStopRecording={() => setRecordingId(null)}
               updateShortcut={(id, keys) => {
                 updateKeyboardShortcuts({
                   ...keyboardShortcuts,
