@@ -229,18 +229,22 @@ Measured occupancy over the 41 presets: 38 auto-capable, 3 with no capability (`
 Removing them also removes the whole class of revocation bugs: no record can be orphaned, replayed, or revived by reverting a value, because there is no record. The cost is deliberate and must be stated in copy: **the Inbox cannot be muted; it can only be fixed.**
 
 ## 11. Device-local state
-## 11. Device-local state
 
 Everything is namespaced by `vault_id` or `container_fingerprint`. Before unlock only `containers` is read.
 
+The two databases below are literal names: `keya-local` holds one KV object store (`state`), and its rows are addressed by string prefixes; `keya-meta` holds the biometric records in their own store so clearing one never takes the other with it.
+
 | Data | Location | Key | Lifetime | Sensitive |
 |---|---|---|---|---|
-| Device key | IndexedDB `device` | singleton | Lost when site data is cleared | non-extractable HMAC `CryptoKey` |
-| Container registrations | IndexedDB `containers` | `container_fingerprint` (§13.1) | Overwritten; after a password change write the new row and delete the old (§12.5) | name, icon, counts, timestamps only |
-| Observations | IndexedDB `observations` | `observation_id`, indexed by `vault_id,key_id` | 10 per Key | structured, with an irreversible `binding` |
-| Biometrics | IndexedDB `biometrics` | `container_fingerprint` | Deleted on unbind | a PRF-wrapped `file_key` |
-| Preferences | `localStorage` | — | never expire | no: auto-lock, clipboard clearing, theme, filters, selection |
-| Usage snapshots | `sessionStorage` | `vault_id + key_id` | current for 15 min, dropped after 24 h, cleared with the tab | quota numbers |
+| Device key | IndexedDB `keya-local/state` | `device/hmacKey`, singleton | Lost when site data is cleared | non-extractable HMAC `CryptoKey` |
+| Container registrations | IndexedDB `keya-local/state` | `containers/<container_fingerprint>` (§13.1) | Overwritten; after a password change write the new row and delete the old (§12.5) | name, icon, counts, timestamps only |
+| Observations | IndexedDB `keya-local/state` | `observations/<vault_id>/<key_id>/<observation_id>` | 10 per Key, ordered by the device `seq` | structured, with an irreversible `binding` |
+| Biometrics | IndexedDB `keya-meta/biometric` | `vault_id` (deviation: §13.2 specifies `container_fingerprint`; see appendix D.4) | Deleted on unbind | a PRF-wrapped password (deviation: D.4) |
+| Preferences | IndexedDB `keya-local/state` | `prefs` (auto-lock, clipboard clearing, hidden presets) | never expire | no |
+| Theme and shortcuts | `localStorage` | `keya-theme`, `keya-shortcuts` | never expire | no |
+| Usage snapshots | `sessionStorage` | `keya-usage:v1:<vault_id>` | current for 15 min, dropped after 24 h, cleared with the tab | quota numbers |
+
+Filters and the current selection are not persisted at all; they live in memory and are reset on unlock. The trailing `/` in every observation key is load-bearing: the store is scanned by raw prefix, so without it `key_id = k` would also match the records of `k2`.
 
 "Not in `.keya`" is not "safe to store in the clear". All of the above must be described in copy as data that clearing browser storage would destroy. The file owes them nothing.
 
@@ -304,7 +308,7 @@ Its boundaries, stated because this will otherwise be misread:
 | 2 | `flushSave()` writes all pending edits with the **old** container |
 | 3 | Rewrite the whole file with the new container (new `salt`, new `nonce`); payload and `content_updated_at` unchanged |
 | 4 | Write succeeded → switch the active generation; write the container registration under the **new** fingerprint |
-| 5 | Wrap the **new** `file_key` with PRF and write the biometric record under the new fingerprint; on failure, write no row, unbind biometrics, require the password next time |
+| 5 | Wrap the **new** `file_key` with PRF and write the biometric record under the new fingerprint; on failure, write no row, unbind biometrics, require the password next time. The shipped code deviates (D.4): the record wraps the password under `vault_id`, so this stage deletes it and the UI re-enrols a fresh credential with the new password; cancelling that prompt leaves biometrics off. |
 | 6 | Delete the two old-fingerprint rows |
 
 - Edits made during stages 1–3 land in stage 3's snapshot, taken at execution time.
@@ -337,6 +341,8 @@ Renaming or moving the file does not invalidate the registration, since the fing
 - The wrapping key derives from the PRF output, and the record's AAD contains **only `container_fingerprint`** (the only value available before unlock), so a record cannot be moved to another container. The record also stores `vault_id`, checked against the decrypted payload; a mismatch invalidates the record, deletes the binding and falls back to the password.
 - The record lives on the device, keyed by `container_fingerprint`. A password change rewrites it at stage 4 and re-wraps at stage 5 with the new `file_key`; failure at either point unbinds and notifies.
 - A lost PRF output or record means falling back to the password. There is no second unlock path.
+
+**Current implementation deviates from this section** (record wraps the password, keyed by `vault_id`, no AAD). Both paths require PRF, so neither downgrades, but the blast radius and binding strength differ. Appendix D.4 of [keya-format.md](keya-format.md) records the deviation and what must be decided before touching biometrics; §11 above states where the records actually live today.
 
 ## 16. Test checklist (16.4–16.8)
 

@@ -31,7 +31,7 @@ A custom provider may also carry a check recipe:
 
 Header and query-parameter names are restricted to letters, digits, dot, underscore, and hyphen. Invalid recipes are refused when saved. A custom provider with no probe cannot be tested; Keya sends nothing and the key says so.
 
-Renaming a custom provider keeps existing keys attached to it. Removing one leaves those keys pointing at no provider, so they display as **Custom** until reassigned.
+Renaming a custom provider keeps existing keys attached to it. A provider that a saved key still points at cannot be removed: Keya refuses and says which provider was kept, so reassign or delete those keys first. Deleting a key never leaves a dangling reference behind either.
 
 ## Endpoints
 

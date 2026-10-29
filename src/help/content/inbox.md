@@ -5,7 +5,7 @@ category: Daily use
 order: 6
 ---
 
-The Inbox is computed from the vault, this device's check history, and the current time. The list itself is not stored anywhere, so the same file shows the same expiry and rejection items on every device. This device's history is stored locally; it is not written into the file.
+The Inbox is computed from the vault, this device's check history, and the current time. The list itself is not stored anywhere, so there is nothing to sync: an expiry item is the same on every device, while a rejection is reported only on the device whose check produced it. This device's history is stored locally; it is not written into the file.
 
 ## What appears
 
@@ -27,7 +27,7 @@ Two rules, because only these are both time-sensitive and fixable:
 
 There is nothing to dismiss or archive in the Inbox itself. An item stays until its fact changes:
 
-- fix the expiry date, clear it, extend it by 30 days, or archive the key;
+- fix the expiry date, clear it, or archive the key;
 - run a test that the provider accepts, or archive the key.
 
 That is deliberate. A dismissal would be a decision stored on one device, so the same vault would show different lists on your laptop and your desktop. Instead, every item maps to something you can do to the vault.

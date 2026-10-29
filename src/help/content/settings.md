@@ -22,7 +22,7 @@ This page is part of the open vault.
 - **Identity** — the vault's name and icon. Both are stored inside the `.keya` file, so every copy shows them.
 - **Location** — the folder name and file name. A browser exposes only those, not a full path.
 - **Biometric Unlock** — available when the browser and authenticator support WebAuthn PRF. Enabling asks for the master password again; it is used for that gesture only and is not kept. The authenticator wraps the password, so a device that cannot do PRF is not offered a weaker fallback. Disabling removes the binding on this device.
-- **Master Password** — **Change** rewrites the whole file with a new salt and a new password. The old password stops working on the new file, but older copies — including cloud version history — keep opening with the old one. Biometric unlock on this device must be enabled again. See [Security](/docs/security).
+- **Master Password** — **Change** rewrites the whole file with a new salt and a new password. The old password stops working on the new file, but older copies — including cloud version history — keep opening with the old one. Keya rebinds biometric unlock on this device right after the change; if you cancel that prompt, the binding is gone and you can enable it again here. See [Security](/docs/security).
 
 ## Data
 
