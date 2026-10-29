@@ -34,6 +34,10 @@ vi.mock('../../../store/useStore', () => ({
     (
       holder.api as { runManualCheck: (...a: unknown[]) => unknown }
     ).runManualCheck(...args),
+  runManualChecks: (...args: unknown[]) =>
+    (
+      holder.api as { runManualChecks: (...a: unknown[]) => unknown }
+    ).runManualChecks(...args),
 }));
 
 const { InboxPage } = await import('../InboxPage');

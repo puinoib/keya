@@ -32,6 +32,7 @@ export async function buildComponentStore(
     },
     saveDelayMs: 0,
     confirmDestination: async () => true,
+    confirmBatchDestinations: async () => true,
   });
 
   await api.useStore

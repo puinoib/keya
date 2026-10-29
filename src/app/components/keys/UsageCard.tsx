@@ -126,7 +126,7 @@ export function UsageCard({
         <button
           onClick={onRefresh}
           disabled={loading}
-          title="Asks the provider for its own allowance. The key is sent to that provider only."
+          title="Asks the provider for its own allowance. The key is sent to the address you approve, once."
           className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-ink-quaternary hover:text-ink-secondary hover:bg-surface-3 transition-colors duration-100 disabled:opacity-50"
         >
           {loading ? (

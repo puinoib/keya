@@ -68,10 +68,21 @@ export interface StoreDeps {
   /** How long edits are coalesced before a write. */
   saveDelayMs?: number;
   /**
-   * How a manual check asks the user to approve the real destination. Injected
-   * so tests can answer without a toast.
+   * How a request asks the user to approve the real destination. Injected so
+   * tests can answer without a toast. `purpose` only changes the copy: usage is
+   * not a credential check and should not be described as one.
    */
-  confirmDestination?: (resolvedHref: string) => Promise<boolean>;
+  confirmDestination?: (
+    resolvedHref: string,
+    purpose: 'check' | 'usage'
+  ) => Promise<boolean>;
+  /**
+   * One gesture for a batch of checks, naming every destination the batch would
+   * reach. Injected for the same reason as `confirmDestination`.
+   */
+  confirmBatchDestinations?: (
+    resolvedHrefs: readonly string[]
+  ) => Promise<boolean>;
 }
 
 export interface ManualCheckResult {
@@ -79,6 +90,21 @@ export interface ManualCheckResult {
   latency_ms: number;
   error?: string;
   kind: 'credential' | 'request';
+  /** The session ended before the result could be stored; nothing to report. */
+  discarded?: boolean;
+}
+
+/** What a batch check did, so the caller can word the summary honestly. */
+export interface BatchCheckResult {
+  /** The user declined the destination list; no request was created. */
+  declined: boolean;
+  /** Requests that left the browser. */
+  checked: number;
+  succeeded: number;
+  /** The provider rejected or could not confirm the credential. */
+  failed: number;
+  /** The session ended mid-flight; these say nothing about the keys. */
+  discarded: number;
 }
 
 export interface AppStore {
@@ -86,6 +112,8 @@ export interface AppStore {
   flushSave: () => Promise<boolean>;
   exportVaultBytes: (markClean?: boolean) => Promise<Uint8Array | null>;
   runManualCheck: (keyId: string) => Promise<ManualCheckResult | null>;
+  /** One gesture for a list of destinations, one request per key. */
+  runManualChecks: (keyIds: readonly string[]) => Promise<BatchCheckResult>;
 }
 
 /** Fields a caller may change on a stored key; the rest is the vault's own. */
@@ -230,10 +258,14 @@ async function buildView(state: {
   const file = state.vault.getPayload();
   const bindings = await state.session.bindings();
   const checks = new Map<string, Observation>();
+  // One range scan for the whole vault: the old per-key loop serialized a
+  // read for every key on every refresh (every edit, save, lock and probe).
+  const byKey = await state.local.observationsByKey(file.vault.id);
 
   for (const [keyId, binding] of bindings) {
-    const list = await state.local.listObservations(file.vault.id, keyId);
-    const latest = list.find((entry) => entry.binding === binding.binding);
+    const latest = byKey
+      .get(keyId)
+      ?.find((entry) => entry.binding === binding.binding);
     if (latest) checks.set(keyId, latest);
   }
 
@@ -252,7 +284,10 @@ async function buildView(state: {
  * `resolvedHref` is the string the fingerprint covers, so what the user
  * approves is exactly what is sent.
  */
-function askDestination(resolvedHref: string): Promise<boolean> {
+function askDestination(
+  resolvedHref: string,
+  purpose: 'check' | 'usage' = 'check'
+): Promise<boolean> {
   let target: URL;
   try {
     target = new URL(resolvedHref);
@@ -261,6 +296,7 @@ function askDestination(resolvedHref: string): Promise<boolean> {
   }
   const plaintext = target.protocol === 'http:';
   const where = `${target.origin}${target.pathname}${target.search}`;
+  const usage = purpose === 'usage';
 
   return new Promise((resolve) => {
     let settled = false;
@@ -269,18 +305,76 @@ function askDestination(resolvedHref: string): Promise<boolean> {
       settled = true;
       resolve(value);
     };
-    toast(plaintext ? 'Send this key over plain http?' : 'Send this key?', {
-      description: plaintext
-        ? `${where} — this travels in clear text and is never remembered.`
-        : `${where} — this destination has not been allowed permanently.`,
-      duration: 20_000,
-      action: {
-        label: plaintext ? 'Send in clear text' : 'Send',
-        onClick: () => settle(true),
-      },
-      onDismiss: () => settle(false),
-      onAutoClose: () => settle(false),
-    });
+    toast(
+      plaintext
+        ? 'Send this key over plain http?'
+        : usage
+          ? 'Read usage from this address?'
+          : 'Send this key?',
+      {
+        description: plaintext
+          ? `${where} — this travels in clear text and is never remembered.`
+          : usage
+            ? `${where} — the key is sent there to read its allowance.`
+            : `${where} — this destination has not been allowed permanently.`,
+        duration: 20_000,
+        action: {
+          label: plaintext ? 'Send in clear text' : 'Send',
+          onClick: () => settle(true),
+        },
+        onDismiss: () => settle(false),
+        onAutoClose: () => settle(false),
+      }
+    );
+  });
+}
+
+/**
+ * One approval for a housekeeping batch. The click names every host the batch
+ * would reach; each request below still earns and consumes its own approval, so
+ * nothing here becomes a standing permission.
+ */
+function askBatchDestinations(
+  resolvedHrefs: readonly string[]
+): Promise<boolean> {
+  const hosts: string[] = [];
+  for (const href of resolvedHrefs) {
+    try {
+      const host = new URL(href).host;
+      if (!hosts.includes(host)) hosts.push(host);
+    } catch {
+      // A URL that will not parse is refused by the executor; naming it here
+      // would only repeat the failure.
+    }
+  }
+  if (hosts.length === 0) return Promise.resolve(false);
+
+  const shown = hosts.slice(0, 3).join(', ');
+  const more = hosts.length > 3 ? ` and ${hosts.length - 3} more` : '';
+  const count = resolvedHrefs.length;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    toast(
+      `Send this key to ${hosts.length === 1 ? 'this address' : 'these addresses'}?`,
+      {
+        description:
+          `${count} ${count === 1 ? 'check' : 'checks'} will read ${shown}${more}. ` +
+          'This click authorizes exactly this batch; nothing is remembered.',
+        duration: 20_000,
+        action: {
+          label: count === 1 ? 'Send' : `Send ${count}`,
+          onClick: () => settle(true),
+        },
+        onDismiss: () => settle(false),
+        onAutoClose: () => settle(false),
+      }
+    );
   });
 }
 
@@ -290,6 +384,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
   const newId = deps.newId ?? (() => crypto.randomUUID());
   const saveDelayMs = deps.saveDelayMs ?? 500;
   const confirmDestination = deps.confirmDestination ?? askDestination;
+  const confirmBatchDestinations =
+    deps.confirmBatchDestinations ?? askBatchDestinations;
 
   let runtime: Runtime | null = null;
   /** Bumped whenever the session is replaced; stale async results check it. */
@@ -365,6 +461,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
       biometricPrompt: null,
 
       unlock: async (opened, fileName, storageMode = 'folder') => {
+        // Read device preferences before the old vault is flushed and locked: a
+        // storage failure here would otherwise leave `runtime` pointing at a
+        // locked vault while the UI still reports an unlocked workspace.
+        const preferences = await deps.local.getPreferences();
+
         // Switching vaults must end the previous session first: its in-flight
         // requests are aborted, its pending edits are flushed, and its file key
         // is dropped. Otherwise a probe from the old vault can still leave the
@@ -401,7 +502,6 @@ export function createAppStore(deps: StoreDeps): AppStore {
           await drainLocalCleanup();
         }
 
-        const preferences = await deps.local.getPreferences();
         generation += 1;
         runtime = {
           vault: opened.vault,
@@ -483,7 +583,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
         });
       },
 
-      markExported: () =>
+      markExported: () => {
+        const active = runtime;
+        if (active && !active.vault.hasUnsavedChanges) {
+          // The exported bytes are now the file's content; let the locked card
+          // describe that state instead of the state at unlock.
+          void writeContainerRecord(active);
+        }
         set({
           // The vault knows whether the exported snapshot still covers every
           // edit; never clear the flag just because a download started.
@@ -491,7 +597,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
           saveFailure: runtime?.vault.hasUnsavedChanges
             ? get().saveFailure
             : null,
-        }),
+        });
+      },
 
       setTheme: (theme) => {
         try {
@@ -709,10 +816,37 @@ export function createAppStore(deps: StoreDeps): AppStore {
           },
         }));
 
-        // The click is the gesture: approve this one request shape, then let the
-        // session decide whether it may go out.
+        // The click is the gesture. Usage leaves the device too, so the address
+        // the credential would reach is shown before anything is approved —
+        // the URL is derived from the key's endpoint, which is not always the
+        // vendor's own host.
         const url = usageRequestUrl({ provider, endpoint });
-        if (url) await active.session.approveUsageOnce(keyId, url);
+        const secure = url !== null && new URL(url).protocol === 'https:';
+        if (secure) {
+          if (!(await confirmDestination(url, 'usage'))) {
+            // A lock during the 20 s prompt owns the state now.
+            if (runtime !== active) return;
+            set((state) => ({
+              usage: {
+                ...state.usage,
+                [keyId]: {
+                  state: 'failed',
+                  vault_id: vaultId,
+                  failure: {
+                    kind: 'unapproved',
+                    message:
+                      'Reading usage needs approval for the destination address.',
+                  },
+                },
+              },
+            }));
+            return;
+          }
+          if (runtime !== active) return;
+          await active.session.approveUsageOnce(keyId, url);
+        }
+        // A plain `http:` endpoint gets no approval: `fetchUsage` refuses it
+        // with its own copy, so nothing lingers in the session's approval list.
 
         const result = await fetchUsage(
           { provider, endpoint, secret },
@@ -920,9 +1054,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
         }
 
         // Download mode has no writable copy: the new container only reaches
-        // disk when the user exports it.
+        // disk when the user exports it. An edit that landed during stage 3 is
+        // still dirty, so read the vault rather than assuming a clean save.
         const download = getState().storageMode === 'download';
-        set({ hasUnsavedChanges: download, saveFailure: null });
+        set({
+          hasUnsavedChanges: download || active.vault.hasUnsavedChanges,
+          saveFailure: null,
+        });
         await get().refresh();
         return { ok: true as const };
       },
@@ -956,24 +1094,14 @@ export function createAppStore(deps: StoreDeps): AppStore {
   });
 
   /**
-   * Run one manually triggered check for a stored key. The click is the gesture
-   * that authorizes the request, so a one-shot approval is created here.
+   * Run one probe for a key whose destination the caller has already approved.
+   * One approval is created and consumed per request, even inside a batch.
    */
-  const runManualCheck = async (
+  const probeApproved = async (
+    active: Runtime,
     keyId: string
-  ): Promise<ManualCheckResult | null> => {
-    const active = runtime;
-    if (!active) return null;
-    const payload = active.vault.getPayload();
-    if (!payload.keys.some((key) => key.id === keyId)) return null;
-
-    const binding = (await active.session.bindings()).get(keyId);
-    // Nothing is stored that could stand in for this click.
-    if (binding && !(await confirmDestination(binding.plan.resolvedHref))) {
-      return null;
-    }
-
-    let outcome: Awaited<ReturnType<typeof active.session.probe>>;
+  ): Promise<ManualCheckResult> => {
+    let outcome: Awaited<ReturnType<Runtime['session']['probe']>>;
     try {
       await active.session.approveOnce(keyId);
       outcome = await active.session.probe(keyId);
@@ -990,8 +1118,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
         kind: 'request' as const,
       };
     }
-    // A switch mid-check must not repaint the vault that did not ask for it.
-    if (runtime === active) await getState().refresh();
+
     if (outcome.status !== 'observed' && outcome.status !== 'discarded') {
       return {
         success: false,
@@ -1001,8 +1128,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         kind: 'request',
       };
     }
-    const observation = outcome.observation;
 
+    const observation = outcome.observation;
     return {
       success: observation.outcome === 'ok',
       latency_ms: observation.latency_ms ?? 0,
@@ -1011,7 +1138,88 @@ export function createAppStore(deps: StoreDeps): AppStore {
           ? undefined
           : (observation.detail_code ?? observation.outcome),
       kind: observation.kind,
+      discarded: outcome.status === 'discarded',
     };
+  };
+
+  /**
+   * Run one manually triggered check for a stored key. The click is the gesture
+   * that authorizes the request, so a one-shot approval is created here.
+   */
+  const runManualCheck = async (
+    keyId: string
+  ): Promise<ManualCheckResult | null> => {
+    const active = runtime;
+    if (!active) return null;
+    const payload = active.vault.getPayload();
+    if (!payload.keys.some((key) => key.id === keyId)) return null;
+
+    const binding = (await active.session.bindings()).get(keyId);
+    // Nothing is stored that could stand in for this click.
+    if (
+      binding &&
+      !(await confirmDestination(binding.plan.resolvedHref, 'check'))
+    ) {
+      return null;
+    }
+    // The prompt can outlive the unlock that opened it.
+    if (runtime !== active) return null;
+
+    const result = await probeApproved(active, keyId);
+    // A switch mid-check must not repaint the vault that did not ask for it.
+    if (runtime === active) await getState().refresh();
+    return result;
+  };
+
+  /**
+   * Housekeeping: one destination prompt for the whole list, then one request
+   * per key. Each request still creates and consumes its own approval, so this
+   * is a batch of single-use consents rather than a standing permission.
+   */
+  const runManualChecks = async (
+    keyIds: readonly string[]
+  ): Promise<BatchCheckResult> => {
+    const nothing = {
+      declined: false,
+      checked: 0,
+      succeeded: 0,
+      failed: 0,
+      discarded: 0,
+    } as const;
+    const active = runtime;
+    if (!active || keyIds.length === 0) return nothing;
+
+    const bindings = await active.session.bindings();
+    const targets = keyIds.filter((id) => bindings.has(id));
+    if (targets.length === 0) return nothing;
+
+    const hrefs = targets.map((id) => bindings.get(id)!.plan.resolvedHref);
+    if (!(await confirmBatchDestinations(hrefs))) {
+      return { ...nothing, declined: true };
+    }
+    if (runtime !== active) return nothing;
+
+    let checked = 0;
+    let succeeded = 0;
+    let failed = 0;
+    let discarded = 0;
+
+    for (const id of targets) {
+      // A lock or a vault switch ends the batch: the remaining approvals would
+      // belong to a session that is gone.
+      if (runtime !== active) break;
+      const result = await probeApproved(active, id);
+      if (result.discarded) {
+        discarded += 1;
+        continue;
+      }
+      checked += 1;
+      if (result.success) succeeded += 1;
+      else failed += 1;
+    }
+
+    if (runtime === active) await getState().refresh();
+    return { declined: false, checked, succeeded, failed, discarded };
   };
 
   /** Turn a refused edit into the sentence the user sees. */
@@ -1123,6 +1331,36 @@ export function createAppStore(deps: StoreDeps): AppStore {
   };
 
   /**
+   * Rewrite the locked-state registration from the live payload.
+   *
+   * `openSession` writes it once, so without this a rename, a new key or a
+   * deleted key would only appear on the welcome screen after the next unlock —
+   * on the screen whose whole job is identifying the file. It is a display
+   * cache: a failure here must never fail a save.
+   */
+  const writeContainerRecord = async (active: Runtime): Promise<void> => {
+    try {
+      const payload = active.vault.getPayload();
+      const fingerprint = active.vault.containerInfo.fingerprint;
+      // A save is not an open: keep the recorded open time when there is one.
+      const existing = await deps.local.getContainer(fingerprint);
+      await deps.local.putContainer({
+        fingerprint,
+        file_name: active.fileName,
+        vault_id: payload.vault.id,
+        name: payload.vault.name,
+        icon: payload.vault.icon,
+        key_count: payload.keys.length,
+        content_updated_at: payload.vault.content_updated_at,
+        last_opened_at: existing?.last_opened_at ?? clock().toISOString(),
+      });
+      active.fingerprint = fingerprint;
+    } catch {
+      // Registration is a cache; the save itself already succeeded.
+    }
+  };
+
+  /**
    * Flush pending edits. Returns false when the write failed, so callers can keep
    * the vault open instead of silently dropping changes.
    */
@@ -1131,23 +1369,29 @@ export function createAppStore(deps: StoreDeps): AppStore {
       clearTimeout(saveTimer);
       saveTimer = null;
     }
-    if (!runtime) return true;
+    const active = runtime;
+    if (!active) return true;
 
     if (getState().storageMode === 'download') {
       // This mode has no writable copy: the exported file is the save. Only
       // pending edits block leaving, so an exported vault can lock normally.
-      if (!getState().hasUnsavedChanges) return true;
+      if (!getState().hasUnsavedChanges) {
+        await writeContainerRecord(active);
+        return true;
+      }
       toast.error('Export a .keya file to save changes before leaving.');
       return false;
     }
 
-    const result = await runtime.vault.flush();
+    const result = await active.vault.flush();
     if (!result.ok) {
       setState({ hasUnsavedChanges: true, saveFailure: result.failure });
       return false;
     }
 
     setState({ hasUnsavedChanges: false, saveFailure: null });
+    // The payload now matches the file, so the locked card may describe it.
+    await writeContainerRecord(active);
     await drainLocalCleanup();
     await getState().refresh();
     return true;
@@ -1158,6 +1402,7 @@ export function createAppStore(deps: StoreDeps): AppStore {
     flushSave,
     exportVaultBytes,
     runManualCheck,
+    runManualChecks,
   };
 }
 

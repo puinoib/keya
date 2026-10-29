@@ -447,13 +447,13 @@ describe('a check that is still in flight', () => {
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
-    const original = h.local.listObservations.bind(h.local);
+    const original = h.local.observationsByKey.bind(h.local);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
     let calls = 0;
-    h.local.listObservations = async (...args) => {
+    h.local.observationsByKey = async (...args) => {
       calls += 1;
       if (calls === 1) await gate;
       return original(...args);
@@ -473,9 +473,9 @@ describe('a check that is still in flight', () => {
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
-    const original = h.local.listObservations.bind(h.local);
+    const original = h.local.observationsByKey.bind(h.local);
     let injected = false;
-    h.local.listObservations = async (...args) => {
+    h.local.observationsByKey = async (...args) => {
       if (!injected) {
         injected = true;
         store.useStore.getState().updateMeta({ name: 'Late edit' });
@@ -806,5 +806,108 @@ describe('switching vaults and re-querying usage', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+});
+
+describe('reading usage asks about the destination', () => {
+  const usagePayload = () => {
+    const payload = cloneFile();
+    payload.keys[0].provider_id = 'preset:opencode-go';
+    payload.keys[0].endpoint = 'https://opencode.ai/zen/go/v1';
+    return payload;
+  };
+
+  it('names the endpoint-derived address before sending', async () => {
+    const h = await openHarness({ payload: usagePayload() });
+    const asked: { href: string; purpose: string }[] = [];
+    const store = createAppStore({
+      local: h.local,
+      clock: () => new Date(FIXED_NOW),
+      timeZone: () => 'UTC',
+      saveDelayMs: 0,
+      // The usage URL is derived from the key's endpoint, which is not always
+      // the vendor's own host, so it needs the same approval a probe gets.
+      confirmDestination: async (href, purpose) => {
+        asked.push({ href, purpose });
+        return false;
+      },
+    });
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as typeof fetch;
+    try {
+      await store.useStore.getState().refreshUsage(IDS.key);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(asked).toEqual([
+      {
+        href: 'https://opencode.ai/inference/go/v1/usage',
+        purpose: 'usage',
+      },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(store.useStore.getState().usage[IDS.key]?.state).toBe('failed');
+  });
+});
+
+describe('housekeeping checks a batch with one destination prompt', () => {
+  const SECOND_KEY = '44444444-4444-4444-8444-444444444444';
+  const twoKeys = () => {
+    const payload = cloneFile();
+    payload.keys = [
+      payload.keys[0],
+      { ...payload.keys[0], id: SECOND_KEY, secret: 'sk-second' },
+    ];
+    return payload;
+  };
+
+  it('asks once, then sends one request per key', async () => {
+    const h = await openHarness({ payload: twoKeys() });
+    const batches: string[][] = [];
+    const store = createAppStore({
+      local: h.local,
+      clock: () => new Date(FIXED_NOW),
+      timeZone: () => 'UTC',
+      saveDelayMs: 0,
+      confirmBatchDestinations: async (hrefs) => {
+        batches.push([...hrefs]);
+        return true;
+      },
+    });
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const result = await store.runManualChecks([IDS.key, SECOND_KEY]);
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(2);
+    expect(result).toMatchObject({
+      declined: false,
+      checked: 2,
+      succeeded: 2,
+      failed: 0,
+      discarded: 0,
+    });
+    expect(h.requests).toHaveLength(2);
+  });
+
+  it('sends nothing when the batch destination is declined', async () => {
+    const h = await openHarness({ payload: twoKeys() });
+    const store = createAppStore({
+      local: h.local,
+      clock: () => new Date(FIXED_NOW),
+      timeZone: () => 'UTC',
+      saveDelayMs: 0,
+      confirmBatchDestinations: async () => false,
+    });
+    await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
+
+    const result = await store.runManualChecks([IDS.key, SECOND_KEY]);
+
+    expect(result).toMatchObject({ declined: true, checked: 0, failed: 0 });
+    expect(h.requests).toHaveLength(0);
   });
 });

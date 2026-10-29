@@ -19,7 +19,11 @@ import {
 import { providerLabel } from '../../state/providers';
 import { daysSince } from '../../state/presentation';
 import { Button } from '@/components/ui/button';
-import { useStore, runManualCheck } from '../../store/useStore';
+import {
+  useStore,
+  runManualCheck,
+  runManualChecks,
+} from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
 
@@ -56,6 +60,7 @@ export function InboxPage() {
   const [housekeepingOpen, setHousekeepingOpen] = useState(false);
   const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
   const [busyKeyId, setBusyKeyId] = useState<string | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
 
   const attention = useMemo(() => view?.attention ?? [], [view]);
   const backlog = useMemo(() => (view ? deviceBacklog(view) : []), [view]);
@@ -71,40 +76,51 @@ export function InboxPage() {
 
   const check = async (keyId: string, announce: boolean): Promise<boolean> => {
     setBusyKeyId(keyId);
-    const result = await runManualCheck(keyId);
-    setBusyKeyId(null);
-    const success = Boolean(result?.success);
-    if (!success && announce) {
-      toast.error('The check did not pass', {
-        description:
-          result?.error ??
-          'The provider did not accept this check. The key is unchanged.',
-      });
+    try {
+      const result = await runManualCheck(keyId);
+      // A declined destination or a session that ended mid-flight sent nothing;
+      // neither says anything about the credential.
+      if (!result || result.discarded) return false;
+      const success = result.success;
+      if (!success && announce) {
+        toast.error('The check did not pass', {
+          description:
+            result.error ??
+            'The provider did not accept this check. The key is unchanged.',
+        });
+      }
+      return success;
+    } finally {
+      setBusyKeyId(null);
     }
-    return success;
   };
 
   const checkAll = async () => {
-    let failed = 0;
-    for (const row of backlog) {
-      const success = await check(row.key.id, false);
-      if (!success) failed += 1;
-    }
-    if (failed > 0) {
-      toast.error(
-        failed === 1
-          ? 'One check did not pass'
-          : `${failed} checks did not pass`,
-        {
-          description:
-            'The provider rejected or could not confirm those keys. Nothing was changed.',
-        }
+    setBatchBusy(true);
+    try {
+      // One gesture names every destination; each request below still earns and
+      // consumes its own single-use approval. A decline sends nothing.
+      const result = await runManualChecks(backlog.map((row) => row.key.id));
+      if (result.declined || result.checked === 0) return;
+
+      if (result.failed > 0) {
+        toast.error(
+          result.failed === 1
+            ? 'One check did not pass'
+            : `${result.failed} checks did not pass`,
+          {
+            description:
+              'The provider rejected or could not confirm those keys. Nothing was changed.',
+          }
+        );
+        return;
+      }
+      toast.success(
+        result.checked === 1 ? 'Key checked' : `${result.checked} keys checked`
       );
-      return;
+    } finally {
+      setBatchBusy(false);
     }
-    toast.success(
-      backlog.length === 1 ? 'Key checked' : `${backlog.length} keys checked`
-    );
   };
 
   if (!view) return null;
@@ -278,7 +294,7 @@ export function InboxPage() {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={() => void checkAll()}
-                  disabled={busyKeyId !== null}
+                  disabled={batchBusy || busyKeyId !== null}
                 >
                   Check all
                 </Button>

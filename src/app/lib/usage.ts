@@ -257,21 +257,13 @@ function isTimeout(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
 }
 
-/** Provider-supplied explanation, if the body has one. */
-function readErrorMessage(body: unknown): string | null {
-  if (!body || typeof body !== 'object') return null;
-  const reply = body as Record<string, unknown>;
-  const error = reply.error;
-  if (error && typeof error === 'object') {
-    const message = (error as Record<string, unknown>).message;
-    if (typeof message === 'string' && message.trim()) return message.trim();
-  }
-  if (typeof error === 'string' && error.trim()) return error.trim();
-  const message = reply.message;
-  if (typeof message === 'string' && message.trim()) return message.trim();
-  return null;
-}
-
+/**
+ * Read a JSON body without decoding failures as an error.
+ *
+ * The reply is never surfaced to the user and never persisted: provider error
+ * copy can echo a token prefix, an account name or a balance, so only the
+ * controlled `kind` and status code leave this function (format §2.4).
+ */
 async function readJson(res: Response): Promise<unknown> {
   try {
     return await res.json();
@@ -281,8 +273,9 @@ async function readJson(res: Response): Promise<unknown> {
 }
 
 /**
- * Ask the provider what is left. The key is sent to that provider's own
- * metadata endpoint and nowhere else; a redirect off the configured host is
+ * Ask the provider what is left. The allowance is read from a metadata endpoint
+ * derived from the key's endpoint, so the caller shows that address before it
+ * creates the one-shot approval (§10.2). A redirect off the requested host is
  * refused rather than followed with the credential attached.
  */
 export async function fetchUsage(
@@ -352,27 +345,22 @@ export async function fetchUsage(
     const body = await readJson(res);
 
     if (res.status === 401) {
-      return failure(
-        'auth',
-        readErrorMessage(body) ?? 'The provider rejected the key (HTTP 401).'
-      );
+      return failure('auth', 'The provider rejected the key (HTTP 401).');
     }
     if (res.status === 403) {
       return failure(
         'forbidden',
-        readErrorMessage(body) ??
-          'The key is not allowed to read usage (HTTP 403). It may be a key without this plan, or lack the permission.'
+        'The key is not allowed to read usage (HTTP 403). It may be a key without this plan, or lack the permission.'
       );
     }
     if (res.status === 429) {
       return failure(
         'rate_limited',
-        readErrorMessage(body) ??
-          'The provider rate limited the request (HTTP 429).'
+        'The provider rate limited the request (HTTP 429).'
       );
     }
     if (!res.ok) {
-      return failure('network', readErrorMessage(body) ?? `HTTP ${res.status}`);
+      return failure('network', `HTTP ${res.status}`);
     }
 
     const windows = source.read(body);
