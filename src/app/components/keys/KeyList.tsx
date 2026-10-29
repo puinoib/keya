@@ -658,6 +658,11 @@ export function EditKeyDialog({
   providersRef.current = providers;
   const viewRef = useRef(view);
   viewRef.current = view;
+  // A draft test outlives the form values it was started with.
+  const formRef = useRef(form);
+  formRef.current = form;
+  const editingKeyRef = useRef(editingKey);
+  editingKeyRef.current = editingKey;
 
   useEffect(() => {
     if (!editingKey) return;
@@ -682,17 +687,31 @@ export function EditKeyDialog({
 
   const handleTest = async () => {
     if (!form.secret) return;
-    setTestState({ testing: true, result: null });
-    const result = await ApiTester.testDraft({
+    const started = {
+      keyId: editingKey?.id ?? null,
       providerId: providerIdForLabel(form.provider, providers),
       endpoint: form.endpoint,
       secret: form.secret,
-      providers,
-    });
-    setTestState({ testing: false, result });
+    };
+    setTestState({ testing: true, result: null });
+    const result = await ApiTester.testDraft({ ...started, providers });
+
+    // The dialog may have moved to another key, or the values may have been
+    // edited, while the request was out. That verdict belongs to the old
+    // request and must not be reported against this one.
+    const latest = formRef.current;
+    const superseded =
+      (editingKeyRef.current?.id ?? null) !== started.keyId ||
+      latest.secret !== started.secret ||
+      latest.endpoint !== started.endpoint ||
+      providerIdForLabel(latest.provider, providers) !== started.providerId;
+
+    setTestState({ testing: false, result: superseded ? null : result });
+    if (superseded) return;
+
     const feedback = describeTestResult(
       result,
-      form.name.trim() || form.provider
+      latest.name.trim() || latest.provider
     );
     toast[result.success ? 'success' : 'error'](feedback.title, {
       description: feedback.description,

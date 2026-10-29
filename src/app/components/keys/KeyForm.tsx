@@ -118,6 +118,10 @@ export function KeyForm({
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  // The draft test is async, and the form can be edited or reset under it.
+  // A result may only be reported for the exact values it was started with.
+  const formRef = useRef(form);
+  formRef.current = form;
 
   useEffect(() => {
     if (!showCalendar) return;
@@ -192,15 +196,27 @@ export function KeyForm({
 
   const handleTest = async () => {
     if (!form.secret) return;
-    setTestState({ testing: true, result: null });
-    const result = await ApiTester.testDraft({
+    const started = {
       providerId: providerIdForLabel(form.provider, providers),
       endpoint: form.endpoint,
       secret: form.secret,
-      providers,
-    });
-    setTestState({ testing: false, result });
-    const feedback = describeTestResult(result, form.name || form.provider);
+    };
+    setTestState({ testing: true, result: null });
+    const result = await ApiTester.testDraft({ ...started, providers });
+
+    // Another key, another destination or another secret means the result
+    // describes a request this form no longer asks for. Drop it instead of
+    // reporting the previous credential's verdict against the current one.
+    const latest = formRef.current;
+    const superseded =
+      latest.secret !== started.secret ||
+      latest.endpoint !== started.endpoint ||
+      providerIdForLabel(latest.provider, providers) !== started.providerId;
+
+    setTestState({ testing: false, result: superseded ? null : result });
+    if (superseded) return;
+
+    const feedback = describeTestResult(result, latest.name || latest.provider);
     toast[result.success ? 'success' : 'error'](feedback.title, {
       description: feedback.description,
     });
