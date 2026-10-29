@@ -452,14 +452,19 @@ describe('a check that is still in flight', () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    let calls = 0;
+    let gated = false;
     h.local.observationsByKey = async (...args) => {
-      calls += 1;
-      if (calls === 1) await gate;
+      // Park only the refresh under test: the lock runs its own refresh, and a
+      // shared call counter would gate whichever of the two arrives first.
+      if (!gated) {
+        gated = true;
+        await gate;
+      }
       return original(...args);
     };
 
     const pending = store.useStore.getState().refresh();
+    await vi.waitFor(() => expect(gated).toBe(true));
     await store.useStore.getState().lock();
     release();
     await pending;
