@@ -66,17 +66,21 @@ import { DeleteKeyDialog } from './DeleteKeyDialog';
 import { KeyFormFields, type KeyFieldValues } from './KeyFormFields';
 
 /**
- * Whether a dialog, menu or listbox is on screen.
+ * Whether a dialog, menu or listbox is actually on screen.
  *
- * Base UI unmounts a popup when it closes, so the presence of one of these
- * roles means Escape has something above the detail panel to dismiss.
+ * Base UI *keeps a closed popup mounted* under a `hidden` ancestor (a Select
+ * stays in the DOM after its first open), so presence alone is not evidence
+ * that Escape belongs to it. Only a rendered popup may take the key.
  */
 function hasOpenPopup(): boolean {
   if (typeof document === 'undefined') return false;
-  return Boolean(
-    document.querySelector(
-      '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
-    )
+  const popups = document.querySelectorAll(
+    '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
+  );
+  return [...popups].some(
+    (popup) =>
+      popup.closest('[hidden]') === null &&
+      getComputedStyle(popup).display !== 'none'
   );
 }
 

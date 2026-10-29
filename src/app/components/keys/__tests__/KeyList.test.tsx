@@ -288,8 +288,7 @@ describe('closing the detail panel', () => {
       harness.api.useStore.getState().setSelectedKeyId(IDS.key);
     });
 
-    // Base UI unmounts a closed popup, so an element with this role means one
-    // is open and owns the key.
+    // A rendered popup owns the key.
     const menu = document.createElement('div');
     menu.setAttribute('role', 'menu');
     document.body.append(menu);
@@ -300,6 +299,31 @@ describe('closing the detail panel', () => {
       expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
     } finally {
       menu.remove();
+    }
+  });
+
+  it('ignores a closed popup that Base UI left mounted', () => {
+    render(<KeyList />);
+    act(() => {
+      harness.api.useStore.getState().setSelectedKeyId(IDS.key);
+    });
+
+    // After its first open, a Base UI Select stays in the DOM under a hidden
+    // ancestor. Counting roles alone would make Escape unusable for the rest
+    // of the session once any filter had been opened.
+    const wrapper = document.createElement('div');
+    wrapper.hidden = true;
+    const listbox = document.createElement('div');
+    listbox.setAttribute('role', 'listbox');
+    wrapper.append(listbox);
+    document.body.append(wrapper);
+    try {
+      act(() => {
+        fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+      });
+      expect(harness.api.useStore.getState().selectedKeyId).toBeNull();
+    } finally {
+      wrapper.remove();
     }
   });
 });
