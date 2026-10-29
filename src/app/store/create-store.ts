@@ -352,6 +352,7 @@ function askBatchDestinations(
   const shown = hosts.slice(0, 3).join(', ');
   const more = hosts.length > 3 ? ` and ${hosts.length - 3} more` : '';
   const count = resolvedHrefs.length;
+  const where = hosts.length === 1 ? 'this address' : 'these addresses';
 
   return new Promise((resolve) => {
     let settled = false;
@@ -361,14 +362,16 @@ function askBatchDestinations(
       resolve(value);
     };
     toast(
-      `Send this key to ${hosts.length === 1 ? 'this address' : 'these addresses'}?`,
+      count === 1
+        ? `Send this key to ${where}?`
+        : `Send these ${count} keys to ${where}?`,
       {
         description:
           `${count} ${count === 1 ? 'check' : 'checks'} will read ${shown}${more}. ` +
           'This click authorizes exactly this batch; nothing is remembered.',
         duration: 20_000,
         action: {
-          label: count === 1 ? 'Send' : `Send ${count}`,
+          label: count === 1 ? 'Send' : 'Send all',
           onClick: () => settle(true),
         },
         onDismiss: () => settle(false),
