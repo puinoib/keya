@@ -136,8 +136,11 @@ interface Observation {
   latency_ms: number | null;
   started_at: string;
   finished_at: string;          // drives staleness, not adoption order
+  seq: number;                  // device-monotonic, assigned when stored
 }
 ```
+
+`seq` is storage bookkeeping, not producer output: the app assigns the next value for that Key when it records the observation. It exists because `finished_at` is a wall clock and cannot order two records after a clock change, while a stored record has no `request_seq` to fall back on. Selection ("the newest observation under this binding"), retention ("the latest 10") and the view all order by `seq`, newest first. Records written before the field existed read as `0` and therefore sort behind every new result.
 
 `detail_code` is closed: only values derivable from the status code plus a known response shape (`scope_insufficient`, `plan_required`, `key_malformed`, `upstream_error`). Provider error text is never persisted — truncation is not redaction, and error text may echo a token prefix, an account name or a balance.
 
@@ -149,7 +152,7 @@ Adoption order, "the latest started wins":
 2. On return, check in order: `session_id` is still current → the Key exists → it is not archived → `binding` matches. Any failure → **discard**, writing no cache and changing no UI.
 3. For one Key accept only a `request_seq` greater than the adopted one; equal or lower is discarded. `finished_at` is not compared, so changing the system clock has no effect.
 4. Across unlocks, results from an old `session_id` are discarded even if every identity field matches.
-5. Keep the latest 10 per Key; delete them with the Key. Archiving keeps history but removes it from the Inbox.
+5. Keep the latest 10 per Key, ordered by the stored `seq`; delete them with the Key. Archiving keeps history but removes it from the Inbox.
 
 Staleness: `finished_at` older than 30 days → the Key is offered a fresh check in the quiet device list. A mismatched `binding` → "not yet verified on this device", with the record kept so the UI can say the last check happened under a different configuration. Neither is an Inbox fact.
 
@@ -165,6 +168,7 @@ Rules:
 
 - **No request without a single-use approval created by that same interaction (I7).**
 - A probe or usage query produces **one** approval per gesture. The real recipient is shown before the request is built; the approval names that exact `fingerprint`, so a configuration change between the click and the send finds nothing to consume.
+- A **housekeeping batch** (`Check all`) is still made of single-use approvals: one gesture names every destination the batch will reach, then each request creates and consumes its own approval. Declining the prompt creates none, and a batch is never a standing permission.
 - An approval is not persisted and not replayable: one gesture, one `fetch()`, and any async retry needs another click. That is what reconciles "a click is an approval" with "every request needs prior authorization". The browser's CORS preflight counts as part of that `fetch()` and consumes nothing extra.
 - `origin`, `path` and `vault_id` are display fields; matching uses `fingerprint` alone.
 - **There is no standing permission.** A persisted grant used to let a daily sweep and an on-save check run unattended; both were removed with the settings page that switched them on, because nothing in the product needs to send without a click. Device storage therefore holds no network consent at all, and a copied file, a clone or a restored backup inherits none — there is none to inherit.
@@ -197,7 +201,7 @@ The Inbox is a pure function of the payload, this device's observations, `now` a
 
 Both add +6 when the Key is grouped and +4 when its newest check succeeded. Ties fall back to the earliest expiry, then the newest rejection, then `key_id`, so the order is stable across devices. The order is an explicit judgement and must stay testable, never an artifact of insertion order.
 
-**Device verification is not an Inbox fact.** For every Key whose recipe can run, the view exposes the newest observation under the current `binding`: `never_verified`, `days_since`, and `stale` (≥ 30 days). It appears as a quiet, collapsible list with "check all" — never as a sidebar count, never as a notification. It is expected to differ across devices: it says "this device has not asked lately", not "this credential is bad". `never_probed` and `probe_stale` are gone as rules because they were never facts the user could fix.
+**Device verification is not an Inbox fact.** For every Key whose recipe can run, the view exposes the newest observation under the current `binding`: `never_verified`, `days_since`, and `stale` (≥ 30 days). It appears as a quiet, collapsible list with "check all" — one destination prompt for the whole batch, then one request per Key — never as a sidebar count, never as a notification. It is expected to differ across devices: it says "this device has not asked lately", not "this credential is bad". `never_probed` and `probe_stale` are gone as rules because they were never facts the user could fix.
 
 **Recipe states.** A Key's recipe sits in exactly one state, which decides whether the Inbox can report anything and what the Key says. "Not executable" is four states, not one: three are fixable by the user and one is not.
 
@@ -360,6 +364,7 @@ Renaming or moving the file does not invalidate the registration, since the fing
 59. No stored consent: nothing in `localStorage` or IndexedDB names a destination, and unlocking never sends anything on its own.
 60. Keys with `http:` targets show "manual checks only (plaintext transport)"; every other checkable key shows no standing authorization warning.
 61. Single-use approval: one gesture sends one request and a second is refused; the approval never appears in storage; it dies on lock.
+61b. Batch: one prompt names every destination, then each request consumes its own approval; declining sends nothing and leaves no approval behind.
 
 ### 16.5 Observations and privacy
 
@@ -367,7 +372,7 @@ Renaming or moving the file does not invalidate the registration, since the fing
 63. After a refresh, rejected copy is generated entirely from `outcome` + `detail_code`.
 64. A mismatched `binding` → UI says "not yet verified on this device", and the Key is neither rejected nor listed in the Inbox.
 65. Clearing site data discards observations with no error.
-66. Out-of-order concurrent returns → the larger `request_seq` wins; system clock changes do not matter.
+66. Out-of-order concurrent returns → the larger `request_seq` wins; system clock changes do not matter. Stored records are ordered by the device-assigned `seq`, so a result recorded after the clock moved backwards still reads as the newest and retention drops the oldest by sequence, not by `finished_at`.
 67. Lock and unlock → late results from the previous session are discarded.
 68. A custom recipe receiving 2xx → `request/ok` only, never `credential/ok`, `basic` mode included.
 69. `timeout` and `network` copy never says "invalid credential" or "CORS error"; a static header whose preflight the server rejects is also `network`, with copy hinting the server may not allow that header.

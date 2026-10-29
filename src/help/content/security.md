@@ -59,7 +59,8 @@ There is no Keya backend and no account system. The deployed site can also load 
 Beyond that, network requests come only from something you asked for:
 
 - a **Test key**, which first shows the exact address the credential will reach;
-- a **usage query**, where the click itself authorizes that exact request without a separate destination dialog.
+- a **usage query**, which shows the allowance address first and then authorizes that one request;
+- a **housekeeping batch**, which names every destination once and then runs one request per key.
 
 Nothing is sent on a schedule, and no approval outlives the click that gave it. `http:` endpoints are confirmed for every send, and usage queries refuse them outright because the key would travel in clear text. Redirects are never followed.
 

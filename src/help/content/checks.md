@@ -29,7 +29,7 @@ A plain `http:` endpoint is checkable, but the key travels in clear text. The ke
 
 The **Usage** card on a key's detail panel reads the provider's own allowance metadata. It is not a Keya estimate, and Keya never invents a financial figure.
 
-- **Check usage** (or **Refresh**) asks the provider once. The click approves that exact request; no separate destination dialog is shown, and nothing is stored in the vault.
+- **Check usage** (or **Refresh**) first shows the address the key would be sent to, then asks the provider once. Nothing is stored in the vault.
 - The figures are cached for this tab only: current for about 15 minutes, shown with a stale warning afterwards, and dropped after 24 hours or when the tab closes. A cached failure is never replayed.
 - The collapsed card shows the tightest window first. Expanding it lists every window the provider reports, with the provider's reset time when it states one.
 - Usage is refused for a plain `http:` endpoint because the key would travel in clear text.

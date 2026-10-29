@@ -38,4 +38,4 @@ The sidebar count shows only these items. It is normally zero, and that is the p
 
 This device's check history is its own. A new device knows nothing about checks you ran elsewhere, so it lists every checkable key as "never verified on this device". That is not a warning about the keys; it is an offer to check them. Nothing there is counted, announced, or badged.
 
-A successful check clears a previous rejection, so a later rejection is reported again. **Check all** runs the same one-request approval for each key in turn.
+A successful check clears a previous rejection, so a later rejection is reported again. **Check all** names every destination in a single prompt, then runs the same one-request approval for each key. Declining the prompt sends nothing.

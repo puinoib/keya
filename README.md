@@ -44,7 +44,7 @@ Chrome or Edge is recommended for folder-based use. Browsers without the directo
 - **Test key** sends one `GET` request to the provider's check target, with the credential in the slot its recipe names. Every test needs a fresh approval that shows the exact destination; nothing is persisted that could act as a standing permission. There is no automatic or scheduled checking.
 - A custom provider uses the check recipe configured in Settings → Providers. With no recipe, Keya sends nothing and the key cannot be tested. A provider that blocks browser requests fails with a network error, which is not proof the credential is invalid.
 - A successful response is **Reachable** unless the endpoint requires the credential, in which case it can be **Verified**. Custom or metered endpoints may incur charges, so prefer a cheap metadata endpoint where the provider offers one.
-- Usage lookups read the provider's own allowance metadata on demand and are refused for plain `http:` endpoints. The figures are cached for this tab only, never written to the vault.
+- Usage lookups read the provider's own allowance metadata on demand. The address is shown before the key is sent, and plain `http:` endpoints are refused. The figures are cached for this tab only, never written to the vault.
 - JSON exports are **unencrypted**. Protect or delete them after use.
 
 There is no password-reset service. Keep the master password in a password manager. Encryption protects stored vault contents, not an unlocked app running on a compromised browser or device. Do not treat this project as independently security-audited.

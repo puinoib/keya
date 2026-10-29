@@ -752,7 +752,7 @@ interface KeyaExchange {
 26. **Timestamp algorithm**: `2026-02-29`, `2026-01-01T24:00:00.000Z`, missing milliseconds, a `+00:00` offset, `2026-1-1T00:00:00.000Z` → rejected; `0050-01-01T00:00:00.000Z` → accepted, which also proves `setUTCFullYear` is used instead of `Date.UTC`.
 27. **UUID**: version nibble ≠ 4, variant nibble `c`/`d`/`e`/`f`, uppercase, non-canonical length → rejected.
 28. One boundary per length and count limit (limit + 1 → rejected).
-29. **`condition` normalization**: the same fact yields the same string (`date:2026-03-01`, `instant:…`, `http:192.168.1.5:8080`). Move the expiry date elsewhere and back: the record stops applying while the fact differs and applies again when it returns. Comparison is by `condition`, not by key.
+29. ~~`condition` normalization~~ **Removed path**: the device-local dismissal record this tested is gone (§10.3 of keya-runtime.md), so there is no `condition` string to normalize or compare.
 30. An `icon` with two grapheme clusters or over 64 bytes → the edit is rejected and nothing is stored truncated.
 31. `icon: null` → rejected; "no icon" is `""` only.
 32. A whitespace-only `secret` → the edit is rejected, file bytes unchanged, nothing marked dirty.
@@ -760,12 +760,12 @@ interface KeyaExchange {
 
 ### 16.3 Write closure (P4)
 
-34. Property test: random edit sequences (boundary values, static headers, deletions, imports) → every successful write is accepted by the reader and decodes to the same state.
+34. Property test: random edit sequences (boundary values, static headers, deletions) → every successful write is accepted by the reader and decodes to the same state. Merge/JSON import is unbuilt, so it contributes no steps.
 35. Hitting a count limit → that edit is rejected and the file is still readable and still the previous legal state.
 36. Serialization determinism: the same state serialized twice → identical bytes.
 37. Static headers in the same logical state but a different input order → identical serialization; the writer must persist them ascending by `(lowercase name, value)`.
 38. **Total length re-check**: a payload whose fields are all legal but whose escaped size approaches the limit → the writer refuses after serializing instead of writing an oversized file.
-39. **Five entry points, same bytes**: the same credential written through create, edit, plaintext import, merge import and programmatic edit → identical serialization, proving `normalize()` is never skipped.
+39. **Every implemented entry point, same bytes**: the same credential written through create, edit and programmatic edit → identical serialization, proving `normalize()` is never skipped. Plaintext import and merge import are unbuilt (§14) and contribute nothing to this vector.
 40. **Dense `order`**: drag three groups around N times → `order` is always a permutation of `0..2`, never out of range, never duplicated.
 41. **Bound-versus-limits assertion**: build `keys = keys_max` with every string filled with the worst escaped characters (`"` and `\`) → serialized length ≤ 32 MiB. This test fails with any change to §6.2 and is the only guardrail on that derivation.
 
