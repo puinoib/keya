@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
-import { DayPicker } from './DayPicker';
-import { GroupSelect } from './GroupSelect';
 import { useStore, type KeyPatch } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { scheduleClipboardClear } from '../../lib/clipboard';
@@ -9,7 +7,6 @@ import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
 import {
   describeTestResult,
-  getTestActionHint,
   getTestActionLabel,
 } from '../../lib/test-feedback';
 import type { Key } from '../../../core/payload/types';
@@ -32,7 +29,6 @@ import {
 } from '../../state/presentation';
 import {
   getDefaultEndpointForProvider,
-  getProviderSections,
   providerIdForLabel,
   providerLabel,
 } from '../../state/providers';
@@ -50,41 +46,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-} from '@/components/ui/select';
 import {
   Archive,
   Copy,
   DotsThree,
-  FloppyDisk,
   Flask,
   Trash,
   PencilSimple,
-  Eye,
-  EyeSlash,
   Key as KeyIcon,
   Plus,
   MagnifyingGlass,
   ArrowCounterClockwise,
-  Spinner,
-  Calendar,
-  X,
 } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 import { keysSearch } from '../../state/keys-search';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
+import { KeyFormFields, type KeyFieldValues } from './KeyFormFields';
 
 /**
  * Whether a dialog, menu or listbox is on screen.
@@ -660,22 +639,6 @@ export function EditKeyDialog({
   const providers = view?.file.providers ?? [];
   const preferences = view?.preferences;
   const [showKey, setShowKey] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showCalendar) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        calendarRef.current &&
-        !calendarRef.current.contains(e.target as Node)
-      ) {
-        setShowCalendar(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showCalendar]);
 
   const [form, setForm] = useState({
     name: editingKey?.name ?? '',
@@ -696,14 +659,9 @@ export function EditKeyDialog({
     result: null,
   });
 
-  const providerSections = getProviderSections(preferences, providers);
   const formCheckKind = checkKind(
     providerIdForLabel(form.provider, providers),
     form.endpoint,
-    providers
-  );
-  const defaultEndpoint = getDefaultEndpointForProvider(
-    form.provider,
     providers
   );
 
@@ -773,6 +731,22 @@ export function EditKeyDialog({
     });
   };
 
+  const handleChange = (patch: Partial<KeyFieldValues>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    if ('secret' in patch || 'endpoint' in patch) {
+      setTestState({ testing: false, result: null });
+    }
+  };
+
+  const handleProviderChange = (provider: string) => {
+    // An edit keeps the stored endpoint when the new provider has no default,
+    // so switching provider never silently blanks a hand-typed address.
+    const endpoint =
+      getDefaultEndpointForProvider(provider, providers) ?? form.endpoint;
+    setForm((f) => ({ ...f, provider, endpoint }));
+    setTestState({ testing: false, result: null });
+  };
+
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
     if (view && hasDuplicateSecret(view, form.secret.trim(), editingKey.id)) {
@@ -809,238 +783,23 @@ export function EditKeyDialog({
           <DialogTitle>Edit API Key or Token</DialogTitle>
         </DialogHeader>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSave();
-          }}
-          className="space-y-4 mt-2"
-        >
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-key-name" className="text-xs">
-              Name
-            </Label>
-            <Input
-              id="edit-key-name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Key name"
-              required
-            />
-          </div>
-
-          {/* Key Value */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-key-secret" className="text-xs">
-              API Key or Token
-            </Label>
-            <div className="relative">
-              <AutoResizeTextarea
-                id="edit-key-secret"
-                value={form.secret}
-                masked={!showKey}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, secret: e.target.value }))
-                }
-                placeholder="sk-... or your API token"
-                className="pr-9 font-mono text-sm break-all"
-                autoComplete="off"
-                spellCheck={false}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                aria-label={showKey ? 'Hide credential' : 'Show credential'}
-                className="absolute right-2 top-2 size-6 flex items-center justify-center rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
-              >
-                {showKey ? (
-                  <EyeSlash className="size-3.5" />
-                ) : (
-                  <Eye className="size-3.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Provider */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-key-provider" className="text-xs">
-              Service / Provider
-            </Label>
-            <Select
-              value={form.provider}
-              onValueChange={(v) => {
-                if (!v) return;
-                const endpoint =
-                  getDefaultEndpointForProvider(v, providers) ?? form.endpoint;
-                setForm((f) => ({ ...f, provider: v, endpoint }));
-              }}
-            >
-              <SelectTrigger id="edit-key-provider">
-                <span className="inline-flex items-center gap-1.5 truncate">
-                  <ProviderLogo provider={form.provider} className="size-3.5" />
-                  {form.provider}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {providerSections.map((section) => (
-                  <SelectGroup key={section.id}>
-                    <SelectLabel>{section.label}</SelectLabel>
-                    {section.providers.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        <div className="flex items-center gap-2">
-                          <ProviderLogo provider={p} className="size-3.5" />
-                          <span>{p}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Endpoint */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Label htmlFor="edit-key-endpoint" className="text-xs">
-                Endpoint
-              </Label>
-              {defaultEndpoint && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((f) => ({ ...f, endpoint: defaultEndpoint }))
-                  }
-                  className="text-ink-quaternary hover:text-accent-bright transition-colors"
-                  title="Reset to default"
-                  aria-label="Reset to the default endpoint"
-                >
-                  <ArrowCounterClockwise className="size-3" />
-                </button>
-              )}
-            </div>
-            <Input
-              id="edit-key-endpoint"
-              value={form.endpoint}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, endpoint: e.target.value }))
-              }
-              placeholder="https://api.openai.com/v1"
-              className="font-mono text-xs"
-            />
-          </div>
-
-          {/* Expiration */}
-          <div className="relative" ref={calendarRef}>
-            <Label htmlFor="edit-key-expiry" className="text-xs">
-              Expiration
-            </Label>
-            <div className="relative mt-1.5">
-              <button
-                type="button"
-                id="edit-key-expiry"
-                onClick={() => setShowCalendar(!showCalendar)}
-                className="w-full inline-flex items-center gap-1.5 h-9 px-3 pr-8 rounded-md text-xs font-normal border border-line bg-transparent hover:bg-surface-4 hover:text-ink-primary transition-colors justify-start text-left"
-              >
-                <Calendar className="size-3.5 shrink-0" />
-                <span
-                  className={
-                    !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
-                  }
-                >
-                  {form.expiry
-                    ? format(form.expiry, 'MMM d, yyyy')
-                    : 'Pick a date'}
-                </span>
-              </button>
-              {form.expiry && (
-                <button
-                  type="button"
-                  aria-label="Clear the expiry date"
-                  onClick={() => setForm((f) => ({ ...f, expiry: undefined }))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-quaternary hover:text-ink-secondary"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-            {showCalendar && (
-              <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
-                <DayPicker
-                  value={form.expiry}
-                  onChange={(d) => {
-                    setForm((f) => ({ ...f, expiry: d }));
-                    setShowCalendar(false);
-                  }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Group */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-key-group" className="text-xs">
-              Group
-            </Label>
-            <GroupSelect
-              id="edit-key-group"
-              groups={view ? sortedGroups(view) : []}
-              value={form.groupId}
-              onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-key-description" className="text-xs">
-              Description
-            </Label>
-            <Input
-              id="edit-key-description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              placeholder="What is this credential used for?"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-2">
-            <Button type="submit" size="sm">
-              <FloppyDisk className="size-3.5" />
-              Save Changes
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTest}
-              disabled={!form.secret || testState.testing}
-              title={getTestActionHint(formCheckKind)}
-            >
-              {testState.testing ? (
-                <Spinner className="size-3.5 animate-spin" />
-              ) : (
-                <Flask className="size-3.5" />
-              )}
-              {getTestActionLabel(formCheckKind)}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              <X className="size-3.5" />
-              Cancel
-            </Button>
-          </div>
-
-          {formCheckKind !== 'credential' && (
-            <p className="text-[11px] leading-relaxed text-ink-quaternary">
-              {getTestActionHint(formCheckKind)}
-            </p>
-          )}
-        </form>
+        <KeyFormFields
+          idPrefix="edit-key"
+          values={form}
+          onChange={handleChange}
+          onProviderChange={handleProviderChange}
+          providers={providers}
+          groups={view ? sortedGroups(view) : []}
+          preferences={preferences}
+          secretVisible={showKey}
+          onToggleSecret={() => setShowKey((visible) => !visible)}
+          testKind={formCheckKind}
+          testing={testState.testing}
+          onTest={handleTest}
+          onSubmit={handleSave}
+          onCancel={onClose}
+          saveLabel="Save Changes"
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { format } from 'date-fns';
 import {
   getDefaultEndpointForProvider,
-  getProviderSections,
   providerIdForLabel,
   providerLabel,
 } from '../../state/providers';
@@ -13,64 +11,24 @@ import type { AddKeyDraft } from '../../store/create-store';
 import type { Provider } from '../../../core/payload/types';
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
-import {
-  describeTestResult,
-  getTestActionHint,
-  getTestActionLabel,
-} from '../../lib/test-feedback';
-import { DayPicker } from './DayPicker';
-import { GroupSelect } from './GroupSelect';
+import { describeTestResult } from '../../lib/test-feedback';
+import { KeyFormFields, type KeyFieldValues } from './KeyFormFields';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-} from '@/components/ui/select';
-import {
-  FloppyDisk,
-  Eye,
-  EyeSlash,
-  ArrowCounterClockwise,
-  Flask,
-  Spinner,
-  Calendar,
-  X,
-} from '@phosphor-icons/react';
 import { toast } from 'sonner';
-
-interface FormData {
-  name: string;
-  secret: string;
-  /** The picker works in labels; the id is resolved when saving. */
-  provider: string;
-  endpoint: string;
-  description: string;
-  groupId: string | null;
-  /** What the day picker shows. */
-  expiry: Date | undefined;
-}
 
 interface TestState {
   testing: boolean;
   result: TestResult | null;
 }
 
-const empty: FormData = {
+const empty: KeyFieldValues = {
   name: '',
   secret: '',
   provider: 'OpenAI',
@@ -83,7 +41,7 @@ const empty: FormData = {
 function toFormData(
   draft: AddKeyDraft,
   providers: readonly Provider[]
-): FormData {
+): KeyFieldValues {
   return {
     name: draft.name,
     secret: draft.secret,
@@ -95,7 +53,7 @@ function toFormData(
   };
 }
 
-function getEmptyForm(providers: readonly Provider[]): FormData {
+function getEmptyForm(providers: readonly Provider[]): KeyFieldValues {
   return {
     ...empty,
     endpoint: getDefaultEndpointForProvider(empty.provider, providers) ?? '',
@@ -118,36 +76,19 @@ export function KeyForm({
       clearAddKeyDraft: s.clearAddKeyDraft,
     }))
   );
-  const [form, setForm] = useState<FormData>(empty);
+  const [form, setForm] = useState<KeyFieldValues>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
     testing: false,
     result: null,
   });
-  const [showCalendar, setShowCalendar] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
   // The draft test is async, and the form can be edited or reset under it.
   // A result may only be reported for the exact values it was started with.
   const formRef = useRef(form);
   formRef.current = form;
 
-  useEffect(() => {
-    if (!showCalendar) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        calendarRef.current &&
-        !calendarRef.current.contains(e.target as Node)
-      ) {
-        setShowCalendar(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showCalendar]);
-
   const providers = view?.file.providers ?? [];
   const preferences = view?.preferences;
-  const providerSections = getProviderSections(preferences, providers);
   const defaultEndpoint = getDefaultEndpointForProvider(
     form.provider,
     providers
@@ -189,17 +130,19 @@ export function KeyForm({
     setTestState({ testing: false, result: null });
   }, [open, addKeyDraft]);
 
-  const handleProviderChange = (provider: string | null) => {
-    if (!provider) return;
+  const handleChange = (patch: Partial<KeyFieldValues>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    // A different credential or destination makes the last result describe
+    // something this form no longer asks for.
+    if ('secret' in patch || 'endpoint' in patch) {
+      setTestState({ testing: false, result: null });
+    }
+  };
+
+  const handleProviderChange = (provider: string) => {
     const endpoint = getDefaultEndpointForProvider(provider, providers) ?? '';
     setForm((f) => ({ ...f, provider, endpoint }));
     setTestState({ testing: false, result: null });
-  };
-
-  const handleResetEndpoint = () => {
-    if (defaultEndpoint) {
-      setForm((f) => ({ ...f, endpoint: defaultEndpoint }));
-    }
   };
 
   const handleTest = async () => {
@@ -230,8 +173,7 @@ export function KeyForm({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (!form.name || !form.secret) return;
     if (view && hasDuplicateSecret(view, form.secret.trim())) {
       // §5.3: the same token in two environments is legitimate. Warn, do not
@@ -280,8 +222,8 @@ export function KeyForm({
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => {
-        if (!o) handleClose();
+      onOpenChange={(next) => {
+        if (!next) handleClose();
       }}
     >
       <DialogContent className="sm:max-w-lg">
@@ -289,237 +231,23 @@ export function KeyForm({
           <DialogTitle>New API Key or Token</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs">
-              Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Production Firecrawl"
-              required
-            />
-          </div>
-
-          {/* Key Value */}
-          <div className="space-y-1.5">
-            <Label htmlFor="secret" className="text-xs">
-              API Key or Token <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <AutoResizeTextarea
-                id="secret"
-                name="api-key-secret"
-                autoComplete="off"
-                data-form-type="other"
-                data-lpignore="true"
-                spellCheck={false}
-                value={form.secret}
-                masked={!showKey}
-                onChange={(e) => {
-                  setForm((f) => ({ ...f, secret: e.target.value }));
-                  setTestState({ testing: false, result: null });
-                }}
-                placeholder="sk-... or your API token"
-                className="pr-9 font-mono text-sm break-all"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                aria-label={showKey ? 'Hide credential' : 'Show credential'}
-                className="absolute right-2 top-2 size-6 flex items-center justify-center
-                           rounded text-ink-quaternary hover:text-ink-secondary transition-colors"
-              >
-                {showKey ? (
-                  <EyeSlash className="size-3.5" />
-                ) : (
-                  <Eye className="size-3.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Provider */}
-          <div className="space-y-1.5">
-            <Label htmlFor="provider" className="text-xs">
-              Service / Provider
-            </Label>
-            <Select value={form.provider} onValueChange={handleProviderChange}>
-              <SelectTrigger>
-                <span className="inline-flex items-center gap-1.5 truncate">
-                  {form.provider && (
-                    <ProviderLogo
-                      provider={form.provider}
-                      className="size-3.5"
-                    />
-                  )}
-                  {form.provider}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {providerSections.map((section) => (
-                  <SelectGroup key={section.id}>
-                    <SelectLabel>{section.label}</SelectLabel>
-                    {section.providers.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        <div className="flex items-center gap-2">
-                          <ProviderLogo provider={p} className="size-3.5" />
-                          <span>{p}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Endpoint */}
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="endpoint"
-              className="text-xs flex items-center gap-1.5"
-            >
-              Endpoint
-              {defaultEndpoint && (
-                <button
-                  type="button"
-                  onClick={handleResetEndpoint}
-                  className="text-ink-quaternary hover:text-accent-bright transition-colors"
-                  title="Reset to default"
-                >
-                  <ArrowCounterClockwise className="size-3" />
-                </button>
-              )}
-            </Label>
-            <Input
-              id="endpoint"
-              value={form.endpoint}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, endpoint: e.target.value }))
-              }
-              placeholder={defaultEndpoint || 'https://api.example.com/v1'}
-              className="font-mono text-xs"
-            />
-          </div>
-
-          {/* Expiration */}
-          <div className="relative" ref={calendarRef}>
-            <Label className="text-xs">Expiration</Label>
-            {/* Two controls, not a button inside a button: a nested
-                `role="button"` cannot be focused, so the clear action was
-                mouse-only. */}
-            <div className="mt-1.5 flex h-9 w-full items-center rounded-md border border-line bg-transparent transition-colors hover:bg-surface-4 focus-within:ring-1 focus-within:ring-accent-bright">
-              <button
-                type="button"
-                onClick={() => setShowCalendar(!showCalendar)}
-                className="inline-flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 text-left text-xs font-normal hover:text-ink-primary"
-              >
-                <Calendar className="size-3.5 shrink-0" />
-                <span
-                  className={
-                    !form.expiry ? 'text-ink-quaternary' : 'text-ink-secondary'
-                  }
-                >
-                  {form.expiry
-                    ? format(form.expiry, 'MMM d, yyyy')
-                    : 'Pick a date'}
-                </span>
-              </button>
-              {form.expiry && (
-                <button
-                  type="button"
-                  aria-label="Clear expiration"
-                  title="Clear expiration"
-                  onClick={() => setForm((f) => ({ ...f, expiry: undefined }))}
-                  className="mr-1.5 inline-flex size-6 shrink-0 items-center justify-center rounded text-ink-quaternary hover:text-ink-secondary"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-            {showCalendar && (
-              <div className="absolute top-full left-0 mt-1 z-50 rounded-lg border border-line bg-canvas-raised shadow-elevated">
-                <DayPicker
-                  value={form.expiry}
-                  onChange={(d) => {
-                    setForm((f) => ({ ...f, expiry: d }));
-                    setShowCalendar(false);
-                  }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Group */}
-          <div className="space-y-1.5">
-            <Label htmlFor="group" className="text-xs">
-              Group
-            </Label>
-            <GroupSelect
-              groups={view ? sortedGroups(view) : []}
-              value={form.groupId}
-              onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-xs">
-              Description
-            </Label>
-            <Input
-              id="description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              placeholder="What is this credential used for?"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-2">
-            <Button type="submit" size="sm">
-              <FloppyDisk className="size-3.5" />
-              Save Key
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleTest}
-              disabled={!form.secret || testState.testing}
-              title={getTestActionHint(formCheckKind)}
-            >
-              {testState.testing ? (
-                <Spinner className="size-3.5 animate-spin" />
-              ) : (
-                <Flask className="size-3.5" />
-              )}
-              {getTestActionLabel(formCheckKind)}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-            >
-              <X className="size-3.5" />
-              Cancel
-            </Button>
-          </div>
-
-          {formCheckKind !== 'credential' && (
-            <p className="text-[11px] leading-relaxed text-ink-quaternary">
-              {getTestActionHint(formCheckKind)}
-            </p>
-          )}
-        </form>
+        <KeyFormFields
+          idPrefix="add-key"
+          values={form}
+          onChange={handleChange}
+          onProviderChange={handleProviderChange}
+          providers={providers}
+          groups={view ? sortedGroups(view) : []}
+          preferences={preferences}
+          secretVisible={showKey}
+          onToggleSecret={() => setShowKey((visible) => !visible)}
+          testKind={formCheckKind}
+          testing={testState.testing}
+          onTest={handleTest}
+          onSubmit={handleSubmit}
+          onCancel={handleClose}
+          saveLabel="Save Key"
+        />
       </DialogContent>
     </Dialog>
   );
