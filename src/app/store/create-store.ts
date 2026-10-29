@@ -1392,11 +1392,18 @@ export function createAppStore(deps: StoreDeps): AppStore {
       return false;
     }
 
-    setState({ hasUnsavedChanges: false, saveFailure: null });
+    // `Vault.flush` can return while an edit landed just after its last write
+    // check, so read the vault instead of assuming a clean save.
+    setState({
+      hasUnsavedChanges: active.vault.hasUnsavedChanges,
+      saveFailure: null,
+    });
     // The payload now matches the file, so the locked card may describe it.
     await writeContainerRecord(active);
     await drainLocalCleanup();
-    await getState().refresh();
+    // No refresh: a save writes the bytes the view was already built from, so
+    // the derived snapshot would be identical. Rebuilding it here doubled the
+    // cost of every edit (one rebuild on the edit, one after the write).
     return true;
   };
 

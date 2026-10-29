@@ -478,20 +478,25 @@ describe('a check that is still in flight', () => {
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
-    const original = h.local.observationsByKey.bind(h.local);
+    // Land the edit in the window between "the file is written" and "the lock
+    // runs": the flush cannot cover it, so the lock must be refused and the
+    // store must not claim a clean save.
+    const originalFlush = h.vault.flush.bind(h.vault);
     let injected = false;
-    h.local.observationsByKey = async (...args) => {
+    h.vault.flush = async () => {
+      const result = await originalFlush();
       if (!injected) {
         injected = true;
         store.useStore.getState().updateMeta({ name: 'Late edit' });
       }
-      return original(...args);
+      return result;
     };
 
     await store.useStore.getState().lock();
 
     // The vault is still dirty, so the lock was refused and the edit survives.
     expect(store.useStore.getState().workspaceState).toBe('unlocked');
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
     expect(h.vault.hasUnsavedChanges).toBe(true);
     expect(h.vault.getPayload().vault.name).toBe('Late edit');
   });
