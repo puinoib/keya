@@ -101,12 +101,28 @@ describe('save scheduling', () => {
     expect(sonner.messages).toEqual([]);
     expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
 
-    // Locking is one of those paths, so it still refuses.
+    // Locking is one of those paths, so it still refuses — and says why in
+    // this mode instead of blaming a file write that never happens.
     await store.useStore.getState().lock();
     expect(sonner.messages[0]).toBe(
-      'error:Export a .keya file to save changes before leaving.'
+      'error:Export .keya before locking; the last edits are not in a file yet.'
     );
     expect(store.useStore.getState().workspaceState).toBe('unlocked');
+  });
+
+  it('deletes in a download-mode vault without an export reminder', async () => {
+    const h = await openHarness();
+    const store = storeOn(h, 0);
+    await store.useStore.getState().unlock(h.opened, 'w.keya', 'download');
+    sonner.messages.length = 0;
+
+    store.useStore.getState().deleteKey(h.vault.getPayload().keys[0].id);
+    await sleep(100);
+
+    // Deleting forces a write in folder mode; here there is none to make, and
+    // the reader is not leaving, so there is nothing to warn about.
+    expect(sonner.messages).toEqual([]);
+    expect(store.useStore.getState().hasUnsavedChanges).toBe(true);
   });
 
   it('reports a failed debounced save and keeps the edits pending', async () => {

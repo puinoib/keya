@@ -34,6 +34,12 @@ function flushBeforeLeaving(): void {
   void browserStore.flushSave().then(
     (ok) => {
       if (ok) return;
+      // A download-mode vault never writes a file, so "the file could not be
+      // written" would describe a write that never happens.
+      if (browserStore.useStore.getState().storageMode === 'download') {
+        toast.error('Export .keya to keep your last edits.');
+        return;
+      }
       const failure = browserStore.useStore.getState().saveFailure;
       toast.error('The last edits were not saved.', {
         description: describeSaveFailure(failure ?? 'io_failed'),

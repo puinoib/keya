@@ -549,7 +549,14 @@ export function createAppStore(deps: StoreDeps): AppStore {
       lock: async () => {
         const saved = await flushSave().catch(() => false);
         if (saved === false) {
-          toast.error('Could not save. The vault stays unlocked.');
+          toast.error(
+            get().storageMode === 'download'
+              ? 'Export .keya before locking; the last edits are not in a file yet.'
+              : 'Could not save. The vault stays unlocked.',
+            get().storageMode === 'download'
+              ? { description: 'The vault stays unlocked so nothing is lost.' }
+              : undefined
+          );
           return;
         }
         const active = runtime;
@@ -768,9 +775,11 @@ export function createAppStore(deps: StoreDeps): AppStore {
         set((state) => ({ usage: withoutKey(state.usage, id) }));
         if (get().selectedKeyId === id) set({ selectedKeyId: null });
         void afterChange();
-        // A deletion is small and important enough to commit immediately; the
-        // local cleanup runs only after this flush succeeds.
-        void flushSave();
+        // A deletion is small and important enough to commit immediately, and
+        // the local cleanup runs only after the write it depends on. A
+        // download-mode vault has no write to make, only rows to drain.
+        if (get().storageMode === 'download') void drainLocalCleanup();
+        else void flushSave();
       },
 
       archiveKey: (id) => {
@@ -1390,7 +1399,8 @@ export function createAppStore(deps: StoreDeps): AppStore {
         await writeContainerRecord(active);
         return true;
       }
-      toast.error('Export a .keya file to save changes before leaving.');
+      // No toast here: leaving, locking and unlocking all reach this with
+      // different advice, and one shared sentence was wrong for all of them.
       return false;
     }
 
