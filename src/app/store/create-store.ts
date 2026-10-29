@@ -535,7 +535,9 @@ export function createAppStore(deps: StoreDeps): AppStore {
         const vaultId = opened.vault.getPayload().vault.id;
         const keyIds = opened.vault.getPayload().keys.map((key) => key.id);
         pruneUsageCache(vaultId, keyIds);
-        set({ usage: readUsageCache(vaultId) });
+        // Age is measured with the store's clock, not `Date.now()`: the two
+        // must agree or a test that fixes the clock reads the cache as stale.
+        set({ usage: readUsageCache(vaultId, clock()) });
       },
 
       verifyPassword: async (password) => {

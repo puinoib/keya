@@ -3,8 +3,6 @@ import { cloneFile, IDS } from '../../../core/__tests__/fixtures';
 import { createAppStore } from '../create-store';
 import { readUsageCache, writeUsageSnapshot } from '../../lib/usage-cache';
 import { providerToDraft } from '../../state/providers';
-
-const RECENT = new Date().toISOString();
 import { FIXED_NOW, PASSWORD, openHarness, type Harness } from './fixtures';
 import { Vault } from '../../vault/vault';
 import {
@@ -12,6 +10,9 @@ import {
   fixedClock,
   memoryPorts,
 } from '../../vault/__tests__/memory-port';
+
+/** Same instant as the store clock, so a cached snapshot is "just taken". */
+const RECENT = FIXED_NOW;
 
 /** Minimal sessionStorage, since the node test environment has none. */
 class MemoryStorage {
@@ -680,27 +681,35 @@ describe('a manual check asks about the destination', () => {
 describe('two overlapping checks', () => {
   it('keeps the result of the later-started one', async () => {
     let call = 0;
+    let releaseFirst!: () => void;
+    let noteFirstStarted!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      noteFirstStarted = resolve;
+    });
     const h = await openHarness({
+      // The first request started first and answers last. Holding it here
+      // makes "started first" a fact instead of a race between two timers.
       fetch: async () => {
         call += 1;
-        const mine = call;
-        // The first request started first and answers last.
-        await new Promise((resolve) =>
-          setTimeout(resolve, mine === 1 ? 40 : 5)
-        );
-        return {
-          status: mine === 1 ? 500 : 200,
-          contentType: 'application/json',
-        };
+        if (call === 1) {
+          noteFirstStarted();
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+          return { status: 500, contentType: 'application/json' };
+        }
+        return { status: 200, contentType: 'application/json' };
       },
     });
     const store = makeStore(h);
     await store.useStore.getState().unlock(h.opened, 'work.keya', 'folder');
 
     const first = store.runManualCheck(IDS.key);
-    await new Promise((resolve) => setTimeout(resolve, 1));
+    await firstStarted;
     const second = store.runManualCheck(IDS.key);
-    await Promise.all([first, second]);
+    await second;
+    releaseFirst();
+    await first;
 
     const observations = await h.local.listObservations(
       h.payload.vault.id,
