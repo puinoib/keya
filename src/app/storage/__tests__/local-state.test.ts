@@ -129,6 +129,19 @@ describe('observations', () => {
     expect(kept[0].seq).toBe(2);
   });
 
+  it('gives two results that land together distinct sequence numbers', async () => {
+    const local = state();
+    await Promise.all([
+      local.recordObservation(observation('obs-a', '2026-06-01T00:00:10.000Z')),
+      local.recordObservation(observation('obs-b', '2026-06-01T00:00:11.000Z')),
+    ]);
+
+    // Both start from the same stored history. Without a per-key chain they
+    // would both compute seq 1 and the order between them would be undefined.
+    const kept = await local.listObservations(VAULT, KEY);
+    expect(kept.map((entry) => entry.seq)).toEqual([2, 1]);
+  });
+
   it('retention drops the oldest sequence, not a rolled-back clock value', async () => {
     const local = state();
     for (let index = 0; index < 10; index += 1) {

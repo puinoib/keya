@@ -121,8 +121,35 @@ export class LocalState {
 
   // ── observations ──
 
+  /**
+   * One write chain per key. Assigning `seq` is a read-modify-write, so two
+   * results that land at the same moment would otherwise compute the same
+   * next number and their order would fall back to the wall clock.
+   */
+  private readonly writes = new Map<string, Promise<void>>();
+
   async recordObservation(observation: Observation): Promise<void> {
     const base = keyOf(OBSERVATION, observation.vault_id, observation.key_id);
+    const previous = this.writes.get(base) ?? Promise.resolve();
+    const run = previous.then(
+      () => this.writeObservation(observation, base),
+      () => this.writeObservation(observation, base)
+    );
+    // Keep the chain alive after a failed write so the next result records.
+    this.writes.set(
+      base,
+      run.then(
+        () => undefined,
+        () => undefined
+      )
+    );
+    return run;
+  }
+
+  private async writeObservation(
+    observation: Observation,
+    base: string
+  ): Promise<void> {
     const existing = await this.listObservations(
       observation.vault_id,
       observation.key_id
