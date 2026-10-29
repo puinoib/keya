@@ -78,9 +78,9 @@ See [AGENTS.md](AGENTS.md) for repository conventions. For file-format changes, 
 
 ## Deployment
 
-Production is `https://keya.one`, served by a Cloudflare Worker from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets. `main` deploys, `dev` is where work lands first, and `worker/index.ts` adds response headers and asset caching around the static assets.
+Production is `https://keya.one`, served by a Cloudflare Worker from the static build in `dist/`. The build needs only Node and pnpm; there are no runtime secrets. There is one branch, `main`, and no CI: pushing deploys nothing, and shipping is an explicit `wrangler deploy` from a machine with a Cloudflare login. `worker/index.ts` adds response headers and asset caching around the static assets.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the pipeline, the required secrets, the branch rules, and the constraints the deployed configuration depends on.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the pre-deploy checklist, the credentials Wrangler needs, and the constraints the deployed configuration depends on.
 
 ## User guides
 

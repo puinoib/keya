@@ -55,9 +55,8 @@ Keya is a local-first API key manager: a React web app storing encrypted `.keya`
 
 ## Branches and deployment
 
-- `dev` is the integration branch: pushing there runs verification and deploys nothing. `main` deploys to production on every push, after the same verification, so treat any commit on `main` as shipped.
-- Promote with a `dev` -> `main` pull request using a merge commit, or `git merge --no-ff dev` locally. Never squash: `dev` must stay an ancestor of `main`.
-- `src/routeTree.gen.ts` is committed. CI typechecks before building and fails when the build would change the committed tree, so commit the regenerated file whenever routes change.
+- Work happens on `main`; there is no `dev` branch and no promotion merge. There is no CI either: pushing verifies nothing and deploys nothing. Deployment is an explicit command run from a clean checkout, so "is this shipped?" is answered by the Cloudflare version tags, not by a branch.
+- `src/routeTree.gen.ts` is committed. The build regenerates it, so run `pnpm typecheck`, `pnpm test`, `pnpm lint` and `pnpm build` yourself before deploying, then commit the regenerated tree: nothing else will notice a stale copy.
 - `wrangler.toml` and `worker/index.ts` own the deployed configuration. Read [DEPLOYMENT.md](DEPLOYMENT.md) before changing either: the content security policy and the permissions policy contain entries whose removal breaks unlocking, provider tests, biometrics or clipboard access, and the production hostname is fixed.
 
 ## Security and data safety

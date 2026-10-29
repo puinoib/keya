@@ -6,34 +6,30 @@ This file records how the deployed environment is wired. It describes the operat
 
 ## Pipeline
 
-| Branch | Behaviour |
-|---|---|
-| `dev` | CI verifies. Nothing deploys. |
-| `main` | CI verifies, then deploys to production. |
+Deployment runs from a developer machine. The repository no longer carries GitHub Actions workflows, so a push verifies nothing and deploys nothing; the only thing that ships is an explicit `wrangler deploy` (below).
 
-Promote work with a `dev` → `main` pull request using **Create a merge commit**, or merge locally:
+There is one branch: `main`. Work is committed to it directly, and nothing deploys on a push — the deploy is the explicit command below, run from a clean `main` checkout. There is no `dev` branch, no promotion merge and no branch ancestry to preserve.
+
+Because no CI gate runs, the gate is a checklist that must pass on the commit about to ship, from a clean tree:
 
 ```bash
-git checkout main
-git merge --no-ff dev
-git push origin main
+pnpm typecheck   # tsc -b
+pnpm test        # vitest run
+pnpm lint        # biome check
+pnpm build       # vite build, which also regenerates src/routeTree.gen.ts
+git status --short   # must be empty before deploying
 ```
 
-Squash and rebase merges are disabled on the repository. `dev` must stay an ancestor of `main`; squashing would make every later promotion re-introduce changes that already landed. After a promotion, bring `dev` back in line with `git merge --ff-only origin/main`.
-
-Both promotion paths converge on one gate, which always runs on the commit about to ship:
-
-- `.github/workflows/ci.yml` — `typecheck` → `test` → `build`. Typecheck runs before the build so a route change that was not committed with its regenerated `src/routeTree.gen.ts` fails, and the build step then fails when regenerating the tree would change the committed copy. Triggers on `dev` pushes and on pull requests to `main`.
-- `.github/workflows/deploy.yml` — calls the same verification, downloads the artifact it produced, and deploys those exact bytes, so what ships is what was verified.
+`src/routeTree.gen.ts` is committed. The build rewrites it, so a route change that was not committed shows up as a dirty file after `pnpm build`; commit it before deploying. Typecheck runs before the build for the same reason: a stale generated tree fails there first.
 
 ## Setup
 
-Repository secrets, used only by the deploy job:
+Wrangler authenticates as the operator: `wrangler login`, or `CLOUDFLARE_API_TOKEN` in the deploying shell. There are no repository secrets, because no CI job runs.
 
-| Secret | Value |
+| Credential | Value |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | Token from the "Edit Cloudflare Workers" template, scoped to the account and zone that host the site |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID for the same account |
+| Wrangler login, or `CLOUDFLARE_API_TOKEN` | Token from the "Edit Cloudflare Workers" template, scoped to the account and zone that host the site |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID for the same account, when the credential can see more than one |
 
 The Worker, the zone, and the custom domain must all live in one Cloudflare account. Cloudflare rejects cross-account custom domains with error 1014, and `workers.dev` cannot be used as a cross-account CNAME target either.
 
@@ -56,6 +52,15 @@ pnpm cf:deploy       # build and deploy from your machine, using your own Wrangl
 
 The `cf:` prefix is deliberate: `pnpm deploy` resolves to pnpm's own built-in command, not a script.
 
+Neither script tags the version. To keep "which commit is live" answerable, deploy the production build with the tag and message attached (run from a clean `main`):
+
+```bash
+pnpm build
+npx wrangler deploy \
+  --tag "$(git rev-parse HEAD)" \
+  --message "main@$(git rev-parse HEAD)"
+```
+
 ## Constraints
 
 - **The content security policy is load-bearing.** `script-src` must keep `'wasm-unsafe-eval'` because libsodium-wrappers-sumo compiles WebAssembly at runtime; without it unlocking and encryption fail. `connect-src` cannot be narrowed to known hosts because provider connectivity tests call endpoints the user supplies. `permissions-policy` must keep the `publickey-credentials-*` and `clipboard-*` entries for biometric unlock and key copying. `font-src 'self'` only permits same-origin font files, so `vite.config.ts` keeps fonts out of Vite's data: URI inlining; inlined subsets would be blocked and log a CSP violation on every load.
@@ -65,13 +70,15 @@ The `cf:` prefix is deliberate: `pnpm deploy` resolves to pnpm's own built-in co
 
 ## Version traceability
 
-Each deploy is tagged with the commit it came from. Cloudflare records it in the version annotations, visible under Workers & Pages → `keya` → Deployments:
+Each deploy is tagged with the commit it came from, via `--tag`/`--message` in the command above. Cloudflare records it in the version annotations, visible under Workers & Pages → `keya` → Deployments:
 
 ```
 workers/tag     <full commit SHA>
 workers/message main@<full commit SHA>
 ```
 
+A deploy run without those flags uploads the same bytes but leaves the version unidentifiable, so treat the flags as part of the deploy, not as decoration.
+
 ## Rollback
 
-Cloudflare keeps previous Worker versions. A dashboard rollback or `wrangler rollback` restores service in seconds, but Git still holds the bad commit, so the next `main` push ships it again. Treat a rollback as temporary and follow it with `git revert` and a normal promotion.
+Cloudflare keeps previous Worker versions. A dashboard rollback or `wrangler rollback` restores service in seconds, but Git still holds the bad commit, so the next deploy from a checkout that contains it ships it again. Treat a rollback as temporary and follow it with `git revert` and a fresh deploy.
