@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { DownloadSimple, UploadSimple, Warning } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { exportJsonCopy, exportKeyaCopy } from '@/app/lib/vault-export';
 import { readLastExport } from '@/app/lib/export-history';
 import {
@@ -27,7 +28,12 @@ function describeExportedAt(iso: string): string {
  * Nothing here edits the payload.
  */
 export function DataPage() {
-  const { view, forgetDeviceState } = useStore();
+  const { view, forgetDeviceState } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      forgetDeviceState: s.forgetDeviceState,
+    }))
+  );
   const vaultId = view?.vaultId;
   const [lastExport, setLastExport] = useState<string | null>(null);
   const [confirmForget, setConfirmForget] = useState(false);

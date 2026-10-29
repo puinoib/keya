@@ -7,6 +7,7 @@ import {
 } from '../../lib/storage';
 import { MAX_FILE_SIZE } from '../../../core/format/constants';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Input } from '@/components/ui/input';
 import { KeyaLogo } from '@/components/ui/keya-logo';
 import { Label } from '@/components/ui/label';
@@ -73,7 +74,14 @@ export function WelcomePage() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme, setBiometricPrompt, workspaceState } = useStore();
+  const { theme, setTheme, setBiometricPrompt, workspaceState } = useStore(
+    useShallow((s) => ({
+      theme: s.theme,
+      setTheme: s.setTheme,
+      setBiometricPrompt: s.setBiometricPrompt,
+      workspaceState: s.workspaceState,
+    }))
+  );
   const CurrentIcon =
     themeOptions.find((o) => o.value === theme)?.icon ?? Monitor;
 

@@ -6,6 +6,7 @@ import { HelpIndex } from './HelpIndex';
 import { HelpPage } from './HelpPage';
 import { loadManifest } from '../lib/manifest';
 import { useStore } from '@/app/store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,7 +31,9 @@ export function HelpLayout() {
   const { documents, categories } = loadManifest();
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, setTheme } = useStore();
+  const { theme, setTheme } = useStore(
+    useShallow((s) => ({ theme: s.theme, setTheme: s.setTheme }))
+  );
   const [currentSlug, setCurrentSlug] = useState<string | null>(() =>
     getSlugFromPath(location.pathname)
   );

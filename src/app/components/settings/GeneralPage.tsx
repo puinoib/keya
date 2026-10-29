@@ -1,4 +1,5 @@
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   ClipboardText,
   Moon,
@@ -32,7 +33,14 @@ const CLIPBOARD_OPTIONS = [
  * vault, so switching vaults changes none of it.
  */
 export function GeneralPage() {
-  const { view, updateSettings, theme, setTheme } = useStore();
+  const { view, updateSettings, theme, setTheme } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      updateSettings: s.updateSettings,
+      theme: s.theme,
+      setTheme: s.setTheme,
+    }))
+  );
   const preferences = view?.preferences;
   const clipboardSeconds = preferences?.clipboard_clear_seconds ?? 15;
 

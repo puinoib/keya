@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   PRESET_PROVIDERS,
   getDefaultEndpointForProvider,
@@ -98,7 +99,9 @@ function Toggle({
 }
 
 export function ProvidersPage() {
-  const { view, updateSettings } = useStore();
+  const { view, updateSettings } = useStore(
+    useShallow((s) => ({ view: s.view, updateSettings: s.updateSettings }))
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [newName, setNewName] = useState('');

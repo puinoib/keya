@@ -1,6 +1,7 @@
 import { Archive, FolderOpen, Gear, List, Tray } from '@phosphor-icons/react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   formatShortcutCompact,
   getShortcutKeys,
@@ -98,7 +99,21 @@ export function Sidebar() {
     clearFilters,
     clearSmartFilters,
     keyboardShortcuts,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      filterGroupId: s.filterGroupId,
+      filterProvider: s.filterProvider,
+      filterTestStatus: s.filterTestStatus,
+      filterExpiryStatus: s.filterExpiryStatus,
+      showArchived: s.showArchived,
+      setShowArchived: s.setShowArchived,
+      setFilterGroupId: s.setFilterGroupId,
+      clearFilters: s.clearFilters,
+      clearSmartFilters: s.clearSmartFilters,
+      keyboardShortcuts: s.keyboardShortcuts,
+    }))
+  );
 
   const openInboxCount = attentionCount(view);
   const isInboxActive = pathname === '/inbox';

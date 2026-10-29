@@ -7,6 +7,7 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { activeKeys, archivedKeys, sortedGroups } from '../../state/view';
 import { keysSearch } from '../../state/keys-search';
 import { providerLabel } from '../../state/providers';
@@ -46,7 +47,25 @@ export function KeysPage() {
     setFilterExpiryStatus,
     clearFilters,
     clearSmartFilters,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      selectedKeyId: s.selectedKeyId,
+      searchQuery: s.searchQuery,
+      filterGroupId: s.filterGroupId,
+      filterProvider: s.filterProvider,
+      filterTestStatus: s.filterTestStatus,
+      filterExpiryStatus: s.filterExpiryStatus,
+      showArchived: s.showArchived,
+      setSearchQuery: s.setSearchQuery,
+      setFilterGroupId: s.setFilterGroupId,
+      setFilterProvider: s.setFilterProvider,
+      setFilterTestStatus: s.setFilterTestStatus,
+      setFilterExpiryStatus: s.setFilterExpiryStatus,
+      clearFilters: s.clearFilters,
+      clearSmartFilters: s.clearSmartFilters,
+    }))
+  );
 
   const groups = view ? sortedGroups(view) : [];
   const viewKeys = !view

@@ -6,6 +6,7 @@ import { MinimalTopBar } from './MinimalTopBar';
 import { KeyForm } from '../keys/KeyForm';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useGlobalShortcuts } from '@/app/hooks/useGlobalShortcuts';
 import { KeyboardShortcutsDialog } from '@/app/components/KeyboardShortcutsDialog';
 import { BiometricPromptLayer } from '@/app/components/BiometricPromptLayer';
@@ -19,7 +20,12 @@ export function AppLayout({
   children?: React.ReactNode;
   topbar?: AppLayoutTopbar;
 }) {
-  const { showAddForm, setShowAddForm } = useStore();
+  const { showAddForm, setShowAddForm } = useStore(
+    useShallow((s) => ({
+      showAddForm: s.showAddForm,
+      setShowAddForm: s.setShowAddForm,
+    }))
+  );
   const [showShortcuts, setShowShortcuts] = useState(false);
   useGlobalShortcuts(() => setShowShortcuts(true));
 

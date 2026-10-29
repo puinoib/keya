@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { flushSave, useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { describeSaveFailure } from '../../state/presentation';
 import {
   MagnifyingGlass,
@@ -32,7 +33,17 @@ export function TopBar() {
     hasUnsavedChanges,
     saveFailure,
     keyboardShortcuts,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      searchQuery: s.searchQuery,
+      setSearchQuery: s.setSearchQuery,
+      beginAddKeyFlow: s.beginAddKeyFlow,
+      storageMode: s.storageMode,
+      hasUnsavedChanges: s.hasUnsavedChanges,
+      saveFailure: s.saveFailure,
+      keyboardShortcuts: s.keyboardShortcuts,
+    }))
+  );
   const [searchFocused, setSearchFocused] = useState(false);
 
   const searchKeys = getShortcutKeys(keyboardShortcuts, 'search.focus');

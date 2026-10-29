@@ -1,4 +1,5 @@
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from '@tanstack/react-router';
 import { ApiTester, unverifiableReason } from '../../lib/api-tester';
 import {
@@ -64,7 +65,22 @@ export function KeyDetail() {
     setFilterGroupId,
     setFilterProvider,
     setShowArchived,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      selectedKeyId: s.selectedKeyId,
+      setSelectedKeyId: s.setSelectedKeyId,
+      updateKey: s.updateKey,
+      archiveKey: s.archiveKey,
+      restoreKey: s.restoreKey,
+      refreshUsage: s.refreshUsage,
+      usage: s.usage,
+      filterGroupId: s.filterGroupId,
+      setFilterGroupId: s.setFilterGroupId,
+      setFilterProvider: s.setFilterProvider,
+      setShowArchived: s.setShowArchived,
+    }))
+  );
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState(false);

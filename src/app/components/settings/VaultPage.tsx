@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Palette, Shield, Spinner } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { EmojiPickerPanel } from '@/app/components/ui/emoji-picker-popover';
@@ -25,7 +26,16 @@ export function VaultPage() {
     verifyPassword,
     activeVaultFileName,
     storageMode,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      view: s.view,
+      updateMeta: s.updateMeta,
+      changePassword: s.changePassword,
+      verifyPassword: s.verifyPassword,
+      activeVaultFileName: s.activeVaultFileName,
+      storageMode: s.storageMode,
+    }))
+  );
   const data = view?.file.vault;
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   // The view is rebuilt asynchronously, so binding the field straight to

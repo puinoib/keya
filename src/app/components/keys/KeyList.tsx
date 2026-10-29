@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { DayPicker } from './DayPicker';
 import { GroupSelect } from './GroupSelect';
 import { useStore, type KeyPatch } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { scheduleClipboardClear } from '../../lib/clipboard';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -117,7 +118,22 @@ export function KeyList() {
     updateKey,
     archiveKey,
     restoreKey,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      searchQuery: s.searchQuery,
+      filterGroupId: s.filterGroupId,
+      filterProvider: s.filterProvider,
+      filterTestStatus: s.filterTestStatus,
+      filterExpiryStatus: s.filterExpiryStatus,
+      showArchived: s.showArchived,
+      selectedKeyId: s.selectedKeyId,
+      setSelectedKeyId: s.setSelectedKeyId,
+      beginAddKeyFlow: s.beginAddKeyFlow,
+      updateKey: s.updateKey,
+      archiveKey: s.archiveKey,
+      restoreKey: s.restoreKey,
+    }))
+  );
   const [testing, setTesting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<Key | null>(null);

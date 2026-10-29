@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ArrowCounterClockwise } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -172,7 +173,12 @@ function ShortcutSettingsRow({
 }
 
 export function ShortcutsPage() {
-  const { keyboardShortcuts, updateKeyboardShortcuts } = useStore();
+  const { keyboardShortcuts, updateKeyboardShortcuts } = useStore(
+    useShallow((s) => ({
+      keyboardShortcuts: s.keyboardShortcuts,
+      updateKeyboardShortcuts: s.updateKeyboardShortcuts,
+    }))
+  );
   const [recordingId, setRecordingId] = useState<ShortcutActionId | null>(null);
 
   return (

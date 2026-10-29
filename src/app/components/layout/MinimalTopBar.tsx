@@ -1,5 +1,6 @@
 import { Plus, Lock } from '@phosphor-icons/react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ThemeMenu } from './ThemeMenu';
 
 /**
@@ -7,7 +8,9 @@ import { ThemeMenu } from './ThemeMenu';
  * It carries only the chrome those pages still need: Add Key, theme, and Lock.
  */
 export function MinimalTopBar() {
-  const { beginAddKeyFlow } = useStore();
+  const { beginAddKeyFlow } = useStore(
+    useShallow((s) => ({ beginAddKeyFlow: s.beginAddKeyFlow }))
+  );
 
   return (
     <header className="h-11 flex items-center gap-2 px-3 shrink-0">

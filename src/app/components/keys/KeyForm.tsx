@@ -12,6 +12,7 @@ import { hasDuplicateSecret, sortedGroups } from '../../state/view';
 import type { AddKeyDraft } from '../../store/create-store';
 import type { Provider } from '../../../core/payload/types';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
 import { ApiTester, checkKind } from '../../lib/api-tester';
 import type { TestResult } from '../../lib/api-tester';
@@ -109,7 +110,14 @@ export function KeyForm({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { addKey, view, addKeyDraft, clearAddKeyDraft } = useStore();
+  const { addKey, view, addKeyDraft, clearAddKeyDraft } = useStore(
+    useShallow((s) => ({
+      addKey: s.addKey,
+      view: s.view,
+      addKeyDraft: s.addKeyDraft,
+      clearAddKeyDraft: s.clearAddKeyDraft,
+    }))
+  );
   const [form, setForm] = useState<FormData>(empty);
   const [showKey, setShowKey] = useState(false);
   const [testState, setTestState] = useState<TestState>({
