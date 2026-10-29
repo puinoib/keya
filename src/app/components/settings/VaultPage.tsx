@@ -138,6 +138,7 @@ export function VaultPage() {
               )}
             </div>
             <Input
+              aria-label="Vault name"
               value={nameDraft}
               onChange={(event) => {
                 const next = event.target.value;
@@ -259,6 +260,7 @@ export function VaultPage() {
                   <Input
                     type="password"
                     autoComplete="off"
+                    aria-label="Master password"
                     value={enrollPw}
                     onChange={(e) => setEnrollPw(e.target.value)}
                     placeholder="Master password"

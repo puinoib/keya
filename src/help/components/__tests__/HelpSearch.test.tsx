@@ -61,6 +61,16 @@ describe('HelpSearch', () => {
     expect(container.querySelector('input')).not.toBeNull();
   });
 
+  it('names its search field', async () => {
+    await act(async () => {
+      root.render(<HelpSearch documents={documents} onNavigate={vi.fn()} />);
+    });
+
+    expect(container.querySelector('input')?.getAttribute('aria-label')).toBe(
+      'Search help'
+    );
+  });
+
   it('shows matching documents when the query changes', async () => {
     await act(async () => {
       root.render(<HelpSearch documents={documents} onNavigate={vi.fn()} />);

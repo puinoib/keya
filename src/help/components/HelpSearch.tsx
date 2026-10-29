@@ -56,6 +56,7 @@ export function HelpSearch({ documents, onNavigate }: HelpSearchProps) {
         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-quaternary" />
         <input
           type="text"
+          aria-label="Search help"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search help docs..."

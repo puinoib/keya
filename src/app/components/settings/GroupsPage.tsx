@@ -122,6 +122,7 @@ export function GroupsPage() {
                     onSelect={setEditingIcon}
                   />
                   <Input
+                    aria-label={`Rename group ${g.name}`}
                     defaultValue={g.name}
                     autoFocus
                     className="h-7 flex-1 text-xs"
@@ -228,6 +229,7 @@ export function GroupsPage() {
             <div className="flex items-center gap-2">
               <EmojiPickerPopover icon={newIcon} onSelect={setNewIcon} />
               <Input
+                aria-label="New group name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Group name"

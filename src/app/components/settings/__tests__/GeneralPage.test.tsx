@@ -54,4 +54,16 @@ describe('clipboard clearing', () => {
       screen.getByText(/Remove a copied credential from the clipboard/)
     ).toBeTruthy();
   });
+
+  it('names the two delay pickers', () => {
+    render(<GeneralPage />);
+
+    // Both show a bare duration, so the name has to say what it delays.
+    expect(
+      screen.getByRole('combobox', { name: 'Auto lock after' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('combobox', { name: 'Clear copied keys after' })
+    ).toBeTruthy();
+  });
 });

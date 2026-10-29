@@ -148,4 +148,20 @@ describe('ProvidersPage', () => {
       screen.getByRole('switch', { name: 'OpenAI provider' })
     ).toBeTruthy();
   });
+
+  it('names every field in the custom provider form', () => {
+    render(<ProvidersPage />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Add Custom Provider/ })
+    );
+
+    // Placeholders are not names: a screen reader announces these empty.
+    expect(screen.getByLabelText('Search providers')).toBeTruthy();
+    expect(screen.getByLabelText('Provider name')).toBeTruthy();
+    expect(screen.getByLabelText('Provider description')).toBeTruthy();
+    expect(screen.getByLabelText('Provider endpoint')).toBeTruthy();
+    expect(
+      screen.getByRole('combobox', { name: 'Check authentication' })
+    ).toBeTruthy();
+  });
 });

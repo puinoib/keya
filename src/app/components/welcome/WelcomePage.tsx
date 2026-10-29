@@ -397,6 +397,7 @@ export function WelcomePage() {
                 </button>
                 <input
                   ref={fileInputRef}
+                  aria-label="Open a .keya file"
                   type="file"
                   accept=".keya"
                   className="hidden"
@@ -478,6 +479,7 @@ export function WelcomePage() {
                       )}
                     </div>
                     <Input
+                      aria-label="Vault name"
                       value={newVaultName}
                       onChange={(e) => setNewVaultName(e.target.value)}
                       placeholder="My Vault"

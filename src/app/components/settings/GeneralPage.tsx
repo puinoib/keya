@@ -107,7 +107,10 @@ export function GeneralPage() {
                 updateSettings({ auto_lock_minutes: Number(v) })
               }
             >
-              <SelectTrigger className="w-24 h-7 text-xs">
+              <SelectTrigger
+                aria-label="Auto lock after"
+                className="w-24 h-7 text-xs"
+              >
                 <SelectValue>
                   {preferences?.auto_lock_minutes ?? 5}
                   {(preferences?.auto_lock_minutes ?? 5) > 1 ? ' mins' : ' min'}
@@ -150,7 +153,10 @@ export function GeneralPage() {
                 updateSettings({ clipboard_clear_seconds: Number(v) })
               }
             >
-              <SelectTrigger className="w-24 h-7 text-xs">
+              <SelectTrigger
+                aria-label="Clear copied keys after"
+                className="w-24 h-7 text-xs"
+              >
                 <SelectValue>
                   {CLIPBOARD_OPTIONS.find(
                     (option) => option.value === clipboardSeconds

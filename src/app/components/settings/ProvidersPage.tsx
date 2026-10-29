@@ -292,6 +292,7 @@ export function ProvidersPage() {
       <div className="mb-5 flex h-8 items-center gap-2 rounded-md border border-line bg-surface-2 px-2.5">
         <MagnifyingGlass className="size-3.5 shrink-0 text-ink-quaternary" />
         <input
+          aria-label="Search providers"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter providers"
@@ -456,6 +457,7 @@ export function ProvidersPage() {
                 {isAdding ? (
                   <div className="p-3 space-y-2">
                     <Input
+                      aria-label="Provider name"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       placeholder="Service name"
@@ -464,12 +466,14 @@ export function ProvidersPage() {
                       autoFocus
                     />
                     <AutoResizeTextarea
+                      aria-label="Provider description"
                       value={newDescription}
                       onChange={(e) => setNewDescription(e.target.value)}
                       placeholder="Why this provider exists (optional)"
                       className="min-h-7 px-2 py-1 text-xs"
                     />
                     <Input
+                      aria-label="Provider endpoint"
                       value={newEndpoint}
                       onChange={(e) => setNewEndpoint(e.target.value)}
                       placeholder="https://api.example.com/v1"
@@ -487,7 +491,10 @@ export function ProvidersPage() {
                           setCheckAuth((value ?? 'none') as CheckAuthChoice)
                         }
                       >
-                        <SelectTrigger className="h-7 text-xs">
+                        <SelectTrigger
+                          aria-label="Check authentication"
+                          className="h-7 text-xs"
+                        >
                           <span>{CHECK_AUTH_LABELS[checkAuth]}</span>
                         </SelectTrigger>
                         <SelectContent>
@@ -505,6 +512,7 @@ export function ProvidersPage() {
                     {checkAuth !== 'none' && (
                       <>
                         <Input
+                          aria-label="Check path"
                           value={checkPath}
                           onChange={(e) => setCheckPath(e.target.value)}
                           placeholder="/v1/models or https://api.example.com/me"
@@ -512,6 +520,7 @@ export function ProvidersPage() {
                         />
                         {(checkAuth === 'header' || checkAuth === 'query') && (
                           <Input
+                            aria-label="Header or query parameter name"
                             value={checkName}
                             onChange={(e) => setCheckName(e.target.value)}
                             placeholder={

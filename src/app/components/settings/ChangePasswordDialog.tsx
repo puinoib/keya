@@ -121,6 +121,7 @@ export function ChangePasswordDialog({
           <div className="relative">
             <Input
               type={showOldPw ? 'text' : 'password'}
+              aria-label="Current password"
               placeholder="Current password"
               value={oldPw}
               onChange={(event) => {
@@ -150,6 +151,7 @@ export function ChangePasswordDialog({
             <div className="relative">
               <Input
                 type={showNewPw ? 'text' : 'password'}
+                aria-label="New password"
                 placeholder="New password (min 12 characters)"
                 value={newPw}
                 onChange={(event) => {
@@ -179,6 +181,7 @@ export function ChangePasswordDialog({
           <div className="relative">
             <Input
               type={showConfirmPw ? 'text' : 'password'}
+              aria-label="Confirm new password"
               placeholder="Confirm new password"
               value={confirmPw}
               onChange={(event) => {

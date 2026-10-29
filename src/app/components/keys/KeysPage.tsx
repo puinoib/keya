@@ -123,7 +123,10 @@ export function KeysPage() {
               value={filterProvider ?? ''}
               onValueChange={(v) => setFilterProvider(v === '' ? null : v)}
             >
-              <SelectTrigger className="h-7 w-auto text-xs px-2">
+              <SelectTrigger
+                aria-label="Filter by provider"
+                className="h-7 w-auto text-xs px-2"
+              >
                 {filterProvider || 'All Providers'}
               </SelectTrigger>
               <SelectContent>
@@ -139,7 +142,10 @@ export function KeysPage() {
               value={filterTestStatus ?? ''}
               onValueChange={(v) => setFilterTestStatus(v === '' ? null : v)}
             >
-              <SelectTrigger className="h-7 w-auto text-xs px-2">
+              <SelectTrigger
+                aria-label="Filter by check result"
+                className="h-7 w-auto text-xs px-2"
+              >
                 {TEST_STATUS_LABELS[filterTestStatus ?? '']}
               </SelectTrigger>
               <SelectContent>
@@ -154,7 +160,10 @@ export function KeysPage() {
               value={filterExpiryStatus ?? ''}
               onValueChange={(v) => setFilterExpiryStatus(v === '' ? null : v)}
             >
-              <SelectTrigger className="h-7 w-auto text-xs px-2">
+              <SelectTrigger
+                aria-label="Filter by expiry"
+                className="h-7 w-auto text-xs px-2"
+              >
                 {EXPIRY_STATUS_LABELS[filterExpiryStatus ?? '']}
               </SelectTrigger>
               <SelectContent>
@@ -174,6 +183,8 @@ export function KeysPage() {
                 >
                   <span className="truncate">{tag.label}</span>
                   <button
+                    type="button"
+                    aria-label={`Remove ${tag.label} filter`}
                     onClick={tag.onRemove}
                     className="shrink-0 text-ink-quaternary hover:text-ink-secondary transition-colors"
                   >

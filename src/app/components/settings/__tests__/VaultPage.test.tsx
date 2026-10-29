@@ -113,7 +113,10 @@ describe('changing the master password', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
 
     expect(await screen.findByText('Change master password')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Current password')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Confirm new password')).toBeTruthy();
+    // The password boxes have no visible label, so each needs an aria-label;
+    // the placeholder alone is not an accessible name.
+    expect(screen.getByLabelText('Current password')).toBeTruthy();
+    expect(screen.getByLabelText('New password')).toBeTruthy();
+    expect(screen.getByLabelText('Confirm new password')).toBeTruthy();
   });
 });
