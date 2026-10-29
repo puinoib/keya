@@ -327,14 +327,41 @@ export function findShortcutConflict(
 
 const STORAGE_KEY = 'keya-shortcuts';
 
-/** Custom key bindings, remembered per browser. */
+/** Longest binding worth accepting; chords (`mod+alt+shift+k`) are far shorter. */
+const MAX_BINDING_LENGTH = 64;
+
+const ACTION_IDS = new Set<string>(
+  SHORTCUT_DEFINITIONS.map((definition) => definition.id)
+);
+
+/**
+ * Custom key bindings, remembered per browser.
+ *
+ * Stored JSON is treated as untrusted: a value that is not a short string would
+ * reach `keys.trim()` / `keys.split()` and throw while rendering the app shell,
+ * so anything unrecognised is dropped instead of cached.
+ */
 export function readShortcutMap(): ShortcutMap {
   if (typeof localStorage === 'undefined') return {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as ShortcutMap;
-    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {};
+    }
+
+    const map: ShortcutMap = {};
+    for (const [actionId, value] of Object.entries(
+      parsed as Record<string, unknown>
+    )) {
+      if (!ACTION_IDS.has(actionId)) continue;
+      if (typeof value !== 'string' || value.length > MAX_BINDING_LENGTH) {
+        continue;
+      }
+      map[actionId as ShortcutActionId] = value;
+    }
+    return map;
   } catch {
     return {};
   }

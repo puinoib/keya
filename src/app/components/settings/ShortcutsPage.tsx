@@ -151,63 +151,61 @@ export function ShortcutsPage() {
   const { keyboardShortcuts, updateKeyboardShortcuts } = useStore();
 
   return (
-    <>
-      <div className="rounded-lg border border-line bg-surface-2">
-        <div className="flex items-center justify-between gap-3 border-b border-line p-3">
-          <div>
-            <p className="text-xs font-medium text-ink-primary">
-              Custom Shortcuts
-            </p>
-            <p className="mt-0.5 text-xs text-ink-quaternary">
-              Click a shortcut and press the keys you want to use
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              updateKeyboardShortcuts({});
-              toast.success('Shortcuts reset to defaults');
-            }}
-          >
-            Reset all
-          </Button>
+    <div className="rounded-lg border border-line bg-surface-2">
+      <div className="flex items-center justify-between gap-3 border-b border-line p-3">
+        <div>
+          <p className="text-xs font-medium text-ink-primary">
+            Custom Shortcuts
+          </p>
+          <p className="mt-0.5 text-xs text-ink-quaternary">
+            Click a shortcut and press the keys you want to use
+          </p>
         </div>
-        {(['global', 'navigation', 'keys'] as ShortcutScope[]).map((scope) => (
-          <div key={scope}>
-            <div className="bg-canvas-base px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-quaternary">
-              {SHORTCUT_SCOPE_LABELS[scope]}
-            </div>
-            {SHORTCUT_DEFINITIONS.filter(
-              (shortcut) => shortcut.scope === scope
-            ).map((shortcut) => (
-              <ShortcutSettingsRow
-                key={shortcut.id}
-                actionId={shortcut.id}
-                shortcutMap={keyboardShortcuts}
-                updateShortcut={(id, keys) => {
-                  updateKeyboardShortcuts({
-                    ...keyboardShortcuts,
-                    [id]: keys,
-                  });
-                }}
-                resetShortcut={(id) => {
-                  const next = { ...keyboardShortcuts };
-                  delete next[id];
-                  updateKeyboardShortcuts(next);
-                }}
-                disableShortcut={(id) => {
-                  updateKeyboardShortcuts({
-                    ...keyboardShortcuts,
-                    [id]: '',
-                  });
-                }}
-              />
-            ))}
-          </div>
-        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            updateKeyboardShortcuts({});
+            toast.success('Shortcuts reset to defaults');
+          }}
+        >
+          Reset all
+        </Button>
       </div>
-    </>
+      {(['global', 'navigation', 'keys'] as ShortcutScope[]).map((scope) => (
+        <div key={scope}>
+          <div className="bg-canvas-base px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-quaternary">
+            {SHORTCUT_SCOPE_LABELS[scope]}
+          </div>
+          {SHORTCUT_DEFINITIONS.filter(
+            (shortcut) => shortcut.scope === scope
+          ).map((shortcut) => (
+            <ShortcutSettingsRow
+              key={shortcut.id}
+              actionId={shortcut.id}
+              shortcutMap={keyboardShortcuts}
+              updateShortcut={(id, keys) => {
+                updateKeyboardShortcuts({
+                  ...keyboardShortcuts,
+                  [id]: keys,
+                });
+              }}
+              resetShortcut={(id) => {
+                const next = { ...keyboardShortcuts };
+                delete next[id];
+                updateKeyboardShortcuts(next);
+              }}
+              disableShortcut={(id) => {
+                updateKeyboardShortcuts({
+                  ...keyboardShortcuts,
+                  [id]: '',
+                });
+              }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }

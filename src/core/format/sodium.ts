@@ -11,15 +11,22 @@ let loaded: SodiumModule | null = null;
 let loading: Promise<SodiumModule> | null = null;
 
 export function loadSodium(): Promise<SodiumModule> {
-  loading ??= (async () => {
-    const module = await import('libsodium-wrappers-sumo');
-    const resolved = module.default ?? (module as unknown as SodiumModule);
-    await resolved.ready;
-    loaded = resolved;
-    return resolved;
-  })();
+  // A rejected chunk load must stay retryable: caching the rejection would make
+  // every later unlock and save fail for the lifetime of the page.
+  loading ??= load().catch((error: unknown) => {
+    loading = null;
+    throw error;
+  });
 
   return loading;
+}
+
+async function load(): Promise<SodiumModule> {
+  const module = await import('libsodium-wrappers-sumo');
+  const resolved = module.default ?? (module as unknown as SodiumModule);
+  await resolved.ready;
+  loaded = resolved;
+  return resolved;
 }
 
 /** Already-loaded libsodium. Throws when called before `loadSodium()`. */
