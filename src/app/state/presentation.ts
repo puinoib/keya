@@ -14,6 +14,7 @@ import type {
   Observation,
   RejectedOutcome,
 } from '../../core/runtime/observations';
+import { isUnverified } from '../../core/runtime/observations';
 import type { OpenFailure } from '../vault/vault';
 import type { Issue } from '../../core/payload/validate';
 import { summarizeIssues } from '../../core/payload/validate';
@@ -126,11 +127,17 @@ export function describeOpenFailure(
   }
 }
 
-export type CheckStatus = 'success' | 'failed' | 'untested';
+/**
+ * `failed` means the service answered and said no; `unverified` means the
+ * request never reached a verdict (timeout, network, rate limit, server error)
+ * and must not be read as evidence about the credential (§10.3).
+ */
+export type CheckStatus = 'success' | 'failed' | 'unverified' | 'untested';
 
 export function checkStatus(observation: Observation | undefined): CheckStatus {
   if (!observation) return 'untested';
-  return observation.outcome === 'ok' ? 'success' : 'failed';
+  if (observation.outcome === 'ok') return 'success';
+  return isUnverified(observation) ? 'unverified' : 'failed';
 }
 
 export function checkStatusLabel(
@@ -138,6 +145,7 @@ export function checkStatusLabel(
   kind?: 'credential' | 'request' | 'unverifiable'
 ): string {
   if (status === 'untested') return 'Untested';
+  if (status === 'unverified') return 'Not verified';
   if (status === 'failed') return 'Failed';
   return kind === 'credential' ? 'Verified' : 'Reachable';
 }

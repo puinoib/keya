@@ -22,7 +22,6 @@ import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import { checkStateHint, describeFailure } from '../../state/presentation';
-import { isUnverified } from '../../../core/runtime/observations';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -99,10 +98,7 @@ export function KeyDetail() {
   const testOk = connectionStatus === 'success';
   const testFail = connectionStatus === 'failed';
   // A rejection is about the credential; a network or timeout failure is not.
-  const testUnverified =
-    connectionStatus === 'failed' && observed !== undefined
-      ? isUnverified(observed)
-      : false;
+  const testUnverified = connectionStatus === 'unverified';
   const checkError =
     check.kind === 'unverifiable'
       ? unverifiableReason(provider)
@@ -192,10 +188,10 @@ export function KeyDetail() {
           ? 'Verified: the provider accepted this credential.'
           : 'Reachable: the endpoint answered. This does not prove the credential is valid.'
         : testFail
-          ? testUnverified
+          ? `Rejected: ${describeFailure(observed) ?? 'the provider did not accept this credential'}.`
+          : testUnverified
             ? `Could not verify: ${describeFailure(observed) ?? 'the last request did not finish'}. This says nothing about the credential.`
-            : `Rejected: ${describeFailure(observed) ?? 'the provider did not accept this credential'}.`
-          : 'Untested: no check has run from this device yet.';
+            : 'Untested: no check has run from this device yet.';
   const plaintextTarget = plaintextTargetOf(view, key);
   const showStatusChips = Boolean(
     expiryLabel || (stateHint && check.manualOnly)
@@ -349,7 +345,7 @@ export function KeyDetail() {
             </div>
           )}
 
-          {testFail && !key.archived_at && checkError && (
+          {(testFail || testUnverified) && !key.archived_at && checkError && (
             <p
               className={`mb-4 text-xs break-words ${
                 testUnverified ? 'text-ink-quaternary' : 'text-danger/80'

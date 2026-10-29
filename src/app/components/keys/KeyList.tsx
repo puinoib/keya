@@ -387,9 +387,13 @@ export function KeyList() {
                 ? {
                     dot: 'bg-danger',
                   }
-                : {
-                    dot: 'bg-ink-quaternary/35',
-                  };
+                : check?.status === 'unverified'
+                  ? {
+                      dot: 'bg-[#d97706]',
+                    }
+                  : {
+                      dot: 'bg-ink-quaternary/35',
+                    };
           const checkLabel = check
             ? getTestActionLabel(check.kind)
             : getTestActionLabel('request');

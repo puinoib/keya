@@ -344,16 +344,28 @@ describe('check status', () => {
     expect(checkStatusLabel(check.status, check.kind)).toBe('Verified');
   });
 
-  it('calls a non-ok outcome failed', () => {
-    const view = buildVaultView(
+  it('separates a rejection from a request that never reached a verdict', () => {
+    const rejected = buildVaultView(
       input({
         checks: new Map([[IDS.key, observation({ outcome: 'auth_failed' })]]),
       })
     );
-    const check = checkOf(view, keyById(view, IDS.key)!);
+    const rejectedCheck = checkOf(rejected, keyById(rejected, IDS.key)!);
+    expect(rejectedCheck.status).toBe('failed');
+    expect(checkStatusLabel(rejectedCheck.status, rejectedCheck.kind)).toBe(
+      'Failed'
+    );
 
-    expect(check.status).toBe('failed');
-    expect(checkStatusLabel(check.status, check.kind)).toBe('Failed');
+    // Network, timeout, rate limits and 5xx say nothing about the credential
+    // and must not be filtered or worded as a rejection (§10.3).
+    for (const outcome of ['network', 'timeout', 'rate_limited'] as const) {
+      const view = buildVaultView(
+        input({ checks: new Map([[IDS.key, observation({ outcome })]]) })
+      );
+      const check = checkOf(view, keyById(view, IDS.key)!);
+      expect(check.status).toBe('unverified');
+      expect(checkStatusLabel(check.status, check.kind)).toBe('Not verified');
+    }
   });
 });
 

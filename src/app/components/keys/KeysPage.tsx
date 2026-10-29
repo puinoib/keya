@@ -16,7 +16,8 @@ import { KeyDetail } from '../keys/KeyDetail';
 const TEST_STATUS_LABELS: Record<string, string> = {
   '': 'All Results',
   success: 'Success',
-  failed: 'Failed',
+  failed: 'Rejected',
+  unverified: 'Not verified',
   untested: 'Untested',
 };
 
@@ -125,7 +126,8 @@ export function KeysPage() {
               <SelectContent>
                 <SelectItem value="">All Results</SelectItem>
                 <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="failed">Rejected</SelectItem>
+                <SelectItem value="unverified">Not verified</SelectItem>
                 <SelectItem value="untested">Untested</SelectItem>
               </SelectContent>
             </Select>
