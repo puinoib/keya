@@ -103,7 +103,7 @@ export type PasswordFailure =
 export type EditFailure = EditRejection | 'invalid_edit' | 'invalid_icon';
 
 /** Keep Argon2 allocation failure distinct from cancellation and bad input. */
-function kdfFailureCode(
+export function kdfFailureCode(
   failure: KdfFailure
 ): 'kdf_busy' | 'kdf_cancelled' | 'kdf_failed' | 'kdf_memory' {
   switch (failure) {
@@ -739,6 +739,11 @@ export class Vault {
       }
       throw error;
     }
+
+    // Derivation takes seconds and the vault can be locked underneath it. A
+    // clone taken from the cleared payload would silently produce an empty
+    // vault under the new password.
+    if (this.locked) return { ok: false, failure: 'locked' };
 
     const copy: KeyaFile = {
       vault: {

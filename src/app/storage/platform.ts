@@ -17,7 +17,7 @@ import {
   generateSalt,
   sealContainer,
 } from '../../core/format/container';
-import { deriveFileKey } from '../../core/format/kdf';
+import { deriveFileKey, KdfError } from '../../core/format/kdf';
 import { serializePayload } from '../../core/payload/serialize';
 import {
   checkIconForWriter,
@@ -25,7 +25,7 @@ import {
 } from '../../core/payload/normalize';
 import { summarizeIssues, validateKeyaFile } from '../../core/payload/validate';
 import type { KeyaFile } from '../../core/payload/types';
-import { VAULT_WRITE_LOCK, Vault } from '../vault/vault';
+import { VAULT_WRITE_LOCK, Vault, kdfFailureCode } from '../vault/vault';
 import { checkPasswordShape } from '../../core/payload/password';
 import { systemClock } from '../vault/ports';
 import { VaultSession } from '../runtime/session';
@@ -162,6 +162,35 @@ export async function createVault(
   const salt = generateSalt();
 
   return webLocks.run(VAULT_WRITE_LOCK, async () => {
+    // Derive and seal before touching the folder. Creating the file first means
+    // any later failure (another tab holding the KDF lock, low memory, a chunk
+    // that will not load) leaves a zero-byte `.keya` that blocks the same name
+    // on every retry and only ever reports `file_too_short`.
+    let fileKey: Uint8Array;
+    try {
+      fileKey = await deriveFileKey({ password, salt, kdf });
+    } catch (error) {
+      return {
+        ok: false,
+        failure:
+          error instanceof KdfError
+            ? kdfFailureCode(error.failure)
+            : 'io_failed',
+      };
+    }
+
+    let bytes: Uint8Array;
+    try {
+      bytes = await sealContainer({
+        payload: serializePayload(validated.value),
+        fileKey,
+        container: { version: VERSION, kdf, salt },
+        nonce: generateNonce(),
+      });
+    } catch {
+      return { ok: false, failure: 'io_failed' };
+    }
+
     let file: FilePort;
     try {
       file = await workspace.createFilePort(fileName);
@@ -171,14 +200,6 @@ export async function createVault(
         failure: error instanceof Error ? error.message : 'io_failed',
       };
     }
-
-    const fileKey = await deriveFileKey({ password, salt, kdf });
-    const bytes = await sealContainer({
-      payload: serializePayload(validated.value),
-      fileKey,
-      container: { version: VERSION, kdf, salt },
-      nonce: generateNonce(),
-    });
 
     try {
       await file.write(bytes);
