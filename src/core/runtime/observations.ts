@@ -31,6 +31,27 @@ export interface Observation {
   latency_ms: number | null;
   started_at: string;
   finished_at: string;
+  /**
+   * Device-monotonic sequence, assigned when the record is stored.
+   *
+   * `finished_at` is a wall clock and the spec forbids ordering by it: a clock
+   * change would make an older result look newest and could hide a rejection.
+   * Records written before this field existed read as 0, so they sort behind
+   * every newly recorded result.
+   */
+  seq?: number;
+}
+
+/** Newest first by the device sequence, falling back to the wall clock. */
+export function compareObservationsNewestFirst(
+  left: Observation,
+  right: Observation
+): number {
+  const bySeq = (right.seq ?? 0) - (left.seq ?? 0);
+  if (bySeq !== 0) return bySeq;
+  const byTime = right.finished_at.localeCompare(left.finished_at);
+  if (byTime !== 0) return byTime;
+  return right.observation_id.localeCompare(left.observation_id);
 }
 
 export interface AdoptionContext {
@@ -134,6 +155,6 @@ export function relevantObservations(
 ): Observation[] {
   return observations
     .filter((observation) => observation.binding === binding)
-    .sort((left, right) => right.finished_at.localeCompare(left.finished_at))
+    .sort(compareObservationsNewestFirst)
     .slice(0, limit);
 }

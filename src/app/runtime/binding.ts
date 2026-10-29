@@ -26,12 +26,40 @@ export async function currentBindings(
 ): Promise<Map<string, KeyBinding>> {
   const result = new Map<string, KeyBinding>();
 
-  for (const key of payload.keys) {
-    const binding = await bindingFor(payload, key, deviceKey);
-    if (binding) result.set(key.id, binding);
+  // Hashing is per key and independent, so it can overlap instead of waiting
+  // for a thousand sequential WebCrypto round trips. The pool keeps a large
+  // vault from queueing thousands of tiny operations at once.
+  const entries = await mapWithConcurrency(payload.keys, 8, (key) =>
+    bindingFor(payload, key, deviceKey)
+  );
+
+  for (const entry of entries) {
+    if (entry) result.set(entry.keyId, entry);
   }
 
   return result;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  map: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await map(items[index]);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker)
+  );
+  return results;
 }
 
 export async function bindingFor(

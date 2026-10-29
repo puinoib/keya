@@ -11,6 +11,7 @@
  */
 
 import type { Observation } from '../../../core/runtime/observations';
+import { compareObservationsNewestFirst } from '../../../core/runtime/observations';
 import { importDeviceKey } from '../../../core/fingerprint';
 
 export interface KeyValuePort {
@@ -122,14 +123,22 @@ export class LocalState {
 
   async recordObservation(observation: Observation): Promise<void> {
     const base = keyOf(OBSERVATION, observation.vault_id, observation.key_id);
-    await this.kv.set(keyOf(base, observation.observation_id), observation);
-
     const existing = await this.listObservations(
       observation.vault_id,
       observation.key_id
     );
-    const excess = existing.slice(this.retention);
-    for (const stale of excess) {
+
+    // Assign the device-monotonic order here, not in the probe: the sequence is
+    // storage bookkeeping, and it is what makes "the latest result" survive a
+    // system-clock change (a wall clock is not an ordering key).
+    const seq =
+      existing.reduce((max, entry) => Math.max(max, entry.seq ?? 0), 0) + 1;
+    const record: Observation = { ...observation, seq };
+    await this.kv.set(keyOf(base, observation.observation_id), record);
+
+    // Newest first by `seq`, so the tail is what retention drops.
+    const ordered = [record, ...existing].sort(compareObservationsNewestFirst);
+    for (const stale of ordered.slice(this.retention)) {
       await this.kv.delete(keyOf(base, stale.observation_id));
     }
   }
@@ -138,13 +147,42 @@ export class LocalState {
     vaultId: string,
     keyId: string
   ): Promise<Observation[]> {
-    const keys = await this.kv.keys(keyOf(OBSERVATION, vaultId, keyId));
+    // The trailing separator matters: `keys()` is a raw prefix scan, so
+    // `observations/v/k` would also match `observations/v/k2/...`.
+    const keys = await this.kv.keys(`${keyOf(OBSERVATION, vaultId, keyId)}/`);
     const records = await Promise.all(
       keys.map((key) => this.kv.get<Observation>(key))
     );
     return records
       .filter((record): record is Observation => Boolean(record))
-      .sort((left, right) => right.finished_at.localeCompare(left.finished_at));
+      .sort(compareObservationsNewestFirst);
+  }
+
+  /**
+   * Every observation of one vault in a single range scan, grouped by key.
+   *
+   * The view needs the newest record per key on every refresh; doing one scan
+   * per key turns a 1000-key vault into thousands of serialized IndexedDB
+   * round trips per save.
+   */
+  async observationsByKey(
+    vaultId: string
+  ): Promise<Map<string, Observation[]>> {
+    const keys = await this.kv.keys(`${keyOf(OBSERVATION, vaultId)}/`);
+    const records = await Promise.all(
+      keys.map((key) => this.kv.get<Observation>(key))
+    );
+
+    const grouped = new Map<string, Observation[]>();
+    for (const record of records) {
+      if (!record) continue;
+      const list = grouped.get(record.key_id);
+      if (list) list.push(record);
+      else grouped.set(record.key_id, [record]);
+    }
+    for (const list of grouped.values())
+      list.sort(compareObservationsNewestFirst);
+    return grouped;
   }
 
   // ── preferences ──
@@ -229,7 +267,7 @@ export class LocalState {
 
   /** Forget this device's knowledge of one vault: every observation of it. */
   async forgetVault(vaultId: string): Promise<void> {
-    const observations = await this.kv.keys(keyOf(OBSERVATION, vaultId));
+    const observations = await this.kv.keys(`${keyOf(OBSERVATION, vaultId)}/`);
     for (const key of observations) {
       await this.kv.delete(key);
     }
