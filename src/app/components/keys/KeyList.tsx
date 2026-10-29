@@ -84,9 +84,25 @@ import { useAppHotkey } from '@/app/hooks/useAppHotkey';
 import { keysSearch } from '../../state/keys-search';
 import { DeleteKeyDialog } from './DeleteKeyDialog';
 
+/**
+ * Whether a dialog, menu or listbox is on screen.
+ *
+ * Base UI unmounts a popup when it closes, so the presence of one of these
+ * roles means Escape has something above the detail panel to dismiss.
+ */
+function hasOpenPopup(): boolean {
+  if (typeof document === 'undefined') return false;
+  return Boolean(
+    document.querySelector(
+      '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]'
+    )
+  );
+}
+
 export function KeyList() {
   const navigate = useNavigate();
   const view = useStore((s) => s.view);
+  const showAddForm = useStore((s) => s.showAddForm);
   const providers = view?.file.providers ?? [];
   const {
     searchQuery,
@@ -295,9 +311,24 @@ export function KeyList() {
     },
     { enabled: keyShortcutsEnabled && !!selectedKey }
   );
-  useAppHotkey('key.closeDetail', () => setSelectedKeyId(null), {
-    enabled: !!selectedKeyId && !editingKey && !deletingKey,
-  });
+  useAppHotkey(
+    'key.closeDetail',
+    () => {
+      // Escape belongs to whatever is on top. Base UI unmounts its popups when
+      // closed, so the presence of one of these roles means a dialog, menu or
+      // listbox is open and must consume the key first; otherwise one press
+      // would close the popup and the detail panel together.
+      //
+      // `event.defaultPrevented` is deliberately not consulted: the hotkey
+      // binding requests `preventDefault`, so it is already set by the time
+      // this callback runs.
+      if (hasOpenPopup()) return;
+      setSelectedKeyId(null);
+    },
+    {
+      enabled: !!selectedKeyId && !editingKey && !deletingKey && !showAddForm,
+    }
+  );
 
   if (!view) return null;
 

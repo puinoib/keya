@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cloneFile, IDS } from '../../../../core/__tests__/fixtures';
 import {
@@ -254,5 +254,52 @@ describe('KeyList', () => {
     expect(
       screen.getByRole('button', { name: 'Select Edge key' })
     ).toBeTruthy();
+  });
+});
+
+describe('closing the detail panel', () => {
+  it('leaves Escape to the add form while it is open', () => {
+    render(<KeyList />);
+    act(() => {
+      harness.api.useStore.getState().setSelectedKeyId(IDS.key);
+      harness.api.useStore.getState().beginAddKeyFlow();
+    });
+
+    // Escape closes the dialog. One press must not also drop the selection
+    // behind it, or closing a dialog would silently take the reader back to a
+    // list with no key open.
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+    });
+    expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
+
+    act(() => {
+      harness.api.useStore.getState().setShowAddForm(false);
+    });
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+    });
+    expect(harness.api.useStore.getState().selectedKeyId).toBeNull();
+  });
+
+  it('leaves Escape to a popup that is on screen', () => {
+    render(<KeyList />);
+    act(() => {
+      harness.api.useStore.getState().setSelectedKeyId(IDS.key);
+    });
+
+    // Base UI unmounts a closed popup, so an element with this role means one
+    // is open and owns the key.
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu');
+    document.body.append(menu);
+    try {
+      act(() => {
+        fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+      });
+      expect(harness.api.useStore.getState().selectedKeyId).toBe(IDS.key);
+    } finally {
+      menu.remove();
+    }
   });
 });
