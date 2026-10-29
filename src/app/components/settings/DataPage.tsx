@@ -6,6 +6,7 @@ import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { exportJsonCopy, exportKeyaCopy } from '@/app/lib/vault-export';
 import { readLastExport } from '@/app/lib/export-history';
+import { format } from 'date-fns';
 import {
   AlertDialogAction,
   AlertDialogCancel,
@@ -20,7 +21,7 @@ import {
 function describeExportedAt(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toLocaleString();
+  return format(parsed, 'MMM d, yyyy HH:mm');
 }
 
 /**

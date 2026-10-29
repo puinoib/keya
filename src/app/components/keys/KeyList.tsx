@@ -753,8 +753,15 @@ export function EditKeyDialog({
 
   const handleSave = () => {
     if (!editingKey || !form.name.trim()) return;
-    if (view && hasDuplicateSecret(view, form.secret.trim(), editingKey.id)) {
-      // §5.3: warn instead of refusing the edit.
+    // §5.3: warn instead of refusing the edit, but only about a duplicate the
+    // reader just introduced. Renaming a key whose token is shared with
+    // another environment must not re-raise the warning every save.
+    const secretChanged = form.secret.trim() !== editingKey.secret;
+    if (
+      secretChanged &&
+      view &&
+      hasDuplicateSecret(view, form.secret.trim(), editingKey.id)
+    ) {
       toast.warning('This credential is already saved', {
         description:
           'Keya keeps both because the same token may be used twice.',

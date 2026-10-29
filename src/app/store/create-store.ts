@@ -25,6 +25,7 @@ import {
   type ProviderDraft,
 } from '../state/providers';
 import { buildVaultView, keyById, type VaultView } from '../state/view';
+import { describeOutcome } from '../probe/execute';
 import { describeSaveFailure } from '../state/presentation';
 import { fetchUsage, usageRequestUrl, type UsageEntry } from '../lib/usage';
 import {
@@ -316,7 +317,7 @@ function askDestination(
           ? `${where} — this travels in clear text and is never remembered.`
           : usage
             ? `${where} — the key is sent there to read its allowance.`
-            : `${where} — this destination has not been allowed permanently.`,
+            : `${where} — this destination has not been approved yet.`,
         duration: 20_000,
         action: {
           label: plaintext ? 'Send in clear text' : 'Send',
@@ -1128,8 +1129,13 @@ export function createAppStore(deps: StoreDeps): AppStore {
       return {
         success: false,
         latency_ms: 0,
+        // Status names are for the log, not for the reader: say what happened.
         error:
-          outcome.status === 'not_executable' ? outcome.reason : outcome.status,
+          outcome.status === 'not_executable'
+            ? 'This provider cannot be checked from a browser.'
+            : outcome.status === 'needs_authorization'
+              ? 'The check was not approved.'
+              : 'The key is no longer in the vault.',
         kind: 'request',
       };
     }
@@ -1138,10 +1144,10 @@ export function createAppStore(deps: StoreDeps): AppStore {
     return {
       success: observation.outcome === 'ok',
       latency_ms: observation.latency_ms ?? 0,
+      // `detail_code` is a controlled machine code; the toast and the detail
+      // panel share the human sentence instead.
       error:
-        observation.outcome === 'ok'
-          ? undefined
-          : (observation.detail_code ?? observation.outcome),
+        observation.outcome === 'ok' ? undefined : describeOutcome(observation),
       kind: observation.kind,
       discarded: outcome.status === 'discarded',
     };

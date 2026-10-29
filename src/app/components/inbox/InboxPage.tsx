@@ -26,6 +26,7 @@ import {
 } from '../../store/useStore';
 import { cn } from '@/lib/utils';
 import { ProviderLogo } from '@/app/components/ui/provider-logo';
+import { format } from 'date-fns';
 
 function expiryLine(row: AttentionRow): string {
   if (row.fact.kind !== 'expiry') return '';
@@ -45,7 +46,7 @@ function whyLine(row: AttentionRow): string {
     const fact = row.key.expiry?.value ?? 'no date';
     return `Rule: expiry · fact: ${fact}. This clears when you move the date or archive the key.`;
   }
-  const when = new Date(row.fact.finished_at).toLocaleString();
+  const when = format(new Date(row.fact.finished_at), 'MMM d, HH:mm');
   const detail = row.fact.detail_code ?? row.fact.outcome;
   return `Rule: rejected · fact: ${detail} at ${when}. This clears when a later check succeeds, or when you archive the key.`;
 }

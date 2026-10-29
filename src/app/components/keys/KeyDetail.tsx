@@ -23,6 +23,8 @@ import { scheduleClipboardClear } from '../../lib/clipboard';
 import type { Key } from '../../../core/payload/types';
 import { getProviderLogo } from '@/app/lib/provider-logo';
 import { checkStateHint, describeFailure } from '../../state/presentation';
+import { describeOutcome } from '../../probe/execute';
+import { format } from 'date-fns';
 import {
   Archive,
   ArrowCounterClockwise,
@@ -115,10 +117,14 @@ export function KeyDetail() {
   const testFail = connectionStatus === 'failed';
   // A rejection is about the credential; a network or timeout failure is not.
   const testUnverified = connectionStatus === 'unverified';
+  // `detail_code` is a machine code; the reader gets the sentence the inbox
+  // and the toast use.
   const checkError =
     check.kind === 'unverifiable'
       ? unverifiableReason(provider)
-      : (observed?.detail_code ?? null);
+      : observed
+        ? describeOutcome(observed)
+        : null;
 
   const handleCopy = async () => {
     try {
@@ -163,14 +169,9 @@ export function KeyDetail() {
     toast.success(`Restored "${key.name}"`);
   };
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  // The interface is written in English; a date rendered in the operating
+  // system's locale reads as a different dialect of the same sentence.
+  const formatDate = (iso: string) => format(new Date(iso), 'MMM d, yyyy');
 
   const expiryStatus = expiryOf(view, key).status;
   const expiryDate = expiryToDate(key.expiry);

@@ -1,5 +1,6 @@
 import { Lock } from '@phosphor-icons/react';
 import type { CachedVaultMeta } from '../../lib/storage';
+import { format } from 'date-fns';
 
 interface VaultCardProps {
   fileName: string;
@@ -24,7 +25,7 @@ export function VaultCard({ fileName, meta, onClick }: VaultCardProps) {
         </p>
         <p className="text-xs text-ink-quaternary">
           {meta
-            ? `${meta.keyCount} keys · Updated ${new Date(meta.updatedAt).toLocaleDateString()}`
+            ? `${meta.keyCount} keys · Updated ${format(new Date(meta.updatedAt), 'MMM d, yyyy')}`
             : fileName}
         </p>
       </div>
